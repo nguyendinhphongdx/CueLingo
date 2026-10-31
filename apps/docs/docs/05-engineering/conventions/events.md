@@ -1,6 +1,6 @@
 # Convention · Event học tập
 
-Event là đầu vào của Learner Model và debrief ([02-architecture/learner-model](../../03-architecture/02-learner-model.md)). Bảng `events` là append-only, là nguồn sự thật.
+Event là đầu vào của Learner Model và debrief ([02-architecture/learner-model](../../03-architecture/05-learner-model.md)). Bảng `events` là append-only, là nguồn sự thật.
 
 | #   | Luật                                                                                                                                                                    |
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -9,4 +9,4 @@ Event là đầu vào của Learner Model và debrief ([02-architecture/learner-
 | 3   | `id` do client sinh (UUID v7) để gửi lại an toàn; server ghi idempotent theo `id`                                                                                       |
 | 4   | Event không chứa audio, không chứa transcript đầy đủ; tham chiếu `segment_id`                                                                                           |
 | 5   | Event mới ảnh hưởng Learner Model → thêm ánh xạ + test trong `packages/learner-model` cùng PR                                                                           |
-| 6   | Cập nhật bảng "Event → cập nhật" trong [learner-model](../../03-architecture/02-learner-model.md) và catalog trong [data-model](../../03-architecture/04-data-model.md) |
+| 6   | Cập nhật bảng "Event → cập nhật" trong [learner-model](../../03-architecture/05-learner-model.md) và catalog trong [data-model](../../03-architecture/07-data-model.md) |

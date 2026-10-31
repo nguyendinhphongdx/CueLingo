@@ -19,16 +19,17 @@ Mỗi phần có `CLAUDE.md` (quy ước riêng) và `README.md`. Đọc cả ha
 
 ## Đọc gì trước khi làm
 
-| Câu hỏi                                    | Đọc                                                                                                              |
-| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| Sản phẩm này là gì, toàn cảnh              | [apps/docs/docs/01-overview/01-big-picture.md](apps/docs/docs/01-overview/01-big-picture.md)                     |
-| Tính năng mới đặt ở đâu                    | [apps/docs/docs/05-engineering/01-extension-points.md](apps/docs/docs/05-engineering/01-extension-points.md)     |
-| Quy ước code của tầng mình sửa             | [apps/docs/docs/05-engineering/README.md](apps/docs/docs/05-engineering/README.md) → convention + **module mẫu** |
-| Module này làm gì, interface ra sao        | `apps/docs/docs/04-modules/<part>/<module>.md`                                                                   |
-| Luồng realtime, Learner Model, AI, dữ liệu | [apps/docs/docs/03-architecture](apps/docs/docs/03-architecture)                                                 |
-| Phạm vi MVP, user story, AC                | [apps/docs/docs/02-product/03-mvp-scope.md](apps/docs/docs/02-product/03-mvp-scope.md)                           |
-| Vì sao chọn X                              | [apps/docs/docs/08-adr](apps/docs/docs/08-adr)                                                                   |
-| Thuật ngữ                                  | [apps/docs/docs/01-overview/05-glossary.md](apps/docs/docs/01-overview/05-glossary.md)                           |
+| Câu hỏi                                    | Đọc                                                                                                                                                                                                                                      |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sản phẩm này là gì, toàn cảnh              | [apps/docs/docs/01-overview/01-big-picture.md](apps/docs/docs/01-overview/01-big-picture.md)                                                                                                                                             |
+| Tính năng mới đặt ở đâu                    | [apps/docs/docs/05-engineering/01-extension-points.md](apps/docs/docs/05-engineering/01-extension-points.md)                                                                                                                             |
+| Quy ước code của tầng mình sửa             | [apps/docs/docs/05-engineering/README.md](apps/docs/docs/05-engineering/README.md) → convention + **module mẫu**                                                                                                                         |
+| Module này làm gì, interface ra sao        | `apps/docs/docs/04-modules/<part>/<module>.md`                                                                                                                                                                                           |
+| Tech stack, các lớp, cây thư mục đích      | [01-tech-stack](apps/docs/docs/03-architecture/01-tech-stack.md) · [02-software-architecture](apps/docs/docs/03-architecture/02-software-architecture.md) · [03-folder-structure](apps/docs/docs/03-architecture/03-folder-structure.md) |
+| Luồng realtime, Learner Model, AI, dữ liệu | [apps/docs/docs/03-architecture](apps/docs/docs/03-architecture)                                                                                                                                                                         |
+| Phạm vi MVP, user story, AC                | [apps/docs/docs/02-product/03-mvp-scope.md](apps/docs/docs/02-product/03-mvp-scope.md)                                                                                                                                                   |
+| Vì sao chọn X                              | [apps/docs/docs/08-adr](apps/docs/docs/08-adr)                                                                                                                                                                                           |
+| Thuật ngữ                                  | [apps/docs/docs/01-overview/05-glossary.md](apps/docs/docs/01-overview/05-glossary.md)                                                                                                                                                   |
 
 > **Đừng đoán từ kiến thức chung.** Repo có quyết định riêng. Khi doc và module mẫu vênh nhau, module mẫu thắng và phải sửa doc.
 

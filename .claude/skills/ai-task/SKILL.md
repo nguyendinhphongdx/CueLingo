@@ -5,11 +5,11 @@ description: Thêm hoặc sửa một tác vụ AI (dịch realtime, tra từ, r
 
 # ai-task — Prompt + gateway + eval
 
-Convention: [ai-calls](../../../apps/docs/docs/05-engineering/conventions/ai-calls.md). Kiến trúc: [ai-architecture](../../../apps/docs/docs/03-architecture/03-ai-architecture.md).
+Convention: [ai-calls](../../../apps/docs/docs/05-engineering/conventions/ai-calls.md). Kiến trúc: [ai-architecture](../../../apps/docs/docs/03-architecture/06-ai-architecture.md).
 
 ## Thêm tác vụ mới
 
-1. **Tên tác vụ** theo dạng `<nhóm>.<việc>` (`translate.realtime`, `assist.lookup`). Ghi vào bảng tác vụ trong `apps/docs/docs/03-architecture/03-ai-architecture.md`.
+1. **Tên tác vụ** theo dạng `<nhóm>.<việc>` (`translate.realtime`, `assist.lookup`). Ghi vào bảng tác vụ trong `apps/docs/docs/03-architecture/06-ai-architecture.md`.
 2. **Prompt** `packages/prompts/src/<task>/v1.ts`:
    - `build(input) → messages`; input có Zod schema.
    - Đầu ra có cấu trúc → Zod schema cho output.

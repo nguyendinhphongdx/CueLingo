@@ -1,4 +1,4 @@
--- Initial schema for the MVP. Design: apps/docs/docs/03-architecture/04-data-model.md
+-- Initial schema for the MVP. Design: apps/docs/docs/03-architecture/07-data-model.md
 CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE users (

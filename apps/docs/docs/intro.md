@@ -14,7 +14,7 @@ CueLingo là trợ lý giao tiếp và học ngoại ngữ lấy AI làm trung t
 ```mermaid
 flowchart LR
   A[1 · Tổng quan<br/>vì sao, cho ai, hệ thống gồm gì] --> B[2 · Sản phẩm<br/>tính năng, hành trình, MVP]
-  B --> C[3 · Kiến trúc<br/>realtime, Learner Model, AI, dữ liệu]
+  B --> C[3 · Kiến trúc<br/>tech stack, các lớp, thư mục, realtime, dữ liệu]
   C --> D[4 · Phần & module<br/>mỗi module một trang]
   D --> E[5 · Engineering<br/>convention, module mẫu]
 ```
@@ -29,16 +29,16 @@ flowchart LR
 
 ## Cấu trúc
 
-| Mục                   | Nội dung                                                                               |
-| --------------------- | -------------------------------------------------------------------------------------- |
-| **1 · Tổng quan**     | Bức tranh toàn cảnh, tầm nhìn, người dùng, sơ đồ hệ thống, thuật ngữ                   |
-| **2 · Sản phẩm**      | Bản đồ tính năng, hành trình người dùng, phạm vi MVP, lộ trình, mô hình kinh doanh     |
-| **3 · Kiến trúc**     | Luồng realtime, Learner Model, kiến trúc AI, mô hình dữ liệu, bảo mật & quyền riêng tư |
-| **4 · Phần & module** | Desktop, Web, API, Workers, Shared packages, ML — mỗi module một trang cùng khuôn      |
-| **5 · Engineering**   | Extension points, convention theo tầng, checklist review, viết tài liệu                |
-| **6 · Delivery Log**  | Hồ sơ từng task: spec, plan, review                                                    |
-| **7 · Nghiên cứu**    | Khảo sát open source, benchmark STT + dịch                                             |
-| **8 · ADR**           | Các quyết định kiến trúc và lý do                                                      |
+| Mục                   | Nội dung                                                                                                                                |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **1 · Tổng quan**     | Bức tranh toàn cảnh, tầm nhìn, người dùng, sơ đồ hệ thống, thuật ngữ                                                                    |
+| **2 · Sản phẩm**      | Bản đồ tính năng, hành trình người dùng, phạm vi MVP, lộ trình, mô hình kinh doanh                                                      |
+| **3 · Kiến trúc**     | Tech stack, kiến trúc phần mềm, tổ chức thư mục, luồng realtime, Learner Model, kiến trúc AI, mô hình dữ liệu, bảo mật & quyền riêng tư |
+| **4 · Phần & module** | Desktop, Web, API, Workers, Shared packages, ML — mỗi module một trang cùng khuôn                                                       |
+| **5 · Engineering**   | Extension points, convention theo tầng, checklist review, viết tài liệu                                                                 |
+| **6 · Delivery Log**  | Hồ sơ từng task: spec, plan, review                                                                                                     |
+| **7 · Nghiên cứu**    | Khảo sát open source, benchmark STT + dịch                                                                                              |
+| **8 · ADR**           | Các quyết định kiến trúc và lý do                                                                                                       |
 
 ## Quy ước
 

@@ -31,8 +31,8 @@ Giữ đúng 6 mục: **Trách nhiệm · Phạm vi MVP · Interface · Phụ th
 
 | Link tới                | Viết                                     | Ví dụ                                                     |
 | ----------------------- | ---------------------------------------- | --------------------------------------------------------- |
-| Trang tài liệu khác     | Đường dẫn tương đối tới file `.md`       | `[Learner Model](../03-architecture/02-learner-model.md)` |
-| Một mục trong trang     | Thêm `#anchor`                           | `../03-architecture/02-learner-model.md#assist-dial`      |
+| Trang tài liệu khác     | Đường dẫn tương đối tới file `.md`       | `[Learner Model](../03-architecture/05-learner-model.md)` |
+| Một mục trong trang     | Thêm `#anchor`                           | `../03-architecture/05-learner-model.md#assist-dial`      |
 | Code, config trong repo | **Không link** — ghi đường dẫn dạng code | `` `services/api/src/modules/glossary/` ``                |
 | Bên ngoài               | URL đầy đủ                               | `https://…`                                               |
 

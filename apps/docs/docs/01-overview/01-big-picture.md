@@ -60,7 +60,7 @@ flowchart TB
 | --------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------- |
 | Live Copilot                | Hiểu và nói được ngay trong họp, trên Zoom/Meet/Teams hay bất kỳ app nào    | [Bản đồ tính năng](../02-product/01-features.md)        |
 | Insights                    | Biết mình đã hiểu bao nhiêu, bỏ lỡ gì, nên học gì sau mỗi cuộc họp          | [Hành trình](../02-product/02-user-journeys.md)         |
-| Learning Studio             | Ôn đúng những cụm từ mình gặp trong công việc, đúng lúc sắp quên            | [Learner Model](../03-architecture/02-learner-model.md) |
+| Learning Studio             | Ôn đúng những cụm từ mình gặp trong công việc, đúng lúc sắp quên            | [Learner Model](../03-architecture/05-learner-model.md) |
 | AI Coach, Planner (sau MVP) | Tập trước cuộc họp với persona khách hàng, chấm phát âm, lộ trình hằng ngày | [Lộ trình](../02-product/04-roadmap.md)                 |
 
 ## Assist Dial: tiến bộ nhìn thấy được
@@ -72,7 +72,7 @@ flowchart LR
   L5["5 · Song ngữ + AI nói thay"] --> L4["4 · Song ngữ + gợi ý câu"] --> L3["3 · Tiếng Anh + từ khó"] --> L2["2 · Chỉ từ khó"] --> L1["1 · Chỉ ghi chép"] --> L0["0 · Tự lập"]
 ```
 
-MVP có mức 4, 3, 1. Chi tiết luật hạ mức ở [Learner Model](../03-architecture/02-learner-model.md#assist-dial).
+MVP có mức 4, 3, 1. Chi tiết luật hạ mức ở [Learner Model](../03-architecture/05-learner-model.md#assist-dial).
 
 ## Hệ thống nhìn từ kỹ thuật
 
@@ -103,7 +103,7 @@ flowchart LR
 | Shared packages | Contract, SDK, logic Learner Model, AI gateway, prompt, UI | [Packages](../04-modules/05-packages/README.md) |
 | ML              | Benchmark và eval model/prompt                             | [ML](../04-modules/06-ml/README.md)             |
 
-Chi tiết các mũi tên ở [Sơ đồ hệ thống](./04-system-overview.md) và [Luồng realtime](../03-architecture/01-realtime-pipeline.md).
+Công nghệ: [Tech stack](../03-architecture/01-tech-stack.md). Các lớp và luật phụ thuộc: [Kiến trúc phần mềm](../03-architecture/02-software-architecture.md). Chi tiết các mũi tên ở [Sơ đồ hệ thống](./04-system-overview.md) và [Luồng realtime](../03-architecture/04-realtime-pipeline.md).
 
 ## Những quyết định định hình sản phẩm
 

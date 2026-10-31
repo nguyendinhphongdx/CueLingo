@@ -2,3 +2,7 @@ packages:
   - 'apps/*'
   - 'services/*'
   - 'packages/*'
+
+# @docusaurus/theme-mermaid 3.10 asks for mermaid >=11.6; mermaid 12 renders only the first diagram per page.
+overrides:
+  mermaid: ^11.6.0

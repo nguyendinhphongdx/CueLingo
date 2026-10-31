@@ -27,7 +27,7 @@ Giá cụ thể chốt sau khi đo chi phí AI thực tế/giờ họp trong bet
 | Kinh doanh | Retention D30/D90 · chuyển đổi free → trả phí · chi phí AI/user/tháng · seat B2B đang hoạt động                                              |
 | Chất lượng | Độ trễ caption p50/p95 · lỗi dịch thuật ngữ · điểm hài lòng debrief                                                                          |
 
-Event dùng để đo: catalog trong [Mô hình dữ liệu](../03-architecture/04-data-model.md#catalog-event-mvp).
+Event dùng để đo: catalog trong [Mô hình dữ liệu](../03-architecture/07-data-model.md#catalog-event-mvp).
 
 ## Cạnh tranh
 

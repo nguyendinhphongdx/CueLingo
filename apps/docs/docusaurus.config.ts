@@ -38,7 +38,7 @@ const config: Config = {
       items: [
         { to: '/overview/big-picture', label: 'Toàn cảnh', position: 'left' },
         { to: '/product/features', label: 'Sản phẩm', position: 'left' },
-        { to: '/architecture/realtime-pipeline', label: 'Kiến trúc', position: 'left' },
+        { to: '/architecture/tech-stack', label: 'Kiến trúc', position: 'left' },
         { to: '/modules', label: 'Modules', position: 'left' },
         { to: '/engineering', label: 'Engineering', position: 'left' },
         { to: '/adr', label: 'ADR', position: 'right' },

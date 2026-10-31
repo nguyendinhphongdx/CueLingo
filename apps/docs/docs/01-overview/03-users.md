@@ -42,4 +42,4 @@ Thị trường đầu tiên là **người đi làm tại Việt Nam** phải g
 | Human coach      | Review và giao bài cho người học được phân công (có đồng ý)     | Scale     |
 | Org owner        | Cấu hình bảo mật, nơi lưu dữ liệu, SSO                          | Scale     |
 
-Quyền riêng tư theo vai trò: [Bảo mật & quyền riêng tư](../03-architecture/05-security-privacy.md).
+Quyền riêng tư theo vai trò: [Bảo mật & quyền riêng tư](../03-architecture/08-security-privacy.md).

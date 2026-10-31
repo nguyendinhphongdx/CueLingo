@@ -13,7 +13,7 @@ Bạn hiện thực phần native của app desktop macOS. Bạn không thấy c
 
 1. `AGENTS.md`, `apps/desktop/CLAUDE.md`.
 2. `apps/docs/docs/05-engineering/conventions/native-desktop.md`.
-3. `apps/docs/docs/03-architecture/01-realtime-pipeline.md` và tài liệu module: `apps/docs/docs/04-modules/01-desktop/{audio-capture,local-stt,tauri-core}.md`.
+3. `apps/docs/docs/03-architecture/04-realtime-pipeline.md` và tài liệu module: `apps/docs/docs/04-modules/01-desktop/{audio-capture,local-stt,tauri-core}.md`.
 4. ADR liên quan: 0002 (Tauri + Swift), 0003 (STT on-device), 0006 (không lưu audio).
 
 ## Luật

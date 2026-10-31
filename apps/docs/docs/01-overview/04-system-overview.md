@@ -63,6 +63,6 @@ flowchart TB
 
 ## Luồng chính
 
-1. **Trong họp**: [luồng realtime](../03-architecture/01-realtime-pipeline.md). Desktop thu âm, STT on-device, gửi câu final lên API; API dịch rồi trả về overlay.
+1. **Trong họp**: [luồng realtime](../03-architecture/04-realtime-pipeline.md). Desktop thu âm, STT on-device, gửi câu final lên API; API dịch rồi trả về overlay.
 2. **Sau họp**: API enqueue `debrief.generate` → worker tạo debrief → web/desktop hiển thị → người dùng thêm cụm từ vào ôn tập.
 3. **Hằng ngày**: web lấy hàng đợi ôn tập; kết quả cập nhật FSRS và Learner Model.

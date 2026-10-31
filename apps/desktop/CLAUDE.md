@@ -1,6 +1,6 @@
 # CLAUDE.md — apps/desktop
 
-Tauri 2 + React + Swift (macOS). Thiết kế: [apps/docs/docs/04-modules/01-desktop](../docs/docs/04-modules/01-desktop/README.md), luồng [realtime](../docs/docs/03-architecture/01-realtime-pipeline.md).
+Tauri 2 + React + Swift (macOS). Thiết kế: [apps/docs/docs/04-modules/01-desktop](../docs/docs/04-modules/01-desktop/README.md), luồng [realtime](../docs/docs/03-architecture/04-realtime-pipeline.md).
 
 | Thư mục               | Ngôn ngữ | Convention                                                                  | Agent             |
 | --------------------- | -------- | --------------------------------------------------------------------------- | ----------------- |

@@ -1,6 +1,6 @@
 # Convention · Quyền riêng tư & bảo mật
 
-Nguyên tắc: [02-architecture/security-privacy](../../03-architecture/05-security-privacy.md). Đây là luật khi code.
+Nguyên tắc: [02-architecture/security-privacy](../../03-architecture/08-security-privacy.md). Đây là luật khi code.
 
 | #   | Luật                                                                                                                                   | 🔴 = chặn merge |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
