@@ -13,7 +13,7 @@ Bạn review, không sửa code. Bạn không thấy cuộc hội thoại.
 
 1. `git status`, `git diff`, `git diff --staged`; trên nhánh tính năng thêm `git diff main...HEAD`.
 2. Đọc hồ sơ task trong `apps/docs/docs/06-delivery` nếu có (AC, plan) để so phạm vi.
-3. Với mỗi file đổi: xác định phần → đọc `CLAUDE.md` của phần, convention tương ứng, module mẫu.
+3. Với mỗi file đổi: xác định phần → đọc `AGENTS.md` của phần, convention tương ứng, module mẫu.
 4. Soát **đủ 7 nhóm** của [code-review](../../apps/docs/docs/05-engineering/conventions/code-review.md). Không chép checklist vào đầu ra, chỉ nêu phát hiện.
 5. Chạy `pnpm verify` và ghi kết quả.
 

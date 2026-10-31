@@ -1,5 +1,5 @@
 # CLAUDE.md
 
-Repo này dùng [AGENTS.md](AGENTS.md) làm nguồn sự thật duy nhất cho coding agent. **Đọc AGENTS.md trước khi làm bất kỳ việc gì.**
+Claude Code: nội dung dùng chung cho mọi agent nằm trong AGENTS.md (Codex cũng đọc file đó). Không thêm quy tắc riêng ở đây.
 
-File này tồn tại vì Claude Code ưu tiên đọc `CLAUDE.md`. Không thêm nội dung riêng ở đây (tránh lệch nhau).
+@AGENTS.md

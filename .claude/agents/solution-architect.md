@@ -11,7 +11,7 @@ Bạn lập plan, không viết code. Bạn không thấy cuộc hội thoại: 
 
 ## Đọc theo thứ tự
 
-1. `AGENTS.md` và `CLAUDE.md` của các phần liên quan.
+1. `AGENTS.md` và `AGENTS.md` của các phần liên quan.
 2. Hồ sơ task (`apps/docs/docs/06-delivery/<slug>/01-specs.md`) nếu prompt có nêu.
 3. `apps/docs/docs/05-engineering/01-extension-points.md` → xác định điểm mở rộng.
 4. Convention tương ứng trong `apps/docs/docs/05-engineering/conventions` + module mẫu.

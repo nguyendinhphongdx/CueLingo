@@ -65,7 +65,7 @@ services/api/
 │       ├── progress/             🟡 (tuần 8–10)
 │       └── privacy/              🟡 (tuần 9–10)
 ├── test/integration/             ⬜ (Nền móng) repository Postgres với Testcontainers
-└── package.json · tsconfig.json · CLAUDE.md · README.md
+└── package.json · tsconfig.json · AGENTS.md · README.md
 ```
 
 ## `services/workers`
@@ -95,7 +95,7 @@ apps/web/
 │   └── lib/
 │       ├── client.ts             ✅ API client duy nhất
 │       └── query.ts              ⬜ (Nền móng) TanStack Query provider
-└── next.config.ts · package.json · CLAUDE.md
+└── next.config.ts · package.json · AGENTS.md
 ```
 
 ## `apps/desktop`

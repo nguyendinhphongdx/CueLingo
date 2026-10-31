@@ -2,23 +2,26 @@
 
 Quy ước code cho người và agent. **Đọc convention của tầng mình sửa trước khi viết code.** Khi doc và module mẫu vênh nhau thì **module mẫu thắng** (đó là code đang chạy), và phải sửa doc cho khớp.
 
-| Khi làm                                  | Đọc                                                                 | Module mẫu để copy                                   |
-| ---------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------- |
-| Thêm tính năng mới (bất kỳ)              | [extension-points](./01-extension-points.md)                        | —                                                    |
-| Trước khi viết code                      | [lazy-coding](./conventions/lazy-coding.md)                         | —                                                    |
-| Module trong `services/api`              | [api-module](./conventions/api-module.md)                           | `services/api/src/modules/glossary/`                 |
-| Feature trong `apps/web` (và UI desktop) | [web-feature](./conventions/web-feature.md)                         | `apps/web/src/features/glossary/`                    |
-| Schema dùng chung, DTO, mã lỗi           | [shared-contract](./conventions/shared-contract.md)                 | `packages/shared/src/dto/glossary.dto.ts`            |
-| Gọi API từ app                           | [shared-contract § Client](./conventions/shared-contract.md#client) | `packages/core-sdk/src/glossary.ts`                  |
-| Gọi model AI, prompt                     | [ai-calls](./conventions/ai-calls.md)                               | — (chưa có)                                          |
-| Event học tập                            | [events](./conventions/events.md)                                   | — (chưa có)                                          |
-| Swift / Rust trong `apps/desktop`        | [native-desktop](./conventions/native-desktop.md)                   | — (chưa có)                                          |
-| Test                                     | [testing](./conventions/testing.md)                                 | `services/api/src/modules/glossary/glossary.test.ts` |
-| Đặt tên                                  | [naming](./conventions/naming.md)                                   | —                                                    |
-| Dữ liệu người dùng, bí mật               | [privacy-security](./conventions/privacy-security.md)               | —                                                    |
-| Review (tự review, agent, người)         | [code-review](./conventions/code-review.md)                         | —                                                    |
-| Viết/sửa tài liệu                        | [writing-docs](./conventions/writing-docs.md)                       | —                                                    |
-| Mở hồ sơ một task                        | [06-delivery](../06-delivery/README.md)                             | `apps/docs/docs/06-delivery/_template/`              |
+| Khi làm                                  | Đọc                                                                                       | Module mẫu để copy                                   |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Làm một task (mọi agent)                 | [Workflow](./workflows/README.md) — task-loop, new-module, contract-sync, ai-task, commit | —                                                    |
+| Dựng một phần chưa có                    | [Scaffold](./scaffold/README.md) — công thức từng app/service/package                     | —                                                    |
+| Chia việc Claude ↔ Codex                 | [Phối hợp nhiều agent](./agent-collaboration.md)                                          | —                                                    |
+| Thêm tính năng mới (bất kỳ)              | [extension-points](./01-extension-points.md)                                              | —                                                    |
+| Trước khi viết code                      | [lazy-coding](./conventions/lazy-coding.md)                                               | —                                                    |
+| Module trong `services/api`              | [api-module](./conventions/api-module.md)                                                 | `services/api/src/modules/glossary/`                 |
+| Feature trong `apps/web` (và UI desktop) | [web-feature](./conventions/web-feature.md)                                               | `apps/web/src/features/glossary/`                    |
+| Schema dùng chung, DTO, mã lỗi           | [shared-contract](./conventions/shared-contract.md)                                       | `packages/shared/src/dto/glossary.dto.ts`            |
+| Gọi API từ app                           | [shared-contract § Client](./conventions/shared-contract.md#client)                       | `packages/core-sdk/src/glossary.ts`                  |
+| Gọi model AI, prompt                     | [ai-calls](./conventions/ai-calls.md)                                                     | — (chưa có)                                          |
+| Event học tập                            | [events](./conventions/events.md)                                                         | — (chưa có)                                          |
+| Swift / Rust trong `apps/desktop`        | [native-desktop](./conventions/native-desktop.md)                                         | — (chưa có)                                          |
+| Test                                     | [testing](./conventions/testing.md)                                                       | `services/api/src/modules/glossary/glossary.test.ts` |
+| Đặt tên                                  | [naming](./conventions/naming.md)                                                         | —                                                    |
+| Dữ liệu người dùng, bí mật               | [privacy-security](./conventions/privacy-security.md)                                     | —                                                    |
+| Review (tự review, agent, người)         | [code-review](./conventions/code-review.md)                                               | —                                                    |
+| Viết/sửa tài liệu                        | [writing-docs](./conventions/writing-docs.md)                                             | —                                                    |
+| Mở hồ sơ một task                        | [06-delivery](../06-delivery/README.md)                                                   | `apps/docs/docs/06-delivery/_template/`              |
 
 ## Lệnh kiểm tra
 

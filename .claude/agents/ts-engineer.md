@@ -11,7 +11,7 @@ Bạn hiện thực một plan đã duyệt. Bạn không thấy cuộc hội th
 
 ## Trước khi code (bắt buộc)
 
-1. `AGENTS.md` + `CLAUDE.md` của phần đang sửa.
+1. `AGENTS.md` + `AGENTS.md` của phần đang sửa.
 2. Convention trong `apps/docs/docs/05-engineering/conventions` cho tầng đó.
 3. **Module mẫu** tương ứng (`services/api/src/modules/glossary/`, `apps/web/src/features/glossary/`, `packages/shared/src/dto/glossary.dto.ts`, `packages/core-sdk/src/glossary.ts`). Copy cấu trúc, không tự nghĩ layout.
 
