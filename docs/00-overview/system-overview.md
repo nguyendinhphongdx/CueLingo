@@ -44,14 +44,14 @@ flowchart TB
 
 ## Các phần
 
-| Phần | Vai trò | Tài liệu |
-| --- | --- | --- |
-| Desktop app | Bề mặt chính trong họp: thu âm 2 luồng, STT on-device, overlay caption, Quick Assist | [03-parts/desktop](../03-parts/desktop/README.md) |
-| Web app | Xem lại, debrief, ôn tập, tiến bộ, quản lý dữ liệu | [03-parts/web](../03-parts/web/README.md) |
-| API service | REST + WebSocket, dịch realtime, assist, Learner Model, ôn tập | [03-parts/api](../03-parts/api/README.md) |
-| Workers | Debrief, tính lại Learner Model, TTS, dọn dữ liệu | [03-parts/workers](../03-parts/workers/README.md) |
-| Shared packages | Kiểu, SDK, logic Learner Model, AI gateway, prompt, UI | [03-parts/packages](../03-parts/packages/README.md) |
-| ML & evaluation | Benchmark và test hồi quy model/prompt | [03-parts/ml](../03-parts/ml/README.md) |
+| Phần            | Vai trò                                                                              | Tài liệu                                            |
+| --------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------- |
+| Desktop app     | Bề mặt chính trong họp: thu âm 2 luồng, STT on-device, overlay caption, Quick Assist | [03-parts/desktop](../03-parts/desktop/README.md)   |
+| Web app         | Xem lại, debrief, ôn tập, tiến bộ, quản lý dữ liệu                                   | [03-parts/web](../03-parts/web/README.md)           |
+| API service     | REST + WebSocket, dịch realtime, assist, Learner Model, ôn tập                       | [03-parts/api](../03-parts/api/README.md)           |
+| Workers         | Debrief, tính lại Learner Model, TTS, dọn dữ liệu                                    | [03-parts/workers](../03-parts/workers/README.md)   |
+| Shared packages | Kiểu, SDK, logic Learner Model, AI gateway, prompt, UI                               | [03-parts/packages](../03-parts/packages/README.md) |
+| ML & evaluation | Benchmark và test hồi quy model/prompt                                               | [03-parts/ml](../03-parts/ml/README.md)             |
 
 ## Quy tắc phụ thuộc
 

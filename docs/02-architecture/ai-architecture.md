@@ -4,26 +4,26 @@ AI được chia hai tầng: **tầng realtime** (dưới 2 giây, model nhỏ v
 
 ## Tác vụ AI trong MVP
 
-| Tác vụ | Tầng | Model (đề xuất) | Gọi từ | Prompt |
-| --- | --- | --- | --- | --- |
-| STT tiếng Anh | Realtime | Parakeet-TDT 0.6B v3 on-device; cloud STT dự phòng | desktop/local-stt, api/realtime | — |
-| Dịch câu | Realtime | LLM nhỏ (TranslateGemma 4B / Qwen3-4B hoặc LLM cloud nhỏ) | api/realtime | `translate.v1` |
-| Tra từ theo ngữ cảnh | Realtime | LLM nhỏ | api/assist | `lookup.v1` |
-| Recap 60 giây | Realtime | LLM nhỏ | api/assist | `recap.v1` |
-| Compose Việt → Anh | Realtime | LLM nhỏ | api/assist | `compose.v1` |
-| Debrief | Suy nghĩ | LLM mạnh | workers/debrief-job | `debrief.v1` (JSON schema) |
-| TTS cho thẻ ôn | Suy nghĩ | TTS cloud hoặc Kokoro | workers/tts-cache | — |
+| Tác vụ               | Tầng     | Model (đề xuất)                                           | Gọi từ                          | Prompt                     |
+| -------------------- | -------- | --------------------------------------------------------- | ------------------------------- | -------------------------- |
+| STT tiếng Anh        | Realtime | Parakeet-TDT 0.6B v3 on-device; cloud STT dự phòng        | desktop/local-stt, api/realtime | —                          |
+| Dịch câu             | Realtime | LLM nhỏ (TranslateGemma 4B / Qwen3-4B hoặc LLM cloud nhỏ) | api/realtime                    | `translate.v1`             |
+| Tra từ theo ngữ cảnh | Realtime | LLM nhỏ                                                   | api/assist                      | `lookup.v1`                |
+| Recap 60 giây        | Realtime | LLM nhỏ                                                   | api/assist                      | `recap.v1`                 |
+| Compose Việt → Anh   | Realtime | LLM nhỏ                                                   | api/assist                      | `compose.v1`               |
+| Debrief              | Suy nghĩ | LLM mạnh                                                  | workers/debrief-job             | `debrief.v1` (JSON schema) |
+| TTS cho thẻ ôn       | Suy nghĩ | TTS cloud hoặc Kokoro                                     | workers/tts-cache               | —                          |
 
 ## Agent ở các giai đoạn sau
 
-| Agent | Giai đoạn | Việc làm |
-| --- | --- | --- |
-| Reply Assistant | Learn | Gợi ý câu trả lời theo Assist level |
-| Evaluator | Learn | Chấm năng lực liên tục, gắn độ khó cho nội dung |
-| Speech Coach | Learn | Chấm phát âm bằng wav2vec2 phoneme + GOP |
-| Planner | Coach | Daily Mix, nhắc rehearsal theo lịch |
-| Content Generator | Coach | Bài nghe, drill, podcast từ dữ liệu thật |
-| Tutor / Roleplay | Coach | Hội thoại voice (Pipecat) với persona thật |
+| Agent             | Giai đoạn | Việc làm                                        |
+| ----------------- | --------- | ----------------------------------------------- |
+| Reply Assistant   | Learn     | Gợi ý câu trả lời theo Assist level             |
+| Evaluator         | Learn     | Chấm năng lực liên tục, gắn độ khó cho nội dung |
+| Speech Coach      | Learn     | Chấm phát âm bằng wav2vec2 phoneme + GOP        |
+| Planner           | Coach     | Daily Mix, nhắc rehearsal theo lịch             |
+| Content Generator | Coach     | Bài nghe, drill, podcast từ dữ liệu thật        |
+| Tutor / Roleplay  | Coach     | Hội thoại voice (Pipecat) với persona thật      |
 
 Các agent không nói chuyện tự do với nhau. Chúng cùng đọc và ghi Learner Model qua API.
 

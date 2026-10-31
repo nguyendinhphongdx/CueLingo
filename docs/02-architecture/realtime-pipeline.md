@@ -37,24 +37,24 @@ sequenceDiagram
 
 Schema đầy đủ nằm trong `@cuelingo/shared` (`ws.ts`).
 
-| Hướng | Message | Nội dung |
-| --- | --- | --- |
-| client → server | `hello` | `{sessionId, token, sttSource: "local" \| "cloud", assistLevel}` |
-| client → server | `segment.final` | `{segmentId, stream, startMs, endMs, text, words[]}` (STT local) |
-| client → server | `audio` | binary PCM frame (STT cloud) |
-| client → server | `event` | event học tập, gửi theo batch |
-| server → client | `transcript.partial` / `transcript.final` | chỉ khi dùng STT cloud |
-| server → client | `translation` | `{segmentId, textVi, hardWords[]}` |
-| server → client | `error` | `{code, retryable}` |
+| Hướng           | Message                                   | Nội dung                                                         |
+| --------------- | ----------------------------------------- | ---------------------------------------------------------------- |
+| client → server | `hello`                                   | `{sessionId, token, sttSource: "local" \| "cloud", assistLevel}` |
+| client → server | `segment.final`                           | `{segmentId, stream, startMs, endMs, text, words[]}` (STT local) |
+| client → server | `audio`                                   | binary PCM frame (STT cloud)                                     |
+| client → server | `event`                                   | event học tập, gửi theo batch                                    |
+| server → client | `transcript.partial` / `transcript.final` | chỉ khi dùng STT cloud                                           |
+| server → client | `translation`                             | `{segmentId, textVi, hardWords[]}`                               |
+| server → client | `error`                                   | `{code, retryable}`                                              |
 
 ## Ngân sách độ trễ (ước tính từ benchmark)
 
-| Bước | Ước tính | Nguồn |
-| --- | --- | --- |
-| STT final sau khi hết câu | ~0,3–0,6 s | Parakeet, ~3 s xử lý / phút audio trên M1 Pro (chưa đo streaming) |
-| Mạng client ↔ API | ~0,05–0,15 s | region châu Á |
-| Dịch 1 câu | p50 0,8 s · p95 1,5 s | TranslateGemma 4B / Qwen3-4B local; LLM cloud cần đo |
-| **Tổng** | **~1,2–2,2 s** | chưa đo end-to-end |
+| Bước                      | Ước tính              | Nguồn                                                             |
+| ------------------------- | --------------------- | ----------------------------------------------------------------- |
+| STT final sau khi hết câu | ~0,3–0,6 s            | Parakeet, ~3 s xử lý / phút audio trên M1 Pro (chưa đo streaming) |
+| Mạng client ↔ API         | ~0,05–0,15 s          | region châu Á                                                     |
+| Dịch 1 câu                | p50 0,8 s · p95 1,5 s | TranslateGemma 4B / Qwen3-4B local; LLM cloud cần đo              |
+| **Tổng**                  | **~1,2–2,2 s**        | chưa đo end-to-end                                                |
 
 ## Lỗi và phục hồi
 

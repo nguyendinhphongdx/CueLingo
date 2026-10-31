@@ -6,10 +6,10 @@ Benchmark và đánh giá chất lượng model/prompt. Không chạy trong prod
 
 ## Modules
 
-| Module | Code | Trách nhiệm |
-| --- | --- | --- |
-| [Benchmark](bench.md) | `bench` | Benchmark STT và dịch EN→VI trên máy local. |
-| [Eval](eval.md) | `eval` | Bộ test hồi quy cho prompt/model: dịch, recap, debrief. Chạy trước mỗi lần đổi model hoặc prompt. |
+| Module                | Code    | Trách nhiệm                                                                                       |
+| --------------------- | ------- | ------------------------------------------------------------------------------------------------- |
+| [Benchmark](bench.md) | `bench` | Benchmark STT và dịch EN→VI trên máy local.                                                       |
+| [Eval](eval.md)       | `eval`  | Bộ test hồi quy cho prompt/model: dịch, recap, debrief. Chạy trước mỗi lần đổi model hoặc prompt. |
 
 ## Quan hệ với phần khác
 

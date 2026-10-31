@@ -2,6 +2,8 @@
 
 > Phần: [API service](README.md) · Code: `services/api/src/modules/glossary/`
 
+> **Module mẫu** của tầng này (`services/api/src/modules/glossary/`). Module mới copy cấu trúc từ đây — xem [api-module](../../05-engineering/conventions/api-module.md).
+
 CRUD thuật ngữ cá nhân; cung cấp glossary cho realtime và STT.
 
 ## Trách nhiệm

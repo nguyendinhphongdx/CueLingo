@@ -16,3 +16,8 @@ __pycache__/
 .uvcache/
 ml/bench/data/
 .pnpm-store/
+
+# Claude Code (per-developer)
+.claude/settings.local.json
+.claude/.cc-writes/
+.claude/worktrees/

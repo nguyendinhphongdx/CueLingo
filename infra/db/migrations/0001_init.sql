@@ -70,8 +70,10 @@ CREATE TABLE glossary_terms (
   user_id          uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   term             text NOT NULL,
   translation      text,
-  note             text
+  note             text,
+  created_at       timestamptz NOT NULL DEFAULT now()
 );
+CREATE UNIQUE INDEX glossary_terms_user_term_idx ON glossary_terms (user_id, lower(term));
 
 CREATE TABLE lexical_items (
   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),

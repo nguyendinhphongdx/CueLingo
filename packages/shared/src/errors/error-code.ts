@@ -1,0 +1,21 @@
+import { z } from 'zod';
+
+/** Error codes shared by api (throws) and core-sdk (parses). Add new codes here only. */
+export const ErrorCode = {
+  Validation: 'VALIDATION_ERROR',
+  Unauthorized: 'UNAUTHORIZED',
+  Forbidden: 'FORBIDDEN',
+  NotFound: 'NOT_FOUND',
+  Conflict: 'CONFLICT',
+  Internal: 'INTERNAL_ERROR',
+} as const;
+export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
+
+export const ErrorResponseSchema = z.object({
+  error: z.object({
+    code: z.enum(ErrorCode),
+    message: z.string(),
+    details: z.unknown().optional(),
+  }),
+});
+export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;

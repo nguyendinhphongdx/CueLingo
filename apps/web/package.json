@@ -7,8 +7,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@cuelingo/shared": "workspace:*",
     "@cuelingo/core-sdk": "workspace:*",
-    "@cuelingo/ui": "workspace:*"
+    "@cuelingo/shared": "workspace:*",
+    "@cuelingo/ui": "workspace:*",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0"
   }
 }

@@ -18,18 +18,18 @@ erDiagram
   segments ||--o{ events : about
 ```
 
-| Bảng | Vai trò | Module ghi |
-| --- | --- | --- |
-| `users` | Profile, mức nghe, Assist mặc định, settings | api/auth, api/learner |
-| `sessions` | Một cuộc họp: thời gian, Assist level, nguồn STT, consent, chi phí | api/sessions |
-| `speakers` | Người nói trong phiên (`me`, `speaker_1`…) | api/realtime |
-| `segments` | Câu đã chốt: gốc, bản dịch, timestamp từng từ, embedding | api/realtime |
-| `events` | Mọi tương tác, idempotent theo `id` do client sinh | api/events |
-| `glossary_terms` | Thuật ngữ cá nhân | api/glossary |
-| `lexical_items` | Từ/cụm dùng chung | api/phrases-review |
-| `user_lexicon` | Trạng thái FSRS receptive/productive, giai đoạn, ngữ cảnh gốc | api/learner, workers/learner-recompute |
-| `debriefs` | Kết quả debrief, có phiên bản và `prompt_version` | workers/debrief-job |
-| `review_logs` | Kết quả từng lần ôn | api/phrases-review |
+| Bảng             | Vai trò                                                            | Module ghi                             |
+| ---------------- | ------------------------------------------------------------------ | -------------------------------------- |
+| `users`          | Profile, mức nghe, Assist mặc định, settings                       | api/auth, api/learner                  |
+| `sessions`       | Một cuộc họp: thời gian, Assist level, nguồn STT, consent, chi phí | api/sessions                           |
+| `speakers`       | Người nói trong phiên (`me`, `speaker_1`…)                         | api/realtime                           |
+| `segments`       | Câu đã chốt: gốc, bản dịch, timestamp từng từ, embedding           | api/realtime                           |
+| `events`         | Mọi tương tác, idempotent theo `id` do client sinh                 | api/events                             |
+| `glossary_terms` | Thuật ngữ cá nhân                                                  | api/glossary                           |
+| `lexical_items`  | Từ/cụm dùng chung                                                  | api/phrases-review                     |
+| `user_lexicon`   | Trạng thái FSRS receptive/productive, giai đoạn, ngữ cảnh gốc      | api/learner, workers/learner-recompute |
+| `debriefs`       | Kết quả debrief, có phiên bản và `prompt_version`                  | workers/debrief-job                    |
+| `review_logs`    | Kết quả từng lần ôn                                                | api/phrases-review                     |
 
 ## Quy tắc
 

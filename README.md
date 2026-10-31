@@ -31,14 +31,14 @@ docs/           Tài liệu: tổng quan → kiến trúc → từng phần → 
 
 ## Tài liệu
 
-Bắt đầu từ [docs/README.md](docs/README.md).
+Bắt đầu từ [docs/README.md](docs/README.md). Làm việc với AI agent: đọc [AGENTS.md](AGENTS.md).
 
 ## Phát triển
 
 ```bash
 pnpm install
 docker compose -f infra/docker-compose.yml up -d
-pnpm dev
+pnpm verify   # format · lint · typecheck · test · luật kiến trúc
 ```
 
-Các package hiện mới là khung (stub). Thứ tự triển khai theo [kế hoạch 12 tuần](docs/01-product/roadmap.md).
+Module mẫu đã chạy thật: `glossary` (shared → api → core-sdk → web). Các module khác mới là khung (stub). Thứ tự triển khai theo [kế hoạch 12 tuần](docs/01-product/roadmap.md).
