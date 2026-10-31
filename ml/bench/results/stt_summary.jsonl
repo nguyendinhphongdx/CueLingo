@@ -1,0 +1,4 @@
+{"model": "whisper-large-v3-turbo", "ami": {"wer": 14.27, "rtf": 0.1489, "n": 80}, "earnings22": {"wer": 8.81, "rtf": 0.104, "n": 80}}
+{"model": "parakeet-tdt-0.6b-v3", "ami": {"wer": 7.95, "rtf": 0.0433, "n": 80}, "earnings22": {"wer": 9.32, "rtf": 0.0612, "n": 80}}
+{"model": "whisper-small", "ami": {"wer": 14.98, "rtf": 0.0674, "n": 80}, "earnings22": {"wer": 10.08, "rtf": 0.0443, "n": 80}}
+{"model": "faster-whisper-small-cpu", "ami": {"wer": 15.83, "rtf": 0.1947, "n": 80}, "earnings22": {"wer": 10.27, "rtf": 0.131, "n": 80}}

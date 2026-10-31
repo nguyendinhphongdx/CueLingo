@@ -1,0 +1,4 @@
+{"model": "opus-mt-en-vi", "n": 200, "bleu": 28.1, "chrf++": 46.49, "lat_p50_s": 0.133, "lat_p95_s": 0.268}
+{"model": "translategemma-4b-4bit", "n": 200, "bleu": 27.58, "chrf++": 47.85, "lat_p50_s": 0.873, "lat_p95_s": 1.511}
+{"model": "qwen3-4b-instruct-4bit", "n": 200, "bleu": 28.06, "chrf++": 47.61, "lat_p50_s": 0.791, "lat_p95_s": 1.482}
+{"model": "translategemma-12b-4bit", "n": 200, "bleu": 27.8, "chrf++": 48.98, "lat_p50_s": 2.638, "lat_p95_s": 4.458}

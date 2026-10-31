@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.next/
+.turbo/
+target/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+
+# Python / ML
+.venv/
+__pycache__/
+.hf/
+.uvcache/
+ml/bench/data/
+.pnpm-store/

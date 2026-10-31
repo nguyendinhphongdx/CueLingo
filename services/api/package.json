@@ -1,0 +1,15 @@
+{
+  "name": "@cuelingo/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cuelingo/shared": "workspace:*",
+    "@cuelingo/ai-gateway": "workspace:*",
+    "@cuelingo/prompts": "workspace:*",
+    "@cuelingo/learner-model": "workspace:*"
+  }
+}
