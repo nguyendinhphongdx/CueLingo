@@ -7,11 +7,11 @@ Nguồn sự thật duy nhất cho mọi coding agent (Claude Code, Cursor, Code
 CueLingo: trợ lý giao tiếp + học ngoại ngữ lấy AI làm trung tâm. MVP là app desktop macOS hiển thị caption Anh → Việt trong mọi app họp, debrief sau họp và ôn tập cụm từ từ chính cuộc họp. Monorepo TypeScript (pnpm + Turborepo); Swift/Rust trong `apps/desktop`; Python chỉ trong `ml/`. Node ≥ 22, **pnpm** (không npm/yarn).
 
 ```text
-apps/       desktop (Tauri+React+Swift) · web (Next.js) · extension, mobile (chưa làm)
+apps/       desktop (Tauri+React+Swift) · web (Next.js) · docs (Docusaurus — toàn bộ tài liệu) · extension, mobile (chưa làm)
 services/   api (Fastify modular monolith) · workers (pg-boss jobs)
 packages/   shared · core-sdk · learner-model · ai-gateway · prompts · ui
 ml/         bench · eval (Python)        infra/  docker-compose, db/migrations
-docs/       00 tổng quan → 01 sản phẩm → 02 kiến trúc → 03 từng phần/module → 04 nghiên cứu → 05 engineering → 06 delivery · adr/
+apps/docs/docs/  01 tổng quan → 02 sản phẩm → 03 kiến trúc → 04 phần & module → 05 engineering → 06 delivery → 07 nghiên cứu → 08 adr
 .claude/    settings, hooks, skills, agents, commands (harness Claude Code)
 ```
 
@@ -19,19 +19,20 @@ Mỗi phần có `CLAUDE.md` (quy ước riêng) và `README.md`. Đọc cả ha
 
 ## Đọc gì trước khi làm
 
-| Câu hỏi                                    | Đọc                                                                                          |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| Tính năng mới đặt ở đâu                    | [docs/05-engineering/extension-points.md](docs/05-engineering/extension-points.md)           |
-| Quy ước code của tầng mình sửa             | [docs/05-engineering/README.md](docs/05-engineering/README.md) → convention + **module mẫu** |
-| Module này làm gì, interface ra sao        | `docs/03-parts/<part>/<module>.md`                                                           |
-| Luồng realtime, Learner Model, AI, dữ liệu | [docs/02-architecture/](docs/02-architecture/)                                               |
-| Phạm vi MVP, user story, AC                | [docs/01-product/mvp-scope.md](docs/01-product/mvp-scope.md)                                 |
-| Vì sao chọn X                              | [docs/adr/](docs/adr/)                                                                       |
-| Thuật ngữ                                  | [docs/00-overview/glossary.md](docs/00-overview/glossary.md)                                 |
+| Câu hỏi                                    | Đọc                                                                                                              |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Sản phẩm này là gì, toàn cảnh              | [apps/docs/docs/01-overview/01-big-picture.md](apps/docs/docs/01-overview/01-big-picture.md)                     |
+| Tính năng mới đặt ở đâu                    | [apps/docs/docs/05-engineering/01-extension-points.md](apps/docs/docs/05-engineering/01-extension-points.md)     |
+| Quy ước code của tầng mình sửa             | [apps/docs/docs/05-engineering/README.md](apps/docs/docs/05-engineering/README.md) → convention + **module mẫu** |
+| Module này làm gì, interface ra sao        | `apps/docs/docs/04-modules/<part>/<module>.md`                                                                   |
+| Luồng realtime, Learner Model, AI, dữ liệu | [apps/docs/docs/03-architecture](apps/docs/docs/03-architecture)                                                 |
+| Phạm vi MVP, user story, AC                | [apps/docs/docs/02-product/03-mvp-scope.md](apps/docs/docs/02-product/03-mvp-scope.md)                           |
+| Vì sao chọn X                              | [apps/docs/docs/08-adr](apps/docs/docs/08-adr)                                                                   |
+| Thuật ngữ                                  | [apps/docs/docs/01-overview/05-glossary.md](apps/docs/docs/01-overview/05-glossary.md)                           |
 
 > **Đừng đoán từ kiến thức chung.** Repo có quyết định riêng. Khi doc và module mẫu vênh nhau, module mẫu thắng và phải sửa doc.
 
-**Thứ tự ưu tiên khi xung đột:** `docs/05-engineering/` > `CLAUDE.md` của phần > file này.
+**Thứ tự ưu tiên khi xung đột:** `apps/docs/docs/05-engineering` > `CLAUDE.md` của phần > file này.
 
 ## Module mẫu (copy cấu trúc, không tự nghĩ layout)
 
@@ -52,18 +53,18 @@ Mỗi phần có `CLAUDE.md` (quy ước riêng) và `README.md`. Đọc cả ha
 6. **`@cuelingo/learner-model` là logic thuần**, không I/O.
 7. **Migration chỉ thêm file mới**, không sửa file đã chạy.
 8. **Quyền riêng tư:** không log transcript/audio/token; không lưu audio nếu người dùng chưa bật; nhà cung cấp mới nhận dữ liệu → ADR.
-9. **Spec ↔ code đồng bộ:** đổi interface/dữ liệu của module → sửa `docs/03-parts/…` trong cùng commit.
+9. **Spec ↔ code đồng bộ:** đổi interface/dữ liệu của module → sửa trang module trong `apps/docs/docs/04-modules/` trong cùng commit. Tài liệu chỉ nằm trong `apps/docs/docs/` ([cách viết](apps/docs/docs/05-engineering/conventions/writing-docs.md)).
 10. **UI tiếng Việt; code, comment, commit tiếng Anh. Docs tiếng Việt.**
 
 Luật 2–7 phần lớn được **máy kiểm** (`pnpm check:deps`, ESLint, typecheck). Vi phạm là CI đỏ.
 
 ## Cách làm việc
 
-- **Phân loại task** trước. Vặt (1–2 file, không đụng contract/schema/AI/quyền riêng tư) → code thẳng rồi `pnpm verify`. Còn lại → skill **`task-loop`**: hồ sơ `docs/06-delivery/`, ba cổng duyệt (spec, plan, kết quả).
+- **Phân loại task** trước. Vặt (1–2 file, không đụng contract/schema/AI/quyền riêng tư) → code thẳng rồi `pnpm verify`. Còn lại → skill **`task-loop`**: hồ sơ `apps/docs/docs/06-delivery`, ba cổng duyệt (spec, plan, kết quả).
 - **Plan trước** cho task ≥ 3 file hoặc ≥ 3 bước (`/plan`).
-- **Thay đổi tối thiểu.** Không refactor "tiện thể". Đi qua [lazy-coding](docs/05-engineering/conventions/lazy-coding.md) trước khi viết code mới.
+- **Thay đổi tối thiểu.** Không refactor "tiện thể". Đi qua [lazy-coding](apps/docs/docs/05-engineering/conventions/lazy-coding.md) trước khi viết code mới.
 - **Ghi rõ giả định** khi spec mơ hồ (trong hồ sơ hoặc commit).
-- **Verify trước khi báo xong:** `pnpm verify` xanh **và** chạy thật luồng vừa sửa. Native: thử trên máy với một cuộc gọi thật.
+- **Verify trước khi báo xong:** `pnpm verify` xanh **và** chạy thật luồng vừa sửa. Sửa docs → `pnpm docs:build` xanh. Native: thử trên máy với một cuộc gọi thật.
 
 ## Lệnh
 
@@ -73,6 +74,8 @@ pnpm verify                     # format:check · lint · typecheck · test · c
 pnpm test                       # vitest
 pnpm check:deps                 # luật phụ thuộc kiến trúc
 pnpm format                     # prettier
+pnpm docs:dev                   # tài liệu: http://localhost:3100
+pnpm docs:build                 # build docs + kiểm link hỏng — chạy khi sửa docs
 docker compose -f infra/docker-compose.yml up -d
 pnpm --filter @cuelingo/api dev # DATABASE_URL=… DEV_AUTH=1
 ```

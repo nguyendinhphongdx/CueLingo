@@ -21,3 +21,7 @@ ml/bench/data/
 .claude/settings.local.json
 .claude/.cc-writes/
 .claude/worktrees/
+
+# Docusaurus
+.docusaurus/
+apps/docs/build/

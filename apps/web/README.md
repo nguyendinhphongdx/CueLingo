@@ -4,4 +4,4 @@ Nơi xem lại cuộc họp, đọc debrief, ôn tập, xem tiến bộ và qu�
 
 Stack: Next.js (App Router) + React/TypeScript
 
-Thiết kế: [docs/03-parts/web/README.md](../../docs/03-parts/web/README.md)
+Thiết kế: [apps/docs/docs/04-modules/02-web/README.md](../docs/docs/04-modules/02-web/README.md)

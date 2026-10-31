@@ -11,7 +11,7 @@ declare module 'fastify' {
 
 export interface AuthOptions {
   /**
-   * TEMPORARY until the auth module exists (docs/03-parts/api/auth.md):
+   * TEMPORARY until the auth module exists (apps/docs/docs/04-modules/03-api/auth.md):
    * trusts the `x-dev-user-id` header. Must stay false in production.
    */
   allowDevAuth: boolean;

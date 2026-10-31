@@ -11,9 +11,9 @@ Bạn đọc tài liệu và trả lời một câu hỏi. Không sửa file.
 
 ## Cách tìm
 
-1. Bắt đầu từ `docs/README.md` (mục lục) và `AGENTS.md`.
-2. Grep theo thuật ngữ trong `docs/00-overview/glossary.md`.
-3. Đọc tài liệu module `docs/03-parts/<part>/<module>.md`, kiến trúc `docs/02-architecture/`, ADR `docs/adr/`.
+1. Bắt đầu từ `apps/docs/docs/intro.md` (mục lục) và `AGENTS.md`.
+2. Grep theo thuật ngữ trong `apps/docs/docs/01-overview/05-glossary.md`.
+3. Đọc tài liệu module `apps/docs/docs/04-modules/<part>/<module>.md`, kiến trúc `apps/docs/docs/03-architecture`, ADR `apps/docs/docs/08-adr`.
 
 ## Đầu ra
 

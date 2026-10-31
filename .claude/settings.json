@@ -17,6 +17,8 @@
       "Bash(pnpm format)",
       "Bash(pnpm format:check)",
       "Bash(pnpm check:deps)",
+      "Bash(pnpm docs:dev)",
+      "Bash(pnpm docs:build)",
       "Bash(pnpm --filter * typecheck)",
       "Bash(pnpm --filter * dev)",
       "Bash(pnpm --filter * build)",
@@ -105,7 +107,12 @@
   "hooks": {
     "SessionStart": [
       {
-        "hooks": [{ "type": "command", "command": "node .claude/hooks/session-start.mjs" }]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/session-start.mjs"
+          }
+        ]
       }
     ]
   }

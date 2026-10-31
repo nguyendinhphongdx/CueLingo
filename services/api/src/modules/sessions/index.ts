@@ -1,5 +1,5 @@
 /**
  * Sessions — Vòng đời cuộc họp: tạo, kết thúc, liệt kê, transcript.
- * Design: docs/03-parts/api/sessions.md
+ * Design: apps/docs/docs/04-modules/03-api/sessions.md
  */
 export {};

@@ -18,7 +18,9 @@
     "test:watch": "vitest",
     "check:deps": "depcruise apps services packages --config .dependency-cruiser.cjs",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm check:deps",
-    "prepare": "husky"
+    "prepare": "husky",
+    "docs:dev": "pnpm --filter @cuelingo/docs dev",
+    "docs:build": "pnpm --filter @cuelingo/docs build"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -4,4 +4,4 @@ Backend modular monolith: REST + realtime WebSocket, điều phối dịch, Lear
 
 Stack: Node.js + Fastify (TypeScript), WebSocket, Postgres (pgvector), pg-boss
 
-Thiết kế: [docs/03-parts/api/README.md](../../docs/03-parts/api/README.md)
+Thiết kế: [apps/docs/docs/04-modules/03-api/README.md](../../apps/docs/docs/04-modules/03-api/README.md)

@@ -1,6 +1,6 @@
 ---
 description: Lập plan cho một task bằng agent solution-architect (không viết code). Trả về plan theo mẫu 02-plan.md với ≥ 2 phương án.
-argument-hint: <mô tả task hoặc đường dẫn hồ sơ docs/06-delivery/...>
+argument-hint: <mô tả task hoặc đường dẫn hồ sơ apps/docs/docs/06-delivery...>
 allowed-tools: [Agent, Read]
 ---
 

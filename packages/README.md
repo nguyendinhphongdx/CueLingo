@@ -11,4 +11,4 @@ TypeScript packages shared by apps and services. Each package is one module with
 | [`@cuelingo/prompts`](prompts)             | Versioned prompts and output schemas                                 |
 | [`@cuelingo/ui`](ui)                       | Shared React components                                              |
 
-Design: [docs/03-parts/packages/README.md](../docs/03-parts/packages/README.md)
+Design: [apps/docs/docs/04-modules/05-packages/README.md](../apps/docs/docs/04-modules/05-packages/README.md)

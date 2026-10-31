@@ -2,4 +2,4 @@
 
 Regression tests for prompts and models (translate, recap, debrief). Run before every model or prompt change.
 
-Design: [docs/03-parts/ml/eval.md](../../docs/03-parts/ml/eval.md)
+Design: [apps/docs/docs/04-modules/06-ml/eval.md](../../apps/docs/docs/04-modules/06-ml/eval.md)

@@ -4,4 +4,4 @@ Job nền không cần realtime: debrief, tính lại Learner Model, cache TTS, 
 
 Stack: Node.js (TypeScript) + pg-boss
 
-Thiết kế: [docs/03-parts/workers/README.md](../../docs/03-parts/workers/README.md)
+Thiết kế: [apps/docs/docs/04-modules/04-workers/README.md](../../apps/docs/docs/04-modules/04-workers/README.md)

@@ -11,6 +11,8 @@ export default tseslint.config(
       '**/.turbo/**',
       '**/target/**',
       'ml/**',
+      '**/.docusaurus/**',
+      'apps/docs/build/**',
     ],
   },
   js.configs.recommended,

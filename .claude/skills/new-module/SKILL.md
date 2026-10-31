@@ -17,7 +17,7 @@ description: Tạo API module mới trong services/api hoặc feature mới tron
 5. Service (business rule, `AppError`), repository (mọi query `WHERE user_id`), routes (chỉ parse → service → DTO).
 6. Đăng ký trong `services/api/src/app.ts` + thêm repository vào `AppDeps.repos` và `server.ts`.
 7. Migration mới nếu cần bảng: `infra/db/migrations/NNNN_<x>.sql` (số tiếp theo, không sửa file cũ).
-8. Cập nhật `docs/03-parts/api/<x>.md` (Interface, Dữ liệu & sự kiện).
+8. Cập nhật `apps/docs/docs/04-modules/03-api/<x>.md` (Interface, Dữ liệu & sự kiện).
 9. `pnpm verify`.
 
 ## Web feature (`apps/web`)
@@ -25,11 +25,11 @@ description: Tạo API module mới trong services/api hoặc feature mới tron
 1. Client trước: thêm `packages/core-sdk/src/<x>.ts` + gắn vào `createClient` (theo `glossary.ts`).
 2. `cp -r apps/web/src/features/glossary apps/web/src/features/<x>` rồi đổi tên.
 3. `use-<x>.ts`: state + gọi `client.<x>`; `<X>Page.tsx`: chỉ trình bày; `index.ts`: export trang.
-4. Cập nhật `docs/03-parts/web/<x>.md`. `pnpm verify`, rồi mở thật trong trình duyệt.
+4. Cập nhật `apps/docs/docs/04-modules/02-web/<x>.md`. `pnpm verify`, rồi mở thật trong trình duyệt.
 
 ## Convention
 
-[api-module](../../../docs/05-engineering/conventions/api-module.md) · [web-feature](../../../docs/05-engineering/conventions/web-feature.md) · [shared-contract](../../../docs/05-engineering/conventions/shared-contract.md)
+[api-module](../../../apps/docs/docs/05-engineering/conventions/api-module.md) · [web-feature](../../../apps/docs/docs/05-engineering/conventions/web-feature.md) · [shared-contract](../../../apps/docs/docs/05-engineering/conventions/shared-contract.md)
 
 ## Anti-pattern
 

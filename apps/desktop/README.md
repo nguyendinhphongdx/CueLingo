@@ -4,4 +4,4 @@ App người dùng dùng trong cuộc họp: thu âm, STT on-device, overlay cap
 
 Stack: Tauri 2 (Rust) + React/TypeScript + module Swift cho audio trên macOS
 
-Thiết kế: [docs/03-parts/desktop/README.md](../../docs/03-parts/desktop/README.md)
+Thiết kế: [apps/docs/docs/04-modules/01-desktop/README.md](../docs/docs/04-modules/01-desktop/README.md)

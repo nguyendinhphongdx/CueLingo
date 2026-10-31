@@ -1,0 +1,9 @@
+{
+  "label": "Nghiên cứu",
+  "position": 7,
+  "link": {
+    "type": "generated-index",
+    "slug": "/research",
+    "description": "Khảo sát open source và benchmark."
+  }
+}

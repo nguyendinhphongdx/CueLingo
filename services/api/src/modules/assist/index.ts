@@ -1,5 +1,5 @@
 /**
  * Assist — Tra từ theo ngữ cảnh, recap, compose (Việt → Anh).
- * Design: docs/03-parts/api/assist.md
+ * Design: apps/docs/docs/04-modules/03-api/assist.md
  */
 export {};

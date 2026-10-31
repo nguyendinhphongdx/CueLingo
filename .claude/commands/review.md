@@ -1,5 +1,5 @@
 ---
-description: Review độc lập các thay đổi đang chờ bằng agent code-reviewer, theo checklist docs/05-engineering/conventions/code-review.md.
+description: Review độc lập các thay đổi đang chờ bằng agent code-reviewer, theo checklist apps/docs/docs/05-engineering/conventions/code-review.md.
 argument-hint: (tuỳ chọn) <phần cần soi kỹ>
 allowed-tools: [Agent, Bash]
 ---

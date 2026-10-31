@@ -12,7 +12,7 @@ Bạn hiện thực một plan đã duyệt. Bạn không thấy cuộc hội th
 ## Trước khi code (bắt buộc)
 
 1. `AGENTS.md` + `CLAUDE.md` của phần đang sửa.
-2. Convention trong `docs/05-engineering/conventions/` cho tầng đó.
+2. Convention trong `apps/docs/docs/05-engineering/conventions` cho tầng đó.
 3. **Module mẫu** tương ứng (`services/api/src/modules/glossary/`, `apps/web/src/features/glossary/`, `packages/shared/src/dto/glossary.dto.ts`, `packages/core-sdk/src/glossary.ts`). Copy cấu trúc, không tự nghĩ layout.
 
 ## Khi code
@@ -20,7 +20,7 @@ Bạn hiện thực một plan đã duyệt. Bạn không thấy cuộc hội th
 - Làm đúng các bước trong plan, không thêm việc ngoài phạm vi. Thấy cần đổi plan → dừng, báo lại, không tự quyết.
 - Test theo AC trước hoặc cùng lúc; module API luôn có test ranh giới người dùng.
 - Contract đổi → sửa api, core-sdk, app cùng lúc.
-- Interface/dữ liệu module đổi → sửa `docs/03-parts/…`.
+- Interface/dữ liệu module đổi → sửa `apps/docs/docs/04-modules…`.
 
 ## Trước khi trả kết quả
 

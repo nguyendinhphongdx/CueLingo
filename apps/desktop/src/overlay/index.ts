@@ -1,5 +1,5 @@
 /**
  * Caption overlay — Cửa sổ caption song ngữ nổi trên app họp.
- * Design: docs/03-parts/desktop/overlay.md
+ * Design: apps/docs/docs/04-modules/01-desktop/overlay.md
  */
 export {};

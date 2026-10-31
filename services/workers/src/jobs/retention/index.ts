@@ -1,5 +1,5 @@
 /**
  * Retention cleanup — Xoá audio hết hạn và thực hiện yêu cầu xoá dữ liệu.
- * Design: docs/03-parts/workers/retention.md
+ * Design: apps/docs/docs/04-modules/04-workers/retention.md
  */
 export {};

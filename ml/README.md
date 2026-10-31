@@ -2,4 +2,4 @@
 
 Benchmark và đánh giá chất lượng model/prompt. Không chạy trong production.
 
-Thiết kế: [docs/03-parts/ml/README.md](../docs/03-parts/ml/README.md)
+Thiết kế: [apps/docs/docs/04-modules/06-ml/README.md](../apps/docs/docs/04-modules/06-ml/README.md)

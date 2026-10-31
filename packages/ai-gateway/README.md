@@ -2,4 +2,4 @@
 
 Lớp trừu tượng nhà cung cấp AI: STT, LLM, TTS; routing theo tác vụ; log chi phí và độ trễ; fallback.
 
-Thiết kế: [docs/03-parts/packages/ai-gateway.md](../../docs/03-parts/packages/ai-gateway.md)
+Thiết kế: [apps/docs/docs/04-modules/05-packages/ai-gateway.md](../../apps/docs/docs/04-modules/05-packages/ai-gateway.md)

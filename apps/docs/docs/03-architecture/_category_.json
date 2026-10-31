@@ -1,0 +1,9 @@
+{
+  "label": "Kiến trúc",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "slug": "/architecture",
+    "description": "Thiết kế xuyên nhiều phần: realtime, Learner Model, AI, dữ liệu, bảo mật."
+  }
+}

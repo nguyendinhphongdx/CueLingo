@@ -1,6 +1,6 @@
 # CLAUDE.md — packages/learner-model
 
-Logic thuần của Learner Model. Thiết kế: [02-architecture/learner-model](../../docs/02-architecture/learner-model.md).
+Logic thuần của Learner Model. Thiết kế: [02-architecture/learner-model](../../apps/docs/docs/03-architecture/02-learner-model.md).
 
 - **Không I/O**: không fs, mạng, DB (máy kiểm). Hàm nhận state + input, trả state mới.
 - Mọi quy tắc (FSRS, giai đoạn, comprehension, Assist Dial) có unit test, kể cả ngưỡng biên.

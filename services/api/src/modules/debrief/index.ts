@@ -1,5 +1,5 @@
 /**
  * Debrief — Đọc kết quả debrief do worker tạo, nhận phản hồi.
- * Design: docs/03-parts/api/debrief.md
+ * Design: apps/docs/docs/04-modules/03-api/debrief.md
  */
 export {};

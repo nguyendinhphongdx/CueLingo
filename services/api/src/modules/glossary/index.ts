@@ -1,6 +1,6 @@
 /**
  * Glossary module — REFERENCE MODULE for services/api. Copy this folder's structure for new modules.
- * Design: docs/03-parts/api/glossary.md · Convention: docs/05-engineering/conventions/api-module.md
+ * Design: apps/docs/docs/04-modules/03-api/glossary.md · Convention: apps/docs/docs/05-engineering/conventions/api-module.md
  */
 import { glossaryRoutes } from './glossary.routes';
 import { createGlossaryService } from './glossary.service';

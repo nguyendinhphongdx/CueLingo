@@ -1,6 +1,6 @@
 /**
  * Architecture rules enforced by `pnpm check:deps`.
- * Source of truth for the rules: docs/00-overview/system-overview.md (Quy tắc phụ thuộc).
+ * Source of truth for the rules: apps/docs/docs/01-overview/04-system-overview.md (Quy tắc phụ thuộc).
  */
 module.exports = {
   forbidden: [
@@ -70,7 +70,7 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '(^|/)(dist|\\.next|\\.turbo)/' },
+    exclude: { path: '(^|/)(dist|\\.next|\\.turbo|\\.docusaurus|build)/|^apps/docs/' },
     tsConfig: { fileName: 'tsconfig.base.json' },
     tsPreCompilationDeps: true,
     combinedDependencies: true,

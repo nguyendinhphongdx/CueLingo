@@ -1,6 +1,6 @@
 ---
 name: task-loop
-description: Quy trình CueLingo cho task KHÔNG đơn giản (≥ 3 file, nhiều phần, hoặc đụng @cuelingo/shared, migration, event, prompt/model AI, dữ liệu người dùng). Mở hồ sơ docs/06-delivery, đi qua 3 cổng duyệt SPEC → PLAN → RESULT. Invoke TRƯỚC khi lập plan hoặc sửa code. Không dùng cho task vặt 1–2 file.
+description: Quy trình CueLingo cho task KHÔNG đơn giản (≥ 3 file, nhiều phần, hoặc đụng @cuelingo/shared, migration, event, prompt/model AI, dữ liệu người dùng). Mở hồ sơ apps/docs/docs/06-delivery, đi qua 3 cổng duyệt SPEC → PLAN → RESULT. Invoke TRƯỚC khi lập plan hoặc sửa code. Không dùng cho task vặt 1–2 file.
 ---
 
 # task-loop — Spec → Plan → Làm → Review
@@ -13,18 +13,18 @@ description: Quy trình CueLingo cho task KHÔNG đơn giản (≥ 3 file, nhi�
 | Không đơn giản | Còn lại                                                            | Tiếp tục                                       |
 | Nhạy cảm       | DB schema, xoá dữ liệu, bảo mật, nhà cung cấp AI mới, breaking API | Tiếp tục + nêu rủi ro ở mỗi cổng               |
 
-Mở hồ sơ: `cp -r docs/06-delivery/_template docs/06-delivery/<YYYY-MM-DD>-<slug>`
+Mở hồ sơ: `cp -r apps/docs/docs/06-delivery/_template apps/docs/docs/06-delivery/<YYYY-MM-DD>-<slug>`
 
 ## 1. Spec → `01-specs.md`
 
-- Đọc: `docs/01-product/mvp-scope.md`, `docs/03-parts/<part>/<module>.md` liên quan. **Chưa đọc code** ở bước này.
+- Đọc: `apps/docs/docs/02-product/03-mvp-scope.md`, `apps/docs/docs/04-modules/<part>/<module>.md` liên quan. **Chưa đọc code** ở bước này.
 - Viết §1 Vấn đề (không nói giải pháp), §2 AC theo EARS (mỗi AC kiểm chứng được), §3 Câu hỏi mở.
 
 **⛔ CỔNG SPEC.** Trình `01-specs.md`. Hỏi: _"Vấn đề và AC đúng chưa? Bắt đầu thiết kế được chưa?"_ Chờ người dùng đồng ý.
 
 ## 2. Plan → `02-plan.md`
 
-1. Đọc `docs/05-engineering/extension-points.md` → task chạm những điểm mở rộng nào.
+1. Đọc `apps/docs/docs/05-engineering/01-extension-points.md` → task chạm những điểm mở rộng nào.
 2. Đọc convention tương ứng + `CLAUDE.md` của phần + **module mẫu**.
 3. Đọc code liên quan (Glob/Grep/Read ở luồng chính; nhiều tài liệu → agent `docs-explorer`).
 4. Ghi một lần: bối cảnh code, **≥ 2 phương án**, phương án chọn + lý do, bảng tác động, các bước (mỗi bước ≈ 1 commit), rủi ro.
@@ -37,7 +37,7 @@ Mở hồ sơ: `cp -r docs/06-delivery/_template docs/06-delivery/<YYYY-MM-DD>-<
 - Thứ tự: contract (`skill contract-sync`) → migration → API module → client → app. Module mới: skill `new-module`. Tác vụ AI: skill `ai-task`.
 - Viết test theo AC **trước hoặc cùng lúc** với code.
 - Giao việc: TypeScript → agent `ts-engineer`; Swift/Rust → `native-engineer`; hoặc làm ở luồng chính.
-- Cập nhật `docs/03-parts/…` khi interface/dữ liệu đổi.
+- Cập nhật `apps/docs/docs/04-modules…` khi interface/dữ liệu đổi.
 - Sau mỗi bước: `pnpm verify`. Đỏ thì sửa trước khi sang bước sau.
 
 ## 4. Review → `03-review.md`

@@ -12,14 +12,14 @@ Bạn hiện thực phần native của app desktop macOS. Bạn không thấy c
 ## Đọc trước
 
 1. `AGENTS.md`, `apps/desktop/CLAUDE.md`.
-2. `docs/05-engineering/conventions/native-desktop.md`.
-3. `docs/02-architecture/realtime-pipeline.md` và tài liệu module: `docs/03-parts/desktop/{audio-capture,local-stt,tauri-core}.md`.
+2. `apps/docs/docs/05-engineering/conventions/native-desktop.md`.
+3. `apps/docs/docs/03-architecture/01-realtime-pipeline.md` và tài liệu module: `apps/docs/docs/04-modules/01-desktop/{audio-capture,local-stt,tauri-core}.md`.
 4. ADR liên quan: 0002 (Tauri + Swift), 0003 (STT on-device), 0006 (không lưu audio).
 
 ## Luật
 
 - Native chỉ làm việc cần native; logic sản phẩm ở TypeScript.
-- Thêm/đổi command hoặc event qua ranh giới → cập nhật bảng trong `docs/03-parts/desktop/tauri-core.md`; payload JSON có schema để phía TS parse bằng Zod.
+- Thêm/đổi command hoặc event qua ranh giới → cập nhật bảng trong `apps/docs/docs/04-modules/01-desktop/tauri-core.md`; payload JSON có schema để phía TS parse bằng Zod.
 - Thread audio: không cấp phát, không chặn I/O, không log mỗi frame.
 - Không ghi audio ra đĩa trừ khi người dùng bật lưu audio. Token chỉ trong Keychain.
 - Rust: `cargo fmt`, `cargo clippy -- -D warnings`, không `unwrap()` ở đường có thể lỗi. Swift: không force-unwrap ở đường có thể lỗi.

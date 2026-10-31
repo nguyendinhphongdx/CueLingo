@@ -16,7 +16,7 @@ description: Tạo commit theo Conventional Commits cho repo CueLingo — chia t
 ```text
 <type>(<scope>): <subject, imperative, ≤ 72 ký tự>
 
-<body: vì sao thay đổi, không lặp lại diff. Link hồ sơ docs/06-delivery/… hoặc ADR nếu có.>
+<body: vì sao thay đổi, không lặp lại diff. Link hồ sơ apps/docs/docs/06-delivery… hoặc ADR nếu có.>
 ```
 
 | type       | Khi                             |

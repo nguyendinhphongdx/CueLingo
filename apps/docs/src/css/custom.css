@@ -1,0 +1,23 @@
+:root {
+  --ifm-color-primary: #2563eb;
+  --ifm-color-primary-dark: #1d4ed8;
+  --ifm-color-primary-darker: #1e40af;
+  --ifm-color-primary-darkest: #1e3a8a;
+  --ifm-color-primary-light: #3b82f6;
+  --ifm-color-primary-lighter: #60a5fa;
+  --ifm-color-primary-lightest: #93c5fd;
+  --ifm-code-font-size: 92%;
+  /* Infima leaves the light background transparent; set it so dark-canvas browsers render correctly. */
+  --ifm-background-color: #ffffff;
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #60a5fa;
+  --ifm-background-color: #1b1b1d;
+}
+
+/* Wide tables scroll instead of squashing columns. */
+.markdown table {
+  display: block;
+  overflow-x: auto;
+}

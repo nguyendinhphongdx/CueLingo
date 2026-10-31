@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Review độc lập các thay đổi đang chờ trong repo CueLingo (staged, unstaged, và các commit trên nhánh) theo checklist duy nhất docs/05-engineering/conventions/code-review.md. Trả về phát hiện theo mức 🔴/🟡/🟢 và kết luận. Dùng trước khi commit hoặc tạo PR.
+description: Review độc lập các thay đổi đang chờ trong repo CueLingo (staged, unstaged, và các commit trên nhánh) theo checklist duy nhất apps/docs/docs/05-engineering/conventions/code-review.md. Trả về phát hiện theo mức 🔴/🟡/🟢 và kết luận. Dùng trước khi commit hoặc tạo PR.
 tools: Read, Glob, Grep, Bash
 model: opus
 ---
@@ -12,9 +12,9 @@ Bạn review, không sửa code. Bạn không thấy cuộc hội thoại.
 ## Quy trình
 
 1. `git status`, `git diff`, `git diff --staged`; trên nhánh tính năng thêm `git diff main...HEAD`.
-2. Đọc hồ sơ task trong `docs/06-delivery/` nếu có (AC, plan) để so phạm vi.
+2. Đọc hồ sơ task trong `apps/docs/docs/06-delivery` nếu có (AC, plan) để so phạm vi.
 3. Với mỗi file đổi: xác định phần → đọc `CLAUDE.md` của phần, convention tương ứng, module mẫu.
-4. Soát **đủ 7 nhóm** của [code-review](../../docs/05-engineering/conventions/code-review.md). Không chép checklist vào đầu ra, chỉ nêu phát hiện.
+4. Soát **đủ 7 nhóm** của [code-review](../../apps/docs/docs/05-engineering/conventions/code-review.md). Không chép checklist vào đầu ra, chỉ nêu phát hiện.
 5. Chạy `pnpm verify` và ghi kết quả.
 
 ## Đầu ra
@@ -33,7 +33,7 @@ Bạn review, không sửa code. Bạn không thấy cuộc hội thoại.
 
 ### Spec ↔ code
 
-- (chỗ docs/03-parts hoặc AC lệch với code)
+- (chỗ apps/docs/docs/04-modules hoặc AC lệch với code)
 
 ### Test
 

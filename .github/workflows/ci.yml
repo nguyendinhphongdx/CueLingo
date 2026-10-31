@@ -22,3 +22,5 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # format:check · lint · typecheck · test · check:deps (architecture rules)
       - run: pnpm verify
+      # Docusaurus build fails on broken links
+      - run: pnpm docs:build

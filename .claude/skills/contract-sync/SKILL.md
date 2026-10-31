@@ -10,7 +10,7 @@ description: Thêm hoặc đổi schema/DTO/mã lỗi/event trong @cuelingo/shar
 1. **Schema trước** trong `packages/shared/src/`:
    - DTO: `dto/<x>.dto.ts` — `<X>Schema`, `Create<X>Schema`, `Update<X>Schema`, `<X>ListSchema` + type `z.infer`/`z.input`/`z.output`.
    - Mã lỗi: chỉ thêm vào `errors/error-code.ts`.
-   - Event: `events/` (xem [events](../../../docs/05-engineering/conventions/events.md)).
+   - Event: `events/` (xem [events](../../../apps/docs/docs/05-engineering/conventions/events.md)).
    - Re-export ở `src/index.ts`.
 2. Test schema: chấp nhận input hợp lệ, từ chối input sai, giá trị mặc định.
 3. Chạy `pnpm typecheck` → **danh sách lỗi chính là danh sách chỗ cần sửa**. Sửa hết:
