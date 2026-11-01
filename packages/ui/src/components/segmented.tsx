@@ -27,7 +27,7 @@ export function Segmented<T extends string>({
         hover={false}
         transition={spring.pop}
         className="bg-card rounded-lg shadow-sm ring-1 ring-black/5 dark:ring-white/10"
-        containerClassName="grid"
+        containerClassName="grid grid-flow-col auto-cols-fr"
         mode="parent"
       >
         {options.map((option) => {
