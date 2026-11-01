@@ -17,9 +17,9 @@ Cài đặt trong app: phím tắt, Assist mặc định, lưu audio, nguồn ST
 
 ## Interface
 
-- `<AssistSettings />`: chọn Assist level `4`, `3` hoặc `1`
+- `<AssistSettings />`: chọn Assist level `4`, `3`, `1` hoặc `0`
 - `useSettings`: store `{assistLevel, setAssistLevel()}` trong bộ nhớ của webview
-- Gọi `native.setAssistLevel(level)` khi người dùng đổi mức
+- Gọi `native.setAssistLevel(level)` và `native.publishSettings({assistLevel})` khi người dùng đổi mức
 - Giai đoạn sau dùng `GET/PATCH /v1/me/settings` để lưu bền
 
 ## Phụ thuộc
@@ -31,7 +31,7 @@ Cài đặt trong app: phím tắt, Assist mặc định, lưu audio, nguồn ST
 
 ## Dữ liệu & sự kiện
 
-- Assist level hiện chỉ nằm trong bộ nhớ của cửa sổ `main`
+- Cửa sổ `main` giữ Assist level trong bộ nhớ và phát event `settings` để overlay đổi ngay
 
 ## Câu hỏi mở
 

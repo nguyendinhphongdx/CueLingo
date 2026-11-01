@@ -2,15 +2,15 @@
 
 > Phần: [Desktop app](./README.md) · Code: `apps/desktop/src/session/`
 
-Máy trạng thái của một cuộc họp phía client: kết nối backend, giữ danh sách câu, áp dụng Assist level.
+Máy trạng thái của một cuộc họp phía client: nhận segment từ STT native, kết nối backend và chuyển transcript sang overlay.
 
 ## Trách nhiệm
 
-- Trạng thái `idle → starting → live → ending → debriefing`
-- Mở phiên qua `core-sdk`, gửi transcript final (STT local) hoặc audio (STT cloud)
-- Ghép transcript và bản dịch theo `segmentId`, giữ 200 câu gần nhất trong bộ nhớ
-- Ghi tín hiệu học tập (`lookup`, `translation_expanded`, `ask_recap`…) qua `core-sdk`
-- Tự kết thúc sau 5 phút im lặng
+- Trạng thái kết nối `idle | connecting | running | reconnecting | error`
+- Gọi `native.sessionStart/Stop`, đăng ký `native.onSegment` và mở WebSocket qua `createRealtimeClient`
+- Phát ngay mọi segment sang overlay; chỉ gửi segment final của luồng `system` lên API
+- Ghép bản dịch từ API với câu gốc theo `segmentId`, rồi phát lại sang overlay
+- Chế độ demo phát 6 segment giả cách nhau 1,5 giây qua cùng đường xử lý segment
 
 ## Phạm vi MVP
 
@@ -18,20 +18,24 @@ Máy trạng thái của một cuộc họp phía client: kết nối backend, g
 
 ## Interface
 
-- `<SessionPanel />`: bắt đầu/dừng phiên và hiện/ẩn overlay
+- `<SessionPanel />`: bắt đầu/dừng phiên, hiện trạng thái kết nối, hiện/ẩn overlay và nút demo trong môi trường dev
 - `startSession(assistLevel)`, `stopSession()`, `toggleOverlay()`: action gọi duy nhất qua cầu nối native
 - `describeNativeError(error)`: chuyển mã lỗi native thành thông báo tiếng Việt
-- Store `useSession()` với `{status, segments, assistLevel, start(), stop()}` thuộc giai đoạn realtime, chưa triển khai
+- `createSessionController({ native, createRealtime, now })`: controller inject dependency để test không cần Tauri/WebSocket
+- `useSession()`: snapshot `{status, error}` và action `start()`, `stop()`, `runDemo()`
+- Cấu hình: `VITE_API_URL` (mặc định `ws://localhost:4000`) và `VITE_REALTIME_TOKEN` (mặc định `dev-token`)
 
 ## Phụ thuộc
 
-- TanStack Query
 - Cầu nối `apps/desktop/src/lib/native.ts`
-- `@cuelingo/core-sdk`, `@cuelingo/shared` (giai đoạn realtime)
+- `@cuelingo/core-sdk`, `@cuelingo/shared`
 
 ## Dữ liệu & sự kiện
 
-- Events: `session_started`, `session_ended`, `segment_final`, `assist_level_changed`
+- Native vào: `segment`
+- Native ra: `transcript`
+- WebSocket ra: `hello`, `segment.final`
+- WebSocket vào: `ready`, `translation`, `error`
 
 ## Câu hỏi mở
 
