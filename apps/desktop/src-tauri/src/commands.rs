@@ -30,8 +30,10 @@ pub struct SessionStartResult {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PermissionsStatus {
-    microphone: &'static str,
-    screen_capture: &'static str,
+    /// `granted`, `denied`, `undetermined` or `unknown` (sidecar missing).
+    microphone: String,
+    /// macOS cannot report this one; it stays `unknown` until `check_system_audio` proves it.
+    system_audio: String,
 }
 
 #[tauri::command]
@@ -63,13 +65,74 @@ pub fn session_stop(state: State<AppState>) -> Result<(), String> {
     state.audio.stop()
 }
 
-/// Real checks (TCC) arrive with the native audio package.
+/// Runs the sidecar in a one-shot mode and returns the JSON line whose `type` is `kind`.
+fn probe_sidecar(flag: &str, kind: &str) -> Option<serde_json::Value> {
+    let path = crate::audio_bridge::sidecar_path()?;
+    let output = std::process::Command::new(path).arg(flag).output().ok()?;
+    String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
+        .find(|value| value.get("type").and_then(|t| t.as_str()) == Some(kind))
+}
+
+fn probe_field(value: &Option<serde_json::Value>, key: &str) -> String {
+    value
+        .as_ref()
+        .and_then(|v| v.get(key))
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown")
+        .to_string()
+}
+
+/// The microphone state comes from macOS (via the sidecar, so the answer is for the app's own bundle).
 #[tauri::command]
-pub fn permissions_status() -> PermissionsStatus {
+pub async fn permissions_status() -> PermissionsStatus {
+    let probe =
+        tauri::async_runtime::spawn_blocking(|| probe_sidecar("--permissions", "permissions"))
+            .await
+            .ok()
+            .flatten();
     PermissionsStatus {
-        microphone: "unknown",
-        screen_capture: "unknown",
+        microphone: probe_field(&probe, "microphone"),
+        system_audio: "unknown".to_string(),
     }
+}
+
+/// Plays a short system sound and reports `granted`, `silent` (no permission or muted) or `error`.
+#[tauri::command]
+pub async fn check_system_audio() -> String {
+    let probe = tauri::async_runtime::spawn_blocking(|| {
+        probe_sidecar("--check-system-audio", "system-audio")
+    })
+    .await
+    .ok()
+    .flatten();
+    probe_field(&probe, "state")
+}
+
+/// Which URLs the app may open outside itself: web pages and the macOS privacy panes it points people to.
+fn is_openable(url: &str) -> bool {
+    url.starts_with("https://")
+        || url.starts_with("http://")
+        || matches!(
+            url,
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
+                | "x-apple.systempreferences:com.apple.preference.security?Privacy_AudioCapture"
+                | "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
+        )
+}
+
+/// Opens a web page or a privacy settings pane with the system handler.
+#[tauri::command]
+pub fn open_external(url: String) -> Result<(), String> {
+    if !is_openable(&url) {
+        return Err("url_not_allowed".into());
+    }
+    std::process::Command::new("/usr/bin/open")
+        .arg(&url)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -91,9 +154,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn permissions_are_unknown_until_native_audio_lands() {
-        let status = permissions_status();
-        assert_eq!(status.microphone, "unknown");
-        assert_eq!(status.screen_capture, "unknown");
+    fn only_web_pages_and_privacy_panes_open() {
+        assert!(is_openable("https://cuelingo.app/sessions/1"));
+        assert!(is_openable(
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
+        ));
+        assert!(!is_openable("file:///etc/passwd"));
+        assert!(!is_openable(
+            "x-apple.systempreferences:com.apple.preference.general"
+        ));
+        assert!(!is_openable("javascript:alert(1)"));
+    }
+
+    #[test]
+    fn probe_field_defaults_to_unknown() {
+        assert_eq!(probe_field(&None, "microphone"), "unknown");
+        let value = Some(serde_json::json!({ "microphone": "granted" }));
+        assert_eq!(probe_field(&value, "microphone"), "granted");
+        assert_eq!(probe_field(&value, "state"), "unknown");
     }
 }

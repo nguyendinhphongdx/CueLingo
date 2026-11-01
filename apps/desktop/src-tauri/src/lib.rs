@@ -17,6 +17,8 @@ pub fn run() {
             commands::session_start,
             commands::session_stop,
             commands::permissions_status,
+            commands::check_system_audio,
+            commands::open_external,
             commands::set_assist_level,
             commands::toggle_overlay,
         ])

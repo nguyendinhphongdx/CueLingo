@@ -3,26 +3,29 @@ import { describe, expect, it } from 'vitest';
 import { describePermission, PermissionsStatusView } from './PermissionsStep';
 
 describe('PermissionsStep', () => {
-  it('describes denied and unknown permissions in Vietnamese', () => {
+  it('describes each permission state in Vietnamese', () => {
     expect(describePermission('microphone', 'denied')).toContain('Cài đặt hệ thống');
-    expect(describePermission('screenCapture', 'unknown')).toContain('Chưa xác định');
+    expect(describePermission('microphone', 'undetermined')).toContain('macOS sẽ hỏi');
+    expect(describePermission('systemAudio', 'granted')).toContain('đã được cấp quyền');
+    expect(describePermission('systemAudio', 'unknown')).toContain('Chưa kiểm tra được');
   });
 
-  it('shows guidance for each permission that is not granted', () => {
+  it('lists both permissions with their own guidance', () => {
     const markup = renderToStaticMarkup(
-      <PermissionsStatusView status={{ microphone: 'denied', screenCapture: 'unknown' }} />,
+      <PermissionsStatusView status={{ microphone: 'denied', systemAudio: 'unknown' }} />,
     );
 
     expect(markup).toContain('Micrô đang bị từ chối');
-    expect(markup).toContain('Chưa xác định quyền ghi màn hình');
+    expect(markup).toContain('Chưa kiểm tra được quyền âm thanh hệ thống');
   });
 
-  it('shows ready state when both permissions are granted', () => {
+  it('marks granted permissions as ready', () => {
     const markup = renderToStaticMarkup(
-      <PermissionsStatusView status={{ microphone: 'granted', screenCapture: 'granted' }} />,
+      <PermissionsStatusView status={{ microphone: 'granted', systemAudio: 'granted' }} />,
     );
 
-    expect(markup).toContain('đã sẵn sàng');
-    expect(markup).not.toContain('Cài đặt hệ thống');
+    expect(markup).toContain('Micrô đã được cấp quyền');
+    expect(markup).toContain('Âm thanh hệ thống đã được cấp quyền');
+    expect(markup).not.toContain('Mở Cài đặt hệ thống');
   });
 });

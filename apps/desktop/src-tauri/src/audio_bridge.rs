@@ -19,7 +19,7 @@ pub struct AudioBridge {
 }
 
 /// Where the sidecar binary lives: `CUELINGO_AUDIO_BIN`, next to the app executable (bundled), or the dev build.
-fn sidecar_path() -> Option<PathBuf> {
+pub(crate) fn sidecar_path() -> Option<PathBuf> {
     if let Ok(path) = std::env::var("CUELINGO_AUDIO_BIN") {
         return Some(PathBuf::from(path));
     }
