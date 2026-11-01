@@ -17,6 +17,9 @@ import {
 } from './modules/review';
 import { createSessionsModule, type SessionsRepository } from './modules/sessions';
 
+/** Origins of the desktop webview (bundled app, Windows bundle, `tauri dev`). It signs in with a bearer token, not cookies. */
+const DESKTOP_ORIGINS = ['tauri://localhost', 'http://tauri.localhost', 'http://localhost:1420'];
+
 export interface AppDeps {
   repos: {
     debrief: DebriefRepository;
@@ -49,7 +52,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   // CORS first, so preflight requests are answered before the auth hook runs.
   // @fastify/cors only allows GET, HEAD and POST by default; the glossary needs PATCH and DELETE from the browser.
   await app.register(cors, {
-    origin: deps.webOrigin,
+    // The desktop app's webview has its own origin: tauri://localhost when bundled, the Vite dev server otherwise.
+    origin: [deps.webOrigin, ...DESKTOP_ORIGINS],
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE'],
   });

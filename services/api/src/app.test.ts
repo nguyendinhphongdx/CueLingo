@@ -92,4 +92,17 @@ describe('local development bearer token', () => {
     });
     expect(response.statusCode).toBe(401);
   });
+
+  it('answers preflight requests from the desktop webview origin', async () => {
+    const response = await app.inject({
+      method: 'OPTIONS',
+      url: '/v1/sessions',
+      headers: {
+        origin: 'tauri://localhost',
+        'access-control-request-method': 'POST',
+        'access-control-request-headers': 'authorization,content-type',
+      },
+    });
+    expect(response.headers['access-control-allow-origin']).toBe('tauri://localhost');
+  });
 });
