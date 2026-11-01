@@ -20,16 +20,18 @@ const gateway = config.GEMINI_API_KEY
     })
   : undefined;
 
+async function verifyToken(token: string): Promise<string | null> {
+  if (!config.REALTIME_DEV_TOKEN || token !== config.REALTIME_DEV_TOKEN) return null;
+  if (config.REALTIME_DEV_USER_ID) return config.REALTIME_DEV_USER_ID;
+  const [profile] = await sql<{ user_id: string }[]>`
+    SELECT user_id FROM learner_profiles ORDER BY created_at LIMIT 1`;
+  return profile?.user_id ?? null;
+}
+
 const realtime = gateway
   ? {
       gateway,
-      async verifyToken(token: string): Promise<string | null> {
-        if (!config.REALTIME_DEV_TOKEN || token !== config.REALTIME_DEV_TOKEN) return null;
-        if (config.REALTIME_DEV_USER_ID) return config.REALTIME_DEV_USER_ID;
-        const [profile] = await sql<{ user_id: string }[]>`
-          SELECT user_id FROM learner_profiles ORDER BY created_at LIMIT 1`;
-        return profile?.user_id ?? null;
-      },
+      verifyToken,
       async glossary(userId: string) {
         return (await glossaryRepository.list(userId))
           .slice(0, 50)
@@ -45,6 +47,8 @@ const app = await buildApp({
   authRoutes: authModule.routes,
   webOrigin: config.WEB_ORIGIN,
   realtime,
+  assist: gateway ? { gateway } : undefined,
+  verifyDevToken: config.NODE_ENV === 'production' ? undefined : verifyToken,
   logger: true,
 });
 
@@ -52,7 +56,7 @@ function logAiCall({ task, model, latencyMs }: AiCallRecord): void {
   app.log.info({ task, model, latencyMs }, 'AI call completed');
 }
 
-if (!gateway) app.log.warn('Realtime WebSocket disabled because GEMINI_API_KEY is not set');
+if (!gateway) app.log.warn('Realtime and Quick Assist disabled because GEMINI_API_KEY is not set');
 
 const shutdown = async () => {
   await app.close();

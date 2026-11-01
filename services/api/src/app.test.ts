@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { AiGateway } from '@cuelingo/ai-gateway';
 import type { FastifyInstance } from 'fastify';
 import { buildTestApp } from './testing';
 
@@ -33,5 +34,62 @@ describe('CORS for the web app', () => {
   it('does not grant access to another origin', async () => {
     const res = await preflight('DELETE', 'https://evil.example');
     expect(res.headers['access-control-allow-origin']).not.toBe('https://evil.example');
+  });
+});
+
+describe('local development bearer token', () => {
+  const DEV_TOKEN = 'local-development-token';
+  const DEV_USER = 'local-user';
+  let app: FastifyInstance;
+
+  beforeEach(async () => {
+    const json = (async () => ({
+      term: 'table',
+      meaningVi: 'hoãn',
+      exampleEn: 'Let us table this topic.',
+    })) as AiGateway['json'];
+    app = await buildTestApp({
+      assist: { gateway: { json } },
+      resolveUserId: async () => null,
+      verifyDevToken: async (token) => (token === DEV_TOKEN ? DEV_USER : null),
+    });
+  });
+  afterEach(() => app.close());
+
+  it('accepts the realtime development token for assist routes', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/assist/lookup',
+      headers: { authorization: `Bearer ${DEV_TOKEN}` },
+      payload: { term: 'table' },
+    });
+    expect(response.statusCode).toBe(200);
+  });
+
+  it('accepts the token at the events auth boundary but nowhere else', async () => {
+    const events = await app.inject({
+      method: 'POST',
+      url: '/v1/events',
+      headers: { authorization: `Bearer ${DEV_TOKEN}` },
+      payload: {},
+    });
+    expect(events.statusCode).toBe(404);
+
+    const glossary = await app.inject({
+      method: 'GET',
+      url: '/v1/glossary',
+      headers: { authorization: `Bearer ${DEV_TOKEN}` },
+    });
+    expect(glossary.statusCode).toBe(401);
+  });
+
+  it('rejects a bad development token', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/assist/lookup',
+      headers: { authorization: 'Bearer bad-token' },
+      payload: { term: 'table' },
+    });
+    expect(response.statusCode).toBe(401);
   });
 });

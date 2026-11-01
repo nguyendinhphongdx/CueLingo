@@ -1,5 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { ComposeResponseSchema, LookupResponseSchema } from '@cuelingo/shared';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AiGatewayError, createAiGateway, type AiCallRecord, type GenerateFn } from './gateway';
+import { TASKS } from './tasks';
 
 const make = (generate: GenerateFn, calls: AiCallRecord[] = []) =>
   createAiGateway({ googleApiKey: 'test', generate, onCall: (c) => calls.push(c) });
@@ -43,5 +45,67 @@ describe('ai-gateway translate.realtime', () => {
     });
     await make(generate).llm('translate.realtime', { text: 'Hi' });
     expect(generate).toHaveBeenCalled();
+  });
+});
+
+describe('ai-gateway structured assist tasks', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('routes all assist tasks to the configured model with an 8 second timeout', () => {
+    for (const task of ['assist.lookup', 'assist.recap', 'assist.compose'] as const) {
+      expect(TASKS[task]).toMatchObject({ model: 'gemini-3.5-flash-lite', timeoutMs: 8_000 });
+    }
+  });
+
+  it('honors AI_ASSIST_MODEL for every assist task', async () => {
+    vi.stubEnv('AI_ASSIST_MODEL', 'custom-assist-model');
+    vi.resetModules();
+    const { TASKS: configuredTasks } = await import('./tasks');
+    expect(configuredTasks['assist.lookup'].model).toBe('custom-assist-model');
+    expect(configuredTasks['assist.recap'].model).toBe('custom-assist-model');
+    expect(configuredTasks['assist.compose'].model).toBe('custom-assist-model');
+  });
+
+  it('parses and validates JSON with the supplied schema', async () => {
+    const generate = vi.fn<GenerateFn>(async () => ({
+      text: JSON.stringify({ term: 'table', meaningVi: 'hoãn', exampleEn: 'Let us table it.' }),
+    }));
+    const output = await make(generate).json(
+      'assist.lookup',
+      { term: 'table', context: 'Let us table it.' },
+      LookupResponseSchema,
+    );
+    expect(output.meaningVi).toBe('hoãn');
+    expect(generate).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries once after invalid JSON or schema output', async () => {
+    const generate = vi
+      .fn<GenerateFn>()
+      .mockResolvedValueOnce({ text: '{bad json' })
+      .mockResolvedValueOnce({
+        text: JSON.stringify({
+          options: [{ en: 'Could you clarify?' }, { en: 'Would you explain?' }],
+        }),
+      });
+    const output = await make(generate).json(
+      'assist.compose',
+      { intentVi: 'Bạn giải thích rõ hơn được không?' },
+      ComposeResponseSchema,
+    );
+    expect(output.options).toHaveLength(2);
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(generate.mock.calls[1]![0].prompt).toContain('previous response was invalid');
+  });
+
+  it('throws AiGatewayError after two invalid responses', async () => {
+    const generate = vi.fn<GenerateFn>(async () => ({ text: '{}' }));
+    await expect(
+      make(generate).json('assist.lookup', { term: 'table' }, LookupResponseSchema),
+    ).rejects.toBeInstanceOf(AiGatewayError);
+    expect(generate).toHaveBeenCalledTimes(2);
   });
 });

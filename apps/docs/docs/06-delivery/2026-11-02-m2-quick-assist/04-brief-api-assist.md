@@ -39,3 +39,29 @@ Không có mạng; dependency đã cài sẵn; không `pnpm add`; test dùng gat
 Được sửa/tạo: `packages/prompts/**`, `packages/ai-gateway/**`, `services/api/**` (module assist, `app.ts`, `server.ts`, `lib/auth.ts`, `lib/errors.ts`), `packages/shared/src/errors/error-code.ts` (chỉ thêm `AssistFailed`), doc module. Không sửa: `apps/**`, `infra/**`, `package.json`, `pnpm-lock.yaml`, `packages/shared/src/dto/*`. Không commit/push. Chạy `pnpm verify` trước khi báo.
 
 ## Kết quả _(implementer điền)_
+
+### File đã đổi
+
+- Thêm prompt phiên bản, fixture và test cho `lookup`, `recap`, `compose` trong `packages/prompts/src/`; export qua `packages/prompts/src/index.ts`.
+- Thêm ba task Assist và phương thức `AiGateway.json()` dùng chung trong `packages/ai-gateway/src/`; JSON/schema sai được thử lại đúng một lần.
+- Hoàn thiện `services/api/src/modules/assist/` theo luồng routes → service; đăng ký tùy chọn trong `app.ts` và nối gateway thật trong `server.ts`.
+- Mở rộng auth dev trong `services/api/src/lib/auth.ts` cho `/v1/assist/*` và `/v1/events`, dùng chung hàm `verifyToken`; production không truyền verifier này.
+- Thêm `ErrorCode.AssistFailed` và ánh xạ HTTP `502`; cập nhật `apps/docs/docs/04-modules/03-api/assist.md`.
+
+### Test đã thêm
+
+- Prompt: kiểm cấu trúc, fixture và schema đầu ra chặt hơn cho cả ba task.
+- Gateway: model/timeout, `AI_ASSIST_MODEL`, parse + validate JSON, retry một lần và lỗi sau hai output sai.
+- API: ba luồng thành công, body sai `400`, thiếu session `401`, output AI sai `502 ASSIST_FAILED` và token dev theo đúng phạm vi route.
+
+### Kiểm chứng
+
+- `pnpm verify`: xanh — 31 test files, 137 tests; typecheck 10 package; không có vi phạm dependency.
+- `pnpm docs:build`: xanh — sinh static files thành công.
+- Luồng thật trong tiến trình Fastify được chạy qua `app.inject`: lookup, recap, compose, auth session/dev token và lỗi retry; gateway dùng provider giả theo yêu cầu môi trường, không gọi mạng.
+- Môi trường báo cảnh báo Node `22.14.0` thấp hơn mức repo yêu cầu `>=22.19`, nhưng toàn bộ lệnh trên kết thúc mã `0`.
+
+### Khác brief / câu hỏi mở
+
+- Không khác brief. Không có câu hỏi mở.
+- Không commit hoặc push.

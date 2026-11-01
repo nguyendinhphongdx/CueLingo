@@ -4,6 +4,7 @@ import Fastify, { type FastifyInstance, type FastifyPluginAsync } from 'fastify'
 import { registerAuth, type AuthOptions } from './lib/auth';
 import { registerErrorHandler } from './lib/errors';
 import type { JobQueue } from './lib/queue';
+import { createAssistModule, type AssistDeps } from './modules/assist';
 import { createGlossaryModule, type GlossaryRepository } from './modules/glossary';
 import { createRealtimeModule, type RealtimeDeps } from './modules/realtime';
 
@@ -17,6 +18,10 @@ export interface AppDeps {
   authRoutes?: FastifyPluginAsync;
   /** Enables the live-caption WebSocket route when its provider credentials are available. */
   realtime?: RealtimeDeps;
+  /** Enables Quick Assist routes when an AI gateway is available. */
+  assist?: AssistDeps;
+  /** Development-only bearer-token verifier for assist and event ingestion. */
+  verifyDevToken?: AuthOptions['verifyDevToken'];
   logger?: boolean;
 }
 
@@ -32,11 +37,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE'],
   });
-  registerAuth(app, { resolveUserId: deps.resolveUserId });
+  registerAuth(app, { resolveUserId: deps.resolveUserId, verifyDevToken: deps.verifyDevToken });
 
   app.get('/healthz', async () => ({ ok: true }));
   if (deps.authRoutes) await app.register(deps.authRoutes);
   await app.register(createGlossaryModule(deps.repos.glossary).routes, { prefix: '/v1/glossary' });
+  if (deps.assist) {
+    await app.register(createAssistModule(deps.assist).routes, { prefix: '/v1/assist' });
+  }
   if (deps.realtime) await app.register(createRealtimeModule(deps.realtime).routes);
 
   return app;

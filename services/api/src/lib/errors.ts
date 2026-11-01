@@ -7,6 +7,7 @@ const STATUS: Record<ErrorCode, number> = {
   [ErrorCode.Forbidden]: 403,
   [ErrorCode.NotFound]: 404,
   [ErrorCode.Conflict]: 409,
+  [ErrorCode.AssistFailed]: 502,
   [ErrorCode.Internal]: 500,
   // WebSocket-only codes still need an HTTP status because they share the enum.
   [ErrorCode.WsUnauthorized]: 401,

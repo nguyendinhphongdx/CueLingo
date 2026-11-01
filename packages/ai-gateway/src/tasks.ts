@@ -5,5 +5,21 @@ export const TASKS = {
     fallbackModel: process.env.AI_TRANSLATE_FALLBACK_MODEL ?? 'gemini-3.5-flash-lite',
     timeoutMs: 3_000,
   },
+  'assist.lookup': {
+    model: process.env.AI_ASSIST_MODEL ?? 'gemini-3.5-flash-lite',
+    fallbackModel: process.env.AI_ASSIST_MODEL ?? 'gemini-3.5-flash-lite',
+    timeoutMs: 8_000,
+  },
+  'assist.recap': {
+    model: process.env.AI_ASSIST_MODEL ?? 'gemini-3.5-flash-lite',
+    fallbackModel: process.env.AI_ASSIST_MODEL ?? 'gemini-3.5-flash-lite',
+    timeoutMs: 8_000,
+  },
+  'assist.compose': {
+    model: process.env.AI_ASSIST_MODEL ?? 'gemini-3.5-flash-lite',
+    fallbackModel: process.env.AI_ASSIST_MODEL ?? 'gemini-3.5-flash-lite',
+    timeoutMs: 8_000,
+  },
 } as const;
 export type TaskName = keyof typeof TASKS;
+export type JsonTaskName = Exclude<TaskName, 'translate.realtime'>;

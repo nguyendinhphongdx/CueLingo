@@ -3,6 +3,14 @@
  * Design: apps/docs/docs/04-modules/05-packages/ai-gateway.md
  */
 export { AiGatewayError, createAiGateway } from './gateway';
-export type { AiCallRecord, AiGateway, AiGatewayOptions, GenerateFn, LlmResult } from './gateway';
+export type {
+  AiCallRecord,
+  AiGateway,
+  AiGatewayOptions,
+  GenerateFn,
+  JsonSchema,
+  JsonTaskInputMap,
+  LlmResult,
+} from './gateway';
 export { TASKS } from './tasks';
-export type { TaskName } from './tasks';
+export type { JsonTaskName, TaskName } from './tasks';
