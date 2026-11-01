@@ -4,16 +4,20 @@ import { loadConfig } from './config';
 import { createSql } from './lib/db';
 import { createPgBossQueue } from './lib/queue';
 import { createAuthModule } from './modules/auth';
+import { createPostgresDebriefRepository } from './modules/debrief';
 import { createPostgresEventsRepository } from './modules/events';
 import { createPostgresGlossaryRepository } from './modules/glossary';
+import { createPostgresSessionsRepository } from './modules/sessions';
 
 const config = loadConfig();
 
 const sql = createSql(config.DATABASE_URL);
 const queue = await createPgBossQueue(config.DATABASE_URL);
 const authModule = createAuthModule(config);
+const debriefRepository = createPostgresDebriefRepository(sql);
 const eventsRepository = createPostgresEventsRepository(sql);
 const glossaryRepository = createPostgresGlossaryRepository(sql);
+const sessionsRepository = createPostgresSessionsRepository(sql);
 
 const gateway = config.GEMINI_API_KEY
   ? createAiGateway({
@@ -39,11 +43,17 @@ const realtime = gateway
           .slice(0, 50)
           .map(({ term, translation }) => ({ term, translation }));
       },
+      store: sessionsRepository,
     }
   : undefined;
 
 const app = await buildApp({
-  repos: { events: eventsRepository, glossary: glossaryRepository },
+  repos: {
+    debrief: debriefRepository,
+    events: eventsRepository,
+    glossary: glossaryRepository,
+    sessions: sessionsRepository,
+  },
   queue,
   resolveUserId: authModule.resolveUserId,
   authRoutes: authModule.routes,

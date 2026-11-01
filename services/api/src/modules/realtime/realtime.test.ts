@@ -173,6 +173,72 @@ describe('realtime module', () => {
     );
   });
 
+  it('stores final mic and system segments, then stores the system translation', async () => {
+    const saveSegment = vi.fn(async () => true);
+    const saveTranslation = vi.fn(async () => undefined);
+    deps.store = { saveSegment, saveTranslation };
+    await connect();
+    await authenticate();
+
+    socket.send(JSON.stringify(segment('my voice', 0, 'mic')));
+    const response = nextMessage(socket);
+    socket.send(JSON.stringify(segment('their voice', 1)));
+    await response;
+
+    await vi.waitFor(() => expect(saveSegment).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() =>
+      expect(saveTranslation).toHaveBeenCalledWith(SEGMENT_IDS[1], 'vi:their voice'),
+    );
+    expect(saveSegment).toHaveBeenNthCalledWith(1, {
+      sessionId: SESSION_ID,
+      userId: USER_ID,
+      segmentId: SEGMENT_IDS[0],
+      source: 'mic',
+      startMs: 0,
+      endMs: 900,
+      textEn: 'my voice',
+    });
+  });
+
+  it('keeps translating when segment and translation persistence fail', async () => {
+    const saveSegment = vi
+      .fn(async () => true)
+      .mockRejectedValueOnce(new Error('segment write failed'))
+      .mockResolvedValueOnce(true);
+    const saveTranslation = vi.fn(async () => {
+      throw new Error('translation write failed');
+    });
+    deps.store = { saveSegment, saveTranslation };
+    await connect();
+    await authenticate();
+
+    let response = nextMessage(socket);
+    socket.send(JSON.stringify(segment('first')));
+    await expect(response).resolves.toMatchObject({ type: 'translation', textVi: 'vi:first' });
+
+    response = nextMessage(socket);
+    socket.send(JSON.stringify(segment('second', 1)));
+    await expect(response).resolves.toMatchObject({ type: 'translation', textVi: 'vi:second' });
+    await vi.waitFor(() => expect(saveTranslation).toHaveBeenCalledTimes(1));
+  });
+
+  it('does not store translations when the session is missing or belongs to another user', async () => {
+    const saveSegment = vi.fn(async () => false);
+    const saveTranslation = vi.fn(async () => undefined);
+    deps.store = { saveSegment, saveTranslation };
+    await connect();
+    await authenticate();
+
+    const response = nextMessage(socket);
+    socket.send(JSON.stringify(segment('still translate')));
+    await expect(response).resolves.toMatchObject({
+      type: 'translation',
+      textVi: 'vi:still translate',
+    });
+    await vi.waitFor(() => expect(saveSegment).toHaveBeenCalledOnce());
+    expect(saveTranslation).not.toHaveBeenCalled();
+  });
+
   it('reports a retryable translation error and translates later segments', async () => {
     llm.mockRejectedValueOnce(new Error('provider failed'));
     await connect();
