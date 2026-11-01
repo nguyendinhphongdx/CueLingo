@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@cuelingo/shared": "workspace:*"
+    "@cuelingo/shared": "workspace:*",
+    "ts-fsrs": "^6.0.0"
   }
 }

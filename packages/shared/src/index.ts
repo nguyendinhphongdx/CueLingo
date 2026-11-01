@@ -7,6 +7,7 @@ export * from './dto/debrief.dto';
 export * from './dto/events.dto';
 export * from './dto/glossary.dto';
 export * from './dto/phrase.dto';
+export * from './dto/review.dto';
 export * from './dto/session.dto';
 export * from './errors/error-code';
 export * from './jobs';
