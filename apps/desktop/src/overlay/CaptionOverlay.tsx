@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { TranscriptEvent } from '../lib/native';
 import { ClickableCaptionLine, QuickAssistPanel, useQuickAssist } from '../quick-assist';
 import { sampleTranscript } from './sample';
-import { VISIBLE_CAPTION_COUNT, useTranscriptStore } from './transcript-store';
+import { useTranscriptStore } from './transcript-store';
 import { useOverlayAssistLevel } from './use-overlay-settings';
 import { useTranscript } from './use-transcript';
 
@@ -42,6 +42,9 @@ export function storeFontSize(value: number) {
   }
 }
 
+/** Within this distance of the bottom the overlay keeps following new captions. */
+const FOLLOW_MARGIN_PX = 48;
+
 export function CaptionOverlay({
   level,
   segments,
@@ -60,7 +63,35 @@ export function CaptionOverlay({
   useTranscript(listen);
   const visibleSegments =
     (receivedTranscript ?? storedReceived) ? (segments ?? storedSegments) : sampleTranscript;
-  const captionSegments = visibleSegments.slice(-VISIBLE_CAPTION_COUNT);
+  const captionSegments = visibleSegments;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const followingRef = useRef(true);
+  const [following, setFollowing] = useState(true);
+
+  function scrollToBottom() {
+    const element = scrollRef.current;
+    if (element) element.scrollTop = element.scrollHeight;
+  }
+
+  /** Follow new captions only while the reader sits near the bottom; scrolling up pauses it. */
+  function handleScroll() {
+    const element = scrollRef.current;
+    if (!element) return;
+    const distance = element.scrollHeight - element.scrollTop - element.clientHeight;
+    const near = distance <= FOLLOW_MARGIN_PX;
+    followingRef.current = near;
+    setFollowing(near);
+  }
+
+  function resumeFollowing() {
+    followingRef.current = true;
+    setFollowing(true);
+    scrollToBottom();
+  }
+
+  useEffect(() => {
+    if (followingRef.current) scrollToBottom();
+  }, [captionSegments, fontSize, assistLevel]);
 
   function resizeCaption(delta: number) {
     const next = clampFontSize(fontSize + delta);
@@ -132,7 +163,12 @@ export function CaptionOverlay({
           {theme === 'dark' ? 'Sáng' : 'Tối'}
         </button>
       </div>
-      <div className="flex-1 space-y-3 overflow-y-auto px-5 pb-5" style={{ fontSize }}>
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex-1 space-y-3 overflow-y-auto px-5 pb-5"
+        style={{ fontSize }}
+      >
         {assistLevel === 0
           ? null
           : captionSegments.map((segment) => (
@@ -153,6 +189,16 @@ export function CaptionOverlay({
               />
             ))}
       </div>
+      {following ? null : (
+        <button
+          type="button"
+          aria-label="Cuộn xuống caption mới nhất"
+          className="focus-visible:ring-ring absolute right-4 bottom-4 min-h-11 cursor-pointer rounded-full bg-sky-600 px-4 py-1 text-sm font-semibold text-white shadow-lg focus-visible:ring-2 focus-visible:outline-none"
+          onClick={resumeFollowing}
+        >
+          ↓ Mới nhất
+        </button>
+      )}
       <QuickAssistPanel state={quickAssist.state} actions={quickAssist} />
     </section>
   );

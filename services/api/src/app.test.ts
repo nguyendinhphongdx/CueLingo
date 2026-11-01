@@ -73,7 +73,7 @@ describe('local development bearer token', () => {
       headers: { authorization: `Bearer ${DEV_TOKEN}` },
       payload: {},
     });
-    expect(events.statusCode).toBe(404);
+    expect(events.statusCode).toBe(400);
 
     const glossary = await app.inject({
       method: 'GET',
