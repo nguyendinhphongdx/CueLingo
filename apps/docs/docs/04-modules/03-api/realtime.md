@@ -2,18 +2,20 @@
 
 > Phần: [API service](./README.md) · Code: `services/api/src/modules/realtime/`
 
-WebSocket theo phiên: nhận transcript (hoặc audio), dịch từng câu final, đẩy bản dịch về client.
+WebSocket theo phiên: nhận transcript final từ STT local, dịch và đẩy bản dịch về client.
 
 ## Trách nhiệm
 
-- Nhận `transcript.final` từ STT local, hoặc audio frame rồi chuyển sang STT cloud qua `ai-gateway`
-- Dịch mỗi câu final kèm 3 câu trước + glossary
-- Lưu segment, ghi event
-- Backpressure, reconnect, đệm 60 giây
+- Xác thực kết nối bằng message `hello`
+- Nhận `segment.final` từ STT local; chỉ dịch stream `system`
+- Dịch tuần tự mỗi câu final kèm tối đa 3 câu `system` trước và glossary của người dùng
+- Trả lỗi theo hợp đồng mà không làm hỏng các câu dịch tiếp theo
 
 ## Phạm vi MVP
 
 - F2 — mục tiêu bản dịch p95 ≤ 2,5 giây
+- Ngoài phạm vi: audio/STT cloud, lưu segment, ghi event, xác thực production (M3-02),
+  reconnect và bộ đệm 60 giây ở server.
 
 ## Interface
 
@@ -22,6 +24,14 @@ WebSocket theo phiên: nhận transcript (hoặc audio), dịch từng câu fina
 - Server → client: `ready`, `translation`, `error`
 - Schema nguồn sự thật: `ClientMessageSchema`, `ServerMessageSchema` trong `@cuelingo/shared`
 - MVP chỉ nhận STT local; `hello.sttSource` là `"local"`. Audio/STT cloud chưa thuộc hợp đồng này.
+- `hello.token` được xác minh ở tầng WebSocket. M1 chỉ có token phát triển qua
+  `REALTIME_DEV_TOKEN`; khi không cấu hình token thì mọi token bị từ chối.
+
+| Biến                   | Bắt buộc | Ý nghĩa                                                              |
+| ---------------------- | -------- | -------------------------------------------------------------------- |
+| `GEMINI_API_KEY`       | Không    | Thiếu biến này thì không đăng ký route realtime                      |
+| `REALTIME_DEV_TOKEN`   | Không    | Token phát triển, tối thiểu 16 ký tự                                 |
+| `REALTIME_DEV_USER_ID` | Không    | UUID người dùng phát triển; nếu thiếu dùng profile được tạo sớm nhất |
 
 ## Phụ thuộc
 
@@ -29,7 +39,9 @@ WebSocket theo phiên: nhận transcript (hoặc audio), dịch từng câu fina
 
 ## Dữ liệu & sự kiện
 
-- Events: `segment_final`, `translation_shown`
+- Module không lưu audio hay transcript ở M1.
+- Glossary được đọc theo `userId` do bộ xác minh token trả về.
+- Mỗi lần gọi AI chỉ log `task`, `model`, `latencyMs`; không log nội dung câu.
 
 ## Câu hỏi mở
 
