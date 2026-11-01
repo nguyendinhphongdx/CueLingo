@@ -4,3 +4,9 @@
  */
 export * from './translate/v1';
 export { translateFixtures } from './translate/fixtures/cases';
+export * from './lookup/v1';
+export { lookupFixtures } from './lookup/fixtures/cases';
+export * from './recap/v1';
+export { recapFixtures } from './recap/fixtures/cases';
+export * from './compose/v1';
+export { composeFixtures } from './compose/fixtures/cases';
