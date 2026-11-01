@@ -9,12 +9,13 @@ WebSocket theo phiên: nhận transcript final từ STT local, dịch và đẩy
 - Xác thực kết nối bằng message `hello`
 - Nhận `segment.final` từ STT local; chỉ dịch stream `system`
 - Dịch tuần tự mỗi câu final kèm tối đa 3 câu `system` trước và glossary của người dùng
+- Lưu câu final của cả `system` và `mic`, sau đó cập nhật bản dịch nếu session thuộc người dùng
 - Trả lỗi theo hợp đồng mà không làm hỏng các câu dịch tiếp theo
 
 ## Phạm vi MVP
 
 - F2 — mục tiêu bản dịch p95 ≤ 2,5 giây
-- Ngoài phạm vi: audio/STT cloud, lưu segment, ghi event, xác thực production (M3-02),
+- Ngoài phạm vi: audio/STT cloud, ghi event, xác thực production (M3-02),
   reconnect và bộ đệm 60 giây ở server.
 
 ## Interface
@@ -39,7 +40,9 @@ WebSocket theo phiên: nhận transcript final từ STT local, dịch và đẩy
 
 ## Dữ liệu & sự kiện
 
-- Module không lưu audio hay transcript ở M1.
+- Lưu `text_en` cho cả hai stream và `text_vi` cho stream `system`; không lưu audio.
+- Session thiếu hoặc thuộc người khác vẫn dịch để tương thích môi trường dev nhưng bỏ qua lưu.
+- Lỗi lưu chỉ được log và không chặn luồng dịch hay ngắt WebSocket.
 - Glossary được đọc theo `userId` do bộ xác minh token trả về.
 - Mỗi lần gọi AI chỉ log `task`, `model`, `latencyMs`; không log nội dung câu.
 

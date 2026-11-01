@@ -5,8 +5,10 @@ import { buildApp } from '../../src/app';
 import { loadConfig } from '../../src/config';
 import { createInMemoryQueue } from '../../src/lib/queue';
 import { createAuthModule, type Mailer } from '../../src/modules/auth';
+import { createInMemoryDebriefRepository } from '../../src/modules/debrief';
 import { createPostgresEventsRepository } from '../../src/modules/events';
 import { createPostgresGlossaryRepository } from '../../src/modules/glossary';
+import { createPostgresSessionsRepository } from '../../src/modules/sessions';
 import { startMigratedPostgres, type TestDatabase } from './postgres';
 
 /** AC3 + AC4: magic-link sign-in creates a session that the API accepts; no session means 401. */
@@ -36,8 +38,10 @@ describe('auth on real Postgres (AC3, AC4)', () => {
     authModule = createAuthModule(config(), mailer);
     app = await buildApp({
       repos: {
+        debrief: createInMemoryDebriefRepository(),
         events: createPostgresEventsRepository(sql),
         glossary: createPostgresGlossaryRepository(sql),
+        sessions: createPostgresSessionsRepository(sql),
       },
       queue: createInMemoryQueue(),
       resolveUserId: authModule.resolveUserId,

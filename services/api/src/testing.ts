@@ -1,8 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import { buildApp, type AppDeps } from './app';
 import { createInMemoryQueue } from './lib/queue';
+import { createInMemoryDebriefRepository } from './modules/debrief';
 import { createInMemoryEventsRepository } from './modules/events';
 import { createInMemoryGlossaryRepository } from './modules/glossary';
+import { createInMemorySessionsRepository } from './modules/sessions';
 
 /** Header the test resolver reads in place of a real session. */
 export const TEST_USER_HEADER = 'x-test-user-id';
@@ -15,8 +17,10 @@ export async function buildTestApp(
   const { repos, ...appOverrides } = overrides;
   const app = await buildApp({
     repos: {
+      debrief: createInMemoryDebriefRepository(),
       events: createInMemoryEventsRepository(),
       glossary: createInMemoryGlossaryRepository(),
+      sessions: createInMemorySessionsRepository(),
       ...repos,
     },
     queue,

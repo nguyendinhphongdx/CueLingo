@@ -24,7 +24,11 @@ const parseMessage = (data: RawData) => {
 export function realtimeRoutes(deps: RealtimeDeps): FastifyPluginAsync {
   return async (app) => {
     app.get('/v1/sessions/:id/stream', { websocket: true }, (socket, request) => {
-      const connection = createRealtimeConnection(deps, (message) => send(socket, message));
+      const connection = createRealtimeConnection(
+        deps,
+        (message) => send(socket, message),
+        (error) => request.log.error({ err: error }, 'Realtime segment persistence failed'),
+      );
       let messageQueue = Promise.resolve();
 
       socket.on('message', (data) => {

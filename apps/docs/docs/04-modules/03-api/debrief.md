@@ -6,8 +6,8 @@
 
 ## Trách nhiệm
 
-- Trả debrief theo phiên bản
-- Nhận feedback từng khối
+- Trả phiên bản debrief cao nhất của một session
+- Nhận feedback từng khối và ghi event học tập append-only
 
 ## Phạm vi MVP
 
@@ -15,15 +15,20 @@
 
 ## Interface
 
-- `GET /v1/sessions/:id/debrief`, `POST /v1/debriefs/:id/feedback`
+| Endpoint                         | Kết quả                                                            |
+| -------------------------------- | ------------------------------------------------------------------ |
+| `GET /v1/sessions/:id/debrief`   | `Debrief` có `version` cao nhất; chưa có hoặc không sở hữu → `404` |
+| `POST /v1/debriefs/:id/feedback` | Nhận `DebriefFeedbackRequest`, ghi event và trả `204`              |
 
 ## Phụ thuộc
 
-- (chưa có)
+- `@cuelingo/shared`
+- Bảng `sessions` để giữ ranh giới người dùng
 
 ## Dữ liệu & sự kiện
 
-- Bảng `debriefs`
+- Đọc bảng `debriefs` qua quan hệ `sessions.user_id`.
+- Feedback ghi bảng `events` với loại `debrief_feedback`; payload gồm `block`, `useful`.
 
 ## Câu hỏi mở
 

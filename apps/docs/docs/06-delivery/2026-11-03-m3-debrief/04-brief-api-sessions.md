@@ -32,3 +32,35 @@ title: Brief M3-01 · api/sessions + đọc debrief + lưu segments
 Quy tắc chung: đọc `AGENTS.md` gốc và `AGENTS.md` của thư mục bạn sửa, `apps/docs/docs/05-engineering/agent-collaboration.md`. Không có mạng, không `pnpm add`, không commit/push; dependency đã cài sẵn. Không đổi hợp đồng trong `packages/shared/src/dto/{session,debrief,phrase}.dto.ts` (nếu thật sự thiếu, dừng và ghi câu hỏi). Chạy `pnpm verify` trước khi báo; điền mục Kết quả.
 
 ## Kết quả _(implementer điền)_
+
+### Đã làm
+
+- Hoàn thiện module `sessions`: repository Postgres/in-memory, service, routes và test cho tạo,
+  kết thúc idempotent, danh sách mới nhất trước, chi tiết kèm segment và ranh giới người dùng.
+- Hoàn thiện module `debrief`: đọc phiên bản cao nhất, nhận feedback `204`, ghi event
+  `debrief_feedback` và trả `404` cho dữ liệu không thuộc người dùng.
+- Mở rộng realtime store: lưu segment final của cả `system`/`mic`, cập nhật `text_vi` sau khi
+  dịch; session thiếu/khác user thì chỉ dịch, không lưu; lỗi lưu chỉ log.
+- Đăng ký repository/module trong `app.ts`, `server.ts`, `testing.ts`; cập nhật integration setup
+  auth và tài liệu `sessions`, `debrief`, `realtime`.
+
+### Test đã thêm
+
+- `services/api/src/modules/sessions/sessions.test.ts`: AC1–AC3, validation và auth.
+- `services/api/src/modules/debrief/debrief.test.ts`: AC3, AC6 và feedback ownership.
+- `services/api/src/modules/realtime/realtime.test.ts`: AC4–AC5, gồm session không hợp lệ.
+- `services/api/test/integration/sessions.int.test.ts`: AC7 với repository Postgres.
+
+### Kiểm tra
+
+- `pnpm verify`: xanh — 36 file test, 161 test; không có vi phạm dependency.
+- `pnpm docs:build`: xanh.
+- Smoke flow bằng app thật trong process: tạo session `201` → end `ended` → detail `200`;
+  queue nhận đúng một `debrief.generate`.
+- Integration Postgres đã thử nhưng không chạy được trong sandbox: Docker socket bị từ chối;
+  môi trường dùng Node `22.14.0` trong khi repo yêu cầu `>=22.19` và `.nvmrc` là 24 (chưa cài).
+
+### Khác brief và câu hỏi mở
+
+- Không cần migration hoặc sửa contract; schema/DTO hiện có đã đủ.
+- Không có câu hỏi mở.
