@@ -28,3 +28,6 @@ apps/docs/build/
 
 # Agent worktrees (see agent-collaboration)
 .worktrees/
+
+# Next.js
+next-env.d.ts

@@ -68,3 +68,17 @@ apps/web/
 - ❌ Logic hoặc gọi API trong `src/app/**` — route chỉ render feature.
 - ❌ `fetch` trực tiếp thay vì `client`.
 - ❌ Copy component shadcn vào `apps/web/components` khi nó dùng được ở desktop — đặt ở `@cuelingo/ui`.
+
+## Bài học khi chạy thật (2026-11-01)
+
+Dựng và chạy trong trình duyệt thật (đăng nhập magic link → `/glossary` → thêm/xoá → đăng xuất) lộ ra những điều test đơn vị không thấy:
+
+| Hiện tượng                                                    | Nguyên nhân                                                                                | Cách xử lý                                                                                       |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `next build` lỗi `binding to a port: Operation not permitted` | Turbopack chạy PostCSS trong một tiến trình con nghe cổng cục bộ; sandbox của agent chặn   | Script `dev` và `build` dùng `--webpack`; `dev:turbo` cho terminal của người dùng                |
+| Trang không có style dù CSS đã nạp                            | Tailwind chỉ quét từ thư mục app; class của `@cuelingo/ui` (bg-card, h-9…) không được sinh | `@source "../components"` trong `packages/ui/src/styles/globals.css`, kèm test `globals.test.ts` |
+| Bấm Xoá không làm gì; mạng báo `ERR_FAILED` sau preflight     | `@fastify/cors` mặc định chỉ cho `GET, HEAD, POST`                                         | API cho phép `PATCH`, `DELETE`; test preflight trong `services/api/src/app.test.ts`              |
+| Thông báo lỗi hiện tiếng Anh của server                       | Hiện thẳng `error.message`                                                                 | `describeError` ánh xạ mã lỗi → tiếng Việt (`src/lib/errors.ts`)                                 |
+| `typecheck` thiếu type route khi build sạch                   | Next sinh type khi chạy                                                                    | Script `typecheck` = `next typegen && tsc --noEmit`; `next-env.d.ts` đã gitignore                |
+
+Cookie session do API (`localhost:4000`) đặt được gửi sang web (`localhost:3000`) vì cookie không phân biệt cổng. Ở production hai origin khác nhau (ví dụ `app.` và `api.` cùng domain gốc) cần cấu hình cookie domain của Better Auth, chưa làm ở giai đoạn này.

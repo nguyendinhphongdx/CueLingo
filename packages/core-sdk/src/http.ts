@@ -6,6 +6,8 @@ export interface ClientOptions {
   /** Returns the current access token, or null when signed out. */
   getToken: () => Promise<string | null> | string | null;
   fetch?: typeof fetch;
+  /** Browsers: 'include' sends the session cookie to an API on another origin. */
+  credentials?: RequestCredentials;
 }
 
 /** Error thrown for any non-2xx response; `code` comes from @cuelingo/shared ErrorCode. */
@@ -41,6 +43,7 @@ export function createHttp(options: ClientOptions) {
       res = await doFetch(`${options.baseUrl}${path}`, {
         method,
         headers,
+        credentials: options.credentials,
         body: body === undefined ? undefined : JSON.stringify(body),
       });
     } catch (err) {

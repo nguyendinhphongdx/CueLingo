@@ -27,6 +27,20 @@ describe('glossary client', () => {
     expect(fetch.mock.calls[0]?.[1].headers.authorization).toBe('Bearer t0k');
   });
 
+  it('forwards the credentials option so the browser sends the session cookie', async () => {
+    const fetch = vi.fn().mockResolvedValue(json(200, { items: [] }));
+    const client = createClient({
+      baseUrl: 'http://api',
+      getToken: () => null,
+      fetch,
+      credentials: 'include',
+    });
+
+    await client.glossary.list();
+
+    expect(fetch.mock.calls[0]?.[1].credentials).toBe('include');
+  });
+
   it('maps an error response to ApiError with the shared code', async () => {
     const fetch = vi
       .fn()

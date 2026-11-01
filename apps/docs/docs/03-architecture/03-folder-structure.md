@@ -14,7 +14,7 @@ Ký hiệu: ✅ đã có code chạy · 🟡 đã có khung (stub) · ⬜ sẽ t
 cuelingo/
 ├── apps/
 │   ├── desktop/        🟡 Tauri + React + Swift — app trong cuộc họp
-│   ├── web/            ✅ Next.js — xem lại, debrief, ôn tập (feature mẫu: glossary)
+│   ├── web/            ✅ Next.js App Router — đăng nhập + glossary chạy thật
 │   ├── docs/           ✅ Docusaurus — toàn bộ tài liệu
 │   ├── extension/      ⬜ giai đoạn Learn
 │   └── mobile/         ⬜ giai đoạn Coach

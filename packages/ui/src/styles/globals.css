@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* Tailwind scans from the app that builds the CSS, so list every folder whose classes must be generated,
+   this package's own components included. Paths are relative to this file. */
+@source "../components";
 @source "../../../../apps/web/src";
 @source "../../../../apps/desktop/src";
 

@@ -1,8 +1,12 @@
 import { createClient } from '@cuelingo/core-sdk';
+import { API_URL } from './config';
 
-/** The single API client for the web app. Features import it; they never call fetch. */
+/**
+ * The single API client for the web app. Features import it; they never call fetch.
+ * Auth is the Better Auth session cookie, so there is no token to read; 'include' sends it cross-origin.
+ */
 export const client = createClient({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000',
-  // TODO(auth module, apps/docs/docs/04-modules/03-api/auth.md): read the session token.
+  baseUrl: API_URL,
   getToken: () => null,
+  credentials: 'include',
 });

@@ -21,7 +21,12 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({ logger: deps.logger ?? false });
   registerErrorHandler(app);
   // CORS first, so preflight requests are answered before the auth hook runs.
-  await app.register(cors, { origin: deps.webOrigin, credentials: true });
+  // @fastify/cors only allows GET, HEAD and POST by default; the glossary needs PATCH and DELETE from the browser.
+  await app.register(cors, {
+    origin: deps.webOrigin,
+    credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE'],
+  });
   registerAuth(app, { resolveUserId: deps.resolveUserId });
 
   app.get('/healthz', async () => ({ ok: true }));
