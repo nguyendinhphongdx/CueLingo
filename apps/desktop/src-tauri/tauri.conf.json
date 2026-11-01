@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "CueLingo",
+  "version": "0.0.0",
+  "identifier": "vn.cmcai.cuelingo",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "CueLingo",
+        "url": "index.html",
+        "width": 960,
+        "height": 640,
+        "visible": true
+      },
+      {
+        "label": "overlay",
+        "title": "CueLingo overlay",
+        "url": "overlay.html",
+        "width": 760,
+        "height": 180,
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "contentProtected": true,
+        "shadow": false,
+        "focus": false,
+        "visible": false
+      }
+    ],
+    "security": { "csp": null }
+  },
+  "bundle": { "active": true, "targets": ["app"], "icon": ["icons/icon.png"] }
+}

@@ -31,3 +31,6 @@ apps/docs/build/
 
 # Next.js
 next-env.d.ts
+
+# Tauri generated schemas
+apps/desktop/src-tauri/gen/
