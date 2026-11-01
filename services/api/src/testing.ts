@@ -3,6 +3,7 @@ import { buildApp, type AppDeps } from './app';
 import { createInMemoryQueue } from './lib/queue';
 import { createInMemoryEventsRepository } from './modules/events';
 import { createInMemoryGlossaryRepository } from './modules/glossary';
+import { createInMemoryPhrasesRepository } from './modules/review';
 
 /** Header the test resolver reads in place of a real session. */
 export const TEST_USER_HEADER = 'x-test-user-id';
@@ -17,6 +18,7 @@ export async function buildTestApp(
     repos: {
       events: createInMemoryEventsRepository(),
       glossary: createInMemoryGlossaryRepository(),
+      phrases: createInMemoryPhrasesRepository(),
       ...repos,
     },
     queue,

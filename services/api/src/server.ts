@@ -6,6 +6,7 @@ import { createPgBossQueue } from './lib/queue';
 import { createAuthModule } from './modules/auth';
 import { createPostgresEventsRepository } from './modules/events';
 import { createPostgresGlossaryRepository } from './modules/glossary';
+import { createPostgresPhrasesRepository } from './modules/review';
 
 const config = loadConfig();
 
@@ -14,6 +15,7 @@ const queue = await createPgBossQueue(config.DATABASE_URL);
 const authModule = createAuthModule(config);
 const eventsRepository = createPostgresEventsRepository(sql);
 const glossaryRepository = createPostgresGlossaryRepository(sql);
+const phrasesRepository = createPostgresPhrasesRepository(sql);
 
 const gateway = config.GEMINI_API_KEY
   ? createAiGateway({
@@ -43,7 +45,11 @@ const realtime = gateway
   : undefined;
 
 const app = await buildApp({
-  repos: { events: eventsRepository, glossary: glossaryRepository },
+  repos: {
+    events: eventsRepository,
+    glossary: glossaryRepository,
+    phrases: phrasesRepository,
+  },
   queue,
   resolveUserId: authModule.resolveUserId,
   authRoutes: authModule.routes,
