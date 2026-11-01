@@ -9,6 +9,8 @@ Bốn giai đoạn. Mỗi giai đoạn chỉ bắt đầu khi giai đoạn trư�
 | 3. Coach  | Tháng 7–12 | Mobile, roleplay persona, rehearsal trước họp, Planner + lịch, gói Pro+               | Retention D90 ổn định         |
 | 4. Scale  | Năm thứ 2  | Nhật, Hàn, Trung · B2B Enterprise · voice mode · podcast · on-premise/VPC             | —                             |
 
+> Mốc giao hàng chi tiết và task cho từng agent: [Backlog và mốc giao hàng](./06-backlog.md).
+
 ## Kế hoạch 12 tuần của MVP
 
 | Tuần        | Hạng mục                                        | Phần/module                                                                   |
