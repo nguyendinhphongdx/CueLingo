@@ -1,0 +1,105 @@
+import AudioCapture
+import Foundation
+import LocalSTT
+
+// cuelingo-audio: captures system audio + mic, transcribes on-device, prints one JSON object per line.
+// stdout events: {"type":"status","state":"loading|ready|error","message":…}
+//                {"type":"segment","segmentId","stream","startMs","endMs","text","words":[],"partial"}
+// stdin: a line "stop" ends the session.
+
+let out = FileHandle.standardOutput
+let writeLock = NSLock()
+func emit(_ object: [String: Any]) {
+    guard let data = try? JSONSerialization.data(withJSONObject: object) else { return }
+    writeLock.lock()
+    out.write(data + Data([0x0A]))
+    writeLock.unlock()
+}
+func status(_ state: String, _ message: String = "") { emit(["type": "status", "state": state, "message": message]) }
+
+final class Pipeline: @unchecked Sendable {
+    let stream: String
+    let segmenter = UtteranceSegmenter()
+    let transcriber: Transcriber
+    private let lock = NSLock()
+    private var busy = false
+    private var epoch = Date()
+
+    init(stream: String, transcriber: Transcriber) {
+        self.stream = stream
+        self.transcriber = transcriber
+    }
+
+    func feed(_ samples: [Int16]) {
+        lock.lock()
+        let events = segmenter.push(samples)
+        lock.unlock()
+        for event in events { handle(event) }
+    }
+
+    private func clearBusy() {
+        lock.lock()
+        busy = false
+        lock.unlock()
+    }
+
+    func finish() {
+        lock.lock()
+        let events = segmenter.flush()
+        lock.unlock()
+        for event in events { handle(event) }
+    }
+
+    private func handle(_ event: UtteranceSegmenter.Event) {
+        let (utterance, partial): (UtteranceSegmenter.Utterance, Bool)
+        switch event {
+        case .partial(let u): (utterance, partial) = (u, true)
+        case .final(let u): (utterance, partial) = (u, false)
+        }
+        if partial {
+            lock.lock()
+            if busy { lock.unlock(); return }  // drop partials while a recognition is running
+            busy = true
+            lock.unlock()
+        }
+        Task {
+            defer { if partial { clearBusy() } }
+            do {
+                let text = try await transcriber.transcribe(utterance.samples)
+                guard !text.isEmpty else { return }
+                emit([
+                    "type": "segment", "segmentId": utterance.id.uuidString.lowercased(), "stream": stream,
+                    "startMs": utterance.startMs, "endMs": utterance.endMs, "text": text,
+                    "words": [Any](), "partial": partial,
+                ])
+            } catch {
+                status("error", "transcribe failed: \(error)")
+            }
+        }
+    }
+}
+
+status("loading", "loading speech model")
+let transcriber = Transcriber()
+do { try await transcriber.load() } catch {
+    status("error", "model load failed: \(error)")
+    exit(2)
+}
+let system = Pipeline(stream: "system", transcriber: transcriber)
+let mic = Pipeline(stream: "mic", transcriber: transcriber)
+let tap = SystemAudioTap()
+let micCapture = MicCapture()
+do { try tap.start { system.feed($0) } } catch { status("error", "system audio: \(error)") }
+do { try micCapture.start { mic.feed($0) } } catch { status("error", "microphone: \(error)") }
+status("ready")
+
+// Wait for "stop" on stdin (or EOF when the parent exits).
+while let line = readLine() {
+    if line.trimmingCharacters(in: .whitespaces) == "stop" { break }
+}
+tap.stop()
+micCapture.stop()
+system.finish()
+mic.finish()
+try? await Task.sleep(nanoseconds: 1_500_000_000)  // let final recognitions flush
+status("stopped")

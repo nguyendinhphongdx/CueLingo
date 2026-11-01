@@ -134,7 +134,8 @@ export function createSessionController({
     if (message.type === 'translation') {
       const transcript = transcriptById.get(message.segmentId);
       if (transcript) publish({ ...transcript, translation: message.textVi, partial: false });
-    } else if (message.type === 'error') {
+    } else if (message.type === 'error' && !message.retryable) {
+      // Retryable errors (one sentence failed to translate) must not end the session.
       fail(new Error(message.code));
     }
   }

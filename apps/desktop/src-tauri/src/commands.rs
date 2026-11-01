@@ -5,10 +5,12 @@ use std::sync::Mutex;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, State};
 
+use crate::audio_bridge::AudioBridge;
 use crate::windows;
 
 #[derive(Default)]
 pub struct AppState {
+    pub audio: AudioBridge,
     session_id: Mutex<Option<String>>,
     assist_level: Mutex<u8>,
 }
@@ -34,6 +36,7 @@ pub struct PermissionsStatus {
 
 #[tauri::command]
 pub fn session_start(
+    app: AppHandle,
     state: State<AppState>,
     opts: SessionStartOpts,
 ) -> Result<SessionStartResult, String> {
@@ -49,6 +52,7 @@ pub fn session_start(
             .as_millis()
     );
     *state.assist_level.lock().map_err(|e| e.to_string())? = opts.assist_level.min(5);
+    state.audio.start(&app)?;
     *current = Some(id.clone());
     Ok(SessionStartResult { session_id: id })
 }
@@ -56,7 +60,7 @@ pub fn session_start(
 #[tauri::command]
 pub fn session_stop(state: State<AppState>) -> Result<(), String> {
     *state.session_id.lock().map_err(|e| e.to_string())? = None;
-    Ok(())
+    state.audio.stop()
 }
 
 /// Real checks (TCC) arrive with the native audio package.

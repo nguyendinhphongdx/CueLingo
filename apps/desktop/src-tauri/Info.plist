@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>CueLingo nghe giọng của bạn trong cuộc họp để hiện caption.</string>
+  <key>NSAudioCaptureUsageDescription</key>
+  <string>CueLingo nghe âm thanh cuộc họp để hiện caption và bản dịch.</string>
+</dict>
+</plist>

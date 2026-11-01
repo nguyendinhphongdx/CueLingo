@@ -1,5 +1,6 @@
 //! Tauri core — windows, global shortcuts, native ↔ webview bridge.
 //! Design: apps/docs/docs/04-modules/01-desktop/tauri-core.md
+mod audio_bridge;
 mod commands;
 mod hotkeys;
 mod windows;
