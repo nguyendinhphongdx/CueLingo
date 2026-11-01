@@ -24,7 +24,7 @@ export function describePermission(name: PermissionName, state: PermissionState)
   if (state === 'denied') {
     return `${label} đang bị từ chối. Mở Cài đặt hệ thống > Quyền riêng tư & Bảo mật để cấp quyền cho CueLingo.`;
   }
-  return `Chưa xác định quyền ${label.toLocaleLowerCase('vi')}. Hãy cấp quyền trong Cài đặt hệ thống > Quyền riêng tư & Bảo mật.`;
+  return `Chưa xác định quyền ${label.toLocaleLowerCase('vi')}. macOS sẽ hỏi quyền khi bạn bấm Bắt đầu lần đầu; nếu đã từ chối, mở Cài đặt hệ thống > Quyền riêng tư & Bảo mật.`;
 }
 
 export function PermissionsStatusView({ status }: { status: PermissionsStatus }) {
