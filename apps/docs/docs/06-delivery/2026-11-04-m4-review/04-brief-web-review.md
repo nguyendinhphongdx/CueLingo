@@ -34,4 +34,31 @@ API (brief khác làm, hợp đồng ở `packages/shared/src/dto/review.dto.ts`
 
 Quy tắc chung: đọc `AGENTS.md` gốc và của thư mục bạn sửa, `apps/docs/docs/05-engineering/agent-collaboration.md`. Không có mạng, không `pnpm add`, không commit/push; dependency đã cài sẵn. Không đổi `packages/shared/src/dto/review.dto.ts` (thiếu thì dừng và ghi câu hỏi). Chạy `pnpm verify` trước khi báo; điền mục Kết quả.
 
-## Kết quả _(implementer điền)_
+## Kết quả
+
+### Đã làm
+
+- Thêm ba route được bảo vệ: `/review`, `/progress`, `/phrases`; cập nhật menu `AppShell` với đích bấm tối thiểu 44 px và tự xuống dòng trên màn hình hẹp.
+- Mở rộng `src/lib/client.ts` cho queue/chấm review, progress và list/xoá phrase; mọi request/response đều parse bằng schema từ `@cuelingo/shared`.
+- Review hỗ trợ recognize + cloze, phím `1–4`, Enter dùng mức gợi ý, khoá gửi lặp, tiến độ, đáp án/nghĩa/ngữ cảnh, tổng kết, ôn tiếp và trạng thái tải/lỗi/rỗng.
+- Progress hiện sáu chỉ số, biểu đồ SVG 7 ngày và 4 tuần; mỗi biểu đồ có `role="img"` và `aria-label` chứa số liệu.
+- Phrase Bank hiện danh sách, trạng thái ôn, nghĩa, xoá và trạng thái tải/lỗi/rỗng.
+
+### File đã đổi
+
+- `apps/web/src/lib/client.ts`, `apps/web/src/features/auth/AppShell.tsx`.
+- `apps/web/src/features/review/**`, `apps/web/src/features/progress/**`, `apps/web/src/features/phrase-bank/**`.
+- `apps/web/src/app/(app)/{review,progress,phrases}/page.tsx`.
+
+### Kiểm chứng
+
+- Thêm 7 component test cho AC1–AC5: tiết lộ đáp án, chấm một lần mỗi click, tổng kết, queue rỗng, đủ chỉ số/nhãn biểu đồ, danh sách và empty state Phrase Bank.
+- `pnpm --filter @cuelingo/web build`: xanh; Next.js sinh đủ `/review`, `/progress`, `/phrases`.
+- `pnpm verify`: xanh — 47 test file, 216 test; không có vi phạm dependency.
+- Đã thử chạy thật bằng `pnpm --filter @cuelingo/web dev` và với hostname `127.0.0.1`; sandbox chặn mở cổng ở cả hai lần (`listen EPERM`), nên chưa thể kiểm tra trực tiếp trong trình duyệt tại worktree này.
+- Môi trường báo Node `v22.14.0` thấp hơn engine `>=22.19`, nhưng build và toàn bộ verify vẫn hoàn tất thành công.
+
+### Khác brief / câu hỏi còn mở
+
+- Không thay đổi phạm vi hoặc hành vi so với brief.
+- Lead cần smoke-test ba route trong trình duyệt ở môi trường cho phép mở cổng trước cổng RESULT.
