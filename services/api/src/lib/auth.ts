@@ -22,7 +22,7 @@ const isPublic = (url: string) =>
   /^\/v1\/sessions\/[^/]+\/stream(?:\?|$)/.test(url);
 
 const acceptsDevToken = (url: string) =>
-  /^\/v1\/(?:assist|events|sessions|phrases)(?:\/|\?|$)/.test(url);
+  /^\/v1\/(?:assist|events|sessions|phrases|review|progress)(?:\/|\?|$)/.test(url);
 
 const bearerToken = (request: FastifyRequest): string | null => {
   const header = request.headers.authorization;

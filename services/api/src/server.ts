@@ -8,7 +8,7 @@ import { createPostgresDebriefRepository } from './modules/debrief';
 import { createPostgresEventsRepository } from './modules/events';
 import { createPostgresGlossaryRepository } from './modules/glossary';
 import { createPostgresSessionsRepository } from './modules/sessions';
-import { createPostgresPhrasesRepository } from './modules/review';
+import { createPostgresPhrasesRepository, createPostgresStudyRepository } from './modules/review';
 
 const config = loadConfig();
 
@@ -20,6 +20,7 @@ const eventsRepository = createPostgresEventsRepository(sql);
 const glossaryRepository = createPostgresGlossaryRepository(sql);
 const sessionsRepository = createPostgresSessionsRepository(sql);
 const phrasesRepository = createPostgresPhrasesRepository(sql);
+const studyRepository = createPostgresStudyRepository(sql);
 
 const gateway = config.GEMINI_API_KEY
   ? createAiGateway({
@@ -56,6 +57,7 @@ const app = await buildApp({
     glossary: glossaryRepository,
     sessions: sessionsRepository,
     phrases: phrasesRepository,
+    study: studyRepository,
   },
   queue,
   resolveUserId: authModule.resolveUserId,

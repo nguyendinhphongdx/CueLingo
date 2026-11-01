@@ -9,7 +9,10 @@ import { createInMemoryDebriefRepository } from '../../src/modules/debrief';
 import { createPostgresEventsRepository } from '../../src/modules/events';
 import { createPostgresGlossaryRepository } from '../../src/modules/glossary';
 import { createPostgresSessionsRepository } from '../../src/modules/sessions';
-import { createPostgresPhrasesRepository } from '../../src/modules/review';
+import {
+  createPostgresPhrasesRepository,
+  createPostgresStudyRepository,
+} from '../../src/modules/review';
 import { startMigratedPostgres, type TestDatabase } from './postgres';
 
 /** AC3 + AC4: magic-link sign-in creates a session that the API accepts; no session means 401. */
@@ -44,6 +47,7 @@ describe('auth on real Postgres (AC3, AC4)', () => {
         glossary: createPostgresGlossaryRepository(sql),
         sessions: createPostgresSessionsRepository(sql),
         phrases: createPostgresPhrasesRepository(sql),
+        study: createPostgresStudyRepository(sql),
       },
       queue: createInMemoryQueue(),
       resolveUserId: authModule.resolveUserId,

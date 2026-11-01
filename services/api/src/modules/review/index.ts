@@ -15,3 +15,15 @@ export type { PhrasesRepository } from './phrases.repository';
 export type { PhrasesService } from './phrases.service';
 export { createPostgresPhrasesRepository } from './phrases.repository';
 export { createInMemoryPhrasesRepository } from './phrases.repository.memory';
+
+import { createStudyService } from './study.service';
+import { progressRoutes, reviewRoutes } from './study.routes';
+import type { StudyRepository } from './study.repository';
+
+export function createStudyModule(repo: StudyRepository) {
+  const study = createStudyService(repo);
+  return { study, reviewRoutes: reviewRoutes(study), progressRoutes: progressRoutes(study) };
+}
+
+export type { StudyRepository } from './study.repository';
+export { createPostgresStudyRepository, createInMemoryStudyRepository } from './study.repository';
