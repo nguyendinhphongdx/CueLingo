@@ -15,6 +15,7 @@ import { SoonBadge } from '@cuelingo/ui/components/soon-badge';
 import { features, upcoming } from '@cuelingo/ui/lib/roadmap';
 import { ExternalLink } from 'lucide-react';
 import { AppShell } from './AppShell';
+import { views } from './views';
 import { openWeb } from './open-web';
 
 export function App() {
@@ -43,6 +44,15 @@ export function App() {
 
 function CurrentView({ view }: { view: string }) {
   const feature = features.find((item) => item.id === view)!;
+  const Page = views[view];
+  if (Page) {
+    return (
+      <>
+        <PageHeader title={feature.label} />
+        <Page />
+      </>
+    );
+  }
 
   if (view === 'home') {
     return (

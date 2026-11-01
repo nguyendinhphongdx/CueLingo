@@ -102,6 +102,67 @@ flowchart LR
 | M5-06 | Quan sát: log có cấu trúc, đo chi phí AI / giờ họp (H5), Sentry; tối ưu độ trễ và CPU/RAM phiên 2 giờ            | C   | M1-10     | L   |
 | M5-07 | Closed beta: 30–50 người, form phản hồi, dashboard H1–H4                                                         | U+C | tất cả    | —   |
 
+## Giai đoạn 2 · Từ demo đến Beta (kế hoạch song song)
+
+**Hiện trạng (2026-11-01):** M1–M4 đã chạy được từ đầu đến cuối trên máy dev: caption song ngữ, tra từ/tóm tắt/nói giúp, lưu cuộc họp, debrief 5 khối, Phrase Bank, ôn FSRS, tiến độ; desktop có khung giao diện cho cả lộ trình (mục chưa làm ghi "Sắp ra mắt"); web dùng chung khung với desktop. **Chưa làm:** đăng nhập trong app, kiểm quyền macOS thật, nối thuật ngữ vào nhận dạng, đóng gói + ký app, nghe lại đoạn khó, bài nghe, quyền riêng tư, onboarding, quan sát, và các trang học trong app desktop.
+
+**Cách chia làn:** **C** (Claude) giữ phần native (Swift/Rust), AI/prompt, bảo mật/auth, hạ tầng phát hành. **X** (Codex) làm React/Next, CRUD API, test, tài liệu. Mỗi đợt có hai làn chạy cùng lúc; X tối đa 3–4 brief khác thư mục; file dùng chung (`roadmap.ts`, `app.ts`, `server.ts`, `package.json`, lockfile) do C sửa khi gộp. Mỗi task X có brief `04-brief-<id>.md` trong `06-delivery/2026-11-06-phase2/`.
+
+Quy ước trạng thái trong `packages/ui/src/lib/roadmap.ts`: khi một tính năng chạy thật trong một client thì đổi `status.<client>` thành `ready`; mọi mục còn lại tự hiện "Sắp ra mắt".
+
+### Đợt 1 · Nền để người khác dùng được (làm ngay)
+
+| ID    | Task                                                                                                                                                                                                                                                                                                             | Chủ | Phụ thuộc | Cỡ  |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | --------- | --- |
+| P2-01 | **Đăng nhập trong app.** Desktop mở `WEB/login?app=1`; sau magic link web gọi `POST /v1/device/code` (cần session) lấy mã dùng một lần, mở `cuelingo://auth?code=…`; app đổi mã lấy token qua `POST /v1/device/exchange`, lưu token trong Keychain (crate `keyring`), gửi `Authorization: Bearer`. Thu hồi được. | C   | M3-01     | L   |
+| P2-02 | **Quyền macOS thật.** Sidecar Swift có lệnh `--permissions` (micro: `AVCaptureDevice`; thu âm hệ thống: thử mở tap ngắn), Rust lệnh `permissions_status` gọi nó; `PermissionsStep` hiện đúng đã cấp/từ chối/chưa hỏi, nút mở thẳng Cài đặt hệ thống.                                                             | C   | —         | M   |
+| P2-03 | **Đóng gói sidecar vào `.app`** (`bundle.resources`/`externalBin`), build script `pnpm desktop:build`, bỏ biến `CUELINGO_AUDIO_BIN` khi chạy bản đóng gói; ký ad-hoc cho dev, chuẩn bị chỗ gắn chứng chỉ thật.                                                                                                   | C   | —         | M   |
+| P2-10 | **Desktop: Ôn tập + Cụm từ** thành trang thật (dùng `/v1/review/*`, `/v1/phrases`), cùng trải nghiệm với web (phím 1–4, thẻ nhận diện/điền chỗ trống), qua `app/views.ts`.                                                                                                                                       | X   | M4        | L   |
+| P2-11 | **Desktop: Thuật ngữ + Tiến độ** thành trang thật (`/v1/glossary`, `/v1/progress`), thêm/xoá thuật ngữ, biểu đồ 7 ngày và 4 tuần.                                                                                                                                                                                | X   | M4        | M   |
+| P2-12 | **Quyền riêng tư:** `DELETE /v1/sessions/:id`, `DELETE /v1/me/data` (xoá cuộc họp, cụm từ, event, debrief của chính mình, giữ tài khoản), `GET /v1/me/export` (JSON); UI ở trang Cài đặt web và desktop (xác nhận hai bước); `workers/retention` xoá hẳn phiên đã đánh dấu `deleted` sau 7 ngày.                 | X   | M3-01     | M   |
+| P2-13 | **Web: trang chủ giới thiệu + trang tải app** (`/` cho khách chưa đăng nhập: giá trị chính, ba bước dùng, ảnh minh hoạ overlay vẽ bằng HTML, nút tải/đăng ký chờ; `/download` hướng dẫn cài và cấp quyền). Dùng skill thiết kế đã cài, không dùng gradient/thẻ icon.                                             | X   | —         | M   |
+
+### Đợt 2 · Dùng hằng ngày được
+
+| ID    | Task                                                                                                                                                                                                                | Chủ | Phụ thuộc    | Cỡ  |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | ------------ | --- |
+| P2-04 | **Nối thuật ngữ vào nhận dạng.** Khi bắt đầu phiên desktop lấy glossary của người dùng, gửi `vocab [...]` tới sidecar (lệnh Rust mới), làm mới khi đổi; thêm cụm nhiều từ vào bộ sửa; prompt dịch đã nhận glossary. | C   | P2-01        | M   |
+| P2-05 | **Giọng đọc (TTS):** task `tts.speak` trong `ai-gateway`, job `tts-cache` lưu file theo hash văn bản, endpoint `GET /v1/tts?text=` trả URL ký; lưu cục bộ khi dev, S3-tương-thích khi có.                           | C   | —            | L   |
+| P2-14 | **Onboarding đầu tiên (desktop):** 4 bước (chào, cấp quyền với trạng thái thật, thử caption mẫu, chọn mức hỗ trợ), chỉ hiện lần đầu, lưu bền.                                                                       | X   | P2-02        | M   |
+| P2-15 | **Cài đặt lưu bền:** `GET/PATCH /v1/me/settings` (mức hỗ trợ mặc định, ngôn ngữ giao diện, giữ audio hay không), desktop lưu cục bộ bằng store Tauri và đồng bộ, trang Cài đặt web.                                 | X   | P2-01        | M   |
+| P2-16 | **Debrief hoàn thiện:** bấm đoạn khó mở transcript tại đúng câu, lọc theo người nói, sao chép/đính kèm debrief, tải Markdown cả cuộc họp, trạng thái "đang tạo" có tiến trình.                                      | X   | M3           | M   |
+| P2-17 | **Bài nghe–gõ + nghe phát âm cụm từ** trong ôn tập (web và desktop) dùng `GET /v1/tts`.                                                                                                                             | X   | P2-05, P2-10 | M   |
+| P2-06 | **Nghe lại đoạn khó:** sidecar cắt clip ngắn quanh câu khi người dùng bật và đồng ý, tải lên kho file, debrief phát 0,75×/1×, tự xoá theo hạn lưu.                                                                  | C   | P2-12, U     | L   |
+
+### Đợt 3 · Học thông minh và phát hành
+
+| ID    | Task                                                                                                                                                                         | Chủ | Phụ thuộc | Cỡ  |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | --------- | --- |
+| P2-07 | **Assist Dial tự gợi ý:** luật thuần trong `learner-model` (đề xuất giảm mức khi % hiểu ≥ 85 ba cuộc họp liền, tăng khi < 60; không tự đổi), `GET /v1/me/assist-suggestion`. | C   | M4        | M   |
+| P2-18 | **UI gợi ý Assist Dial:** thẻ trên Phiên họp (desktop) và Tiến độ (web) với "Áp dụng / Để sau", ghi event.                                                                   | X   | P2-07     | S   |
+| P2-08 | **Bài nghe đánh giá đầu vào:** 6 đoạn nghe có TTS, chấm điểm, ra mức nghe + Assist mặc định (`POST /v1/placement`).                                                          | C   | P2-05     | M   |
+| P2-19 | **UI bài đánh giá** (web + desktop), có thể làm lại.                                                                                                                         | X   | P2-08     | M   |
+| P2-20 | **Quan sát:** log có cấu trúc + request id, đo chi phí AI mỗi giờ họp (bảng `events`), trang nội bộ `/admin/metrics` số liệu H1–H5, Sentry tuỳ chọn qua biến môi trường.     | X   | —         | M   |
+| P2-21 | **Kiểm thử đầu-cuối:** Playwright cho web (đăng nhập magic link dev → cuộc họp → debrief → lưu cụm từ → ôn → tiến độ), chạy trong CI.                                        | X   | P2-13     | M   |
+| P2-09 | **Ký + notarize + tự cập nhật + kênh phát hành:** workflow GitHub Actions dựng `.dmg`, ký, notarize, Tauri updater, trang `/download` trỏ bản mới nhất.                      | C+U | P2-03, U  | L   |
+
+### Đợt 4 · Closed beta
+
+| ID    | Task                                                                                                                            | Chủ | Phụ thuộc | Cỡ  |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------- | --- | --------- | --- |
+| P2-22 | **M1-10 chạy thật:** Zoom/Meet 30 phút, đo p95 độ trễ, overlay không lộ khi chia sẻ màn hình, CPU/RAM phiên 2 giờ; ghi số liệu. | U+C | P2-03     | M   |
+| P2-23 | **Đăng nhập thật:** Google OAuth, email gửi magic link (nhà cung cấp), cookie domain web ↔ API, CORS theo domain thật.          | C+U | —         | M   |
+| P2-24 | **Nhãn người nói "Speaker N"** (tách người trong luồng hệ thống) và đổi tên người nói trong debrief.                            | C   | P2-16     | L   |
+| P2-25 | **Form phản hồi + dashboard H1–H4**, mời 30–50 người dùng thử, vòng sửa lỗi hai tuần.                                           | U+C | tất cả    | —   |
+
+### Thứ tự chạy và ranh giới file
+
+- **Đợt 1** chạy ngay: C làm P2-02 rồi P2-01 rồi P2-03; X làm P2-10, P2-11, P2-12, P2-13 song song (khác thư mục: `apps/desktop/src/study/*`, `apps/desktop/src/study/*` thuật ngữ + tiến độ ở thư mục riêng, `services/api/modules/privacy`, `apps/web/src/app/(public)`).
+- Mọi trang mới của desktop đăng ký qua `apps/desktop/src/app/views.ts`; mỗi brief thêm đúng một dòng. C đổi `roadmap.ts` sau khi gộp.
+- **Cổng giữa các đợt:** `pnpm verify` xanh, người dùng thử bản `.app` mới, cập nhật mục này (đánh ✅), rồi mới mở đợt kế.
+- **Việc của người dùng (U)** theo đợt: Đợt 1: không. Đợt 2: nơi lưu file (S3-tương-thích hoặc dùng đĩa cục bộ khi demo). Đợt 3: tài khoản Apple Developer. Đợt 4: tài khoản email gửi thư, khoá Google OAuth, domain, họp thử thật.
+- **Rủi ro mới:** token thiết bị (P2-01) là thay đổi bảo mật, cần review kỹ; nơi lưu audio (P2-06) liên quan quyền riêng tư nên mặc định tắt và cần đồng ý rõ; chi phí TTS (P2-05) cần cache theo hash để không gọi lặp.
+
 ## Việc cần từ người dùng (U)
 
 | Khi nào      | Việc                                                                                               |
