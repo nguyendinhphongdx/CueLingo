@@ -33,7 +33,8 @@ export function createSessionsApi({ apiUrl, token, fetch: request = fetch }: Ses
     const response = await request(`${baseUrl}${path}`, {
       method: 'POST',
       headers,
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      // The API parses JSON bodies, so a request with a JSON content type must carry one.
+      body: JSON.stringify(body ?? {}),
     });
 
     if (!response.ok) throw new Error(`Session request failed with status ${response.status}`);

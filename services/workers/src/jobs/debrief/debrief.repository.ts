@@ -47,7 +47,7 @@ export function createPostgresDebriefRepository(sql: Sql): DebriefRepository {
             phrase_suggestions, rephrase, comprehension_pct, prompt_version
           ) VALUES (
             ${sessionId}, ${version}, ${tx.json(content.summary)},
-            ${tx.json(content.actionItems)}, ${tx.array(content.hardSegmentIds)}::uuid[],
+            ${tx.json(content.actionItems)}, ${content.hardSegmentIds}::uuid[],
             ${tx.json(content.phraseSuggestions)}, ${tx.json(content.rephrase)},
             ${content.comprehensionPct}, ${promptVersion}
           )`;
