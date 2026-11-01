@@ -6,22 +6,19 @@ import { PermissionsStep } from '../onboarding';
 import { RecentSessions, SessionPanel } from '../session';
 import { AssistSettings } from '../settings';
 import { AboutCard, ShortcutList } from './AboutCard';
+import { Button } from '@cuelingo/ui/components/button';
+import { ComingSoon } from '@cuelingo/ui/components/coming-soon';
+import { PageHeader } from '@cuelingo/ui/components/page-header';
+import { ListCard, Section } from '@cuelingo/ui/components/section';
+import { SoonBadge } from '@cuelingo/ui/components/soon-badge';
+import { features, upcoming } from '@cuelingo/ui/lib/roadmap';
+import { ExternalLink } from 'lucide-react';
 import { AppShell } from './AppShell';
-import { ComingSoon, SoonBadge } from './ComingSoon';
-import { features, upcoming, type View } from './features';
-
-function PageHeader({ title, description }: { title: string; description?: string }) {
-  return (
-    <header>
-      <h1 className="text-2xl leading-tight font-semibold tracking-tight">{title}</h1>
-      {description ? <p className="text-muted-foreground mt-1 text-sm">{description}</p> : null}
-    </header>
-  );
-}
+import { openWeb } from './open-web';
 
 export function App() {
   useColorScheme();
-  const [view, setView] = useState<View>('home');
+  const [view, setView] = useState('home');
 
   return (
     <MotionConfig reducedMotion="user">
@@ -42,8 +39,8 @@ export function App() {
   );
 }
 
-function CurrentView({ view }: { view: View }) {
-  const feature = features.find((item) => item.view === view)!;
+function CurrentView({ view }: { view: string }) {
+  const feature = features.find((item) => item.id === view)!;
 
   if (view === 'home') {
     return (
@@ -52,14 +49,11 @@ function CurrentView({ view }: { view: View }) {
         <SessionPanel />
         <AssistSettings />
         <RecentSessions />
-        <section aria-labelledby="shortcuts-title" className="space-y-3">
-          <h2 id="shortcuts-title" className="text-sm font-semibold">
-            Phím tắt
-          </h2>
+        <Section title="Phím tắt">
           <div className="bg-card rounded-xl border px-4 py-3">
             <ShortcutList />
           </div>
-        </section>
+        </Section>
       </>
     );
   }
@@ -77,11 +71,8 @@ function CurrentView({ view }: { view: View }) {
         <PageHeader title="Cài đặt" />
         <PermissionsStep />
         <AboutCard />
-        <section aria-labelledby="upcoming-title" className="space-y-3">
-          <h2 id="upcoming-title" className="text-sm font-semibold">
-            Đang trên lộ trình
-          </h2>
-          <ul className="bg-card divide-y rounded-xl border">
+        <Section title="Đang trên lộ trình">
+          <ListCard>
             {upcoming.map((item) => (
               <li key={item.title} className="flex items-start justify-between gap-4 px-4 py-3">
                 <div className="min-w-0">
@@ -91,15 +82,32 @@ function CurrentView({ view }: { view: View }) {
                 <SoonBadge />
               </li>
             ))}
-          </ul>
-        </section>
+          </ListCard>
+        </Section>
       </>
     );
   }
   return (
     <>
       <PageHeader title={feature.label} />
-      <ComingSoon feature={feature} />
+      <ComingSoon
+        feature={feature}
+        action={
+          <>
+            <p className="text-muted-foreground mb-3 text-sm">
+              Trong lúc chờ bản trong app, bạn dùng được ngay trên web.
+            </p>
+            <Button
+              variant="outline"
+              className="cursor-pointer"
+              onClick={() => void openWeb(feature.webPath)}
+            >
+              <ExternalLink aria-hidden="true" className="size-4" />
+              Mở trên web
+            </Button>
+          </>
+        }
+      />
     </>
   );
 }

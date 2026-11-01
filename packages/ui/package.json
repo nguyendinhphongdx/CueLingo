@@ -9,16 +9,19 @@
     "./globals.css": "./src/styles/globals.css",
     "./components/*": "./src/components/*.tsx",
     "./lib/*": "./src/lib/*.ts",
-    "./hooks/*": "./src/hooks/*.ts"
+    "./hooks/*": "./src/hooks/*.ts",
+    "./brand.css": "./src/styles/brand.css"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build:css": "tailwindcss -i src/styles/globals.css -o dist/globals.css"
   },
   "dependencies": {
+    "@animate-ui/react": "^2.4.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.66.0",
+    "motion": "^14.9.0",
     "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {

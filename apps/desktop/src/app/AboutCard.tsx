@@ -1,3 +1,4 @@
+import { Kbd } from '@cuelingo/ui/components/kbd';
 import {
   Card,
   CardContent,
@@ -12,14 +13,6 @@ const shortcuts = [
   { keys: '⌘⇧W', label: 'Họ vừa nói gì? (tóm tắt)' },
   { keys: '⌘⇧S', label: 'Nói giúp (soạn câu tiếng Anh)' },
 ];
-
-export function Kbd({ children }: { children: string }) {
-  return (
-    <kbd className="bg-card text-foreground rounded-md border border-b-2 px-2 py-0.5 font-sans text-xs font-medium tracking-wide">
-      {children}
-    </kbd>
-  );
-}
 
 export function ShortcutList() {
   return (

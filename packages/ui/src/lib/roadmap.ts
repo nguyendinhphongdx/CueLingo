@@ -1,63 +1,55 @@
-import {
-  BookOpenCheck,
-  Bookmark,
-  History,
-  Languages,
-  Mic,
-  Settings,
-  TrendingUp,
-  type LucideIcon,
-} from 'lucide-react';
-
 /**
- * The product roadmap as the app shows it. Flip `status` to `ready` and add the view when a feature ships.
- * `web` means it already works on the web app and the desktop page links to it.
+ * The product roadmap as every client shows it: one list drives the sidebar, the coming-soon pages
+ * and the roadmap card. Flip `status` to `ready` (or `web`) when a feature ships in that client.
  */
-export type FeatureStatus = 'ready' | 'web' | 'soon';
-
-export type View =
-  'home' | 'meetings' | 'review' | 'phrases' | 'glossary' | 'progress' | 'settings';
+export type FeatureStatus = 'ready' | 'soon';
+export type FeatureGroup = 'meeting' | 'learn' | 'app';
+export type FeatureIconName =
+  'mic' | 'history' | 'review' | 'bookmark' | 'languages' | 'progress' | 'settings';
 
 export interface Feature {
-  view: View;
+  id: string;
   label: string;
-  group: 'meeting' | 'learn' | 'app';
-  icon: LucideIcon;
-  status: FeatureStatus;
-  /** One sentence on what the person gets. */
+  group: FeatureGroup;
+  icon: FeatureIconName;
+  /** Per client: where the feature stands in that client. */
+  status: { desktop: FeatureStatus; web: FeatureStatus };
   summary: string;
-  /** Concrete things they will be able to do. */
   bullets: string[];
-  /** Path on the web app, when there is one. */
-  webPath?: string;
+  /** Route on the web app. */
+  webPath: string;
 }
 
 export const features: Feature[] = [
   {
-    view: 'home',
+    id: 'home',
     label: 'Phiên họp',
     group: 'meeting',
-    icon: Mic,
-    status: 'ready',
+    icon: 'mic',
+    status: { desktop: 'ready', web: 'soon' },
     summary: 'Bật caption song ngữ cho cuộc họp đang diễn ra.',
-    bullets: [],
+    bullets: [
+      'Caption tiếng Anh kèm bản dịch tiếng Việt ngay trên màn hình',
+      'Tra từ, tóm tắt và soạn câu trả lời trong lúc họp',
+    ],
+    webPath: '/',
   },
   {
-    view: 'meetings',
+    id: 'meetings',
     label: 'Cuộc họp',
     group: 'meeting',
-    icon: History,
-    status: 'ready',
+    icon: 'history',
+    status: { desktop: 'ready', web: 'ready' },
     summary: 'Xem lại các cuộc họp và debrief sau họp.',
-    bullets: [],
+    bullets: ['Tóm tắt, việc cần làm, đoạn khó và cụm từ nên lưu', 'Xuất debrief ra Markdown'],
     webPath: '/sessions',
   },
   {
-    view: 'review',
+    id: 'review',
     label: 'Ôn tập',
     group: 'learn',
-    icon: BookOpenCheck,
-    status: 'soon',
+    icon: 'review',
+    status: { desktop: 'soon', web: 'ready' },
     summary: 'Ôn lại cụm từ từ chính các cuộc họp của bạn, 5–10 phút mỗi ngày.',
     bullets: [
       'Thẻ nhận diện nghĩa và điền chỗ trống từ câu trong cuộc họp',
@@ -67,11 +59,11 @@ export const features: Feature[] = [
     webPath: '/review',
   },
   {
-    view: 'phrases',
+    id: 'phrases',
     label: 'Cụm từ',
     group: 'learn',
-    icon: Bookmark,
-    status: 'soon',
+    icon: 'bookmark',
+    status: { desktop: 'soon', web: 'ready' },
     summary: 'Kho cụm từ bạn đã lưu từ debrief và từ lúc tra từ.',
     bullets: [
       'Lưu cụm từ chỉ với một cú bấm từ caption hoặc debrief',
@@ -81,11 +73,11 @@ export const features: Feature[] = [
     webPath: '/phrases',
   },
   {
-    view: 'glossary',
+    id: 'glossary',
     label: 'Thuật ngữ',
     group: 'learn',
-    icon: Languages,
-    status: 'soon',
+    icon: 'languages',
+    status: { desktop: 'soon', web: 'ready' },
     summary: 'Thuật ngữ riêng của công việc, để caption nghe và dịch đúng.',
     bullets: [
       'Thêm từ viết tắt và tên sản phẩm như SLA, roadmap',
@@ -95,11 +87,11 @@ export const features: Feature[] = [
     webPath: '/glossary',
   },
   {
-    view: 'progress',
+    id: 'progress',
     label: 'Tiến độ',
     group: 'learn',
-    icon: TrendingUp,
-    status: 'soon',
+    icon: 'progress',
+    status: { desktop: 'soon', web: 'ready' },
     summary: 'Bạn nghe hiểu tốt hơn bao nhiêu qua từng tuần.',
     bullets: [
       'Phần trăm hiểu trung bình của các cuộc họp',
@@ -109,23 +101,24 @@ export const features: Feature[] = [
     webPath: '/progress',
   },
   {
-    view: 'settings',
+    id: 'settings',
     label: 'Cài đặt',
     group: 'app',
-    icon: Settings,
-    status: 'ready',
-    summary: 'Quyền truy cập, tài khoản và thông tin ứng dụng.',
-    bullets: [],
+    icon: 'settings',
+    status: { desktop: 'ready', web: 'soon' },
+    summary: 'Tài khoản, quyền riêng tư và thông tin ứng dụng.',
+    bullets: ['Quản lý tài khoản và thiết bị', 'Xoá dữ liệu cuộc họp và cụm từ của bạn'],
+    webPath: '/settings',
   },
 ];
 
-export const featureGroups: Array<{ id: Feature['group']; title: string }> = [
+export const featureGroups: Array<{ id: FeatureGroup; title: string }> = [
   { id: 'meeting', title: 'Họp' },
   { id: 'learn', title: 'Học' },
   { id: 'app', title: 'Ứng dụng' },
 ];
 
-/** Features that are not in the app yet, shown as a short roadmap in Settings. */
+/** Smaller items on the roadmap that have no page of their own yet. */
 export const upcoming: Array<{ title: string; description: string }> = [
   {
     title: 'Tài khoản',

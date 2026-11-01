@@ -75,7 +75,7 @@ export function SessionPanel() {
     <section
       aria-label="Caption trực tiếp"
       className={`relative overflow-hidden rounded-2xl border p-6 transition-colors ${
-        running ? 'hero-live border-transparent text-white' : 'bg-card'
+        running ? 'surface-live border-transparent text-white' : 'bg-card'
       }`}
     >
       <div className="flex items-start justify-between gap-6">
