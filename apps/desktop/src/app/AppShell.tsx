@@ -20,10 +20,10 @@ interface AppShellProps {
 /** Window frame: brand and navigation on the left, the current view on the right. */
 export function AppShell({ view, onNavigate, children }: AppShellProps) {
   return (
-    <div className="bg-background text-foreground relative flex min-h-screen">
+    <div className="bg-background text-foreground relative flex h-screen overflow-hidden">
       {/* The native title bar is transparent; this strip lets the window be dragged. */}
       <div data-tauri-drag-region className="absolute inset-x-0 top-0 z-10 h-9" />
-      <aside className="bg-muted/60 flex w-[220px] shrink-0 flex-col border-r px-3 pt-12 pb-5">
+      <aside className="bg-muted/60 flex h-full w-[220px] shrink-0 flex-col overflow-hidden border-r px-3 pt-12 pb-5">
         <div className="flex items-center gap-3 px-2">
           <Logo size={36} />
           <div className="min-w-0">
@@ -66,7 +66,7 @@ export function AppShell({ view, onNavigate, children }: AppShellProps) {
         </nav>
         <p className="text-muted-foreground mt-auto px-2 text-xs leading-relaxed">{APP_TAGLINE}</p>
       </aside>
-      <main className="flex-1 overflow-y-auto px-10 pt-14 pb-9">
+      <main className="scroll-auto-hide h-full flex-1 overflow-y-auto px-10 pt-14 pb-9">
         <div className="mx-auto flex max-w-[640px] flex-col gap-6">{children}</div>
       </main>
     </div>
