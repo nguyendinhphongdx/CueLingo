@@ -49,7 +49,7 @@ export const features: Feature[] = [
     label: 'Ôn tập',
     group: 'learn',
     icon: 'review',
-    status: { desktop: 'soon', web: 'ready' },
+    status: { desktop: 'ready', web: 'ready' },
     summary: 'Ôn lại cụm từ từ chính các cuộc họp của bạn, 5–10 phút mỗi ngày.',
     bullets: [
       'Thẻ nhận diện nghĩa và điền chỗ trống từ câu trong cuộc họp',
@@ -63,7 +63,7 @@ export const features: Feature[] = [
     label: 'Cụm từ',
     group: 'learn',
     icon: 'bookmark',
-    status: { desktop: 'soon', web: 'ready' },
+    status: { desktop: 'ready', web: 'ready' },
     summary: 'Kho cụm từ bạn đã lưu từ debrief và từ lúc tra từ.',
     bullets: [
       'Lưu cụm từ chỉ với một cú bấm từ caption hoặc debrief',
@@ -77,7 +77,7 @@ export const features: Feature[] = [
     label: 'Thuật ngữ',
     group: 'learn',
     icon: 'languages',
-    status: { desktop: 'soon', web: 'ready' },
+    status: { desktop: 'ready', web: 'ready' },
     summary: 'Thuật ngữ riêng của công việc, để caption nghe và dịch đúng.',
     bullets: [
       'Thêm từ viết tắt và tên sản phẩm như SLA, roadmap',
@@ -91,7 +91,7 @@ export const features: Feature[] = [
     label: 'Tiến độ',
     group: 'learn',
     icon: 'progress',
-    status: { desktop: 'soon', web: 'ready' },
+    status: { desktop: 'ready', web: 'ready' },
     summary: 'Bạn nghe hiểu tốt hơn bao nhiêu qua từng tuần.',
     bullets: [
       'Phần trăm hiểu trung bình của các cuộc họp',
