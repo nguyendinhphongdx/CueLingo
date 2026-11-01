@@ -12,4 +12,11 @@ describe('worker loadConfig', () => {
     expect(() => loadConfig({})).toThrow(ConfigError);
     expect(() => loadConfig({})).toThrow(/DATABASE_URL/);
   });
+
+  it('accepts an optional Gemini API key', () => {
+    expect(
+      loadConfig({ DATABASE_URL: 'postgres://u:p@localhost:5432/d', GEMINI_API_KEY: 'key' })
+        .GEMINI_API_KEY,
+    ).toBe('key');
+  });
 });

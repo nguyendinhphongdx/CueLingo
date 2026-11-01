@@ -10,3 +10,5 @@ export * from './recap/v1';
 export { recapFixtures } from './recap/fixtures/cases';
 export * from './compose/v1';
 export { composeFixtures } from './compose/fixtures/cases';
+export * from './debrief/v1';
+export { debriefFixtures } from './debrief/fixtures/cases';

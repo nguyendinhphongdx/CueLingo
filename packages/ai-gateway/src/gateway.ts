@@ -1,14 +1,17 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import {
   buildComposePrompt,
+  buildDebriefPrompt,
   buildLookupPrompt,
   buildRecapPrompt,
   buildTranslatePrompt,
   COMPOSE_PROMPT_VERSION,
+  DEBRIEF_PROMPT_VERSION,
   LOOKUP_PROMPT_VERSION,
   RECAP_PROMPT_VERSION,
   TRANSLATE_PROMPT_VERSION,
   type TranslateInput,
+  type DebriefPromptInput,
 } from '@cuelingo/prompts';
 import type { ComposeRequest, LookupRequest, RecapRequest } from '@cuelingo/shared';
 import { generateText } from 'ai';
@@ -40,6 +43,7 @@ export interface JsonTaskInputMap {
   'assist.lookup': LookupRequest;
   'assist.recap': RecapRequest;
   'assist.compose': ComposeRequest;
+  'debrief.generate': DebriefPromptInput;
 }
 
 export type GenerateFn = (args: {
@@ -157,6 +161,11 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
         return { ...buildRecapPrompt(input as RecapRequest), version: RECAP_PROMPT_VERSION };
       case 'assist.compose':
         return { ...buildComposePrompt(input as ComposeRequest), version: COMPOSE_PROMPT_VERSION };
+      case 'debrief.generate':
+        return {
+          ...buildDebriefPrompt(input as DebriefPromptInput),
+          version: DEBRIEF_PROMPT_VERSION,
+        };
     }
   }
 

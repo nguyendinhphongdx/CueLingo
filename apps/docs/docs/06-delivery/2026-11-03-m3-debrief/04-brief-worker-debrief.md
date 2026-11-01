@@ -33,3 +33,22 @@ Job `debrief.generate` (`{sessionId}`) đọc transcript một session (bảng `
 Quy tắc chung: đọc `AGENTS.md` gốc và `AGENTS.md` của thư mục bạn sửa, `apps/docs/docs/05-engineering/agent-collaboration.md`. Không có mạng, không `pnpm add`, không commit/push; dependency đã cài sẵn. Không đổi hợp đồng trong `packages/shared/src/dto/{session,debrief,phrase}.dto.ts` (nếu thật sự thiếu, dừng và ghi câu hỏi). Chạy `pnpm verify` trước khi báo; điền mục Kết quả.
 
 ## Kết quả _(implementer điền)_
+
+- Đã triển khai:
+  - Prompt `debrief.generate@v1` và 3 fixture VI/EN trong `packages/prompts/src/debrief/`; gắn nhãn “Tôi”/“Họ”, giữ khoảng 12.000 ký tự gần nhất, ràng buộc 5 khối, id đoạn khó và câu `mic` được rephrase.
+  - Task gateway `debrief.generate`: model mặc định `gemini-3.5-flash-lite`, `AI_DEBRIEF_MODEL`, timeout 60 giây, parse/validate JSON qua gateway hiện có.
+  - Job `services/workers/src/jobs/debrief/`: đọc transcript theo thứ tự, bỏ qua session thiếu/rỗng, lọc id lạ, đặt điểm hiểu `null` khi dưới 5 câu, ghi phiên bản `max+1` và cập nhật session trong cùng transaction. Advisory lock bảo vệ số phiên bản khi chạy đồng thời.
+  - Worker đăng ký job và nhận `GEMINI_API_KEY` tuỳ chọn; thiếu key không chặn khởi động, job có transcript lỗi rõ ràng để pg-boss retry.
+  - Cập nhật trang module `apps/docs/docs/04-modules/04-workers/debrief-job.md`.
+- Test đã thêm:
+  - `packages/prompts/src/debrief/v1.test.ts`: cấu trúc prompt, nhãn speaker, giới hạn transcript, 3 fixture.
+  - `packages/ai-gateway/src/gateway.test.ts`: route/model/timeout/env và output schema.
+  - `services/workers/src/jobs/debrief/debrief.test.ts`: AC1–AC4, version mới khi chạy lại, điểm hiểu ít dữ liệu và thiếu key.
+  - `services/workers/test/integration/debrief.int.test.ts`: luồng repository thật với Postgres, gồm hai version và trạng thái `debriefed`.
+- Kiểm tra:
+  - `pnpm verify`: xanh — 36 file test, 162 test; không có vi phạm dependency. Máy chỉ có Node 22.14 (repo yêu cầu ≥22.19) nên lệnh có cảnh báo engine nhưng hoàn tất thành công.
+  - `pnpm docs:build`: xanh.
+  - Test mục tiêu prompt + gateway + handler: xanh — 20 test.
+  - Test Postgres thật chưa chạy được tại worktree này: Testcontainers báo `Could not find a working container runtime strategy` vì Docker daemon không chạy. Test đã typecheck và được để lại cho CI/máy có Docker.
+- Khác brief: thêm integration test repository để kiểm tra transaction/version/status; không đổi contract, migration, model mặc định hoặc file ngoài phạm vi được phép.
+- Câu hỏi còn mở: không có.

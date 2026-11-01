@@ -1,6 +1,8 @@
+import { createAiGateway } from '@cuelingo/ai-gateway';
 import { PgBoss } from 'pg-boss';
 import { loadConfig } from './config';
 import { jobs } from './jobs';
+import { createPostgresDebriefRepository } from './jobs/debrief';
 import { createPostgresRetentionRepository } from './jobs/retention';
 import type { JobDeps } from './jobs/types';
 import { createSql } from './lib/db';
@@ -10,6 +12,15 @@ const config = loadConfig();
 const sql = createSql(config.DATABASE_URL);
 
 const deps: JobDeps = {
+  debrief: createPostgresDebriefRepository(sql),
+  ai: config.GEMINI_API_KEY
+    ? createAiGateway({
+        googleApiKey: config.GEMINI_API_KEY,
+        onCall: ({ task, model, latencyMs }) =>
+          console.warn('worker: AI call completed', { task, model, latencyMs }),
+      })
+    : undefined,
+  log: { warn: (message, context) => console.warn(message, context) },
   retention: createPostgresRetentionRepository(sql),
   storage: createUnconfiguredStorage(),
   now: () => new Date(),
