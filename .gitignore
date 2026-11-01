@@ -34,3 +34,6 @@ next-env.d.ts
 
 # Tauri generated schemas
 apps/desktop/src-tauri/gen/
+
+# SwiftPM
+.build/
