@@ -44,3 +44,18 @@ flowchart LR
 ## Rủi ro
 
 Xem [backlog](../../02-product/06-backlog.md#điều-chưa-chắc-và-cách-giảm-rủi-ro). Rủi ro hiện tại cao nhất: quyền macOS và STT streaming chưa đo.
+
+## Số đo sơ bộ M1-10 (2026-11-01)
+
+Đo bằng file ghi âm (giọng tổng hợp 5,6 s), chưa phải họp thật:
+
+| Khâu                                      | Kết quả                       | Ngưỡng  |
+| ----------------------------------------- | ----------------------------- | ------- |
+| Nạp model (một lần)                       | ~0,3 s                        | -       |
+| Partial đầu tiên                          | sau 0,7 s                     | -       |
+| Nhận dạng câu cuối (5,6 s âm thanh)       | ~0,2 s sau khi chốt câu       | -       |
+| Chốt câu (khoảng lặng 600 ms + nhận dạng) | ~0,8 s sau khi người nói xong | ≤ 1 s   |
+| Dịch qua API + Gemini                     | 0,8–1,4 s mỗi câu             | -       |
+| Ước tính tổng đến bản dịch                | ~1,6–2,2 s                    | ≤ 2,5 s |
+
+Chưa đo: chạy live trong Zoom/Meet, ổn định 30 phút, overlay có lộ khi chia sẻ màn hình hay không.
