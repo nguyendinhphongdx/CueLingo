@@ -59,11 +59,7 @@ CREATE TABLE ...;
 DROP TABLE ...;
 ```
 
-Việc chuyển đổi:
-
-1. Đổi `0001_init.sql` thành `<timestamp>_init.sql` có `-- migrate:up` / `-- migrate:down`. File này chưa chạy ở đâu nên được phép sửa — **lần duy nhất**.
-2. Bỏ mount `./db/migrations:/docker-entrypoint-initdb.d` trong `infra/docker-compose.yml`: migration chỉ chạy bằng `pnpm db:migrate`.
-3. CI: dựng Postgres service, chạy `pnpm db:migrate` trước integration test.
+Đã làm (giai đoạn Nền móng): `0001_init.sql` thành `20261101090000_init.sql` có `-- migrate:up` / `-- migrate:down` (lần sửa duy nhất vì chưa chạy ở đâu); bỏ mount `docker-entrypoint-initdb.d` trong `infra/docker-compose.yml`, migration chỉ chạy bằng `pnpm db:migrate` (đọc `DATABASE_URL` từ `.env`). CI không cần service Postgres: integration test tự dựng container bằng Testcontainers và chạy dbmate lên đó (`test/integration/postgres.ts`).
 
 ## 3. Hàng đợi — `src/lib/queue.ts`
 
@@ -92,33 +88,11 @@ pnpm --filter @cuelingo/api add better-auth pg
 pnpm --filter @cuelingo/api add -D @types/pg
 ```
 
-**Dữ liệu:** Better Auth sở hữu bảng định danh (`user`, `session`, `account`, `verification`). Bảng `users` của ta đổi thành `learner_profiles` (khoá `user_id` → `user.id`); mọi cột `user_id` của bảng nghiệp vụ tham chiếu `user.id`. Sinh schema bằng `npx auth@latest generate`, **chép SQL vào một migration dbmate** (không dùng `auth migrate`). Kiểm kiểu id mà schema sinh ra (chuỗi hay UUID) và cho cột `user_id` khớp.
+**Dữ liệu:** Better Auth sở hữu bảng định danh. Ta đặt tên có tiền tố qua `modelName` (`auth_user`, `auth_session`, `auth_account`, `auth_verification`) để không lẫn `auth_session` (đăng nhập) với `sessions` (cuộc họp). Bảng `users` cũ của ta đổi thành `learner_profiles` (khoá `user_id` → `auth_user.id`); mọi cột `user_id` nghiệp vụ tham chiếu `auth_user(id)`. Trên Postgres, Better Auth để DB tự sinh id UUID nên `user_id` giữ kiểu `uuid`; cột của Better Auth giữ camelCase có nháy kép.
 
-`src/modules/auth/auth.ts`:
+`npx auth@latest generate` với adapter Postgres **cần kết nối tới DB đang chạy** (nó đọc schema hiện có), nên migration ban đầu được viết tay theo schema lõi và có **test chống lệch**: `auth.int.test.ts` gọi `getMigrations()` của Better Auth trên DB đã migrate và đòi không còn gì để tạo/thêm. Nâng phiên bản Better Auth → chạy `pnpm test:int`; lệch thì thêm migration mới (không dùng `auth migrate`).
 
-```ts
-import { betterAuth } from 'better-auth';
-import { magicLink } from 'better-auth/plugins'; // xác nhận đường import trong tài liệu plugin
-import { Pool } from 'pg';
-import type { Config } from '../../config';
-
-export function createAuth(config: Config) {
-  return betterAuth({
-    database: new Pool({ connectionString: config.DATABASE_URL }),
-    secret: config.BETTER_AUTH_SECRET,
-    baseURL: config.BETTER_AUTH_URL,
-    trustedOrigins: [config.WEB_ORIGIN],
-    socialProviders: { google: { clientId: '…', clientSecret: '…' } }, // từ config
-    plugins: [
-      magicLink({
-        sendMagicLink: async ({ email, url }) => {
-          /* gửi email */
-        },
-      }),
-    ],
-  });
-}
-```
+Cấu hình thật nằm ở `services/api/src/modules/auth/`: `auth.ts` (instance), `auth.routes.ts` (mount `/api/auth/*` và `sessionUserId`), `auth.mailer.ts` (dev in link ra log, production từ chối vì chưa có nhà cung cấp email). `magicLink` từ `better-auth/plugins`; Google chỉ bật khi có cả hai khoá; `databaseHooks.user.create.after` tạo dòng `learner_profiles`.
 
 Gắn handler (theo hướng dẫn Fastify của Better Auth): route `GET|POST /api/auth/*` chuyển request Fastify sang `Request` của Fetch (`fromNodeHeaders` từ `better-auth/node`), gọi `auth.handler(req)`, chép status/header/body về `reply`. Đăng ký `@fastify/cors` (origin = `WEB_ORIGIN`, `credentials: true`) **trước** handler.
 

@@ -5,11 +5,11 @@
  */
 import type { Config } from '../../config';
 import { createAuth } from './auth';
-import { createMailer } from './auth.mailer';
+import { createMailer, type Mailer } from './auth.mailer';
 import { authRoutes, sessionUserId } from './auth.routes';
 
-export function createAuthModule(config: Config) {
-  const auth = createAuth(config, createMailer(config));
+export function createAuthModule(config: Config, mailer: Mailer = createMailer(config)) {
+  const auth = createAuth(config, mailer);
   return { auth, routes: authRoutes(auth), resolveUserId: sessionUserId(auth) };
 }
 

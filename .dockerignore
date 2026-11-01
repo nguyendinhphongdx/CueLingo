@@ -1,0 +1,16 @@
+# Never ship secrets or local state into an image.
+.env
+.env.*
+!.env.example
+.git
+.worktrees
+node_modules
+**/node_modules
+.turbo
+.pnpm-store
+**/dist
+**/.next
+**/.docusaurus
+apps/docs/build
+ml
+.claude

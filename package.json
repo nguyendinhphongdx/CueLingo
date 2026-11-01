@@ -20,7 +20,12 @@
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm check:deps",
     "prepare": "husky",
     "docs:dev": "pnpm --filter @cuelingo/docs dev",
-    "docs:build": "pnpm --filter @cuelingo/docs build"
+    "docs:build": "pnpm --filter @cuelingo/docs build",
+    "db:new": "dbmate --migrations-dir infra/db/migrations new",
+    "db:migrate": "dbmate --migrations-dir infra/db/migrations --no-dump-schema up",
+    "db:rollback": "dbmate --migrations-dir infra/db/migrations --no-dump-schema rollback",
+    "db:status": "dbmate --migrations-dir infra/db/migrations status",
+    "test:int": "vitest run --config vitest.int.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

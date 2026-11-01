@@ -82,7 +82,9 @@ pnpm format                     # prettier
 pnpm docs:dev                   # tài liệu: http://localhost:3100
 pnpm docs:build                 # build docs + kiểm link hỏng — chạy khi sửa docs
 docker compose -f infra/docker-compose.yml up -d
-pnpm --filter @cuelingo/api dev # DATABASE_URL=… DEV_AUTH=1 (đến khi có Better Auth)
+pnpm db:migrate                 # dbmate (cần .env: cp .env.example .env)
+pnpm test:int                   # integration test với Postgres thật (cần Docker)
+pnpm --filter @cuelingo/api dev # API (đọc .env ở gốc repo)
 ```
 
 ## Theo từng agent

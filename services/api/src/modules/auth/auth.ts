@@ -16,6 +16,11 @@ export function createAuth(config: Config, mailer: Mailer) {
     secret: config.BETTER_AUTH_SECRET,
     baseURL: config.BETTER_AUTH_URL,
     trustedOrigins: [config.WEB_ORIGIN],
+    // Tables are prefixed auth_ so they never read as our meeting tables (sessions).
+    user: { modelName: 'auth_user' },
+    session: { modelName: 'auth_session' },
+    account: { modelName: 'auth_account' },
+    verification: { modelName: 'auth_verification' },
     socialProviders:
       config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET
         ? {
