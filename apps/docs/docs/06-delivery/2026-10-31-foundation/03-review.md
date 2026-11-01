@@ -43,3 +43,9 @@ Cập nhật theo từng brief. **Đã chạy thật** nghĩa là chạy với P
 - Cookie session giữa hai origin khác nhau ở production (cookie domain) chưa cấu hình.
 - Nhà cung cấp email cho magic link ở production (trước beta); object storage cho audio.
 - Chưa thử CI trên GitHub.
+
+## B3 Desktop (2026-11-01)
+
+- Lead: khung Tauri 2 + Rust (cửa sổ, tray, ⌘⇧L/W/S, 5 command), `native.ts` parse Zod. Codex: toàn bộ UI React (13 test). Review chéo: 🟢 đúng phạm vi, không `invoke` ngoài `native.ts`; 🟡 level overlay chưa đồng bộ với main.
+- ✅ `pnpm verify` (62 test), `cargo fmt/clippy -D warnings/test`, `tauri dev` khởi động không lỗi, `tauri build` ra `CueLingo.app` (11 MB).
+- ⏳ AC8: chưa nhìn được cửa sổ (agent thiếu quyền Screen Recording) — cần bạn chạy `pnpm --filter @cuelingo/desktop tauri dev`, bấm ⌘⇧L, thử chia sẻ màn hình Zoom/Meet.

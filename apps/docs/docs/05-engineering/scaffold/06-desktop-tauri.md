@@ -10,7 +10,7 @@ Quyết định: [ADR-0002](../../08-adr/0002-desktop-tauri-swift.md), [ADR-0007
 
 ## Điều kiện trước
 
-- Rust (`rustup`), Xcode Command Line Tools; [UI package](./05-ui-package.md) xong.
+- Rust ≥ 1.90 (Tauri 2.12+; repo ghim `stable` trong `src-tauri/rust-toolchain.toml`, chạy `rustup update stable`), Xcode Command Line Tools; [UI package](./05-ui-package.md) xong.
 - Kiểm tra: `cargo --version`, `xcode-select -p`.
 
 ## 1. Vite + React trong `apps/desktop`
@@ -91,3 +91,9 @@ Module UI (`session`, `overlay`…) chỉ dùng `native` và `client`; không g�
 - ❌ `invoke('…')` rải rác trong component.
 - ❌ Logic sản phẩm (dịch, Learner Model) trong Rust.
 - ❌ Overlay có viền/cửa sổ hệ thống hoặc lọt vào bản chia sẻ màn hình.
+
+## Giới hạn đã gặp (2026-11-01)
+
+- Agent trong sandbox không ghi được `~/.cargo`: `cargo fetch/build/clippy` và `tauri dev/build` chạy ngoài sandbox.
+- Codex chỉ viết UI React (không có mạng, không chạy cargo); Rust và `native.ts` do lead giữ.
+- Hai webview (main, overlay) không chung store: đồng bộ Assist level là việc còn mở.
