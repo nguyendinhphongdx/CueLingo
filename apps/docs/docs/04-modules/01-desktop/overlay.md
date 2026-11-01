@@ -17,16 +17,21 @@ Cửa sổ caption song ngữ nổi trên app họp.
 
 ## Interface
 
-- Component `<CaptionOverlay />` đọc `useSession()`
+- `<CaptionOverlay level={level} />`: hiện dữ liệu mẫu trước sự kiện transcript đầu tiên; level `0` ẩn nội dung, `1` chỉ hiện bản dịch, `3–4` hiện song ngữ
+- `useTranscript()`: đăng ký và dọn listener qua `native.onTranscript`
+- `useTranscriptStore`: `push(event)` thay segment cùng `segmentId`, giữ tối đa 6 segment
 
 ## Phụ thuộc
 
-- `@cuelingo/ui` (CaptionLine)
+- `@cuelingo/ui` (`CaptionLine`)
+- Zustand
+- Cầu nối `apps/desktop/src/lib/native.ts`
 
 ## Dữ liệu & sự kiện
 
-- (chưa có)
+- Nhận `transcript`: `{segmentId, text, translation, partial}` từ Tauri core
 
 ## Câu hỏi mở
 
 - Từ khó xác định ở client (cache Lexicon) hay server trả kèm bản dịch?
+- Đồng bộ Assist level giữa cửa sổ `main` và `overlay` bằng event hay đọc từ Tauri state?

@@ -17,11 +17,15 @@
 
 ## Interface
 
-- Gọi `PATCH /v1/me`, `POST /v1/placement`
+- `<PermissionsStep />`: đọc trạng thái bằng TanStack Query, cho phép kiểm tra lại
+- `describePermission(name, state)`: chuyển trạng thái quyền thành hướng dẫn tiếng Việt
+- Giai đoạn sau gọi `PATCH /v1/me`, `POST /v1/placement` cho hồ sơ và bài đánh giá
 
 ## Phụ thuộc
 
-- `@cuelingo/core-sdk`
+- TanStack Query
+- Cầu nối `apps/desktop/src/lib/native.ts`
+- `@cuelingo/core-sdk` (hồ sơ và bài đánh giá, chưa triển khai)
 
 ## Dữ liệu & sự kiện
 

@@ -18,11 +18,16 @@ Máy trạng thái của một cuộc họp phía client: kết nối backend, g
 
 ## Interface
 
-- Store (Zustand) `useSession()`: `{status, segments, assistLevel, start(), stop()}`
+- `<SessionPanel />`: bắt đầu/dừng phiên và hiện/ẩn overlay
+- `startSession(assistLevel)`, `stopSession()`, `toggleOverlay()`: action gọi duy nhất qua cầu nối native
+- `describeNativeError(error)`: chuyển mã lỗi native thành thông báo tiếng Việt
+- Store `useSession()` với `{status, segments, assistLevel, start(), stop()}` thuộc giai đoạn realtime, chưa triển khai
 
 ## Phụ thuộc
 
-- `@cuelingo/core-sdk`, `@cuelingo/shared`
+- TanStack Query
+- Cầu nối `apps/desktop/src/lib/native.ts`
+- `@cuelingo/core-sdk`, `@cuelingo/shared` (giai đoạn realtime)
 
 ## Dữ liệu & sự kiện
 
