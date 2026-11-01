@@ -27,58 +27,24 @@ services/workers/src/
 
 ## Định nghĩa job
 
-Tên và schema payload ở `@cuelingo/shared` (`src/jobs.ts`) để API gửi đúng kiểu:
+Tên job và schema payload ở `@cuelingo/shared` (`src/jobs.ts`: `JobName`, `JobPayloads`) để API gửi đúng kiểu. Trong worker, một job là kết quả của `defineJob` (`src/jobs/types.ts`): nó parse payload bằng schema chung rồi gọi `handle(deps, payload)`; payload sai thì **reject promise** (không ném đồng bộ).
 
 ```ts
-// packages/shared/src/jobs.ts
-export const JobName = {
-  RetentionSweep: 'retention.sweep',
-  DebriefGenerate: 'debrief.generate',
-} as const;
-export const DebriefGeneratePayload = z.object({ sessionId: z.uuid() });
-```
-
-```ts
-// services/workers/src/jobs/retention/index.ts
-import { JobName } from '@cuelingo/shared';
-import { z } from 'zod';
-import type { JobDefinition } from '../types';
-import { sweepExpiredAudio } from './retention.handler';
-
-export const retentionSweep: JobDefinition<z.ZodObject<{}>> = {
+// services/workers/src/jobs/retention/index.ts  — JOB MẪU
+export const retentionSweep = defineJob({
   name: JobName.RetentionSweep,
-  payload: z.object({}),
   schedule: '15 3 * * *', // cron, giờ UTC
-  handle: (deps) => sweepExpiredAudio(deps),
-};
+  handle: async (deps) => {
+    await sweepExpiredAudio(deps);
+  },
+});
 ```
+
+Mỗi thư mục job có: `index.ts` (định nghĩa), `<job>.handler.ts` (hàm thuần của `deps`), `<job>.repository.ts` (interface + bản Postgres), `<job>.test.ts` (deps giả). `JobDeps` (`jobs/types.ts`) liệt kê những gì handler được chạm: repository, `ObjectStorage`, `now()`.
 
 ## `worker.ts`
 
-```ts
-import { PgBoss } from 'pg-boss';
-import { loadConfig } from './config';
-import { jobs } from './jobs';
-
-const config = loadConfig();
-const boss = new PgBoss(config.DATABASE_URL);
-boss.on('error', (err) => console.error('pg-boss', err));
-await boss.start();
-
-const deps = createDeps(config); // db, ai-gateway, storage…
-for (const job of jobs) {
-  await boss.createQueue(job.name);
-  if (job.schedule) await boss.schedule(job.name, job.schedule);
-  // pg-boss 12: handler nhận MẢNG job.
-  await boss.work(job.name, async (batch) => {
-    for (const j of batch) await job.handle(deps, job.payload.parse(j.data));
-  });
-}
-
-process.on('SIGTERM', () => void boss.stop());
-```
-
-Đối chiếu tên hàm `schedule` và tuỳ chọn `work` (batch size, retry) với tài liệu pg-boss của phiên bản đã cài trước khi dùng.
+Đã dựng tại `services/workers/src/worker.ts`: `loadConfig()` → `postgres.js` → `new PgBoss(url)` → `start()` → với mỗi job trong `jobs/index.ts`: `createQueue`, `schedule` (nếu có cron), `work` (handler nhận **mảng** job, mỗi phần tử gọi `job.run`) → `SIGTERM`/`SIGINT` gọi `boss.stop()`. Tên hàm và tuỳ chọn pg-boss luôn đối chiếu với tài liệu bản đã cài.
 
 ## Luật cho handler
 
