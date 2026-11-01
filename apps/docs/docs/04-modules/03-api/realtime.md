@@ -17,7 +17,11 @@ WebSocket theo phiên: nhận transcript (hoặc audio), dịch từng câu fina
 
 ## Interface
 
-- `WS /v1/sessions/:id/stream` — message schema trong `@cuelingo/shared/ws`
+- `WS /v1/sessions/:id/stream`
+- Client → server: `hello`, `segment.final`, `event`
+- Server → client: `ready`, `translation`, `error`
+- Schema nguồn sự thật: `ClientMessageSchema`, `ServerMessageSchema` trong `@cuelingo/shared`
+- MVP chỉ nhận STT local; `hello.sttSource` là `"local"`. Audio/STT cloud chưa thuộc hợp đồng này.
 
 ## Phụ thuộc
 

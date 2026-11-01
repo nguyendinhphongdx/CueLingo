@@ -5,3 +5,4 @@
 export * from './dto/glossary.dto';
 export * from './errors/error-code';
 export * from './jobs';
+export * from './ws/ws';

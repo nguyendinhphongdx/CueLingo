@@ -64,8 +64,7 @@ Không commit, không push.
 
 ## Kết quả _(implementer điền)_
 
-- File đã đổi:
-- Test đã thêm:
-- `pnpm verify`:
-- Khác brief (và lý do):
-- Câu hỏi còn mở:
+- File đã đổi: `packages/shared/src/ws/{ws.ts,ws.test.ts,index.ts}`, `error-code.ts`, `packages/core-sdk/src/{realtime.ts,realtime.test.ts,index.ts}`, trang docs module realtime/shared/core-sdk.
+- Test đã thêm: 21 (hợp đồng + client: hello→ready, đệm 60 s, backoff, message hỏng). Tổng `pnpm verify`: 83 test xanh.
+- Khác brief: Codex dừng đúng quy định vì thêm 3 mã `ws_*` làm vỡ `Record<ErrorCode, number>` trong `services/api/src/lib/errors.ts` (brief sót file này). Claude sửa tối thiểu (thêm 3 trạng thái HTTP) rồi verify.
+- Câu hỏi còn mở: message `event` chưa có payload (M2-06); chưa chặn `startMs/endMs` âm.

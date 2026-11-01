@@ -12,3 +12,10 @@ export function createClient(options: ClientOptions) {
 
 export type CueLingoClient = ReturnType<typeof createClient>;
 export { ApiError, type ClientOptions } from './http';
+export {
+  createRealtimeClient,
+  type RealtimeClient,
+  type RealtimeClientOptions,
+  type RealtimeSocket,
+  type RealtimeState,
+} from './realtime';

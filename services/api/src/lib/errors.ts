@@ -8,6 +8,10 @@ const STATUS: Record<ErrorCode, number> = {
   [ErrorCode.NotFound]: 404,
   [ErrorCode.Conflict]: 409,
   [ErrorCode.Internal]: 500,
+  // WebSocket-only codes still need an HTTP status because they share the enum.
+  [ErrorCode.WsUnauthorized]: 401,
+  [ErrorCode.WsBadMessage]: 400,
+  [ErrorCode.WsTranslationFailed]: 502,
 };
 
 /** The only error type services throw on purpose. Anything else becomes a 500. */
