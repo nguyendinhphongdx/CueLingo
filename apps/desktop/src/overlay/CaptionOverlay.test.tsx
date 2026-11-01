@@ -35,7 +35,8 @@ describe('CaptionOverlay', () => {
       const markup = renderToStaticMarkup(
         <CaptionOverlay listen={false} level={level} segments={[segment]} receivedTranscript />,
       );
-      expect(markup).toContain('Original sentence');
+      expect(markup).toContain('aria-label="Tra từ Original"');
+      expect(markup).toContain('aria-label="Tra từ sentence"');
       expect(markup).toContain('Câu dịch');
     }
   });

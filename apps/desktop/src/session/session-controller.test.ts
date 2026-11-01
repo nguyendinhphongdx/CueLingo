@@ -79,9 +79,9 @@ describe('session controller', () => {
     context.emitSegment(segment());
 
     expect(context.published).toEqual([
-      { segmentId, text: 'Original text', translation: null, partial: true },
-      { segmentId, text: 'Original text', translation: null, partial: false },
-      { segmentId, text: 'Original text', translation: null, partial: false },
+      { segmentId, stream: 'system', text: 'Original text', translation: null, partial: true },
+      { segmentId, stream: 'mic', text: 'Original text', translation: null, partial: false },
+      { segmentId, stream: 'system', text: 'Original text', translation: null, partial: false },
     ]);
     expect(context.sent).toEqual([
       {
@@ -110,6 +110,7 @@ describe('session controller', () => {
 
     expect(context.published.at(-1)).toEqual({
       segmentId,
+      stream: 'system',
       text: 'Original text',
       translation: 'Bản dịch',
       partial: false,

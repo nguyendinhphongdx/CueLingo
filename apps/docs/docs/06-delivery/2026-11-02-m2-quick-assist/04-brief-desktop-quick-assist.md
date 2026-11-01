@@ -35,3 +35,15 @@ Copy phong cách `overlay/` và `session/` hiện có (hook + store + component 
 Không có mạng, không `pnpm add`, không cargo. Được sửa/tạo: `apps/desktop/src/**`. Không sửa `apps/desktop/src-tauri/**`, `packages/**`, `services/**`. Không commit/push. Chạy `pnpm --filter @cuelingo/desktop exec tsc --noEmit` và `pnpm verify`.
 
 ## Kết quả _(implementer điền)_
+
+- Đã làm Quick Assist trong `apps/desktop/src/quick-assist/`: API client tập trung, hook điều phối state/hotkey, popup tra từ, panel recap, form compose, teleprompter chọn câu và sao chép.
+- Đã nối vào `CaptionOverlay`: từ tiếng Anh là đích tra cứu; toolbar có nút recap/compose; caption vẫn chỉ hiện 6 câu, store giữ tối đa 15 segment và recap chỉ lấy câu `system` final.
+- Đã bổ sung nguồn `system | mic` cho transcript nội bộ phía desktop; không sửa Rust hay contract shared. Learning event lookup/recap gửi fire-and-forget khi thao tác; `compose_used` gửi khi chọn câu để có `chosenIndex` đúng contract.
+- Test mới: API URL/auth/shared-schema/error; trạng thái loading/result/error/retry; từ có thể bấm; hotkey recap/compose; recap content; form và cỡ chữ teleprompter. Regression test session/store/overlay đã cập nhật.
+- Verify:
+  - `pnpm --filter @cuelingo/desktop exec tsc --noEmit`: xanh.
+  - `pnpm exec vitest run apps/desktop/src`: 8 file, 29 test xanh.
+  - `pnpm --filter @cuelingo/desktop build`: xanh (Vite production build, 207 module).
+  - `pnpm verify`: xanh (29 file, 117 test; không có vi phạm dependency).
+- Chưa chạy cuộc gọi Zoom/Meet thật vì môi trường không có backend/token/cuộc gọi; đã chạy production build và kiểm luồng mạng bằng fetch giả. Môi trường báo Node `22.14.0`, thấp hơn mức repo yêu cầu `22.19`, nhưng tất cả lệnh trên đều thành công.
+- Không làm khác brief; không có câu hỏi mở.
