@@ -63,6 +63,17 @@ Implementer điền mục **Kết quả** trong brief: file đã đổi, test đ
 2. Phát hiện ghi vào `03-review.md` (🔴/🟡/🟢); 🔴 trả lại implementer.
 3. Lead tích hợp, chạy lại verify trên nhánh tích hợp, trình **cổng RESULT**.
 
+## Giới hạn đã gặp với Codex (rút ra từ brief B2, 2026-11-01)
+
+| Giới hạn                                                                                  | Hệ quả                                                          | Cách xử lý                                                                                                                            |
+| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Codex **không có mạng** (`ENOTFOUND registry.npmjs.org`)                                  | Không `pnpm install`, không CLI cần tải (shadcn, `create-*`)    | Lead **cài sẵn dependency** trong worktree rồi mới giao; brief có mục "Môi trường" nói rõ cấm cài và cấm CLI mạng; component viết tay |
+| Plugin Codex ghi log/trạng thái vào `~/.claude/plugins/data/…` (ngoài sandbox của Claude) | Agent con `codex:codex-rescue` bị `EPERM`, không khởi động được | Lead chạy `node …/codex-companion.mjs task --write "<prompt>"` trong worktree với sandbox tắt cho **đúng lệnh đó** (người dùng duyệt) |
+| Sibling của repo (`../cuelingo-…`) nằm ngoài vùng ghi của agent bị sandbox                | `git worktree add ../…` thất bại                                | Worktree nằm trong repo: `.worktrees/<slug>-<agent>` (đã gitignore)                                                                   |
+| Cả hai nhánh cùng sửa `pnpm-lock.yaml`                                                    | Xung đột khi merge                                              | Merge xong lấy lockfile của nhánh đích rồi `pnpm install` để tạo lại                                                                  |
+
+Kết quả B2: Codex đọc `AGENTS.md` gốc và của thư mục, làm đúng phạm vi file, ghi mục "Kết quả" đầy đủ và tự báo `pnpm verify` xanh — harness đủ để giao việc không cần hội thoại.
+
 ## Không giao cho agent khác
 
 Quyết định ở các cổng · viết/duyệt ADR · quyết định quyền riêng tư hoặc nhà cung cấp AI · đổi prompt/model mặc định · push, PR, mọi hành động ra ngoài repo.

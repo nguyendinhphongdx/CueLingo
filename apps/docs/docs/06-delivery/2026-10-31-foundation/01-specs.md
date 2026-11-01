@@ -4,9 +4,9 @@ title: 2026-10-31 · Nền móng
 
 # foundation — Giai đoạn 1 · Nền móng
 
-| Trạng thái              | Loại                | Nhánh / PR        | Ước lượng → thực tế |
-| ----------------------- | ------------------- | ----------------- | ------------------- |
-| Spec + Plan (chờ duyệt) | chore / feature nền | `feat/foundation` | 2 tuần → ?          |
+| Trạng thái                                                                               | Loại                | Nhánh / PR        | Ước lượng → thực tế |
+| ---------------------------------------------------------------------------------------- | ------------------- | ----------------- | ------------------- |
+| Đang làm: B1, B2, B4 xong (B1 chưa chạy với Docker); còn B5 Web, B3 Desktop, tích hợp CI | chore / feature nền | `feat/foundation` | 2 tuần → ?          |
 
 **Phạm vi:** trong: cấu hình, migration, auth thật, hàng đợi + worker, UI kit, web Next.js, khung app desktop, integration test, Dockerfile, CI · ngoài: audio, STT, realtime, AI, các module nghiệp vụ ngoài `glossary`.
 
@@ -47,6 +47,9 @@ Mọi giai đoạn sau (đường realtime, vòng học) đều cần những n�
 
 ## Decision log
 
-| Ngày       | Pha  | Quyết định / lý do                                                                                                             |
-| ---------- | ---- | ------------------------------------------------------------------------------------------------------------------------------ |
-| 2026-10-31 | Spec | Mở hồ sơ. Trình spec và plan **cùng lúc** ở một cổng vì phạm vi đã được duyệt trước qua trang Tổ chức thư mục và ADR 0007–0011 |
+| Ngày       | Pha  | Quyết định / lý do                                                                                                                                                                                                               |
+| ---------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-31 | Spec | Mở hồ sơ. Trình spec và plan **cùng lúc** ở một cổng vì phạm vi đã được duyệt trước qua trang Tổ chức thư mục và ADR 0007–0011                                                                                                   |
+| 2026-11-01 | Plan | Đã duyệt spec + plan. Mặc định cho câu hỏi mở: magic link in ra log khi dev (production từ chối đến khi chọn nhà cung cấp email), Google OAuth bật khi có khoá, giữ `engines` ≥ 22 và image dùng `node:24-slim`                  |
+| 2026-11-01 | Làm  | Bảng Better Auth đặt tiền tố `auth_` (`modelName`) để không lẫn với `sessions` (cuộc họp); `users` → `learner_profiles`. Schema Better Auth viết tay vì `auth generate` cần DB đang chạy; thêm test chống lệch (`getMigrations`) |
+| 2026-11-01 | Làm  | Worktree agent đặt trong `.worktrees/` (ngoài repo bị sandbox chặn). Codex không có mạng: lead cài sẵn dependency (xem agent-collaboration)                                                                                      |
