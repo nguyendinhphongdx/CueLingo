@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { CheckCircle2, CircleHelp, XCircle } from 'lucide-react';
 import { Button } from '@cuelingo/ui/components/button';
 import {
   Card,
@@ -35,10 +36,23 @@ export function PermissionsStatusView({ status }: { status: PermissionsStatus })
   }
 
   return (
-    <ul className="text-muted-foreground list-disc space-y-2 pl-5 text-sm">
-      {(['microphone', 'screenCapture'] as const).map((name) => (
-        <li key={name}>{describePermission(name, status[name])}</li>
-      ))}
+    <ul className="divide-y">
+      {(['microphone', 'screenCapture'] as const).map((name) => {
+        const state = status[name];
+        const Icon = state === 'granted' ? CheckCircle2 : state === 'denied' ? XCircle : CircleHelp;
+        const tone =
+          state === 'granted'
+            ? 'text-emerald-600 dark:text-emerald-400'
+            : state === 'denied'
+              ? 'text-red-600 dark:text-red-400'
+              : 'text-muted-foreground';
+        return (
+          <li key={name} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+            <Icon aria-hidden="true" className={`mt-0.5 size-5 shrink-0 ${tone}`} />
+            <p className="text-sm leading-relaxed">{describePermission(name, state)}</p>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -67,6 +81,7 @@ export function PermissionsStep() {
         )}
         <Button
           variant="outline"
+          className="cursor-pointer"
           onClick={() => void permissions.refetch()}
           disabled={permissions.isFetching}
         >

@@ -1,29 +1,24 @@
 import { spring } from '@animate-ui/react/utils/motion';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { useState } from 'react';
+import { useColorScheme } from './use-color-scheme';
 import { PermissionsStep } from '../onboarding';
 import { SessionPanel } from '../session';
 import { AssistSettings } from '../settings';
 import { AboutCard, ShortcutList } from './AboutCard';
 import { AppShell, type View } from './AppShell';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@cuelingo/ui/components/card';
 
 function PageHeader({ title, description }: { title: string; description: string }) {
   return (
     <header>
-      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+      <h1 className="text-[28px] leading-tight font-semibold tracking-tight">{title}</h1>
       <p className="text-muted-foreground mt-1 text-sm">{description}</p>
     </header>
   );
 }
 
 export function App() {
+  useColorScheme();
   const [view, setView] = useState<View>('home');
 
   return (
@@ -45,17 +40,14 @@ export function App() {
                 />
                 <SessionPanel />
                 <AssistSettings />
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Phím tắt</CardTitle>
-                    <CardDescription>
-                      Dùng được ngay cả khi bạn đang ở trong app họp.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <section aria-labelledby="shortcuts-title" className="space-y-3">
+                  <h2 id="shortcuts-title" className="text-sm font-semibold">
+                    Phím tắt
+                  </h2>
+                  <div className="bg-card rounded-xl border px-4 py-3">
                     <ShortcutList />
-                  </CardContent>
-                </Card>
+                  </div>
+                </section>
               </>
             ) : (
               <>
