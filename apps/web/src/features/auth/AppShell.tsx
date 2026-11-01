@@ -1,6 +1,9 @@
 'use client';
 
+import { AppFrame } from '@cuelingo/ui/components/app-frame';
 import { Button } from '@cuelingo/ui/components/button';
+import { Logo } from '@cuelingo/ui/components/logo';
+import { features } from '@cuelingo/ui/lib/roadmap';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
@@ -29,43 +32,45 @@ export function AppShell({ children }: { children: ReactNode }) {
     router.replace('/login');
   };
 
+  const activeId =
+    features.find(
+      (feature) => pathname === feature.webPath || pathname.startsWith(`${feature.webPath}/`),
+    )?.id ?? '';
+
   return (
-    <div className="mx-auto max-w-3xl p-4">
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        <span className="font-semibold">CueLingo</span>
-        <span className="flex min-w-0 items-center gap-2 text-sm">
-          <span className="text-muted-foreground hidden truncate sm:inline">
+    <AppFrame
+      nav={{
+        client: 'web',
+        activeId,
+        brand: (
+          <div className="flex items-center gap-3">
+            <Logo size={36} className="rounded-[22%]" />
+            <span className="text-[15px] leading-tight font-semibold tracking-tight">CueLingo</span>
+          </div>
+        ),
+        renderItem: (feature, { className, children: content, active, onSelect }) => (
+          <Link
+            href={feature.webPath}
+            aria-current={active ? 'page' : undefined}
+            className={className}
+            onClick={onSelect}
+          >
+            {content}
+          </Link>
+        ),
+      }}
+      footer={
+        <div className="space-y-2">
+          <p className="text-muted-foreground truncate text-xs" title={session.user.email}>
             {session.user.email}
-          </span>
-          <Button variant="outline" className="min-h-11" onClick={signOut}>
+          </p>
+          <Button variant="outline" className="min-h-11 w-full cursor-pointer" onClick={signOut}>
             Đăng xuất
           </Button>
-        </span>
-      </header>
-      <nav aria-label="Điều hướng chính" className="mb-6 flex flex-wrap gap-2 border-b pb-3">
-        {[
-          { href: '/sessions', label: 'Cuộc họp' },
-          { href: '/review', label: 'Ôn tập' },
-          { href: '/phrases', label: 'Cụm từ' },
-          { href: '/progress', label: 'Tiến độ' },
-          { href: '/glossary', label: 'Thuật ngữ' },
-        ].map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active ? 'page' : undefined}
-              className={`focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
-                active ? 'bg-accent text-accent-foreground' : 'hover:bg-accent'
-              }`}
-            >
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
+        </div>
+      }
+    >
       {children}
-    </div>
+    </AppFrame>
   );
 }

@@ -27,6 +27,7 @@ export function GlossaryList({
           <Button
             variant="ghost"
             size="sm"
+            className="min-h-11"
             onClick={() => onRemove(t.id)}
             aria-label={`Xoá ${t.term}`}
           >

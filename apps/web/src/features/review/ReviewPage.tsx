@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@cuelingo/ui/components/card';
+import { PageHeader } from '@cuelingo/ui/components/page-header';
 import Link from 'next/link';
 import { useEffect } from 'react';
 import { type ReviewResult, useReview } from './use-review';
@@ -219,33 +220,45 @@ export function ReviewPage() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [review]);
 
-  if (review.loading) return <p className="text-muted-foreground text-sm">Đang chuẩn bị thẻ ôn…</p>;
-  if (review.error && review.total === 0) {
-    return (
+  let content;
+
+  if (review.loading) {
+    content = <p className="text-muted-foreground text-sm">Đang chuẩn bị thẻ ôn…</p>;
+  } else if (review.error && review.total === 0) {
+    content = (
       <p role="alert" className="text-destructive text-sm">
         {review.error}
       </p>
     );
+  } else if (review.result) {
+    content = <ReviewSummary result={review.result} onRestart={review.restart} />;
+  } else if (!review.card) {
+    content = <ReviewEmptyState />;
+  } else {
+    content = (
+      <div className="space-y-3">
+        {review.error && (
+          <p role="alert" className="text-destructive text-sm">
+            {review.error}
+          </p>
+        )}
+        <ReviewSession
+          card={review.card}
+          position={review.cardIndex + 1}
+          total={review.total}
+          selectedChoice={review.selectedChoice}
+          submitting={review.submitting}
+          onChoose={review.choose}
+          onRate={(rating) => void review.rate(rating)}
+        />
+      </div>
+    );
   }
-  if (review.result) return <ReviewSummary result={review.result} onRestart={review.restart} />;
-  if (!review.card) return <ReviewEmptyState />;
 
   return (
-    <div className="space-y-3">
-      {review.error && (
-        <p role="alert" className="text-destructive text-sm">
-          {review.error}
-        </p>
-      )}
-      <ReviewSession
-        card={review.card}
-        position={review.cardIndex + 1}
-        total={review.total}
-        selectedChoice={review.selectedChoice}
-        submitting={review.submitting}
-        onChoose={review.choose}
-        onRate={(rating) => void review.rate(rating)}
-      />
-    </div>
+    <>
+      <PageHeader title="Ôn tập" description="Ôn lại cụm từ từ chính các cuộc họp của bạn." />
+      {content}
+    </>
   );
 }

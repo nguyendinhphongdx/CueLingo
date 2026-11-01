@@ -32,7 +32,7 @@ export const features: Feature[] = [
       'Caption tiếng Anh kèm bản dịch tiếng Việt ngay trên màn hình',
       'Tra từ, tóm tắt và soạn câu trả lời trong lúc họp',
     ],
-    webPath: '/',
+    webPath: '/live',
   },
   {
     id: 'meetings',
