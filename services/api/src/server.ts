@@ -1,15 +1,16 @@
 import { buildApp } from './app';
+import { loadConfig } from './config';
 import { createSql } from './lib/db';
 import { createPostgresGlossaryRepository } from './modules/glossary';
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) throw new Error('DATABASE_URL is required');
+const config = loadConfig();
 
-const sql = createSql(databaseUrl);
+const sql = createSql(config.DATABASE_URL);
 const app = await buildApp({
   repos: { glossary: createPostgresGlossaryRepository(sql) },
-  allowDevAuth: process.env.NODE_ENV !== 'production' && process.env.DEV_AUTH === '1',
+  // TEMPORARY until Better Auth lands in this same task (header auth for local runs only).
+  allowDevAuth: config.NODE_ENV !== 'production',
   logger: true,
 });
 
-await app.listen({ port: Number(process.env.PORT ?? 4000), host: '0.0.0.0' });
+await app.listen({ port: config.PORT, host: '0.0.0.0' });
