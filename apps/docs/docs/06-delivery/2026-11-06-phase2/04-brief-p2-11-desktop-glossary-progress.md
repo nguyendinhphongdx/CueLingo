@@ -31,3 +31,20 @@ Hai trang thật trong `apps/desktop/src/insights/` (thư mục riêng, khác br
 Quy tắc chung: đọc `AGENTS.md` gốc và của thư mục bạn sửa, `apps/docs/docs/05-engineering/agent-collaboration.md`, và mục "Giai đoạn 2" trong `apps/docs/docs/02-product/06-backlog.md`. Không có mạng, không `pnpm add`, không commit/push; dependency đã cài sẵn. Không sửa `packages/ui/src/lib/roadmap.ts`, `package.json`, `pnpm-lock.yaml` (lead sửa khi gộp). Thiết kế giao diện: dùng component của `@cuelingo/ui` và các skill thiết kế trong `.claude/skills/` (design-taste-frontend phần app screen, frontend-design): màu chỉ dành cho dữ liệu, không gradient, không thẻ icon giống nhau, nhãn câu thường. Chạy `pnpm verify` trước khi báo; điền mục Kết quả.
 
 ## Kết quả _(implementer điền)_
+
+- **Đã làm:**
+  - Thêm client `insights-api.ts` cho toàn bộ CRUD `/v1/glossary` và `GET /v1/progress`; request/response đều parse bằng schema từ `@cuelingo/shared`, lỗi conflict hiện tiếng Việt.
+  - Trang **Thuật ngữ** có câu giải thích caption, form thuật ngữ/nghĩa/ghi chú, tìm theo cả ba trường, sửa tại chỗ, xác nhận trước khi xoá, cùng loading/error/empty state.
+  - Trang **Tiến độ** hiện đủ 6 chỉ số, biểu đồ cột SVG 7 ngày và 4 tuần có thang đo + `aria-label`; khi chưa có lượt ôn/cuộc họp thì thay biểu đồ bằng hướng dẫn rỗng.
+  - Đăng ký `glossary` và `progress` trong `apps/desktop/src/app/views.ts`.
+- **File đã đổi/tạo:** `apps/desktop/src/app/views.ts`, toàn bộ 9 file trong `apps/desktop/src/insights/` (API, hooks, hai page, index và ba test).
+- **Test thêm:** 7 test — contract/API + lỗi trùng; các trạng thái danh sách/thêm/sửa/xác nhận xoá/tìm; đủ chỉ số, mô tả trợ năng và trạng thái rỗng của biểu đồ.
+- **Kiểm tra:**
+  - `pnpm --filter @cuelingo/desktop typecheck` — xanh.
+  - `pnpm vitest run apps/desktop` — 12 file, 45 test xanh.
+  - `pnpm --filter @cuelingo/desktop build` — xanh.
+  - `pnpm verify` — xanh: 54 file, 230 test; `check:deps` không có vi phạm.
+  - `pnpm docs:build` — xanh.
+  - `design-taste-frontend` app lint — 0 FAIL, 0 WARN.
+- **Chạy thật:** đã dựng production bundle. Không thể mở UI trong môi trường này vì Vite bị sandbox chặn bind `127.0.0.1:1420` (`EPERM`) và browser access host không khả dụng; lead cần click thử hai trang sau khi tích hợp. Không có thay đổi khác brief.
+- **Lưu ý môi trường:** Node hiện tại là 22.14.0 nên pnpm cảnh báo thấp hơn mức repo yêu cầu 22.19; các lệnh trên vẫn chạy xanh.
