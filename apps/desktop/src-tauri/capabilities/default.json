@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Both windows may call our commands and listen to events",
   "windows": ["main", "overlay"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "core:window:allow-start-dragging"]
 }
