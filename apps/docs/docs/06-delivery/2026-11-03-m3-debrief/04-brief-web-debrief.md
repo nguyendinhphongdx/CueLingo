@@ -35,3 +35,14 @@ API (đang được brief khác làm, hợp đồng ở `packages/shared/src/dto
 Quy tắc chung: đọc `AGENTS.md` gốc và `AGENTS.md` của thư mục bạn sửa, `apps/docs/docs/05-engineering/agent-collaboration.md`. Không có mạng, không `pnpm add`, không commit/push; dependency đã cài sẵn. Không đổi hợp đồng trong `packages/shared/src/dto/{session,debrief,phrase}.dto.ts` (nếu thật sự thiếu, dừng và ghi câu hỏi). Chạy `pnpm verify` trước khi báo; điền mục Kết quả.
 
 ## Kết quả _(implementer điền)_
+
+- **Đã đổi:**
+  - Thêm `/sessions` và `/sessions/[id]`; danh sách luôn sắp mới nhất trước, có thời lượng, trạng thái và empty/loading/error state tiếng Việt.
+  - Thêm trang debrief với điểm hiểu, đủ 5 khối, feedback từng khối, liên kết từ đoạn khó tới transcript song ngữ, lưu từng cụm từ và xuất Markdown ở client.
+  - Thêm polling debrief 404 mỗi 5 giây, dừng sau 2 phút; thêm liên kết **Cuộc họp** vào `AppShell` và bảo đảm các đích bấm mới tối thiểu 44 px.
+  - Mở rộng `apps/web/src/lib/client.ts` cho API session/debrief/phrase và validate request/response bằng schema shared. Không sửa `packages/**` vì ngoài phạm vi brief.
+- **File chính:** `src/app/(app)/sessions/**`, `src/features/library/**`, `src/features/debrief/**`, `src/features/auth/AppShell.tsx`, `src/lib/client.ts` (đều dưới `apps/web/`).
+- **Test thêm:** component test cho empty/list/order, trạng thái processing, đủ 5 khối + transcript + feedback, trạng thái/click lưu; unit test giới hạn polling và nội dung Markdown. Toàn bộ suite: **36 file, 159 test xanh**.
+- **Verify:** `pnpm verify` xanh; `pnpm --filter @cuelingo/web build` xanh (routes `/sessions` static, `/sessions/[id]` dynamic).
+- **Chạy thật:** đã thử khởi động API mock cục bộ để smoke test bằng trình duyệt nhưng sandbox chặn mở cổng loopback với `listen EPERM`, nên chưa thể chạy browser flow trong môi trường này. Production build và test render/component đã chạy thành công.
+- **Lưu ý môi trường:** pnpm cảnh báo Node hiện tại `22.14.0` thấp hơn mức repo yêu cầu `>=22.19`; các lệnh trên vẫn hoàn tất xanh. Không có câu hỏi mở.
