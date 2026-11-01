@@ -1,8 +1,8 @@
-import { CaptionLine } from '@cuelingo/ui/components/caption-line';
 import { useState } from 'react';
 import type { TranscriptEvent } from '../lib/native';
+import { ClickableCaptionLine, QuickAssistPanel, useQuickAssist } from '../quick-assist';
 import { sampleTranscript } from './sample';
-import { useTranscriptStore } from './transcript-store';
+import { VISIBLE_CAPTION_COUNT, useTranscriptStore } from './transcript-store';
 import { useOverlayAssistLevel } from './use-overlay-settings';
 import { useTranscript } from './use-transcript';
 
@@ -56,9 +56,11 @@ export function CaptionOverlay({
   const assistLevel = level ?? syncedLevel;
   const [fontSize, setFontSize] = useState(() => clampFontSize(initialFontSize ?? readFontSize()));
   const [theme, setTheme] = useState<'light' | 'dark'>(initialTheme);
+  const quickAssist = useQuickAssist({ listen });
   useTranscript(listen);
   const visibleSegments =
     (receivedTranscript ?? storedReceived) ? (segments ?? storedSegments) : sampleTranscript;
+  const captionSegments = visibleSegments.slice(-VISIBLE_CAPTION_COUNT);
 
   function resizeCaption(delta: number) {
     const next = clampFontSize(fontSize + delta);
@@ -72,8 +74,8 @@ export function CaptionOverlay({
       data-theme={theme}
       className={
         theme === 'dark'
-          ? 'flex h-screen flex-col overflow-hidden rounded-xl bg-black/70 text-white shadow-lg'
-          : 'flex h-screen flex-col overflow-hidden rounded-xl bg-white/90 text-slate-950 shadow-lg'
+          ? 'relative flex h-screen flex-col overflow-hidden rounded-xl bg-black/70 text-white shadow-lg'
+          : 'relative flex h-screen flex-col overflow-hidden rounded-xl bg-white/90 text-slate-950 shadow-lg'
       }
     >
       <div
@@ -84,6 +86,22 @@ export function CaptionOverlay({
         <span className="h-1 w-10 rounded-full bg-current opacity-30" aria-hidden="true" />
       </div>
       <div className="flex items-center justify-end gap-1 px-3 pb-2">
+        <button
+          type="button"
+          aria-label="Họ vừa nói gì?"
+          className="focus-visible:ring-ring min-h-11 cursor-pointer rounded px-3 py-1 text-sm hover:bg-current/10 focus-visible:ring-2 focus-visible:outline-none"
+          onClick={quickAssist.openRecap}
+        >
+          Tóm tắt
+        </button>
+        <button
+          type="button"
+          aria-label="Nói giúp"
+          className="focus-visible:ring-ring min-h-11 cursor-pointer rounded px-3 py-1 text-sm hover:bg-current/10 focus-visible:ring-2 focus-visible:outline-none"
+          onClick={quickAssist.openCompose}
+        >
+          Nói giúp
+        </button>
         <button
           type="button"
           aria-label="Giảm cỡ chữ"
@@ -117,12 +135,14 @@ export function CaptionOverlay({
       <div className="flex-1 space-y-3 overflow-y-auto px-5 pb-5" style={{ fontSize }}>
         {assistLevel === 0
           ? null
-          : visibleSegments.map((segment) => (
-              <CaptionLine
+          : captionSegments.map((segment) => (
+              <ClickableCaptionLine
                 key={segment.segmentId}
                 text={assistLevel === 1 ? (segment.translation ?? 'Đang dịch…') : segment.text}
                 translation={assistLevel === 1 ? undefined : (segment.translation ?? undefined)}
                 partial={segment.partial}
+                lookupEnabled={assistLevel !== 1}
+                onLookup={(term) => quickAssist.lookup(term, segment.text)}
                 className={`text-inherit! [&>p]:text-inherit! ${
                   segment.partial ? 'font-normal opacity-60' : 'font-semibold'
                 } ${
@@ -133,6 +153,7 @@ export function CaptionOverlay({
               />
             ))}
       </div>
+      <QuickAssistPanel state={quickAssist.state} actions={quickAssist} />
     </section>
   );
 }

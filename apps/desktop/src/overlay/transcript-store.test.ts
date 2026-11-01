@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TranscriptEvent } from '../lib/native';
-import { updateTranscriptEvents } from './transcript-store';
+import { selectRecentSystemSentences, updateTranscriptEvents } from './transcript-store';
 
 const event = (segmentId: string, partial = false): TranscriptEvent => ({
   segmentId,
@@ -18,13 +18,24 @@ describe('transcript store', () => {
     expect(result).toEqual([final]);
   });
 
-  it('keeps only the six most recent segments', () => {
-    const result = Array.from({ length: 7 }, (_, index) => event(String(index + 1))).reduce(
+  it('keeps up to fifteen recent segments for Quick Assist', () => {
+    const result = Array.from({ length: 16 }, (_, index) => event(String(index + 1))).reduce(
       updateTranscriptEvents,
       [],
     );
 
-    expect(result).toHaveLength(6);
-    expect(result.map(({ segmentId }) => segmentId)).toEqual(['2', '3', '4', '5', '6', '7']);
+    expect(result).toHaveLength(15);
+    expect(result.at(0)?.segmentId).toBe('2');
+    expect(result.at(-1)?.segmentId).toBe('16');
+  });
+
+  it('selects only final system sentences for recap', () => {
+    const segments: TranscriptEvent[] = [
+      { ...event('system'), stream: 'system' },
+      { ...event('mic'), stream: 'mic' },
+      { ...event('partial', true), stream: 'system' },
+    ];
+
+    expect(selectRecentSystemSentences(segments)).toEqual(['Text system']);
   });
 });

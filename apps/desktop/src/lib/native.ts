@@ -23,6 +23,7 @@ export type PermissionsStatus = z.infer<typeof PermissionsStatus>;
 
 export const TranscriptEvent = z.object({
   segmentId: z.string(),
+  stream: z.enum(['system', 'mic']).optional(),
   text: z.string(),
   translation: z.string().nullable(),
   partial: z.boolean(),

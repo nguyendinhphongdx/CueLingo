@@ -112,6 +112,7 @@ export function createSessionController({
   function handleSegment(segment: SegmentEvent) {
     publish({
       segmentId: segment.segmentId,
+      stream: segment.stream,
       text: segment.text,
       translation: null,
       partial: segment.partial,
