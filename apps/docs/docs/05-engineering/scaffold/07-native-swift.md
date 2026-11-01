@@ -50,3 +50,9 @@ Theo [native-desktop](../conventions/native-desktop.md): thread audio không c�
 - [ ] Trong một cuộc gọi Zoom/Meet thử: log phía Rust đếm frame của cả hai luồng (`system`, `mic`), VAD báo `start/end` đúng lúc có người nói.
 - [ ] Từ chối quyền → app báo trạng thái rõ ràng, không crash.
 - [ ] `swift test` xanh; `cargo clippy` sạch.
+
+## Kết luận spike (2026-11-01)
+
+- **Thu âm hệ thống:** Core Audio Process Tap (`CATapDescription` + aggregate device + IOProc) chạy tốt trên macOS 26; tối thiểu macOS 14.2. Mic dùng `AVAudioEngine`. Cả hai qua `Resampler` về 16 kHz mono Int16. Frame đầu tới sau ~110 ms (hệ thống) và ~280 ms (mic).
+- **Quyền:** macOS gắn quyền với **app bundle** chạy tiến trình. CLI trần (hoặc chạy dưới terminal/agent khác) không được hỏi quyền và nhận toàn số 0 (không có lỗi). Cần `Info.plist` có `NSAudioCaptureUsageDescription` và `NSMicrophoneUsageDescription`; app Tauri nhúng `src-tauri/Info.plist`. Để thử nhanh: gói binary thành `.app` ký ad-hoc và mở bằng `open -W -n --stdout <file> App.app --args …`.
+- **Cầu Swift↔Rust:** chọn sidecar (Swift CLI trong bundle, Rust spawn và đọc stdout) thay cho FFI: tách crash, dễ test; chi tiết ở M1-02.
