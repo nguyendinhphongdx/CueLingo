@@ -3,11 +3,17 @@ import {
   DebriefFeedbackRequestSchema,
   DebriefSchema,
   ErrorResponseSchema,
+  PhraseListSchema,
   PhraseSchema,
+  ProgressSchema,
+  ReviewAnswerRequestSchema,
+  ReviewAnswerResponseSchema,
+  ReviewQueueSchema,
   SavePhraseRequestSchema,
   SessionDetailSchema,
   SessionListSchema,
   type DebriefFeedbackRequest,
+  type ReviewAnswerRequest,
   type SavePhraseRequest,
 } from '@cuelingo/shared';
 import { API_URL } from './config';
@@ -87,7 +93,20 @@ export const client = {
       ),
   },
   phrases: {
+    list: () => request('GET', '/v1/phrases', PhraseListSchema),
     save: (input: SavePhraseRequest) =>
       request('POST', '/v1/phrases', PhraseSchema, SavePhraseRequestSchema.parse(input)),
+    remove: (id: string) => request('DELETE', `/v1/phrases/${encodeURIComponent(id)}`, null),
   },
+  review: {
+    queue: () => request('GET', '/v1/review/queue', ReviewQueueSchema),
+    answer: (input: ReviewAnswerRequest) =>
+      request(
+        'POST',
+        '/v1/review/answer',
+        ReviewAnswerResponseSchema,
+        ReviewAnswerRequestSchema.parse(input),
+      ),
+  },
+  progress: () => request('GET', '/v1/progress', ProgressSchema),
 };

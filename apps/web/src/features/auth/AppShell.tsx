@@ -42,9 +42,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Button>
         </span>
       </header>
-      <nav aria-label="Điều hướng chính" className="mb-6 flex gap-2 border-b pb-3">
+      <nav aria-label="Điều hướng chính" className="mb-6 flex flex-wrap gap-2 border-b pb-3">
         {[
           { href: '/sessions', label: 'Cuộc họp' },
+          { href: '/review', label: 'Ôn tập' },
+          { href: '/phrases', label: 'Cụm từ' },
+          { href: '/progress', label: 'Tiến độ' },
           { href: '/glossary', label: 'Thuật ngữ' },
         ].map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
