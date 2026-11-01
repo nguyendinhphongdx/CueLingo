@@ -4,9 +4,9 @@ title: 2026-10-31 · Nền móng
 
 # foundation — Giai đoạn 1 · Nền móng
 
-| Trạng thái                                                                               | Loại                | Nhánh / PR        | Ước lượng → thực tế |
-| ---------------------------------------------------------------------------------------- | ------------------- | ----------------- | ------------------- |
-| Đang làm: B1, B2, B4 xong (B1 chưa chạy với Docker); còn B5 Web, B3 Desktop, tích hợp CI | chore / feature nền | `feat/foundation` | 2 tuần → ?          |
+| Trạng thái                                                                          | Loại                | Nhánh / PR        | Ước lượng → thực tế |
+| ----------------------------------------------------------------------------------- | ------------------- | ----------------- | ------------------- |
+| Xong, chờ cổng RESULT: B1–B5 đã làm và chạy thật; CI chạy tại máy, chưa trên GitHub | chore / feature nền | `feat/foundation` | 2 tuần → ?          |
 
 **Phạm vi:** trong: cấu hình, migration, auth thật, hàng đợi + worker, UI kit, web Next.js, khung app desktop, integration test, Dockerfile, CI · ngoài: audio, STT, realtime, AI, các module nghiệp vụ ngoài `glossary`.
 
@@ -53,3 +53,4 @@ Mọi giai đoạn sau (đường realtime, vòng học) đều cần những n�
 | 2026-11-01 | Plan | Đã duyệt spec + plan. Mặc định cho câu hỏi mở: magic link in ra log khi dev (production từ chối đến khi chọn nhà cung cấp email), Google OAuth bật khi có khoá, giữ `engines` ≥ 22 và image dùng `node:24-slim`                  |
 | 2026-11-01 | Làm  | Bảng Better Auth đặt tiền tố `auth_` (`modelName`) để không lẫn với `sessions` (cuộc họp); `users` → `learner_profiles`. Schema Better Auth viết tay vì `auth generate` cần DB đang chạy; thêm test chống lệch (`getMigrations`) |
 | 2026-11-01 | Làm  | Worktree agent đặt trong `.worktrees/` (ngoài repo bị sandbox chặn). Codex không có mạng: lead cài sẵn dependency (xem agent-collaboration)                                                                                      |
+| 2026-11-01 | Làm  | B3: Rust + `native.ts` do lead, UI React do Codex. Nâng Rust lên stable ≥ 1.90 (Tauri 2.12), ghim bằng `rust-toolchain.toml`. Thêm job CI `desktop` (macOS) và bước web build                                                    |

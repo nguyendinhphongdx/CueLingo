@@ -26,6 +26,31 @@ jobs:
       - run: pnpm docs:build
       # Real Postgres via Testcontainers (migrations, repositories, sign-in flow)
       - run: pnpm test:int
+      # Next.js production build (webpack)
+      - run: pnpm --filter @cuelingo/web build
       # The image must build and must not contain .env
       - run: docker build -f services/api/Dockerfile -t cuelingo-api:ci .
       - run: docker build -f services/workers/Dockerfile -t cuelingo-workers:ci .
+
+  desktop:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: apps/desktop/src-tauri
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: pnpm --filter @cuelingo/desktop build
+        working-directory: .
+      - run: cargo fmt --check
+      - run: cargo clippy -- -D warnings
+      - run: cargo test
