@@ -43,6 +43,7 @@ describe('auth on real Postgres (AC3, AC4)', () => {
   });
   afterAll(async () => {
     await app.close();
+    await authModule.close();
     await sql.end();
     await db.stop();
   });

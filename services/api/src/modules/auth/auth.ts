@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { magicLink } from 'better-auth/plugins';
-import { Pool } from 'pg';
+import type { Pool } from 'pg';
 import type { Config } from '../../config';
 import type { Mailer } from './auth.mailer';
 
@@ -8,14 +8,14 @@ import type { Mailer } from './auth.mailer';
  * Better Auth owns identity tables (user, session, account, verification).
  * Our domain keys off user.id; learner_profiles gets one row per user on sign-up.
  */
-export function createAuth(config: Config, mailer: Mailer) {
-  const pool = new Pool({ connectionString: config.DATABASE_URL });
-
+export function createAuth(config: Config, mailer: Mailer, pool: Pool) {
   return betterAuth({
     database: pool,
     secret: config.BETTER_AUTH_SECRET,
     baseURL: config.BETTER_AUTH_URL,
     trustedOrigins: [config.WEB_ORIGIN],
+    // Our id columns are uuid: have Better Auth generate UUIDs instead of its default random strings.
+    advanced: { database: { generateId: 'uuid' } },
     // Tables are prefixed auth_ so they never read as our meeting tables (sessions).
     user: { modelName: 'auth_user' },
     session: { modelName: 'auth_session' },

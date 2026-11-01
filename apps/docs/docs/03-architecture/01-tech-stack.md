@@ -10,19 +10,19 @@ Tiêu chí chọn, theo thứ tự ưu tiên: (1) phù hợp với quyền riên
 
 ## Nền tảng chung
 
-| Thành phần        | Lựa chọn                                              | Trạng thái | Ghi chú                                                           |
-| ----------------- | ----------------------------------------------------- | ---------- | ----------------------------------------------------------------- |
-| Ngôn ngữ          | TypeScript 5 (strict, `noUncheckedIndexedAccess`)     | Đã chốt    | [ADR-0001](../08-adr/0001-monorepo-typescript-first.md)           |
-| Runtime           | Node.js 24 LTS                                        | Đề xuất    | Repo đang yêu cầu ≥ 22; nâng lên 24 khi scaffold service đầu tiên |
-| Monorepo          | pnpm workspaces + Turborepo                           | Đã chốt    | pnpm cho dependency, Turbo cho task                               |
-| Schema / validate | Zod 4                                                 | Đã chốt    | Nguồn sự thật của contract (`@cuelingo/shared`)                   |
-| Lint / format     | ESLint 10 (flat config) + typescript-eslint, Prettier | Đã chốt    |                                                                   |
-| Luật kiến trúc    | dependency-cruiser                                    | Đã chốt    | `pnpm check:deps`                                                 |
-| Test              | Vitest                                                | Đã chốt    | Unit + test HTTP qua `app.inject`                                 |
-| Test tích hợp DB  | Testcontainers (Postgres)                             | Đề xuất    | Cho repository Postgres                                           |
-| Test E2E web      | Playwright                                            | Đề xuất    | Từ giai đoạn Learn                                                |
-| Git hooks / CI    | husky + lint-staged · GitHub Actions                  | Đã chốt    | `pnpm verify` + `pnpm docs:build`                                 |
-| Tài liệu          | Docusaurus 3 + Mermaid                                | Đã chốt    | `apps/docs`                                                       |
+| Thành phần        | Lựa chọn                                              | Trạng thái | Ghi chú                                                                                    |
+| ----------------- | ----------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------ |
+| Ngôn ngữ          | TypeScript 5 (strict, `noUncheckedIndexedAccess`)     | Đã chốt    | [ADR-0001](../08-adr/0001-monorepo-typescript-first.md)                                    |
+| Runtime           | Node.js 24 LTS (tối thiểu 22.19)                      | Đã chốt    | `undici` 8 (kéo vào bởi Testcontainers) đòi Node ≥ 22.19; image Docker dùng `node:24-slim` |
+| Monorepo          | pnpm workspaces + Turborepo                           | Đã chốt    | pnpm cho dependency, Turbo cho task                                                        |
+| Schema / validate | Zod 4                                                 | Đã chốt    | Nguồn sự thật của contract (`@cuelingo/shared`)                                            |
+| Lint / format     | ESLint 10 (flat config) + typescript-eslint, Prettier | Đã chốt    |                                                                                            |
+| Luật kiến trúc    | dependency-cruiser                                    | Đã chốt    | `pnpm check:deps`                                                                          |
+| Test              | Vitest                                                | Đã chốt    | Unit + test HTTP qua `app.inject`                                                          |
+| Test tích hợp DB  | Testcontainers (Postgres)                             | Đề xuất    | Cho repository Postgres                                                                    |
+| Test E2E web      | Playwright                                            | Đề xuất    | Từ giai đoạn Learn                                                                         |
+| Git hooks / CI    | husky + lint-staged · GitHub Actions                  | Đã chốt    | `pnpm verify` + `pnpm docs:build`                                                          |
+| Tài liệu          | Docusaurus 3 + Mermaid                                | Đã chốt    | `apps/docs`                                                                                |
 
 ## Desktop (`apps/desktop`)
 

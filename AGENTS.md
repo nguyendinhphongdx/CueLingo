@@ -4,7 +4,7 @@ Nguồn sự thật duy nhất cho mọi coding agent (Claude Code, Cursor, Code
 
 ## Repo là gì
 
-CueLingo: trợ lý giao tiếp + học ngoại ngữ lấy AI làm trung tâm. MVP là app desktop macOS hiển thị caption Anh → Việt trong mọi app họp, debrief sau họp và ôn tập cụm từ từ chính cuộc họp. Monorepo TypeScript (pnpm + Turborepo); Swift/Rust trong `apps/desktop`; Python chỉ trong `ml/`. Node ≥ 22, **pnpm** (không npm/yarn).
+CueLingo: trợ lý giao tiếp + học ngoại ngữ lấy AI làm trung tâm. MVP là app desktop macOS hiển thị caption Anh → Việt trong mọi app họp, debrief sau họp và ôn tập cụm từ từ chính cuộc họp. Monorepo TypeScript (pnpm + Turborepo); Swift/Rust trong `apps/desktop`; Python chỉ trong `ml/`. Node ≥ 22.19 (khuyến nghị 24, xem `.nvmrc`; Testcontainers cần ≥ 22.19), **pnpm** (không npm/yarn).
 
 ```text
 apps/       desktop (Tauri+React+Swift) · web (Next.js) · docs (Docusaurus — toàn bộ tài liệu) · extension, mobile (chưa làm)

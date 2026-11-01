@@ -3,14 +3,23 @@
  * resolver that turns a session cookie into request.userId.
  * Design: apps/docs/docs/04-modules/03-api/auth.md
  */
+import { Pool } from 'pg';
 import type { Config } from '../../config';
 import { createAuth } from './auth';
 import { createMailer, type Mailer } from './auth.mailer';
 import { authRoutes, sessionUserId } from './auth.routes';
 
 export function createAuthModule(config: Config, mailer: Mailer = createMailer(config)) {
-  const auth = createAuth(config, mailer);
-  return { auth, routes: authRoutes(auth), resolveUserId: sessionUserId(auth) };
+  // Better Auth talks to Postgres through its own pg pool; the module owns it so shutdown can close it.
+  const pool = new Pool({ connectionString: config.DATABASE_URL });
+  pool.on('error', (err) => console.error('auth pool', err));
+  const auth = createAuth(config, mailer, pool);
+  return {
+    auth,
+    routes: authRoutes(auth),
+    resolveUserId: sessionUserId(auth),
+    close: () => pool.end(),
+  };
 }
 
 export type { Mailer } from './auth.mailer';

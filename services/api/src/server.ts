@@ -23,6 +23,7 @@ const app = await buildApp({
 const shutdown = async () => {
   await app.close();
   await queue.stop();
+  await authModule.close();
   await sql.end();
 };
 process.on('SIGTERM', () => void shutdown());

@@ -137,3 +137,15 @@ pnpm --filter @cuelingo/api add -D @testcontainers/postgresql
 - ❌ Chạy `auth migrate` hoặc để Better Auth tự tạo bảng ngoài dbmate.
 - ❌ Hai bảng người dùng song song (`users` và `user`).
 - ❌ Giữ đường tắt header dev trong production "cho tiện test".
+
+## Bài học khi chạy thật (2026-11-01)
+
+Những điều chỉ lộ ra khi chạy với Postgres thật; đã sửa trong code, ghi lại để lần dựng sau khỏi vấp lại:
+
+| Hiện tượng                                                                               | Nguyên nhân                                                          | Cách xử lý                                                                                                                    |
+| ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| dbmate: `pq: SSL is not enabled on the server`                                           | dbmate mặc định đòi SSL                                              | `DATABASE_URL` có `?sslmode=disable` ở dev (`pg`, `postgres.js`, pg-boss, dbmate đều hiểu); production dùng `sslmode=require` |
+| Magic link trả 500: `invalid input syntax for type uuid`                                 | Better Auth sinh id chuỗi ngẫu nhiên, còn cột là `uuid`              | `advanced.database.generateId: 'uuid'` trong `auth.ts`                                                                        |
+| Test integration: lỗi `terminating connection` không bắt được khi dừng container         | Pool `pg` của Better Auth không được đóng                            | Module auth tự tạo pool, có `close()` và `pool.on('error')`; `server.ts` đóng khi shutdown                                    |
+| Test integration không khởi động: `Cannot read properties of undefined (reading 'bind')` | `undici` 8 cần Node ≥ 22.19                                          | `engines` ≥ 22.19, `.nvmrc` = 24, CI dùng Node 24                                                                             |
+| `pnpm add` báo `ERR_PNPM_UNEXPECTED_STORE`                                               | Cài dependency lúc trong lúc ngoài sandbox dùng store pnpm khác nhau | Chạy `pnpm add/install` **nhất quán một chế độ** (trong sandbox của Claude Code); Docker và server chạy ngoài                 |
