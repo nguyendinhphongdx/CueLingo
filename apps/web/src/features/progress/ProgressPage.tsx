@@ -1,7 +1,9 @@
 'use client';
 
 import type { Progress } from '@cuelingo/shared';
-import { Card, CardContent, CardHeader, CardTitle } from '@cuelingo/ui/components/card';
+import { Card, CardContent } from '@cuelingo/ui/components/card';
+import { PageHeader } from '@cuelingo/ui/components/page-header';
+import { Section } from '@cuelingo/ui/components/section';
 import { useProgress } from './use-progress';
 
 const dateLabel = (value: string, options: Intl.DateTimeFormatOptions) =>
@@ -87,11 +89,9 @@ export function ProgressView({ progress }: { progress: Progress }) {
   );
 
   return (
-    <div className="space-y-6">
-      <section aria-labelledby="progress-title">
-        <h1 id="progress-title" className="mb-3 text-2xl font-semibold">
-          Tiến độ
-        </h1>
+    <>
+      <PageHeader title="Tiến độ" description="Theo dõi việc học qua từng tuần." />
+      <Section title="Tổng quan">
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {stats.map(([label, value]) => (
             <div key={label} className="bg-card rounded-xl border p-4 shadow-sm">
@@ -100,47 +100,60 @@ export function ProgressView({ progress }: { progress: Progress }) {
             </div>
           ))}
         </dl>
-      </section>
-      <Card>
-        <CardHeader>
-          <CardTitle>Ôn tập trong 7 ngày</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <BarChart
-            values={dailyValues}
-            labels={dailyLabels}
-            ariaLabel={`Số lượt ôn 7 ngày: ${progress.reviewsLast7Days.map((item) => `${item.date} ${item.count} lượt`).join(', ')}`}
-          />
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Số lần tra từ mỗi cuộc họp</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <BarChart
-            values={weeklyValues}
-            labels={weeklyLabels}
-            ariaLabel={`Số lần tra từ trung bình mỗi cuộc họp trong 4 tuần: ${progress.weekly.map((item, index) => `tuần ${item.weekStart} có ${weeklyValues[index]} lần, ${item.lookups} lượt tra trong ${item.meetings} cuộc họp`).join('; ')}`}
-          />
-          <p className="text-muted-foreground mt-2 text-sm">
-            Số thấp dần cho thấy bạn cần ít hỗ trợ hơn.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+      </Section>
+      <Section title="Ôn tập trong 7 ngày">
+        <Card>
+          <CardContent className="pt-6">
+            <BarChart
+              values={dailyValues}
+              labels={dailyLabels}
+              ariaLabel={`Số lượt ôn 7 ngày: ${progress.reviewsLast7Days.map((item) => `${item.date} ${item.count} lượt`).join(', ')}`}
+            />
+          </CardContent>
+        </Card>
+      </Section>
+      <Section title="Số lần tra từ mỗi cuộc họp">
+        <Card>
+          <CardContent className="pt-6">
+            <BarChart
+              values={weeklyValues}
+              labels={weeklyLabels}
+              ariaLabel={`Số lần tra từ trung bình mỗi cuộc họp trong 4 tuần: ${progress.weekly.map((item, index) => `tuần ${item.weekStart} có ${weeklyValues[index]} lần, ${item.lookups} lượt tra trong ${item.meetings} cuộc họp`).join('; ')}`}
+            />
+            <p className="text-muted-foreground mt-2 text-sm">
+              Số thấp dần cho thấy bạn cần ít hỗ trợ hơn.
+            </p>
+          </CardContent>
+        </Card>
+      </Section>
+    </>
   );
 }
 
 export function ProgressPage() {
   const { progress, loading, error } = useProgress();
-  if (loading) return <p className="text-muted-foreground text-sm">Đang tải tiến độ…</p>;
+  if (loading)
+    return (
+      <>
+        <PageHeader title="Tiến độ" />
+        <p className="text-muted-foreground text-sm">Đang tải tiến độ…</p>
+      </>
+    );
   if (error)
     return (
-      <p role="alert" className="text-destructive text-sm">
-        {error}
-      </p>
+      <>
+        <PageHeader title="Tiến độ" />
+        <p role="alert" className="text-destructive text-sm">
+          {error}
+        </p>
+      </>
     );
-  if (!progress) return <p className="text-muted-foreground text-sm">Chưa có dữ liệu tiến độ.</p>;
+  if (!progress)
+    return (
+      <>
+        <PageHeader title="Tiến độ" />
+        <p className="text-muted-foreground text-sm">Chưa có dữ liệu tiến độ.</p>
+      </>
+    );
   return <ProgressView progress={progress} />;
 }

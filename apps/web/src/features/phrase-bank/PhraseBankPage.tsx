@@ -2,13 +2,9 @@
 
 import type { Phrase } from '@cuelingo/shared';
 import { Button } from '@cuelingo/ui/components/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@cuelingo/ui/components/card';
+import { Card, CardContent } from '@cuelingo/ui/components/card';
+import { PageHeader } from '@cuelingo/ui/components/page-header';
+import { Section } from '@cuelingo/ui/components/section';
 import Link from 'next/link';
 import { usePhrases } from './use-phrases';
 
@@ -63,23 +59,24 @@ export function PhraseList({
 export function PhraseBankPage() {
   const { phrases, loading, removingId, error, remove } = usePhrases();
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Kho cụm từ</CardTitle>
-        <CardDescription>Những cụm từ bạn đã lưu từ các cuộc họp.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {error && (
-          <p role="alert" className="text-destructive mb-3 text-sm">
-            {error}
-          </p>
-        )}
-        {loading ? (
-          <p className="text-muted-foreground text-sm">Đang tải cụm từ…</p>
-        ) : (
-          <PhraseList phrases={phrases} removingId={removingId} onRemove={remove} />
-        )}
-      </CardContent>
-    </Card>
+    <>
+      <PageHeader title="Cụm từ" description="Những cụm từ bạn đã lưu từ các cuộc họp." />
+      <Section title="Kho cụm từ">
+        <Card>
+          <CardContent className="pt-6">
+            {error && (
+              <p role="alert" className="text-destructive mb-3 text-sm">
+                {error}
+              </p>
+            )}
+            {loading ? (
+              <p className="text-muted-foreground text-sm">Đang tải cụm từ…</p>
+            ) : (
+              <PhraseList phrases={phrases} removingId={removingId} onRemove={remove} />
+            )}
+          </CardContent>
+        </Card>
+      </Section>
+    </>
   );
 }

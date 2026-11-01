@@ -1,7 +1,9 @@
 'use client';
 
 import type { Session } from '@cuelingo/shared';
-import { Card, CardContent, CardHeader, CardTitle } from '@cuelingo/ui/components/card';
+import { Card, CardContent } from '@cuelingo/ui/components/card';
+import { PageHeader } from '@cuelingo/ui/components/page-header';
+import { Section } from '@cuelingo/ui/components/section';
 import Link from 'next/link';
 import { useSessions } from './use-sessions';
 
@@ -78,22 +80,24 @@ export function LibraryPage() {
   const { sessions, loading, error } = useSessions();
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Cuộc họp</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {error && (
-          <p role="alert" className="text-destructive text-sm">
-            {error}
-          </p>
-        )}
-        {loading ? (
-          <p className="text-muted-foreground text-sm">Đang tải cuộc họp…</p>
-        ) : (
-          <SessionList sessions={sessions} />
-        )}
-      </CardContent>
-    </Card>
+    <>
+      <PageHeader title="Cuộc họp" description="Xem lại các cuộc họp và mở debrief sau họp." />
+      <Section title="Lịch sử cuộc họp">
+        <Card>
+          <CardContent className="pt-6">
+            {error && (
+              <p role="alert" className="text-destructive text-sm">
+                {error}
+              </p>
+            )}
+            {loading ? (
+              <p className="text-muted-foreground text-sm">Đang tải cuộc họp…</p>
+            ) : (
+              <SessionList sessions={sessions} />
+            )}
+          </CardContent>
+        </Card>
+      </Section>
+    </>
   );
 }

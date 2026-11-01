@@ -8,6 +8,8 @@ import type {
 } from '@cuelingo/shared';
 import { Button } from '@cuelingo/ui/components/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@cuelingo/ui/components/card';
+import { PageHeader } from '@cuelingo/ui/components/page-header';
+import { Section } from '@cuelingo/ui/components/section';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { useDebrief } from './use-debrief';
@@ -66,20 +68,19 @@ function DebriefBlock({
   children: ReactNode;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {children}
-        <FeedbackButtons
-          block={block}
-          pending={feedbackBlock === block}
-          value={feedbackValue?.block === block ? feedbackValue.useful : undefined}
-          onFeedback={onFeedback}
-        />
-      </CardContent>
-    </Card>
+    <Section title={title}>
+      <Card>
+        <CardContent className="pt-6">
+          {children}
+          <FeedbackButtons
+            block={block}
+            pending={feedbackBlock === block}
+            value={feedbackValue?.block === block ? feedbackValue.useful : undefined}
+            onFeedback={onFeedback}
+          />
+        </CardContent>
+      </Card>
+    </Section>
   );
 }
 
@@ -137,34 +138,43 @@ export function DebriefPageView({
   onSavePhrase,
   onExport,
 }: DebriefPageViewProps) {
-  if (loading) return <p className="text-muted-foreground text-sm">Đang tải debrief…</p>;
+  if (loading)
+    return (
+      <>
+        <PageHeader title="Chi tiết cuộc họp" />
+        <p className="text-muted-foreground text-sm">Đang tải debrief…</p>
+      </>
+    );
 
   if (!debrief) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{processing ? 'Đang xử lý debrief…' : 'Chưa thể mở debrief'}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {processing && (
-            <p className="text-muted-foreground text-sm">
-              CueLingo đang tổng hợp cuộc họp. Trang này sẽ tự thử lại mỗi 5 giây trong tối đa 2
-              phút.
-            </p>
-          )}
-          {error && (
-            <p role="alert" className="text-destructive text-sm">
-              {error}
-            </p>
-          )}
-          <Link
-            href="/sessions"
-            className="focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-          >
-            Quay lại danh sách cuộc họp
-          </Link>
-        </CardContent>
-      </Card>
+      <>
+        <PageHeader title="Chi tiết cuộc họp" />
+        <Card>
+          <CardHeader>
+            <CardTitle>{processing ? 'Đang xử lý debrief…' : 'Chưa thể mở debrief'}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {processing && (
+              <p className="text-muted-foreground text-sm">
+                CueLingo đang tổng hợp cuộc họp. Trang này sẽ tự thử lại mỗi 5 giây trong tối đa 2
+                phút.
+              </p>
+            )}
+            {error && (
+              <p role="alert" className="text-destructive text-sm">
+                {error}
+              </p>
+            )}
+            <Link
+              href="/sessions"
+              className="focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+            >
+              Quay lại danh sách cuộc họp
+            </Link>
+          </CardContent>
+        </Card>
+      </>
     );
   }
 
@@ -175,28 +185,27 @@ export function DebriefPageView({
 
   return (
     <div className="space-y-4">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link
-            href="/sessions"
-            className="focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md text-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-          >
-            ← Cuộc họp
-          </Link>
-          <h1 className="text-2xl font-semibold">{session?.title || debrief.summary.headlineVi}</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Điểm hiểu:{' '}
-            <strong className="text-foreground">
-              {debrief.comprehensionPct === null
-                ? 'Chưa đủ dữ liệu'
-                : `${Math.round(debrief.comprehensionPct)}%`}
-            </strong>
-          </p>
-        </div>
-        <Button variant="outline" className="min-h-11" onClick={onExport}>
-          Xuất Markdown
-        </Button>
-      </header>
+      <div>
+        <Link
+          href="/sessions"
+          className="focus-visible:ring-ring mb-2 inline-flex min-h-11 items-center rounded-md text-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+        >
+          ← Cuộc họp
+        </Link>
+        <PageHeader
+          title={session?.title || debrief.summary.headlineVi}
+          description={`Điểm hiểu: ${
+            debrief.comprehensionPct === null
+              ? 'Chưa đủ dữ liệu'
+              : `${Math.round(debrief.comprehensionPct)}%`
+          }`}
+          action={
+            <Button variant="outline" className="min-h-11" onClick={onExport}>
+              Xuất Markdown
+            </Button>
+          }
+        />
+      </div>
 
       {error && (
         <p role="alert" className="text-destructive text-sm">
@@ -329,32 +338,31 @@ export function DebriefPageView({
         )}
       </DebriefBlock>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Transcript song ngữ</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {session?.segments.length ? (
-            <ol className="space-y-4">
-              {session.segments.map((segment) => (
-                <li
-                  key={segment.id}
-                  id={`segment-${segment.id}`}
-                  tabIndex={-1}
-                  className="scroll-mt-4 rounded-md border-l-4 border-transparent pl-4 focus:border-primary focus:bg-accent focus:outline-none target:border-primary target:bg-accent"
-                >
-                  <p className="text-sm">{segment.textEn}</p>
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    {segment.textVi || 'Chưa có bản dịch'}
-                  </p>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <p className="text-muted-foreground text-sm">Chưa có transcript cho cuộc họp này.</p>
-          )}
-        </CardContent>
-      </Card>
+      <Section title="Transcript song ngữ">
+        <Card>
+          <CardContent className="pt-6">
+            {session?.segments.length ? (
+              <ol className="space-y-4">
+                {session.segments.map((segment) => (
+                  <li
+                    key={segment.id}
+                    id={`segment-${segment.id}`}
+                    tabIndex={-1}
+                    className="scroll-mt-4 rounded-md border-l-4 border-transparent pl-4 focus:border-primary focus:bg-accent focus:outline-none target:border-primary target:bg-accent"
+                  >
+                    <p className="text-sm">{segment.textEn}</p>
+                    <p className="text-muted-foreground mt-1 text-sm">
+                      {segment.textVi || 'Chưa có bản dịch'}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="text-muted-foreground text-sm">Chưa có transcript cho cuộc họp này.</p>
+            )}
+          </CardContent>
+        </Card>
+      </Section>
     </div>
   );
 }

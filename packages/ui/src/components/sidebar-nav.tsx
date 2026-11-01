@@ -15,10 +15,14 @@ export interface SidebarNavProps {
    */
   renderItem: (
     feature: Feature,
-    parts: { className: string; children: ReactNode; active: boolean },
+    parts: { className: string; children: ReactNode; active: boolean; onSelect: () => void },
   ) => ReactNode;
   footer?: ReactNode;
   topInset?: string;
+  /** Collapses into AppFrame's mobile drawer while keeping the desktop client unchanged. */
+  responsive?: boolean;
+  mobileOpen?: boolean;
+  onItemSelect?: () => void;
 }
 
 export function SidebarNav({
@@ -28,13 +32,21 @@ export function SidebarNav({
   renderItem,
   footer,
   topInset = 'pt-6',
+  responsive = false,
+  mobileOpen = false,
+  onItemSelect,
 }: SidebarNavProps) {
   return (
     <aside
-      className={`bg-muted/60 flex h-full w-[220px] shrink-0 flex-col overflow-hidden border-r px-3 pb-5 ${topInset}`}
+      id={responsive ? 'mobile-navigation' : undefined}
+      className={`bg-muted/60 h-full w-[220px] shrink-0 flex-col overflow-hidden border-r px-3 pb-5 ${topInset} ${
+        responsive
+          ? `${mobileOpen ? 'flex' : 'hidden'} absolute top-16 bottom-0 left-0 z-30 h-auto w-[min(320px,calc(100vw-3rem))] shadow-xl md:static md:flex md:h-full md:w-[220px] md:shadow-none`
+          : 'flex'
+      }`}
     >
-      <div className="px-2">{brand}</div>
-      <nav aria-label="Điều hướng chính" className="mt-6">
+      <div className={responsive ? 'hidden px-2 md:block' : 'px-2'}>{brand}</div>
+      <nav aria-label="Điều hướng chính" className={responsive ? 'md:mt-6' : 'mt-6'}>
         <Highlight
           value={activeId}
           hover={false}
@@ -54,7 +66,8 @@ export function SidebarNav({
                     <HighlightItem key={feature.id} value={feature.id}>
                       {renderItem(feature, {
                         active,
-                        className: `focus-visible:ring-ring flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 text-left text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                        onSelect: () => onItemSelect?.(),
+                        className: `focus-visible:ring-ring flex min-h-11 w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 text-left text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
                           active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
                         }`,
                         children: (

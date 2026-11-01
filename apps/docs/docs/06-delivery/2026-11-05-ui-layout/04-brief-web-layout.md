@@ -39,3 +39,26 @@ Desktop đã dùng bộ component chung trong `packages/ui` (khung, thanh bên, 
 Quy tắc chung: đọc `AGENTS.md` gốc và của thư mục bạn sửa. Không có mạng, không `pnpm add`, không commit/push. Chạy `pnpm verify` trước khi báo; điền mục Kết quả.
 
 ## Kết quả _(implementer điền)_
+
+- Web đã dùng `AppFrame` + `SidebarNav` chung với desktop, có active route, ba nhóm lộ trình,
+  trạng thái sắp ra mắt, email và hành động đăng xuất.
+- `AppFrame` giữ nguyên chế độ desktop khi có `dragRegion`; trên web dưới `md` dùng top bar +
+  drawer, nút native có `aria-expanded`, đóng khi chọn route và mọi đích điều hướng cao tối thiểu
+  44 px.
+- Đã import brand token, đồng bộ dark mode theo `prefers-color-scheme`, thêm `/live`, `/settings`,
+  chuẩn hoá `PageHeader`/`Section` cho các trang hiện có và giữ `/login` ngoài app frame.
+- Đã thêm component test cho app shell, mobile trigger, trạng thái coming-soon, hai trang mới và
+  login không có điều hướng ứng dụng.
+
+| Kiểm tra                                                   | Kết quả                                             |
+| ---------------------------------------------------------- | --------------------------------------------------- |
+| `pnpm verify`                                              | Xanh — 51 file test, 221 test                       |
+| `pnpm --filter @cuelingo/web build`                        | Xanh — có route `/live` và `/settings`              |
+| `pnpm --filter @cuelingo/desktop exec tsc --noEmit`        | Xanh                                                |
+| `pnpm exec vitest run apps/desktop`                        | Xanh — 9 file test, 37 test                         |
+| `pnpm --filter @cuelingo/web dev`                          | Không chạy được: sandbox chặn bind port với `EPERM` |
+| `next dev --hostname 127.0.0.1 --port 3000` (thử thay thế) | Không chạy được: sandbox chặn bind port với `EPERM` |
+
+Lưu ý môi trường: mọi lệnh pnpm in cảnh báo Node `22.14.0` thấp hơn mức repo yêu cầu `>=22.19`,
+nhưng các bước verify, build và test trên đều hoàn tất thành công. Do sandbox chặn port, chưa thể
+thực hiện kiểm tra trực quan trong trình duyệt ở worktree này.
