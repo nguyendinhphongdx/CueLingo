@@ -1,7 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { buildApp } from '../../app';
-import { createInMemoryGlossaryRepository } from './glossary.repository.memory';
+import { buildTestApp, TEST_USER_HEADER } from '../../testing';
 
 const ALICE = 'alice';
 const BOB = 'bob';
@@ -10,14 +9,11 @@ describe('glossary module', () => {
   let app: FastifyInstance;
 
   beforeEach(async () => {
-    app = await buildApp({
-      repos: { glossary: createInMemoryGlossaryRepository() },
-      allowDevAuth: true,
-    });
+    app = await buildTestApp();
   });
   afterEach(() => app.close());
 
-  const as = (user: string) => ({ 'x-dev-user-id': user });
+  const as = (user: string) => ({ [TEST_USER_HEADER]: user });
   const create = (user: string, payload: unknown) =>
     app.inject({
       method: 'POST',

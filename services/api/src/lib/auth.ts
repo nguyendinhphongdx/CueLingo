@@ -1,5 +1,5 @@
 import { ErrorCode } from '@cuelingo/shared';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { AppError } from './errors';
 
 declare module 'fastify' {
@@ -10,22 +10,18 @@ declare module 'fastify' {
 }
 
 export interface AuthOptions {
-  /**
-   * TEMPORARY until the auth module exists (apps/docs/docs/04-modules/03-api/auth.md):
-   * trusts the `x-dev-user-id` header. Must stay false in production.
-   */
-  allowDevAuth: boolean;
+  /** Turns a request into the signed-in user's id, or null. Production: Better Auth session. Tests: a header. */
+  resolveUserId: (request: FastifyRequest) => Promise<string | null>;
 }
+
+const isPublic = (url: string) => url === '/healthz' || url.startsWith('/api/auth/');
 
 export function registerAuth(app: FastifyInstance, options: AuthOptions): void {
   app.decorateRequest('userId', '');
   app.addHook('onRequest', async (request) => {
-    if (request.url === '/healthz') return;
-    const devUser = request.headers['x-dev-user-id'];
-    if (options.allowDevAuth && typeof devUser === 'string' && devUser) {
-      request.userId = devUser;
-      return;
-    }
-    throw new AppError(ErrorCode.Unauthorized, 'Authentication required');
+    if (isPublic(request.url)) return;
+    const userId = await options.resolveUserId(request);
+    if (!userId) throw new AppError(ErrorCode.Unauthorized, 'Authentication required');
+    request.userId = userId;
   });
 }
