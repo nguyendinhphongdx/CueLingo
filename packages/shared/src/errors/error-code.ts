@@ -8,6 +8,9 @@ export const ErrorCode = {
   NotFound: 'NOT_FOUND',
   Conflict: 'CONFLICT',
   Internal: 'INTERNAL_ERROR',
+  WsUnauthorized: 'ws_unauthorized',
+  WsBadMessage: 'ws_bad_message',
+  WsTranslationFailed: 'ws_translation_failed',
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 

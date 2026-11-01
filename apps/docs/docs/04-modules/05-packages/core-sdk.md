@@ -17,6 +17,11 @@ SDK client dùng chung cho desktop và web: auth, REST, stream phiên, hàng đ�
 ## Interface
 
 - `createClient({baseUrl, getToken})` → `{sessions, assist, review, events, stream}`
+- `createRealtimeClient({url, token, sessionId, assistLevel, onMessage, onState, onError})`
+  → `{connect, send, close, state}`
+- Trạng thái realtime: `idle | connecting | open | reconnecting | closed`; chỉ `open` sau message
+  `ready`
+- Mất kết nối: đệm message tối đa 60 giây và reconnect với backoff 0,5–8 giây
 
 ## Phụ thuộc
 

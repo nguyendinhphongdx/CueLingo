@@ -16,7 +16,11 @@ Kiểu domain, schema API/WebSocket (zod), catalog event.
 
 ## Interface
 
-- `import { SessionSchema, WsServerMessage, EventName } from "@cuelingo/shared"`
+- `ClientMessageSchema` / `ClientMessage`: union strict theo `type` gồm `hello`, `segment.final`, `event`
+- `ServerMessageSchema` / `ServerMessage`: union strict theo `type` gồm `ready`, `translation`, `error`
+- `segment.final`: `{segmentId, stream, startMs, endMs, text, words}`
+- `translation`: `{segmentId, textVi, hardWords}`
+- Mã lỗi WebSocket: `ws_unauthorized`, `ws_bad_message`, `ws_translation_failed`
 
 ## Phụ thuộc
 
