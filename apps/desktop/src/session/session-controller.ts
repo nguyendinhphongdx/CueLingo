@@ -26,7 +26,7 @@ interface NativeSessionBridge {
 
 interface SessionControllerOptions {
   native: NativeSessionBridge;
-  sessions: SessionsApi;
+  sessions: Pick<SessionsApi, 'create' | 'end'>;
   createRealtime(options: RealtimeClientOptions): RealtimeClient;
   now?: () => number;
   apiUrl?: string;

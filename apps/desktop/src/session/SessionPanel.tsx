@@ -74,7 +74,7 @@ export function SessionPanel() {
   return (
     <section
       aria-label="Caption trực tiếp"
-      className={`relative overflow-hidden rounded-2xl border p-6 shadow-sm transition-colors ${
+      className={`relative overflow-hidden rounded-2xl border p-6 transition-colors ${
         running ? 'hero-live border-transparent text-white' : 'bg-card'
       }`}
     >

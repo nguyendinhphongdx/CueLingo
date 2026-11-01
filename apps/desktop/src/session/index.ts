@@ -4,3 +4,4 @@
  */
 export { SessionPanel } from './SessionPanel';
 export { useSession } from './use-session';
+export { RecentSessions } from './RecentSessions';

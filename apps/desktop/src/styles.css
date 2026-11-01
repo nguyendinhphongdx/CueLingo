@@ -41,13 +41,7 @@ body {
   user-select: none;
 }
 
-/* Hero card shown while a session runs. */
+/* Hero card while a session runs: one flat field of the brand colour, the only loud thing on screen. */
 .hero-live {
-  background:
-    radial-gradient(
-      120% 140% at 0% 0%,
-      color-mix(in oklab, var(--brand-from) 100%, transparent),
-      transparent 60%
-    ),
-    linear-gradient(135deg, var(--brand-from), var(--brand-to));
+  background: var(--brand-from);
 }

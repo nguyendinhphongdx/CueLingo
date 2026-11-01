@@ -3,16 +3,16 @@ import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { useState } from 'react';
 import { useColorScheme } from './use-color-scheme';
 import { PermissionsStep } from '../onboarding';
-import { SessionPanel } from '../session';
+import { RecentSessions, SessionPanel } from '../session';
 import { AssistSettings } from '../settings';
 import { AboutCard, ShortcutList } from './AboutCard';
 import { AppShell, type View } from './AppShell';
 
-function PageHeader({ title, description }: { title: string; description: string }) {
+function PageHeader({ title, description }: { title: string; description?: string }) {
   return (
     <header>
-      <h1 className="text-[28px] leading-tight font-semibold tracking-tight">{title}</h1>
-      <p className="text-muted-foreground mt-1 text-sm">{description}</p>
+      <h1 className="text-2xl leading-tight font-semibold tracking-tight">{title}</h1>
+      {description ? <p className="text-muted-foreground mt-1 text-sm">{description}</p> : null}
     </header>
   );
 }
@@ -34,12 +34,10 @@ export function App() {
           >
             {view === 'home' ? (
               <>
-                <PageHeader
-                  title="Phiên họp"
-                  description="Bật caption trước khi vào cuộc họp, rồi mở Zoom, Meet hoặc Teams như bình thường."
-                />
+                <PageHeader title="Phiên họp" />
                 <SessionPanel />
                 <AssistSettings />
+                <RecentSessions />
                 <section aria-labelledby="shortcuts-title" className="space-y-3">
                   <h2 id="shortcuts-title" className="text-sm font-semibold">
                     Phím tắt

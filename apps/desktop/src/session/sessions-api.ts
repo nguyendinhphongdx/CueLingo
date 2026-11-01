@@ -1,7 +1,9 @@
 import {
   CreateSessionRequestSchema,
+  SessionListSchema,
   SessionSchema,
   type CreateSessionRequest,
+  type SessionList,
   type Session,
 } from '@cuelingo/shared';
 
@@ -10,6 +12,7 @@ type Fetch = typeof fetch;
 export interface SessionsApi {
   create(input: CreateSessionRequest): Promise<Session>;
   end(sessionId: string): Promise<Session>;
+  list(): Promise<SessionList>;
 }
 
 interface SessionsApiOptions {
@@ -45,6 +48,11 @@ export function createSessionsApi({ apiUrl, token, fetch: request = fetch }: Ses
     create: (input: CreateSessionRequest) =>
       post('/v1/sessions', CreateSessionRequestSchema.parse(input)),
     end: (sessionId: string) => post(`/v1/sessions/${sessionId}/end`),
+    async list() {
+      const response = await request(`${baseUrl}/v1/sessions`, { headers });
+      if (!response.ok) throw new Error(`Session request failed with status ${response.status}`);
+      return SessionListSchema.parse(await response.json());
+    },
   } satisfies SessionsApi;
 }
 

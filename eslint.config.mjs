@@ -13,6 +13,8 @@ export default tseslint.config(
       'ml/**',
       '**/.docusaurus/**',
       '.worktrees/**',
+      '.claude/skills/**',
+      '.taste-skill/**',
       'apps/docs/build/**',
     ],
   },
