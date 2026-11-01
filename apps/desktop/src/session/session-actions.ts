@@ -5,6 +5,10 @@ export const startSession = (assistLevel: SelectableAssistLevel) =>
   native.sessionStart({ assistLevel });
 export const stopSession = () => native.sessionStop();
 export const toggleOverlay = () => native.toggleOverlay();
+export const openDebrief = (sessionId: string) => {
+  const webUrl = (import.meta.env.VITE_WEB_URL || 'http://localhost:3000').replace(/\/$/, '');
+  return native.openUrl(`${webUrl}/sessions/${sessionId}`);
+};
 
 function nativeErrorCode(error: unknown) {
   if (typeof error === 'string') return error;

@@ -56,6 +56,10 @@ export const native = {
       SessionStartResult.parse(v),
     ),
   sessionStop: () => invoke('session_stop').then(() => undefined),
+  openUrl: (url: string) => {
+    window.open(z.url().parse(url), '_blank', 'noopener,noreferrer');
+    return Promise.resolve();
+  },
   permissionsStatus: () => invoke('permissions_status').then((v) => PermissionsStatus.parse(v)),
   setAssistLevel: (level: number) =>
     invoke('set_assist_level', { level: AssistLevel.parse(level) }).then(() => undefined),

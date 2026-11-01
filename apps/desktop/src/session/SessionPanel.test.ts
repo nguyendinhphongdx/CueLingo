@@ -1,12 +1,13 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { SessionStatus } from './SessionPanel';
+import { DebriefButton, SessionStatus } from './SessionPanel';
 
 const nativeMocks = vi.hoisted(() => ({
   sessionStart: vi.fn(),
   sessionStop: vi.fn(),
   toggleOverlay: vi.fn(),
+  openUrl: vi.fn(),
 }));
 
 vi.mock('../lib/native', () => ({ native: nativeMocks }));
@@ -28,6 +29,17 @@ describe('SessionPanel', () => {
     const { toggleOverlay } = await import('./session-actions');
     await toggleOverlay();
     expect(nativeMocks.toggleOverlay).toHaveBeenCalledOnce();
+  });
+
+  it('renders the debrief button and opens the session in the configured web app', async () => {
+    const sessionId = '6df65d24-949f-4456-b5d2-4394c9d7ae16';
+    const markup = renderToStaticMarkup(createElement(DebriefButton, { sessionId }));
+    const { openDebrief } = await import('./session-actions');
+
+    await openDebrief(sessionId);
+
+    expect(markup).toContain('Xem debrief');
+    expect(nativeMocks.openUrl).toHaveBeenCalledWith(`http://localhost:3000/sessions/${sessionId}`);
   });
 
   it('maps known and unknown native errors to Vietnamese messages', async () => {
