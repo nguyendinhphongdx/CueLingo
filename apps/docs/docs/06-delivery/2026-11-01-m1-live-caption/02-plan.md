@@ -28,18 +28,18 @@ flowchart LR
 
 ## Tiến độ
 
-| Task  | Chủ | Trạng thái   | Ghi chú                                                                                          |
-| ----- | --- | ------------ | ------------------------------------------------------------------------------------------------ |
-| M1-01 | C   | ⏳ chờ quyền | Swift chạy, frame tới sau ~250 ms; tín hiệu = 0 vì chưa cấp quyền Micro / System Audio Recording |
-| M1-04 | X   | ✅           | Hợp đồng `ws` trong `@cuelingo/shared`                                                           |
-| M1-07 | X   | ✅           | Client realtime trong `@cuelingo/core-sdk` (đệm 60 s, backoff)                                   |
-| M1-05 | C   | 🔶 đang đo   | Prompt v1 + gateway + fallback xong, 91 test xanh; đo Gemini thật: xem bảng dưới                 |
-| M1-02 | C   | chờ M1-01    |                                                                                                  |
-| M1-03 | C   | chờ M1-02    |                                                                                                  |
-| M1-06 | C   | tiếp theo    | Có thể làm ngay vì không phụ thuộc native                                                        |
-| M1-08 | X   | chờ M1-02    | Brief viết khi M1-02 xong                                                                        |
-| M1-09 | X   | chờ M1-08    | Cần Claude thêm event `settings` trong Rust trước                                                |
-| M1-10 | C   | cuối         | Cổng M1                                                                                          |
+| Task  | Chủ | Trạng thái   | Ghi chú                                                                                                                                                                                                                                                      |
+| ----- | --- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| M1-01 | C   | ⏳ chờ quyền | Swift chạy, frame tới sau ~250 ms; tín hiệu = 0 vì chưa cấp quyền Micro / System Audio Recording                                                                                                                                                             |
+| M1-04 | X   | ✅           | Hợp đồng `ws` trong `@cuelingo/shared`                                                                                                                                                                                                                       |
+| M1-07 | X   | ✅           | Client realtime trong `@cuelingo/core-sdk` (đệm 60 s, backoff)                                                                                                                                                                                               |
+| M1-05 | C   | ✅           | Prompt v1 + gateway + fallback; Gemini thật: `gemini-3.1-flash-lite` pass 12/12, p50 0,74 s, p95 0,97 s; dự phòng `gemini-3.5-flash-lite` (2.5 flash-lite Google đã ngừng cho tài khoản mới; 3.5 không nhận `thinkingBudget`, dùng `thinkingLevel: minimal`) |
+| M1-02 | C   | chờ M1-01    |                                                                                                                                                                                                                                                              |
+| M1-03 | C   | chờ M1-02    |                                                                                                                                                                                                                                                              |
+| M1-06 | C   | tiếp theo    | Có thể làm ngay vì không phụ thuộc native                                                                                                                                                                                                                    |
+| M1-08 | X   | chờ M1-02    | Brief viết khi M1-02 xong                                                                                                                                                                                                                                    |
+| M1-09 | X   | chờ M1-08    | Cần Claude thêm event `settings` trong Rust trước                                                                                                                                                                                                            |
+| M1-10 | C   | cuối         | Cổng M1                                                                                                                                                                                                                                                      |
 
 ## Rủi ro
 
