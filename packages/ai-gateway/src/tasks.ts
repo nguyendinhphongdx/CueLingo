@@ -20,6 +20,11 @@ export const TASKS = {
     fallbackModel: process.env.AI_ASSIST_MODEL ?? 'gemini-3.5-flash-lite',
     timeoutMs: 8_000,
   },
+  'debrief.generate': {
+    model: process.env.AI_DEBRIEF_MODEL ?? 'gemini-3.5-flash-lite',
+    fallbackModel: process.env.AI_DEBRIEF_MODEL ?? 'gemini-3.5-flash-lite',
+    timeoutMs: 60_000,
+  },
 } as const;
 export type TaskName = keyof typeof TASKS;
 export type JsonTaskName = Exclude<TaskName, 'translate.realtime'>;

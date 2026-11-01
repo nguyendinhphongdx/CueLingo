@@ -1,9 +1,10 @@
 import { JobPayloads, type JobName, type JobPayload } from '@cuelingo/shared';
 import type { ObjectStorage } from '../lib/storage';
+import type { DebriefHandlerDeps } from './debrief/debrief.handler';
 import type { RetentionRepository } from './retention/retention.repository';
 
 /** Everything a handler may touch. Handlers are plain functions of (deps, payload), so tests pass fakes. */
-export interface JobDeps {
+export interface JobDeps extends DebriefHandlerDeps {
   retention: RetentionRepository;
   storage: ObjectStorage;
   now: () => Date;

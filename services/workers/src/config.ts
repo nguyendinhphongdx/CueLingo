@@ -3,6 +3,7 @@ import { z } from 'zod';
 const ConfigSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   DATABASE_URL: z.url(),
+  GEMINI_API_KEY: z.string().min(1).optional(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
