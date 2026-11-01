@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from '@cuelingo/ui/components/card';
 import { useSettings } from '../settings';
-import { describeNativeError, toggleOverlay } from './session-actions';
+import { describeNativeError, openDebrief, toggleOverlay } from './session-actions';
 import type { SessionStatus } from './session-controller';
 import { useSession } from './use-session';
 
@@ -24,6 +24,14 @@ export function SessionStatus({ status }: { status: SessionStatus }) {
     <p aria-live="polite" className="text-muted-foreground text-sm">
       Trạng thái: <span className="text-foreground font-medium">{statusText[status]}</span>
     </p>
+  );
+}
+
+export function DebriefButton({ sessionId }: { sessionId: string }) {
+  return (
+    <Button variant="outline" onClick={() => void openDebrief(sessionId)}>
+      Xem debrief
+    </Button>
   );
 }
 
@@ -59,6 +67,9 @@ export function SessionPanel() {
             <Button variant="outline" onClick={session.runDemo}>
               Chạy thử caption
             </Button>
+          ) : null}
+          {session.completedSessionId ? (
+            <DebriefButton sessionId={session.completedSessionId} />
           ) : null}
         </div>
         {error ? (

@@ -7,12 +7,14 @@ import type {
   TranscriptEvent,
 } from '../lib/native';
 import type { SelectableAssistLevel } from '../settings';
+import type { SessionsApi } from './sessions-api';
 
 export type SessionStatus = 'idle' | 'connecting' | 'running' | 'reconnecting' | 'error';
 
 export interface SessionSnapshot {
   status: SessionStatus;
   error: Error | null;
+  completedSessionId: string | null;
 }
 
 interface NativeSessionBridge {
@@ -24,9 +26,9 @@ interface NativeSessionBridge {
 
 interface SessionControllerOptions {
   native: NativeSessionBridge;
+  sessions: SessionsApi;
   createRealtime(options: RealtimeClientOptions): RealtimeClient;
   now?: () => number;
-  createSessionId?: () => string;
   apiUrl?: string;
   token?: string;
 }
@@ -77,14 +79,16 @@ function realtimeUrl(apiUrl: string, sessionId: string) {
 
 export function createSessionController({
   native,
+  sessions,
   createRealtime,
   now = Date.now,
-  createSessionId = () => crypto.randomUUID(),
   apiUrl = 'ws://localhost:4000',
   token = 'dev-token',
 }: SessionControllerOptions): SessionController {
-  let snapshot: SessionSnapshot = { status: 'idle', error: null };
+  let snapshot: SessionSnapshot = { status: 'idle', error: null, completedSessionId: null };
   let realtime: RealtimeClient | null = null;
+  let activeSessionId: string | null = null;
+  let stopPromise: Promise<void> | null = null;
   let stopSegmentListener: (() => void) | null = null;
   let listenerRegistration = 0;
   let runtimeGeneration = 0;
@@ -170,9 +174,15 @@ export function createSessionController({
       if (snapshot.status !== 'idle' && snapshot.status !== 'error') return;
       clearRuntime();
       const generation = runtimeGeneration;
-      update({ status: 'connecting', error: null });
+      update({ status: 'connecting', error: null, completedSessionId: null });
 
       try {
+        const session = await sessions.create({ assistLevel });
+        if (generation !== runtimeGeneration) {
+          await sessions.end(session.id).catch(() => undefined);
+          return;
+        }
+        activeSessionId = session.id;
         await listenForSegments();
         if (generation !== runtimeGeneration) return;
         await native.sessionStart({ assistLevel });
@@ -180,11 +190,10 @@ export function createSessionController({
           await native.sessionStop();
           return;
         }
-        const sessionId = createSessionId();
         realtime = createRealtime({
-          url: realtimeUrl(apiUrl, sessionId),
+          url: realtimeUrl(apiUrl, session.id),
           token,
-          sessionId,
+          sessionId: session.id,
           assistLevel,
           onMessage: handleMessage,
           onState(state) {
@@ -201,13 +210,31 @@ export function createSessionController({
       }
     },
     async stop() {
+      if (stopPromise) return stopPromise;
+
+      const sessionId = activeSessionId;
+      activeSessionId = null;
       clearRuntime();
-      try {
-        await native.sessionStop();
-        update({ status: 'idle', error: null });
-      } catch (error) {
-        fail(error);
-      }
+      stopPromise = (async () => {
+        const [nativeResult, apiResult] = await Promise.allSettled([
+          native.sessionStop(),
+          sessionId ? sessions.end(sessionId) : Promise.resolve(),
+        ]);
+        const error =
+          nativeResult.status === 'rejected'
+            ? nativeResult.reason
+            : apiResult.status === 'rejected'
+              ? apiResult.reason
+              : null;
+        update({
+          status: nativeResult.status === 'rejected' ? 'error' : 'idle',
+          error: error instanceof Error || error === null ? error : new Error(String(error)),
+          completedSessionId: sessionId ?? snapshot.completedSessionId,
+        });
+      })().finally(() => {
+        stopPromise = null;
+      });
+      return stopPromise;
     },
     runDemo() {
       demoTimers.forEach(clearTimeout);

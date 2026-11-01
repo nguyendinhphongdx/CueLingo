@@ -24,6 +24,7 @@ function setup() {
   let realtimeOptions: RealtimeClientOptions | undefined;
   const sent: unknown[] = [];
   const published: TranscriptEvent[] = [];
+  const calls: string[] = [];
   const realtime: RealtimeClient = {
     connect: vi.fn(),
     send: (message) => sent.push(message),
@@ -33,7 +34,10 @@ function setup() {
     },
   };
   const native = {
-    sessionStart: vi.fn().mockResolvedValue({ sessionId: 'local-native-session' }),
+    sessionStart: vi.fn(async () => {
+      calls.push('native.start');
+      return { sessionId: 'local-native-session' };
+    }),
     sessionStop: vi.fn().mockResolvedValue(undefined),
     onSegment: vi.fn(async (callback: (event: SegmentEvent) => void) => {
       onSegment = callback;
@@ -43,22 +47,46 @@ function setup() {
       published.push(event);
     }),
   };
+  const sessions = {
+    create: vi.fn(async (input: { assistLevel: number }) => {
+      calls.push('api.create');
+      return {
+        id: sessionId,
+        title: null,
+        startedAt: '2026-11-03T00:00:00.000Z',
+        endedAt: null,
+        status: 'live' as const,
+        assistLevel: input.assistLevel,
+      };
+    }),
+    end: vi.fn(async () => ({
+      id: sessionId,
+      title: null,
+      startedAt: '2026-11-03T00:00:00.000Z',
+      endedAt: '2026-11-03T01:00:00.000Z',
+      status: 'ended' as const,
+      assistLevel: 3,
+    })),
+  };
   const controller = createSessionController({
     native,
+    sessions,
     createRealtime: (options) => {
+      calls.push('realtime.create');
       realtimeOptions = options;
       return realtime;
     },
     apiUrl: 'ws://api.test/',
     token: 'dev-token',
     now: () => 1_000,
-    createSessionId: () => sessionId,
   });
 
   return {
     controller,
     native,
+    sessions,
     realtime,
+    calls,
     sent,
     published,
     emitSegment: (event: SegmentEvent) => onSegment?.(event),
@@ -131,6 +159,60 @@ describe('session controller', () => {
     expect(context.controller.getSnapshot().status).toBe('reconnecting');
     options?.onError(new Error('offline'));
     expect(context.controller.getSnapshot().status).toBe('error');
+  });
+
+  it('creates the API session before starting native capture and opening realtime', async () => {
+    const context = setup();
+
+    await context.controller.start(4);
+
+    expect(context.sessions.create).toHaveBeenCalledWith({ assistLevel: 4 });
+    expect(context.calls).toEqual(['api.create', 'native.start', 'realtime.create']);
+    expect(context.getRealtimeOptions()?.sessionId).toBe(sessionId);
+  });
+
+  it('does not start native capture or realtime when session creation fails', async () => {
+    const context = setup();
+    context.sessions.create.mockRejectedValueOnce(new Error('API unavailable'));
+
+    await context.controller.start(3);
+
+    expect(context.native.sessionStart).not.toHaveBeenCalled();
+    expect(context.realtime.connect).not.toHaveBeenCalled();
+    expect(context.controller.getSnapshot()).toMatchObject({
+      status: 'error',
+      error: new Error('API unavailable'),
+    });
+  });
+
+  it('ends the API session once when stop is pressed twice', async () => {
+    const context = setup();
+    await context.controller.start(3);
+
+    await Promise.all([context.controller.stop(), context.controller.stop()]);
+
+    expect(context.native.sessionStop).toHaveBeenCalledOnce();
+    expect(context.sessions.end).toHaveBeenCalledOnce();
+    expect(context.sessions.end).toHaveBeenCalledWith(sessionId);
+    expect(context.controller.getSnapshot()).toMatchObject({
+      status: 'idle',
+      completedSessionId: sessionId,
+    });
+  });
+
+  it('still stops native capture and returns idle when ending the API session fails', async () => {
+    const context = setup();
+    await context.controller.start(3);
+    context.sessions.end.mockRejectedValueOnce(new Error('API unavailable'));
+
+    await context.controller.stop();
+
+    expect(context.native.sessionStop).toHaveBeenCalledOnce();
+    expect(context.controller.getSnapshot()).toMatchObject({
+      status: 'idle',
+      error: new Error('API unavailable'),
+      completedSessionId: sessionId,
+    });
   });
 
   it('emits six demo segments 1.5 seconds apart through transcript publishing', () => {
