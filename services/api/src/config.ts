@@ -12,6 +12,9 @@ const ConfigSchema = z
     BETTER_AUTH_SECRET: z.string().min(32),
     GOOGLE_CLIENT_ID: z.string().min(1).optional(),
     GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+    GEMINI_API_KEY: z.string().min(1).optional(),
+    REALTIME_DEV_TOKEN: z.string().min(16).optional(),
+    REALTIME_DEV_USER_ID: z.uuid().optional(),
   })
   .refine((c) => Boolean(c.GOOGLE_CLIENT_ID) === Boolean(c.GOOGLE_CLIENT_SECRET), {
     message: 'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set together',

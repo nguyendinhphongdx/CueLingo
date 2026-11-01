@@ -38,4 +38,25 @@ describe('loadConfig', () => {
       loadConfig({ ...valid, GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 's' }).GOOGLE_CLIENT_ID,
     ).toBe('id');
   });
+
+  it('accepts valid optional realtime configuration', () => {
+    const config = loadConfig({
+      ...valid,
+      GEMINI_API_KEY: 'gemini-key',
+      REALTIME_DEV_TOKEN: 'dev-token-at-least-16-characters',
+      REALTIME_DEV_USER_ID: '9ee72a14-8cd4-4f2e-8131-4ed638e2d875',
+    });
+    expect(config.GEMINI_API_KEY).toBe('gemini-key');
+    expect(config.REALTIME_DEV_TOKEN).toBe('dev-token-at-least-16-characters');
+    expect(config.REALTIME_DEV_USER_ID).toBe('9ee72a14-8cd4-4f2e-8131-4ed638e2d875');
+  });
+
+  it('rejects invalid realtime development credentials', () => {
+    expect(() => loadConfig({ ...valid, REALTIME_DEV_TOKEN: 'too-short' })).toThrow(
+      /REALTIME_DEV_TOKEN/,
+    );
+    expect(() => loadConfig({ ...valid, REALTIME_DEV_USER_ID: 'not-a-uuid' })).toThrow(
+      /REALTIME_DEV_USER_ID/,
+    );
+  });
 });

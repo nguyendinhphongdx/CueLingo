@@ -14,7 +14,10 @@ export interface AuthOptions {
   resolveUserId: (request: FastifyRequest) => Promise<string | null>;
 }
 
-const isPublic = (url: string) => url === '/healthz' || url.startsWith('/api/auth/');
+const isPublic = (url: string) =>
+  url === '/healthz' ||
+  url.startsWith('/api/auth/') ||
+  /^\/v1\/sessions\/[^/]+\/stream(?:\?|$)/.test(url);
 
 export function registerAuth(app: FastifyInstance, options: AuthOptions): void {
   app.decorateRequest('userId', '');
