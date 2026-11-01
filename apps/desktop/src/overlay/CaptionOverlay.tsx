@@ -72,8 +72,8 @@ export function CaptionOverlay({
       data-theme={theme}
       className={
         theme === 'dark'
-          ? 'overflow-hidden rounded-xl bg-black/70 text-white shadow-lg'
-          : 'overflow-hidden rounded-xl bg-white/90 text-slate-950 shadow-lg'
+          ? 'flex h-screen flex-col overflow-hidden rounded-xl bg-black/70 text-white shadow-lg'
+          : 'flex h-screen flex-col overflow-hidden rounded-xl bg-white/90 text-slate-950 shadow-lg'
       }
     >
       <div
@@ -114,7 +114,7 @@ export function CaptionOverlay({
           {theme === 'dark' ? 'Sáng' : 'Tối'}
         </button>
       </div>
-      <div className="space-y-3 px-5 pb-5" style={{ fontSize }}>
+      <div className="flex-1 space-y-3 overflow-y-auto px-5 pb-5" style={{ fontSize }}>
         {assistLevel === 0
           ? null
           : visibleSegments.map((segment) => (
@@ -123,12 +123,12 @@ export function CaptionOverlay({
                 text={assistLevel === 1 ? (segment.translation ?? 'Đang dịch…') : segment.text}
                 translation={assistLevel === 1 ? undefined : (segment.translation ?? undefined)}
                 partial={segment.partial}
-                className={`[&>p]:text-[inherit] ${
+                className={`text-inherit! [&>p]:text-inherit! ${
                   segment.partial ? 'font-normal opacity-60' : 'font-semibold'
                 } ${
                   assistLevel === 3
-                    ? '[&>p:first-child]:opacity-70 [&>p+p]:text-[inherit] [&>p+p]:font-bold'
-                    : '[&>p+p]:text-[inherit] [&>p+p]:opacity-80'
+                    ? '[&>p:first-child]:opacity-70 [&>p+p]:text-inherit! [&>p+p]:font-bold'
+                    : '[&>p+p]:text-inherit! [&>p+p]:opacity-80'
                 }`}
               />
             ))}
