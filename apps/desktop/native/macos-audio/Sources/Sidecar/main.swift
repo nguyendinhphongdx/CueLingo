@@ -5,7 +5,8 @@ import LocalSTT
 // cuelingo-audio: captures system audio + mic, transcribes on-device, prints one JSON object per line.
 // stdout events: {"type":"status","state":"loading|ready|error","message":…}
 //                {"type":"segment","segmentId","stream","startMs","endMs","text","words":[],"partial"}
-// stdin: a line "stop" ends the session.
+// stdin: a line "stop" ends the session; "vocab ["SLA",...]" replaces the glossary terms.
+// env CUELINGO_VOCAB: the same JSON array, applied at start.
 
 let out = FileHandle.standardOutput
 let writeLock = NSLock()
@@ -85,6 +86,13 @@ do { try await transcriber.load() } catch {
     status("error", "model load failed: \(error)")
     exit(2)
 }
+func applyVocabulary(_ json: String) async {
+    guard let data = json.data(using: .utf8),
+          let terms = try? JSONDecoder().decode([String].self, from: data) else { return }
+    await transcriber.setVocabulary(terms)
+}
+if let initial = ProcessInfo.processInfo.environment["CUELINGO_VOCAB"] { await applyVocabulary(initial) }
+
 let system = Pipeline(stream: "system", transcriber: transcriber)
 
 // `--file x.wav` (16 kHz mono Int16): run a recording through the same pipeline, for tests and demos.
@@ -116,7 +124,9 @@ DispatchQueue.global().async {
 
 // Wait for "stop" on stdin (or EOF when the parent exits).
 while let line = readLine() {
-    if line.trimmingCharacters(in: .whitespaces) == "stop" { break }
+    let command = line.trimmingCharacters(in: .whitespaces)
+    if command == "stop" { break }
+    if command.hasPrefix("vocab ") { await applyVocabulary(String(command.dropFirst(6))) }
 }
 tap.stop()
 micCapture.stop()

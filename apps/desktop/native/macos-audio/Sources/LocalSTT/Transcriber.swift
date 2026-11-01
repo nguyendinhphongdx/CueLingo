@@ -5,7 +5,14 @@ import Foundation
 public actor Transcriber {
     private let manager = AsrManager(config: .default)
 
+    private var corrector = VocabularyCorrector(terms: [])
+
     public init() {}
+
+    /// The user's glossary terms for the current meeting; applied to every later utterance.
+    public func setVocabulary(_ terms: [String]) {
+        corrector = VocabularyCorrector(terms: terms)
+    }
 
     /// Downloads the model on first use (~500 MB), then loads it.
     public func load() async throws {
@@ -22,6 +29,6 @@ public actor Transcriber {
         // Each utterance is independent, so it gets a fresh decoder state.
         var state = TdtDecoderState.make(decoderLayers: await manager.decoderLayerCount)
         let result = try await manager.transcribe(samples, decoderState: &state)
-        return result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return corrector.correct(result.text.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 }
