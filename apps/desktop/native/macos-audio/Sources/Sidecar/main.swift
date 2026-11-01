@@ -86,12 +86,33 @@ do { try await transcriber.load() } catch {
     exit(2)
 }
 let system = Pipeline(stream: "system", transcriber: transcriber)
+
+// `--file x.wav` (16 kHz mono Int16): run a recording through the same pipeline, for tests and demos.
+if let flag = CommandLine.arguments.firstIndex(of: "--file"), flag + 1 < CommandLine.arguments.count {
+    let data = try Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[flag + 1]))
+    let pcm = data.dropFirst(44)
+    let samples: [Int16] = pcm.withUnsafeBytes { Array($0.bindMemory(to: Int16.self)) }
+    status("ready")
+    var offset = 0
+    while offset < samples.count {
+        system.feed(Array(samples[offset..<min(offset + 3200, samples.count)]))
+        offset += 3200
+    }
+    system.feed([Int16](repeating: 0, count: 16_000))  // trailing silence closes the last sentence
+    system.finish()
+    try? await Task.sleep(nanoseconds: 4_000_000_000)
+    status("stopped")
+    exit(0)
+}
 let mic = Pipeline(stream: "mic", transcriber: transcriber)
 let tap = SystemAudioTap()
 let micCapture = MicCapture()
 do { try tap.start { system.feed($0) } } catch { status("error", "system audio: \(error)") }
-do { try micCapture.start { mic.feed($0) } } catch { status("error", "microphone: \(error)") }
 status("ready")
+// The mic can block on its permission prompt; start it off the main path so system captions never wait for it.
+DispatchQueue.global().async {
+    do { try micCapture.start { mic.feed($0) } } catch { status("error", "microphone: \(error)") }
+}
 
 // Wait for "stop" on stdin (or EOF when the parent exits).
 while let line = readLine() {

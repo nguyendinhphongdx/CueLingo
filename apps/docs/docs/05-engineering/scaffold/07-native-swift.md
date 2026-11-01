@@ -56,3 +56,10 @@ Theo [native-desktop](../conventions/native-desktop.md): thread audio không c�
 - **Thu âm hệ thống:** Core Audio Process Tap (`CATapDescription` + aggregate device + IOProc) chạy tốt trên macOS 26; tối thiểu macOS 14.2. Mic dùng `AVAudioEngine`. Cả hai qua `Resampler` về 16 kHz mono Int16. Frame đầu tới sau ~110 ms (hệ thống) và ~280 ms (mic).
 - **Quyền:** macOS gắn quyền với **app bundle** chạy tiến trình. CLI trần (hoặc chạy dưới terminal/agent khác) không được hỏi quyền và nhận toàn số 0 (không có lỗi). Cần `Info.plist` có `NSAudioCaptureUsageDescription` và `NSMicrophoneUsageDescription`; app Tauri nhúng `src-tauri/Info.plist`. Để thử nhanh: gói binary thành `.app` ký ad-hoc và mở bằng `open -W -n --stdout <file> App.app --args …`.
 - **Cầu Swift↔Rust:** chọn sidecar (Swift CLI trong bundle, Rust spawn và đọc stdout) thay cho FFI: tách crash, dễ test; chi tiết ở M1-02.
+
+## Sidecar `cuelingo-audio` (M1)
+
+- stdout: mỗi dòng một JSON: `{"type":"status","state":"loading|ready|error|stopped"}` và `{"type":"segment","segmentId","stream","startMs","endMs","text","words":[],"partial"}`. stdin: dòng `stop` kết thúc phiên. `--file x.wav` (16 kHz mono Int16) chạy một file qua cùng đường xử lý (test/demo, không cần quyền).
+- Tách câu: VAD năng lượng (`UtteranceSegmenter`, im lặng 600 ms hoặc 15 s thì chốt câu), partial mỗi 0,7 s bằng cách nhận dạng lại đoạn đang nói. Model: Parakeet TDT v2 (tiếng Anh) của FluidAudio, tải ~500 MB lần đầu vào `~/Library/Application Support/FluidAudio`. Câu < 1 s được đệm im lặng (model lỗi "zero shape" nếu ngắn hơn).
+- Mic khởi động ở luồng riêng vì có thể treo chờ quyền; system audio không phụ thuộc mic.
+- Lỗi đã gặp: ký lại app ad-hoc mỗi lần build làm macOS hỏi lại quyền, và chờ hộp thoại làm treo tiến trình. Cần chứng chỉ ký ổn định (M5-05) để hết.

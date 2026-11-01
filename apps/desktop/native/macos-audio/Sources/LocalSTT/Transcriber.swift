@@ -13,7 +13,12 @@ public actor Transcriber {
         try await manager.loadModels(models)
     }
 
-    public func transcribe(_ samples: [Float]) async throws -> String {
+    /// The model needs at least ~1 s of audio; shorter utterances are padded with silence.
+    static let minSamples = 16_000
+
+    public func transcribe(_ input: [Float]) async throws -> String {
+        let samples = input.count < Self.minSamples
+            ? input + [Float](repeating: 0, count: Self.minSamples - input.count) : input
         // Each utterance is independent, so it gets a fresh decoder state.
         var state = TdtDecoderState.make(decoderLayers: await manager.decoderLayerCount)
         let result = try await manager.transcribe(samples, decoderState: &state)
