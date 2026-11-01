@@ -29,7 +29,7 @@ export function createPostgresEventsRepository(sql: Sql): EventsRepository {
         if (sessionIds.length > 0) {
           const owned = await tx<{ id: string }[]>`
             SELECT id FROM sessions
-            WHERE user_id = ${userId} AND id = ANY(${tx.array(sessionIds)}::uuid[])`;
+            WHERE user_id = ${userId} AND id = ANY(${sessionIds}::uuid[])`;
           if (owned.length !== sessionIds.length) throw new Error('Event session not found');
         }
 
@@ -45,7 +45,7 @@ export function createPostgresEventsRepository(sql: Sql): EventsRepository {
             SELECT segments.id FROM segments
             JOIN sessions ON sessions.id = segments.session_id
             WHERE sessions.user_id = ${userId}
-              AND segments.id = ANY(${tx.array(segmentIds)}::uuid[])`;
+              AND segments.id = ANY(${segmentIds}::uuid[])`;
           if (owned.length !== segmentIds.length) throw new Error('Event segment not found');
         }
 
