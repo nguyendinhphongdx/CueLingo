@@ -29,15 +29,30 @@ function duration(session: Session): string | null {
 }
 
 /** The last few meetings, each opening its debrief in the browser. Hidden until there is one. */
-export function RecentSessions() {
+export function RecentSessions({
+  limit = 4,
+  showEmpty = false,
+}: {
+  limit?: number;
+  showEmpty?: boolean;
+}) {
   const recent = useQuery({
-    queryKey: ['recent-sessions'],
+    queryKey: ['recent-sessions', limit],
     queryFn: () => sessionsApi.list(),
-    select: (data) => data.sessions.filter((session) => session.status !== 'deleted').slice(0, 4),
+    select: (data) =>
+      data.sessions.filter((session) => session.status !== 'deleted').slice(0, limit),
     staleTime: 15_000,
   });
 
-  if (!recent.data || recent.data.length === 0) return null;
+  if (!recent.data) return null;
+  if (recent.data.length === 0) {
+    return showEmpty ? (
+      <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
+        Chưa có cuộc họp nào. Bấm Bắt đầu ở mục Phiên họp, debrief sẽ xuất hiện ở đây sau khi bạn
+        dừng.
+      </p>
+    ) : null;
+  }
 
   return (
     <section aria-labelledby="recent-title" className="space-y-3">

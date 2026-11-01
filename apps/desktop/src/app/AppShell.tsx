@@ -1,15 +1,10 @@
 import { Highlight, HighlightItem } from '@animate-ui/react/primitives/effects/highlight';
 import { spring } from '@animate-ui/react/utils/motion';
-import { Mic, Settings, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { featureGroups, features, type View } from './features';
 import { APP_NAME, APP_TAGLINE, APP_VERSION, Logo } from './Logo';
 
-export type View = 'home' | 'settings';
-
-const navItems: Array<{ view: View; label: string; icon: LucideIcon }> = [
-  { view: 'home', label: 'Phiên họp', icon: Mic },
-  { view: 'settings', label: 'Cài đặt', icon: Settings },
-];
+export type { View };
 
 interface AppShellProps {
   view: View;
@@ -31,37 +26,53 @@ export function AppShell({ view, onNavigate, children }: AppShellProps) {
             <p className="text-muted-foreground text-xs">Phiên bản {APP_VERSION}</p>
           </div>
         </div>
-        <nav aria-label="Điều hướng chính" className="mt-7">
+        <nav aria-label="Điều hướng chính" className="mt-6">
           <Highlight
             value={view}
             hover={false}
+            controlledItems
             transition={spring.pop}
             className="bg-card rounded-lg shadow-sm ring-1 ring-black/5 dark:ring-white/10"
-            containerClassName="flex flex-col gap-0.5"
-            mode="parent"
           >
-            {navItems.map(({ view: target, label, icon: Icon }) => {
-              const active = view === target;
-              return (
-                <HighlightItem key={target} value={target}>
-                  <button
-                    type="button"
-                    aria-current={active ? 'page' : undefined}
-                    onClick={() => onNavigate(target)}
-                    className={`focus-visible:ring-ring flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 text-left text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
-                      active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <Icon
-                      aria-hidden="true"
-                      className={`size-[18px] ${active ? 'text-primary' : ''}`}
-                      strokeWidth={2}
-                    />
-                    {label}
-                  </button>
-                </HighlightItem>
-              );
-            })}
+            {featureGroups.map((group) => (
+              <div key={group.id} className="mb-3 flex flex-col gap-0.5">
+                <p className="text-muted-foreground px-3 pb-1 text-xs font-medium">{group.title}</p>
+                {features
+                  .filter((feature) => feature.group === group.id)
+                  .map(({ view: target, label, icon: Icon, status }) => {
+                    const active = view === target;
+                    return (
+                      <HighlightItem key={target} value={target}>
+                        <button
+                          type="button"
+                          aria-current={active ? 'page' : undefined}
+                          onClick={() => onNavigate(target)}
+                          className={`focus-visible:ring-ring flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 text-left text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                            active
+                              ? 'text-foreground'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          <Icon
+                            aria-hidden="true"
+                            className={`size-[18px] ${active ? 'text-primary' : ''}`}
+                            strokeWidth={2}
+                          />
+                          <span className="flex-1">{label}</span>
+                          {status === 'soon' ? (
+                            <span
+                              className="bg-muted-foreground/60 size-1.5 rounded-full"
+                              title="Sắp ra mắt"
+                            >
+                              <span className="sr-only">Sắp ra mắt</span>
+                            </span>
+                          ) : null}
+                        </button>
+                      </HighlightItem>
+                    );
+                  })}
+              </div>
+            ))}
           </Highlight>
         </nav>
         <p className="text-muted-foreground mt-auto px-2 text-xs leading-relaxed">{APP_TAGLINE}</p>
