@@ -14,6 +14,7 @@ import {
   createPostgresPhrasesRepository,
   createPostgresStudyRepository,
 } from '../../src/modules/review';
+import { createPostgresDeviceRepository } from '../../src/modules/device';
 import { startMigratedPostgres, type TestDatabase } from './postgres';
 
 /** AC3 + AC4: magic-link sign-in creates a session that the API accepts; no session means 401. */
@@ -48,6 +49,7 @@ describe('auth on real Postgres (AC3, AC4)', () => {
         glossary: createPostgresGlossaryRepository(sql),
         privacy: createPostgresPrivacyRepository(sql),
         sessions: createPostgresSessionsRepository(sql),
+        device: createPostgresDeviceRepository(sql),
         phrases: createPostgresPhrasesRepository(sql),
         study: createPostgresStudyRepository(sql),
       },

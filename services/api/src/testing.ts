@@ -6,6 +6,7 @@ import { createInMemoryEventsRepository } from './modules/events';
 import { createInMemoryGlossaryRepository } from './modules/glossary';
 import type { PrivacyRepository } from './modules/privacy';
 import { createInMemorySessionsRepository } from './modules/sessions';
+import { createInMemoryDeviceRepository } from './modules/device';
 import { createInMemoryPhrasesRepository, createInMemoryStudyRepository } from './modules/review';
 
 /** Header the test resolver reads in place of a real session. */
@@ -31,6 +32,7 @@ export async function buildTestApp(
       glossary: createInMemoryGlossaryRepository(),
       privacy: emptyPrivacyRepository(),
       sessions: createInMemorySessionsRepository(),
+      device: createInMemoryDeviceRepository(),
       phrases: createInMemoryPhrasesRepository(),
       study: createInMemoryStudyRepository(),
       ...repos,

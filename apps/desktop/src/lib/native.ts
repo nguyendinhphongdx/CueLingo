@@ -64,6 +64,13 @@ export const native = {
       SessionStartResult.parse(v),
     ),
   sessionStop: () => invoke('session_stop').then(() => undefined),
+  /** The device token kept in the macOS Keychain; null when nobody is signed in. */
+  authTokenGet: () => invoke('auth_token_get').then((v) => z.string().nullable().parse(v)),
+  authTokenSet: (token: string) => invoke('auth_token_set', { token }).then(() => undefined),
+  authTokenClear: () => invoke('auth_token_clear').then(() => undefined),
+  /** Fires when the browser hands back a sign-in code through the cuelingo:// link. */
+  onAuthCode: (cb: (code: string) => void): Promise<UnlistenFn> =>
+    listen('auth-code', (e) => cb(z.string().parse(e.payload))),
   /** Opens a web page or a macOS privacy pane with the system handler (the webview cannot open windows). */
   openUrl: (url: string) =>
     invoke('open_external', { url: z.string().min(1).parse(url) }).then(() => undefined),

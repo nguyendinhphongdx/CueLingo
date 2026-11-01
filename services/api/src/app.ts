@@ -7,6 +7,7 @@ import type { JobQueue } from './lib/queue';
 import { createAssistModule, type AssistDeps } from './modules/assist';
 import { createDebriefModule, type DebriefRepository } from './modules/debrief';
 import { createEventsModule, type EventsRepository } from './modules/events';
+import { createDeviceModule, type DeviceRepository } from './modules/device';
 import { createGlossaryModule, type GlossaryRepository } from './modules/glossary';
 import { createPrivacyModule, type PrivacyRepository } from './modules/privacy';
 import { createRealtimeModule, type RealtimeDeps } from './modules/realtime';
@@ -26,6 +27,7 @@ export interface AppDeps {
     debrief: DebriefRepository;
     events: EventsRepository;
     glossary: GlossaryRepository;
+    device: DeviceRepository;
     phrases: PhrasesRepository;
     privacy: PrivacyRepository;
     study: StudyRepository;
@@ -59,8 +61,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE'],
   });
-  registerAuth(app, { resolveUserId: deps.resolveUserId, verifyDevToken: deps.verifyDevToken });
+  const device = createDeviceModule(deps.repos.device);
+  registerAuth(app, {
+    resolveUserId: deps.resolveUserId,
+    verifyDevToken: deps.verifyDevToken,
+    verifyDeviceToken: device.device.verifyToken,
+  });
 
+  await app.register(device.routes, { prefix: '/v1/device' });
   app.get('/healthz', async () => ({ ok: true }));
   if (deps.authRoutes) await app.register(deps.authRoutes);
   await app.register(createDebriefModule(deps.repos.debrief).routes);

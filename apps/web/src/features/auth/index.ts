@@ -4,3 +4,4 @@
  */
 export { AppShell } from './AppShell';
 export { LoginPage } from './LoginPage';
+export { AppAuthPage } from './AppAuthPage';

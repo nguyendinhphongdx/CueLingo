@@ -14,6 +14,7 @@ import {
   SessionDetailSchema,
   SessionListSchema,
   DeleteMyDataRequestSchema,
+  DeviceCodeResponseSchema,
   type DeleteMyDataRequest,
   type DebriefFeedbackRequest,
   type ReviewAnswerRequest,
@@ -79,6 +80,10 @@ async function request<T>(
 /** Web endpoints that are not yet part of core-sdk still stay behind this single client boundary. */
 export const client = {
   ...coreClient,
+  device: {
+    /** A one-time code the desktop app trades for its own token. Needs the web session. */
+    createCode: () => request('POST', '/v1/device/code', DeviceCodeResponseSchema),
+  },
   sessions: {
     list: () => request('GET', '/v1/sessions', SessionListSchema),
     get: (id: string) =>

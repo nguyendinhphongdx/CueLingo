@@ -6,6 +6,7 @@ import {
   ReviewQueueSchema,
   type ReviewAnswerRequest,
 } from '@cuelingo/shared';
+import { currentToken, resolveToken, type TokenSource } from '../auth';
 import type { z } from 'zod';
 
 type Fetch = typeof fetch;
@@ -19,7 +20,7 @@ export interface StudyApi {
 
 interface StudyApiOptions {
   apiUrl: string;
-  token: string;
+  token: TokenSource;
   fetch?: Fetch;
 }
 
@@ -34,7 +35,9 @@ export function createStudyApi({
 }: StudyApiOptions): StudyApi {
   const baseUrl = restUrl(apiUrl);
   const headers = {
-    Authorization: `Bearer ${token}`,
+    get Authorization() {
+      return `Bearer ${resolveToken(token)}`;
+    },
     'Content-Type': 'application/json',
   };
 
@@ -69,5 +72,5 @@ export function createStudyApi({
 
 export const studyApi = createStudyApi({
   apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:4000',
-  token: import.meta.env.VITE_REALTIME_TOKEN || 'dev-token',
+  token: currentToken,
 });

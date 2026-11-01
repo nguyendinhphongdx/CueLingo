@@ -1,3 +1,4 @@
+import { currentToken, resolveToken, type TokenSource } from '../auth';
 import {
   CreateSessionRequestSchema,
   SessionListSchema,
@@ -18,7 +19,7 @@ export interface SessionsApi {
 
 interface SessionsApiOptions {
   apiUrl: string;
-  token: string;
+  token: TokenSource;
   fetch?: Fetch;
 }
 
@@ -29,7 +30,9 @@ function restUrl(apiUrl: string) {
 export function createSessionsApi({ apiUrl, token, fetch: request = fetch }: SessionsApiOptions) {
   const baseUrl = restUrl(apiUrl);
   const headers = {
-    Authorization: `Bearer ${token}`,
+    get Authorization() {
+      return `Bearer ${resolveToken(token)}`;
+    },
     'Content-Type': 'application/json',
   };
 
@@ -66,5 +69,5 @@ export function createSessionsApi({ apiUrl, token, fetch: request = fetch }: Ses
 
 export const sessionsApi = createSessionsApi({
   apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:4000',
-  token: import.meta.env.VITE_REALTIME_TOKEN || 'dev-token',
+  token: currentToken,
 });

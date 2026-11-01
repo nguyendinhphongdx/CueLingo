@@ -15,14 +15,22 @@ import { ListCard, Section } from '@cuelingo/ui/components/section';
 import { SoonBadge } from '@cuelingo/ui/components/soon-badge';
 import { features, upcoming } from '@cuelingo/ui/lib/roadmap';
 import { ExternalLink } from 'lucide-react';
+import { AccountCard, isDevToken, LoginScreen, useAuth } from '../auth';
 import { AppShell } from './AppShell';
 import { views } from './views';
 import { openWeb } from './open-web';
 
 export function App() {
   useColorScheme();
+  const auth = useAuth();
   useSyncAssistLevel();
   const [view, setView] = useState('home');
+
+  if (auth.status === 'loading') return <div className="bg-background h-screen" />;
+  // A development token in the environment lets the app run without an account.
+  if (auth.status === 'signedOut' && !isDevToken()) {
+    return <LoginScreen phase={auth.phase} onSignIn={() => void auth.signIn()} />;
+  }
 
   return (
     <MotionConfig reducedMotion="user">
@@ -35,7 +43,7 @@ export function App() {
             animate={{ opacity: 1, y: 0, transition: spring.pop }}
             exit={{ opacity: 0, transition: { duration: 0.12 } }}
           >
-            <CurrentView view={view} />
+            <CurrentView view={view} onSignOut={() => void auth.signOut()} />
           </motion.div>
         </AnimatePresence>
       </AppShell>
@@ -43,7 +51,7 @@ export function App() {
   );
 }
 
-function CurrentView({ view }: { view: string }) {
+function CurrentView({ view, onSignOut }: { view: string; onSignOut(): void }) {
   const feature = features.find((item) => item.id === view)!;
   const Page = views[view];
   if (Page) {
@@ -82,6 +90,7 @@ function CurrentView({ view }: { view: string }) {
     return (
       <>
         <PageHeader title="Cài đặt" />
+        <AccountCard onSignOut={onSignOut} />
         <PermissionsStep />
         <PrivacyPanel />
         <AboutCard />

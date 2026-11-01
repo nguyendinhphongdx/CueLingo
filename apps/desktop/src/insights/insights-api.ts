@@ -1,4 +1,5 @@
 import { ApiError } from '@cuelingo/core-sdk';
+import { currentToken, resolveToken, type TokenSource } from '../auth';
 import {
   CreateGlossaryTermSchema,
   ErrorResponseSchema,
@@ -25,7 +26,7 @@ export interface InsightsApi {
 
 interface InsightsApiOptions {
   apiUrl: string;
-  token: string;
+  token: TokenSource;
   fetch?: Fetch;
 }
 
@@ -46,7 +47,9 @@ export function describeInsightsError(error: unknown): string {
 export function createInsightsApi({ apiUrl, token, fetch: request = fetch }: InsightsApiOptions) {
   const baseUrl = restUrl(apiUrl);
   const headers = {
-    Authorization: `Bearer ${token}`,
+    get Authorization() {
+      return `Bearer ${resolveToken(token)}`;
+    },
     'Content-Type': 'application/json',
   };
 
@@ -114,5 +117,5 @@ export function createInsightsApi({ apiUrl, token, fetch: request = fetch }: Ins
 
 export const insightsApi = createInsightsApi({
   apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:4000',
-  token: import.meta.env.VITE_REALTIME_TOKEN || 'dev-token',
+  token: currentToken,
 });

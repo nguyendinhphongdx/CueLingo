@@ -30,7 +30,7 @@ interface SessionControllerOptions {
   createRealtime(options: RealtimeClientOptions): RealtimeClient;
   now?: () => number;
   apiUrl?: string;
-  token?: string;
+  token?: string | (() => string);
 }
 
 export interface SessionController {
@@ -83,7 +83,7 @@ export function createSessionController({
   createRealtime,
   now = Date.now,
   apiUrl = 'ws://localhost:4000',
-  token = 'dev-token',
+  token = '',
 }: SessionControllerOptions): SessionController {
   let snapshot: SessionSnapshot = { status: 'idle', error: null, completedSessionId: null };
   let realtime: RealtimeClient | null = null;
@@ -192,7 +192,7 @@ export function createSessionController({
         }
         realtime = createRealtime({
           url: realtimeUrl(apiUrl, session.id),
-          token,
+          token: typeof token === 'function' ? token() : token,
           sessionId: session.id,
           assistLevel,
           onMessage: handleMessage,

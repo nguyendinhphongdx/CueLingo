@@ -67,5 +67,12 @@
     "macOS": {
       "minimumSystemVersion": "14.2"
     }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["cuelingo"]
+      }
+    }
   }
 }

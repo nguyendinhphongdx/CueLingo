@@ -1,3 +1,4 @@
+import { currentToken, resolveToken, type TokenSource } from '../auth';
 import {
   DeleteMyDataRequestSchema,
   ExportSchema,
@@ -18,11 +19,15 @@ export function createPrivacyApi({
   fetch: request = fetch,
 }: {
   apiUrl: string;
-  token: string;
+  token: TokenSource;
   fetch?: Fetch;
 }): PrivacyApi {
   const baseUrl = apiUrl.replace(/^ws:/, 'http:').replace(/^wss:/, 'https:').replace(/\/$/, '');
-  const authorization = { Authorization: `Bearer ${token}` };
+  const authorization = {
+    get Authorization() {
+      return `Bearer ${resolveToken(token)}`;
+    },
+  };
   return {
     async exportData() {
       const response = await request(`${baseUrl}/v1/me/export`, { headers: authorization });
@@ -42,5 +47,5 @@ export function createPrivacyApi({
 
 export const privacyApi = createPrivacyApi({
   apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:4000',
-  token: import.meta.env.VITE_REALTIME_TOKEN || 'dev-token',
+  token: currentToken,
 });

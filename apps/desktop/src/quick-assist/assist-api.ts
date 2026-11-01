@@ -11,6 +11,7 @@ import {
   type LookupRequest,
   type RecapRequest,
 } from '@cuelingo/shared';
+import { currentToken, resolveToken, type TokenSource } from '../auth';
 import type { z } from 'zod';
 
 type Fetch = typeof fetch;
@@ -24,7 +25,7 @@ export interface AssistApi {
 
 interface AssistApiOptions {
   apiUrl: string;
-  token: string;
+  token: TokenSource;
   fetch?: Fetch;
 }
 
@@ -35,7 +36,9 @@ function restUrl(apiUrl: string) {
 export function createAssistApi({ apiUrl, token, fetch: request = fetch }: AssistApiOptions) {
   const baseUrl = restUrl(apiUrl);
   const headers = {
-    Authorization: `Bearer ${token}`,
+    get Authorization() {
+      return `Bearer ${resolveToken(token)}`;
+    },
     'Content-Type': 'application/json',
   };
 
@@ -71,5 +74,5 @@ export function createAssistApi({ apiUrl, token, fetch: request = fetch }: Assis
 
 export const assistApi = createAssistApi({
   apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:4000',
-  token: import.meta.env.VITE_REALTIME_TOKEN || 'dev-token',
+  token: currentToken,
 });

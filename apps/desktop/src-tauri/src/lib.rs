@@ -1,6 +1,7 @@
 //! Tauri core — windows, global shortcuts, native ↔ webview bridge.
 //! Design: apps/docs/docs/04-modules/01-desktop/tauri-core.md
 mod audio_bridge;
+mod auth;
 mod commands;
 mod hotkeys;
 mod windows;
@@ -8,10 +9,12 @@ mod windows;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
 use tauri::WindowEvent;
+use tauri_plugin_deep_link::DeepLinkExt;
 
 pub fn run() {
     tauri::Builder::default()
         .plugin(hotkeys::plugin())
+        .plugin(tauri_plugin_deep_link::init())
         .manage(commands::AppState::default())
         .invoke_handler(tauri::generate_handler![
             commands::session_start,
@@ -21,9 +24,25 @@ pub fn run() {
             commands::open_external,
             commands::set_assist_level,
             commands::toggle_overlay,
+            auth::auth_token_get,
+            auth::auth_token_set,
+            auth::auth_token_clear,
         ])
         .setup(|app| {
             hotkeys::register(app.handle())?;
+
+            // Sign-in links: while running, and when a link is what launched the app.
+            let handle = app.handle().clone();
+            app.deep_link().on_open_url(move |event| {
+                for url in event.urls() {
+                    auth::handle_url(&handle, url.as_str());
+                }
+            });
+            if let Ok(Some(urls)) = app.deep_link().get_current() {
+                for url in urls {
+                    auth::handle_url(app.handle(), url.as_str());
+                }
+            }
             windows::prepare_overlay(app.handle())?;
 
             let show = MenuItemBuilder::with_id("show", "Mở CueLingo").build(app)?;
