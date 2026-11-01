@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type SelectableAssistLevel = 4 | 3 | 1;
+export type SelectableAssistLevel = 4 | 3 | 1 | 0;
 
 interface SettingsState {
   assistLevel: SelectableAssistLevel;

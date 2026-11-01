@@ -12,6 +12,7 @@ const options = [
   { level: 4, label: 'Đầy đủ' },
   { level: 3, label: 'Gợi ý' },
   { level: 1, label: 'Tối thiểu' },
+  { level: 0, label: 'Ẩn' },
 ] as const;
 
 export function AssistSettings() {
