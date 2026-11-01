@@ -5,6 +5,7 @@ import { createInMemoryDebriefRepository } from './modules/debrief';
 import { createInMemoryEventsRepository } from './modules/events';
 import { createInMemoryGlossaryRepository } from './modules/glossary';
 import { createInMemorySessionsRepository } from './modules/sessions';
+import { createInMemoryPhrasesRepository } from './modules/review';
 
 /** Header the test resolver reads in place of a real session. */
 export const TEST_USER_HEADER = 'x-test-user-id';
@@ -21,6 +22,7 @@ export async function buildTestApp(
       events: createInMemoryEventsRepository(),
       glossary: createInMemoryGlossaryRepository(),
       sessions: createInMemorySessionsRepository(),
+      phrases: createInMemoryPhrasesRepository(),
       ...repos,
     },
     queue,

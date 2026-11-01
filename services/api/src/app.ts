@@ -9,6 +9,7 @@ import { createDebriefModule, type DebriefRepository } from './modules/debrief';
 import { createEventsModule, type EventsRepository } from './modules/events';
 import { createGlossaryModule, type GlossaryRepository } from './modules/glossary';
 import { createRealtimeModule, type RealtimeDeps } from './modules/realtime';
+import { createReviewModule, type PhrasesRepository } from './modules/review';
 import { createSessionsModule, type SessionsRepository } from './modules/sessions';
 
 export interface AppDeps {
@@ -16,6 +17,7 @@ export interface AppDeps {
     debrief: DebriefRepository;
     events: EventsRepository;
     glossary: GlossaryRepository;
+    phrases: PhrasesRepository;
     sessions: SessionsRepository;
   };
   queue: JobQueue;
@@ -55,6 +57,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(createSessionsModule(deps.repos.sessions, deps.queue).routes, {
     prefix: '/v1/sessions',
   });
+  await app.register(createReviewModule(deps.repos.phrases).routes, { prefix: '/v1/phrases' });
   if (deps.assist) {
     await app.register(createAssistModule(deps.assist).routes, { prefix: '/v1/assist' });
   }

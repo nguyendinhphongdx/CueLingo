@@ -26,3 +26,17 @@ Module `services/api/src/modules/review/` (hoặc `phrases/`, theo thiết kế 
 Quy tắc chung: đọc `AGENTS.md` gốc và `AGENTS.md` của thư mục bạn sửa, `apps/docs/docs/05-engineering/agent-collaboration.md`. Không có mạng, không `pnpm add`, không commit/push; dependency đã cài sẵn. Không đổi hợp đồng trong `packages/shared/src/dto/{session,debrief,phrase}.dto.ts` (nếu thật sự thiếu, dừng và ghi câu hỏi). Chạy `pnpm verify` trước khi báo; điền mục Kết quả.
 
 ## Kết quả _(implementer điền)_
+
+- Đã triển khai `modules/review` cho `POST/GET/DELETE /v1/phrases`, gồm service chuẩn hoá lemma, repository in-memory/Postgres và wiring trong `app.ts`, `server.ts`, `testing.ts`.
+- Postgres upsert `lexical_items(type='phrase')` + `user_lexicon` trong một câu lệnh; lưu lặp lại giữ cùng id, chỉ cập nhật nghĩa khi request có `meaningVi`, đặt `in_review=true`, chỉ gắn segment thuộc user. Xoá chỉ tác động `user_lexicon`.
+- Test thêm:
+  - `services/api/src/modules/review/phrases.test.ts`: AC1–AC4 qua Fastify injection (5 test).
+  - `services/api/test/integration/phrases.int.test.ts`: upsert DB, ranh giới user/segment và giữ `lexical_items` khi xoá.
+- File tài liệu đã cập nhật: `apps/docs/docs/04-modules/03-api/phrases-review.md`.
+- Kiểm tra:
+  - `pnpm verify`: xanh — 35 test files, 155 tests; dependency check không có vi phạm. Chạy bằng Node 22.14 có cảnh báo thấp hơn engine `>=22.19`, nhưng mọi bước đều hoàn tất.
+  - `pnpm docs:build`: xanh.
+  - Integration Postgres chưa chạy được trong sandbox: Node 22.14 làm `undici` lỗi lúc import; đổi sang Node 23.8 thì Testcontainers báo không có container runtime. Test đã được thêm để CI/máy có Docker chạy.
+  - Đã chạy thật luồng HTTP qua Fastify injection trong unit test: lưu → liệt kê → xoá → liệt kê. Thử mở listener TCP để smoke bằng `fetch` bị sandbox chặn IPC socket của `tsx` (`EPERM`).
+- Khác brief: không có. Không sửa contract, migration hay file ngoài phạm vi.
+- Câu hỏi còn mở: không có.
