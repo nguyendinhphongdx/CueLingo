@@ -1,4 +1,5 @@
 import AudioCapture
+import AVFoundation
 import Foundation
 import LocalSTT
 
@@ -81,6 +82,48 @@ final class Pipeline: @unchecked Sendable {
 }
 
 status("loading", "loading speech model")
+// `--permissions`: print the microphone permission state and exit (no model load).
+if CommandLine.arguments.contains("--permissions") {
+    let state: String
+    switch AVCaptureDevice.authorizationStatus(for: .audio) {
+    case .authorized: state = "granted"
+    case .denied, .restricted: state = "denied"
+    default: state = "undetermined"
+    }
+    emit(["type": "permissions", "microphone": state])
+    exit(0)
+}
+
+// `--check-system-audio`: macOS has no API to read the system-audio permission, so play a short system
+// sound and see whether the tap hears it. Silence means no permission or a muted speaker.
+if CommandLine.arguments.contains("--check-system-audio") {
+    let lock = NSLock()
+    nonisolated(unsafe) var peak = 0
+    let probe = SystemAudioTap()
+    do {
+        try probe.start { samples in
+            let loudest = samples.map { abs(Int($0)) }.max() ?? 0
+            lock.lock()
+            peak = max(peak, loudest)
+            lock.unlock()
+        }
+    } catch {
+        emit(["type": "system-audio", "state": "error", "message": "\(error)"])
+        exit(0)
+    }
+    let player = Process()
+    player.executableURL = URL(fileURLWithPath: "/usr/bin/afplay")
+    player.arguments = ["/System/Library/Sounds/Ping.aiff"]
+    try? player.run()
+    try? await Task.sleep(nanoseconds: 1_600_000_000)
+    probe.stop()
+    lock.lock()
+    let heard = peak
+    lock.unlock()
+    emit(["type": "system-audio", "state": heard > 200 ? "granted" : "silent", "peak": heard])
+    exit(0)
+}
+
 let transcriber = Transcriber()
 do { try await transcriber.load() } catch {
     status("error", "model load failed: \(error)")

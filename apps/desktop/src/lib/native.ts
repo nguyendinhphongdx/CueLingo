@@ -14,12 +14,20 @@ export type SessionStartInput = z.infer<typeof SessionStartInput>;
 export const SessionStartResult = z.object({ sessionId: z.string().min(1) });
 export type SessionStartResult = z.infer<typeof SessionStartResult>;
 
-export const PermissionState = z.enum(['granted', 'denied', 'unknown']);
+export const PermissionState = z.enum(['granted', 'denied', 'undetermined', 'unknown']);
 export const PermissionsStatus = z.object({
   microphone: PermissionState,
-  screenCapture: PermissionState,
+  systemAudio: PermissionState,
 });
 export type PermissionsStatus = z.infer<typeof PermissionsStatus>;
+
+export const SystemAudioCheck = z.enum(['granted', 'silent', 'error', 'unknown']);
+export type SystemAudioCheck = z.infer<typeof SystemAudioCheck>;
+
+export const PRIVACY_PANES = {
+  microphone: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone',
+  systemAudio: 'x-apple.systempreferences:com.apple.preference.security?Privacy_AudioCapture',
+} as const;
 
 export const TranscriptEvent = z.object({
   segmentId: z.string(),
@@ -56,10 +64,11 @@ export const native = {
       SessionStartResult.parse(v),
     ),
   sessionStop: () => invoke('session_stop').then(() => undefined),
-  openUrl: (url: string) => {
-    window.open(z.url().parse(url), '_blank', 'noopener,noreferrer');
-    return Promise.resolve();
-  },
+  /** Opens a web page or a macOS privacy pane with the system handler (the webview cannot open windows). */
+  openUrl: (url: string) =>
+    invoke('open_external', { url: z.string().min(1).parse(url) }).then(() => undefined),
+  /** Plays a short system sound and reports whether the app heard it: the only way to test system-audio permission. */
+  checkSystemAudio: () => invoke('check_system_audio').then((v) => SystemAudioCheck.parse(v)),
   permissionsStatus: () => invoke('permissions_status').then((v) => PermissionsStatus.parse(v)),
   setAssistLevel: (level: number) =>
     invoke('set_assist_level', { level: AssistLevel.parse(level) }).then(() => undefined),

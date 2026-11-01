@@ -33,3 +33,10 @@ Hai trang thật trong `apps/desktop/src/study/` thay cho "Sắp ra mắt", đă
 Quy tắc chung: đọc `AGENTS.md` gốc và của thư mục bạn sửa, `apps/docs/docs/05-engineering/agent-collaboration.md`, và mục "Giai đoạn 2" trong `apps/docs/docs/02-product/06-backlog.md`. Không có mạng, không `pnpm add`, không commit/push; dependency đã cài sẵn. Không sửa `packages/ui/src/lib/roadmap.ts`, `package.json`, `pnpm-lock.yaml` (lead sửa khi gộp). Thiết kế giao diện: dùng component của `@cuelingo/ui` và các skill thiết kế trong `.claude/skills/` (design-taste-frontend phần app screen, frontend-design): màu chỉ dành cho dữ liệu, không gradient, không thẻ icon giống nhau, nhãn câu thường. Chạy `pnpm verify` trước khi báo; điền mục Kết quả.
 
 ## Kết quả _(implementer điền)_
+
+- **File đã đổi:** `apps/desktop/src/app/views.ts`; tạo mới `apps/desktop/src/study/` gồm client API dùng chung, hook/state cho ôn tập và cụm từ, hai trang desktop, barrel export và test.
+- **Đã làm:** trang Ôn tập hỗ trợ recognize/cloze, phím 1–4, Enter dùng mức gợi ý, chấm đúng/sai cục bộ, gửi `responseMs`, khoá POST trùng, tiến độ, tổng kết/ôn tiếp, rỗng và thử lại khi lỗi; trang Cụm từ có tìm kiếm cục bộ, trạng thái đang ôn, xác nhận xoá, rỗng và thử lại khi lỗi. `views.ts` đăng ký `review` và `phrases`.
+- **Test mới:** 11 test trong 3 file, gồm shared-schema/API/auth header, hai loại thẻ + bốn mức chấm, POST đúng một lần rồi chuyển thẻ, tổng kết/rỗng, hiển thị/tìm kiếm/xác nhận xoá/thử lại của cụm từ.
+- **Verify:** `pnpm verify` xanh — format, lint, typecheck, 54 file / 234 test, check:deps (0 vi phạm). `pnpm --filter @cuelingo/desktop build` xanh (2.700 module). Design lint cho `apps/desktop/src/study` đạt 0 FAIL / 0 WARN.
+- **Chạy thật:** thử khởi động Vite để kiểm tra tương tác nhưng sandbox chặn bind `127.0.0.1:1420` (`EPERM`); production build thành công, các luồng tương tác được kiểm bằng component/unit test. Cần lead mở app desktop ngoài sandbox để kiểm tra trực quan trước khi merge.
+- **Khác brief:** không đổi Rust, dependency, lockfile hay file ngoài phạm vi triển khai; chỉ cập nhật mục Kết quả này theo yêu cầu. Không có câu hỏi mở.
