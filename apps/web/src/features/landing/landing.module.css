@@ -1,0 +1,665 @@
+.header,
+.hero,
+.capabilities,
+.privacy,
+.closing,
+.footer,
+.downloadHero,
+.requirements,
+.installation,
+.troubleshooting,
+.downloadFooter {
+  width: min(100% - 2rem, 90rem);
+  margin-inline: auto;
+}
+
+.header {
+  min-height: 5.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  font-size: 0.9375rem;
+}
+
+.brandLink,
+.headerNav,
+.footer nav {
+  display: flex;
+  align-items: center;
+}
+
+.brandLink {
+  min-height: 2.75rem;
+  gap: 0.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.logo {
+  border-radius: 22%;
+}
+
+.headerNav {
+  gap: clamp(1rem, 3vw, 2.5rem);
+}
+
+.header a,
+.footer a,
+.downloadFooter a,
+.textAction {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  text-underline-offset: 0.3em;
+}
+
+.header a:focus-visible,
+.footer a:focus-visible,
+.downloadFooter a:focus-visible,
+.textAction:focus-visible {
+  border-radius: 0.125rem;
+  outline: 3px solid var(--ring);
+  outline-offset: 0.25rem;
+}
+
+.hero {
+  min-height: calc(100svh - 5.5rem);
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(24rem, 1.08fr);
+  align-items: center;
+  gap: clamp(2.5rem, 6vw, 7rem);
+  padding-block: clamp(3rem, 8vw, 8rem);
+}
+
+.heroCopy {
+  position: relative;
+  z-index: 1;
+}
+
+.hero h1,
+.downloadHero h1 {
+  max-width: 16ch;
+  font-size: clamp(3.5rem, 5.2vw, 6rem);
+  font-weight: 650;
+  line-height: 0.93;
+  letter-spacing: -0.065em;
+  text-wrap: balance;
+}
+
+.heroCopy > p,
+.downloadHero > div > p {
+  max-width: 34rem;
+  margin-top: clamp(2rem, 4vw, 3rem);
+  font-size: clamp(1.125rem, 1.5vw, 1.375rem);
+  line-height: 1.55;
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  margin-top: 2.25rem;
+}
+
+.primaryAction,
+.disabledAction {
+  min-height: 2.75rem;
+  border-radius: 0;
+  padding-inline: 1.5rem;
+}
+
+.primaryAction:focus-visible,
+.disabledAction:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 0.25rem;
+}
+
+.textAction {
+  font-weight: 650;
+  text-decoration: underline;
+}
+
+.captionScene {
+  position: relative;
+  min-height: clamp(28rem, 60vw, 42rem);
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  padding: clamp(1rem, 3vw, 2.25rem);
+  background: var(--brand);
+  clip-path: polygon(12% 0, 100% 0, 100% 88%, 88% 100%, 0 100%, 0 12%);
+}
+
+.captionScene::before,
+.captionScene::after {
+  content: '';
+  position: absolute;
+  background: color-mix(in oklab, var(--background) 15%, var(--brand));
+}
+
+.captionScene::before {
+  width: 46%;
+  height: 28%;
+  left: 8%;
+  top: 12%;
+}
+
+.captionScene::after {
+  width: 34%;
+  height: 19%;
+  right: 7%;
+  top: 32%;
+}
+
+.meetingChrome {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.meetingChrome span {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: color-mix(in oklab, white 60%, var(--brand));
+}
+
+.captionWindow {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  background: color-mix(in oklab, #0f172a 93%, transparent);
+  color: white;
+}
+
+.speaker {
+  width: max-content;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  display: grid;
+  place-items: center;
+  margin-bottom: 1rem;
+  padding-inline: 0.8rem;
+  background: var(--brand);
+  font-weight: 700;
+}
+
+.english {
+  color: #cbd5e1;
+  font-size: clamp(1rem, 1.5vw, 1.25rem);
+  line-height: 1.45;
+}
+
+.vietnamese {
+  max-width: 30ch;
+  margin-top: 0.4rem;
+  font-size: clamp(1.25rem, 2.25vw, 2rem);
+  font-weight: 750;
+  line-height: 1.28;
+}
+
+.captionSceneCompact {
+  min-height: 22rem;
+  clip-path: polygon(10% 0, 100% 0, 100% 86%, 86% 100%, 0 100%, 0 14%);
+}
+
+.capabilities,
+.installation {
+  padding-block: clamp(7rem, 14vw, 13rem);
+}
+
+.sectionIntro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.55fr);
+  align-items: end;
+  gap: 2rem;
+  margin-bottom: clamp(4rem, 8vw, 7rem);
+}
+
+.sectionIntro h2,
+.privacy h2,
+.closing h2,
+.requirements h2,
+.troubleshooting h2 {
+  max-width: 14ch;
+  font-size: clamp(2.5rem, 5vw, 5rem);
+  font-weight: 650;
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+  text-wrap: balance;
+}
+
+.sectionIntro p,
+.privacy p,
+.closing p,
+.requirements p,
+.troubleshooting p {
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+.capabilityList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.capability {
+  min-height: 12rem;
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(18rem, 0.55fr);
+  align-items: center;
+  gap: 2rem;
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+  background: var(--muted);
+  clip-path: polygon(
+    2rem 0,
+    100% 0,
+    100% calc(100% - 2rem),
+    calc(100% - 2rem) 100%,
+    0 100%,
+    0 2rem
+  );
+}
+
+.capability:nth-child(2) {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.capability:nth-child(3) {
+  background: var(--brand);
+  color: white;
+}
+
+.capability h3,
+.stepList h3 {
+  max-width: 20ch;
+  font-size: clamp(1.75rem, 3vw, 3rem);
+  font-weight: 650;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.capability p,
+.stepList p {
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+.privacy {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(24rem, 1.15fr);
+  align-items: center;
+  gap: clamp(4rem, 10vw, 10rem);
+  padding: clamp(7rem, 12vw, 11rem) max(1rem, calc((100% - 90rem) / 2));
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+.privacy > div:first-child p {
+  max-width: 35rem;
+  margin-top: 2rem;
+  color: #e2e8f0;
+}
+
+.privacyFlow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  font-size: clamp(1.25rem, 2.8vw, 2.5rem);
+}
+
+.privacyFlow span,
+.privacyFlow strong {
+  min-height: 5rem;
+  display: flex;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  clip-path: polygon(
+    1.25rem 0,
+    100% 0,
+    100% calc(100% - 1.25rem),
+    calc(100% - 1.25rem) 100%,
+    0 100%,
+    0 1.25rem
+  );
+}
+
+.privacyFlow span {
+  background: #334155;
+}
+
+.privacyFlow strong {
+  background: var(--brand);
+}
+
+.closing {
+  display: grid;
+  grid-template-columns: minmax(20rem, 0.85fr) minmax(0, 1.15fr);
+  align-items: center;
+  gap: clamp(3rem, 9vw, 9rem);
+  padding-block: clamp(7rem, 14vw, 13rem);
+}
+
+.closing > div:last-child p {
+  max-width: 34rem;
+  margin-block: 2rem;
+}
+
+.footer,
+.downloadFooter {
+  min-height: 9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding-block: 2rem;
+}
+
+.footer > p {
+  font-size: clamp(2.5rem, 7vw, 7rem);
+  font-weight: 750;
+  letter-spacing: -0.07em;
+}
+
+.footer nav {
+  gap: 1.5rem;
+}
+
+.sessionCheck {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  color: var(--muted-foreground);
+}
+
+.downloadHero {
+  min-height: 43rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(22rem, 0.72fr);
+  align-items: center;
+  gap: clamp(3rem, 8vw, 8rem);
+  padding-block: clamp(4rem, 8vw, 8rem);
+}
+
+.downloadHero h1 {
+  max-width: 14ch;
+}
+
+.downloadHero .primaryAction,
+.downloadHero .disabledAction {
+  margin-top: 2.25rem;
+}
+
+.requirements,
+.troubleshooting {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(20rem, 0.7fr);
+  gap: clamp(3rem, 10vw, 10rem);
+  padding-block: clamp(6rem, 11vw, 10rem);
+}
+
+.requirements {
+  width: 100%;
+  padding-inline: max(1rem, calc((100% - 90rem) / 2));
+  background: var(--muted);
+}
+
+.requirements strong {
+  display: block;
+  margin-bottom: 1.5rem;
+  font-size: clamp(1.75rem, 3vw, 3rem);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.stepList {
+  counter-reset: steps;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(2rem, 6vw, 5rem);
+  list-style: none;
+}
+
+.stepList li {
+  counter-increment: steps;
+  display: grid;
+  grid-template-columns: 3.5rem 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.stepList li::before {
+  content: counter(steps);
+  width: 3rem;
+  height: 3rem;
+  display: grid;
+  place-items: center;
+  background: var(--brand);
+  color: white;
+  font-weight: 750;
+  clip-path: polygon(
+    0.7rem 0,
+    100% 0,
+    100% calc(100% - 0.7rem),
+    calc(100% - 0.7rem) 100%,
+    0 100%,
+    0 0.7rem
+  );
+}
+
+.stepList p {
+  max-width: 35rem;
+  margin-top: 1rem;
+}
+
+.troubleshooting {
+  width: 100%;
+  padding-inline: max(1rem, calc((100% - 90rem) / 2));
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+.troubleshooting > div {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.troubleshooting p {
+  color: #e2e8f0;
+}
+
+.downloadFooter span {
+  color: var(--muted-foreground);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .heroCopy,
+  .hero .captionScene,
+  .downloadHero > div,
+  .downloadHero .captionScene {
+    animation: enter 600ms ease-out both;
+  }
+
+  .hero .captionScene,
+  .downloadHero .captionScene {
+    animation-delay: 120ms;
+  }
+
+  @keyframes enter {
+    from {
+      opacity: 0;
+      transform: translateY(1.25rem);
+    }
+  }
+}
+
+@media (max-width: 64rem) {
+  .hero,
+  .downloadHero {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    padding-top: 4rem;
+  }
+
+  .heroCopy {
+    max-width: 48rem;
+  }
+
+  .captionScene {
+    min-height: 34rem;
+  }
+
+  .privacy,
+  .closing {
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+  }
+
+  .stepList {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 48rem) {
+  .header,
+  .hero,
+  .capabilities,
+  .closing,
+  .footer,
+  .downloadHero,
+  .installation,
+  .downloadFooter {
+    width: min(100% - 2rem, 90rem);
+  }
+
+  .headerNav a:first-child {
+    display: none;
+  }
+
+  .hero,
+  .downloadHero {
+    min-height: auto;
+    gap: 3.5rem;
+  }
+
+  .hero h1,
+  .downloadHero h1 {
+    max-width: 16ch;
+    font-size: clamp(2.75rem, 11vw, 4.5rem);
+  }
+
+  .captionScene {
+    min-height: 27rem;
+  }
+
+  .captionSceneCompact {
+    min-height: 19rem;
+  }
+
+  .sectionIntro,
+  .capability,
+  .privacy,
+  .closing,
+  .requirements,
+  .troubleshooting {
+    grid-template-columns: 1fr;
+  }
+
+  .sectionIntro {
+    align-items: start;
+  }
+
+  .capability {
+    min-height: 18rem;
+    align-content: center;
+  }
+
+  .privacy,
+  .requirements,
+  .troubleshooting {
+    gap: 3rem;
+  }
+
+  .closing .captionScene {
+    order: 2;
+  }
+
+  .footer {
+    align-items: flex-end;
+  }
+
+  .footer nav {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0;
+  }
+}
+
+@media (max-width: 30rem) {
+  .header,
+  .hero,
+  .capabilities,
+  .closing,
+  .footer,
+  .downloadHero,
+  .installation,
+  .downloadFooter {
+    width: calc(100% - 2rem);
+  }
+
+  .brandLink span {
+    display: none;
+  }
+
+  .heroActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .primaryAction,
+  .disabledAction {
+    width: 100%;
+  }
+
+  .textAction {
+    justify-content: center;
+  }
+
+  .captionScene {
+    margin-inline: -1rem;
+    width: calc(100% + 2rem);
+    clip-path: polygon(8% 0, 100% 0, 100% 90%, 90% 100%, 0 100%, 0 10%);
+  }
+
+  .captionWindow {
+    padding: 1.25rem;
+  }
+
+  .privacyFlow {
+    font-size: 1.25rem;
+  }
+
+  .stepList li {
+    grid-template-columns: 3rem 1fr;
+    gap: 0.75rem;
+  }
+
+  .footer,
+  .downloadFooter {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .footer nav {
+    align-items: flex-start;
+  }
+}
