@@ -3,6 +3,7 @@ import {
   DebriefFeedbackRequestSchema,
   DebriefSchema,
   ErrorResponseSchema,
+  ExportSchema,
   PhraseListSchema,
   PhraseSchema,
   ProgressSchema,
@@ -12,6 +13,8 @@ import {
   SavePhraseRequestSchema,
   SessionDetailSchema,
   SessionListSchema,
+  DeleteMyDataRequestSchema,
+  type DeleteMyDataRequest,
   type DebriefFeedbackRequest,
   type ReviewAnswerRequest,
   type SavePhraseRequest,
@@ -82,6 +85,7 @@ export const client = {
       request('GET', `/v1/sessions/${encodeURIComponent(id)}`, SessionDetailSchema),
     getDebrief: (id: string) =>
       request('GET', `/v1/sessions/${encodeURIComponent(id)}/debrief`, DebriefSchema),
+    remove: (id: string) => request('DELETE', `/v1/sessions/${encodeURIComponent(id)}`, null),
   },
   debriefs: {
     feedback: (id: string, input: DebriefFeedbackRequest) =>
@@ -109,4 +113,9 @@ export const client = {
       ),
   },
   progress: () => request('GET', '/v1/progress', ProgressSchema),
+  privacy: {
+    export: () => request('GET', '/v1/me/export', ExportSchema),
+    deleteMyData: (input: DeleteMyDataRequest) =>
+      request('DELETE', '/v1/me/data', null, DeleteMyDataRequestSchema.parse(input)),
+  },
 };

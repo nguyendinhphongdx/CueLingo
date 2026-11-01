@@ -76,6 +76,41 @@ describe('sessions module', () => {
     expect(app.queue.jobs).toEqual([]);
   });
 
+  it('soft-deletes an owned session and hides it from list and detail', async () => {
+    const mine = (await create(ALICE)).json();
+    const theirs = (await create(BOB, 'Bob meeting')).json();
+
+    const denied = await app.inject({
+      method: 'DELETE',
+      url: `/v1/sessions/${theirs.id}`,
+      headers: as(ALICE),
+    });
+    expect(denied.statusCode).toBe(404);
+
+    const deleted = await app.inject({
+      method: 'DELETE',
+      url: `/v1/sessions/${mine.id}`,
+      headers: as(ALICE),
+    });
+    expect(deleted.statusCode).toBe(204);
+    expect(
+      (await app.inject({ method: 'GET', url: '/v1/sessions', headers: as(ALICE) })).json()
+        .sessions,
+    ).toEqual([]);
+    expect(
+      (
+        await app.inject({
+          method: 'GET',
+          url: `/v1/sessions/${mine.id}`,
+          headers: as(ALICE),
+        })
+      ).statusCode,
+    ).toBe(404);
+    expect(
+      (await app.inject({ method: 'GET', url: '/v1/sessions', headers: as(BOB) })).json().sessions,
+    ).toHaveLength(1);
+  });
+
   it('rejects invalid input and requires authentication', async () => {
     const invalid = await app.inject({
       method: 'POST',

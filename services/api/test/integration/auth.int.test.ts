@@ -8,6 +8,7 @@ import { createAuthModule, type Mailer } from '../../src/modules/auth';
 import { createInMemoryDebriefRepository } from '../../src/modules/debrief';
 import { createPostgresEventsRepository } from '../../src/modules/events';
 import { createPostgresGlossaryRepository } from '../../src/modules/glossary';
+import { createPostgresPrivacyRepository } from '../../src/modules/privacy';
 import { createPostgresSessionsRepository } from '../../src/modules/sessions';
 import {
   createPostgresPhrasesRepository,
@@ -45,6 +46,7 @@ describe('auth on real Postgres (AC3, AC4)', () => {
         debrief: createInMemoryDebriefRepository(),
         events: createPostgresEventsRepository(sql),
         glossary: createPostgresGlossaryRepository(sql),
+        privacy: createPostgresPrivacyRepository(sql),
         sessions: createPostgresSessionsRepository(sql),
         phrases: createPostgresPhrasesRepository(sql),
         study: createPostgresStudyRepository(sql),

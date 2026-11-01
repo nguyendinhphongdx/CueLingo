@@ -11,17 +11,21 @@ export function createInMemorySessionsRepository(): SessionsRepository {
   return {
     async list(userId) {
       return sessions
-        .filter((row) => row.userId === userId)
+        .filter((row) => row.userId === userId && row.status !== 'deleted')
         .sort((a, b) => a.startedAt.localeCompare(b.startedAt))
         .reverse()
         .map(strip);
     },
     async findById(userId, id) {
-      const row = sessions.find((item) => item.userId === userId && item.id === id);
+      const row = sessions.find(
+        (item) => item.userId === userId && item.id === id && item.status !== 'deleted',
+      );
       return row ? strip(row) : null;
     },
     async findDetail(userId, id) {
-      const row = sessions.find((item) => item.userId === userId && item.id === id);
+      const row = sessions.find(
+        (item) => item.userId === userId && item.id === id && item.status !== 'deleted',
+      );
       if (!row) return null;
       return {
         ...strip(row),
@@ -45,15 +49,31 @@ export function createInMemorySessionsRepository(): SessionsRepository {
       return strip(row);
     },
     async end(userId, id) {
-      const row = sessions.find((item) => item.userId === userId && item.id === id);
+      const row = sessions.find(
+        (item) => item.userId === userId && item.id === id && item.status !== 'deleted',
+      );
       if (!row) return null;
       if (row.status !== 'live') return { session: strip(row), endedNow: false };
       row.status = 'ended';
       row.endedAt = new Date().toISOString();
       return { session: strip(row), endedNow: true };
     },
+    async softDelete(userId, id) {
+      const row = sessions.find(
+        (item) => item.userId === userId && item.id === id && item.status !== 'deleted',
+      );
+      if (!row) return false;
+      row.status = 'deleted';
+      row.endedAt = new Date().toISOString();
+      return true;
+    },
     async saveSegment(input) {
-      if (!sessions.some((row) => row.id === input.sessionId && row.userId === input.userId)) {
+      if (
+        !sessions.some(
+          (row) =>
+            row.id === input.sessionId && row.userId === input.userId && row.status !== 'deleted',
+        )
+      ) {
         return false;
       }
       const existing = segments.find((row) => row.id === input.segmentId);

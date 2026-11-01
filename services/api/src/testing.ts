@@ -4,11 +4,19 @@ import { createInMemoryQueue } from './lib/queue';
 import { createInMemoryDebriefRepository } from './modules/debrief';
 import { createInMemoryEventsRepository } from './modules/events';
 import { createInMemoryGlossaryRepository } from './modules/glossary';
+import type { PrivacyRepository } from './modules/privacy';
 import { createInMemorySessionsRepository } from './modules/sessions';
 import { createInMemoryPhrasesRepository, createInMemoryStudyRepository } from './modules/review';
 
 /** Header the test resolver reads in place of a real session. */
 export const TEST_USER_HEADER = 'x-test-user-id';
+
+const emptyPrivacyRepository = (): PrivacyRepository => ({
+  async deleteMyData() {},
+  async exportMyData(_userId, exportedAt) {
+    return { exportedAt: exportedAt.toISOString(), sessions: [], phrases: [], glossaryTerms: [] };
+  },
+});
 
 /** App wired with in-memory repositories, an in-memory queue and a header-based session. */
 export async function buildTestApp(
@@ -21,6 +29,7 @@ export async function buildTestApp(
       debrief: createInMemoryDebriefRepository(),
       events: createInMemoryEventsRepository(),
       glossary: createInMemoryGlossaryRepository(),
+      privacy: emptyPrivacyRepository(),
       sessions: createInMemorySessionsRepository(),
       phrases: createInMemoryPhrasesRepository(),
       study: createInMemoryStudyRepository(),

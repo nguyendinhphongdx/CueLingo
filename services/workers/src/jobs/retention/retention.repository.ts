@@ -9,6 +9,8 @@ export interface RetentionRepository {
   /** Segments whose meeting started before `cutoff` and still point at saved audio. */
   findExpiredAudio(cutoff: Date, limit: number): Promise<ExpiredAudio[]>;
   clearAudioKeys(segmentIds: string[]): Promise<void>;
+  /** Permanently removes a bounded batch of soft-deleted sessions older than `cutoff`. */
+  deleteExpiredSessions(cutoff: Date, limit: number): Promise<number>;
 }
 
 export function createPostgresRetentionRepository(sql: Sql): RetentionRepository {
@@ -24,6 +26,18 @@ export function createPostgresRetentionRepository(sql: Sql): RetentionRepository
     async clearAudioKeys(segmentIds) {
       if (segmentIds.length === 0) return;
       await sql`UPDATE segments SET audio_key = NULL WHERE id IN ${sql(segmentIds)}`;
+    },
+    async deleteExpiredSessions(cutoff, limit) {
+      const deleted = await sql<{ id: string }[]>`
+        DELETE FROM sessions
+        WHERE id IN (
+          SELECT id FROM sessions
+          WHERE status = 'deleted' AND ended_at < ${cutoff}
+          ORDER BY ended_at
+          LIMIT ${limit}
+        )
+        RETURNING id`;
+      return deleted.length;
     },
   };
 }

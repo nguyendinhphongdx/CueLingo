@@ -26,5 +26,10 @@ export function sessionsRoutes(service: SessionsService): FastifyPluginAsync {
       const { id } = parse(IdParamsSchema, request.params);
       return service.end(request.userId, id);
     });
+    app.delete('/:id', async (request, reply) => {
+      const { id } = parse(IdParamsSchema, request.params);
+      await service.remove(request.userId, id);
+      return reply.code(204).send();
+    });
   };
 }

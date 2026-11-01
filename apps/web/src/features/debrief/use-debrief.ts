@@ -21,7 +21,7 @@ function phraseKey(input: Pick<SavePhraseRequest, 'phrase' | 'meaningVi'>) {
   return `${input.phrase}\u0000${input.meaningVi ?? ''}`;
 }
 
-export function useDebrief(sessionId: string) {
+export function useDebrief(sessionId: string, onDeleted?: () => void) {
   const pollingStartedAt = useRef(Date.now());
   const [savedPhraseKeys, setSavedPhraseKeys] = useState<ReadonlySet<string>>(new Set());
 
@@ -48,6 +48,10 @@ export function useDebrief(sessionId: string) {
       setSavedPhraseKeys((current) => new Set(current).add(phraseKey(input)));
     },
   });
+  const remove = useMutation({
+    mutationFn: () => client.sessions.remove(sessionId),
+    onSuccess: () => onDeleted?.(),
+  });
 
   const debriefNotFound = isDebriefNotFound(debrief.error);
 
@@ -60,7 +64,8 @@ export function useDebrief(sessionId: string) {
       describeError(session.error) ??
       (debriefNotFound ? null : describeError(debrief.error)) ??
       describeError(feedback.error) ??
-      describeError(save.error),
+      describeError(save.error) ??
+      describeError(remove.error),
     feedbackBlock: feedback.isPending ? (feedback.variables?.input.block ?? null) : null,
     feedbackValue: feedback.isSuccess ? feedback.variables?.input : undefined,
     sendFeedback: (block: DebriefFeedbackRequest['block'], useful: boolean) => {
@@ -82,6 +87,8 @@ export function useDebrief(sessionId: string) {
       anchor.click();
       setTimeout(() => URL.revokeObjectURL(url), 0);
     },
+    deleting: remove.isPending,
+    deleteSession: () => remove.mutate(),
     phraseKey,
   };
 }
