@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@cuelingo/shared": "workspace:*"
+    "@cuelingo/shared": "workspace:*",
+    "zod": "^4.6.7"
   }
 }

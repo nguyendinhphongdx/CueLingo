@@ -9,6 +9,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@cuelingo/shared": "workspace:*"
+    "@ai-sdk/google": "^4.0.109",
+    "@cuelingo/prompts": "workspace:*",
+    "@cuelingo/shared": "workspace:*",
+    "ai": "^7.0.159"
   }
 }
