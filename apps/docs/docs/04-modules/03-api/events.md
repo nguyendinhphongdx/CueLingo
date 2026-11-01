@@ -7,8 +7,8 @@ Nhận và kiểm tra event học tập/sản phẩm, ghi vào bảng `events` (
 ## Trách nhiệm
 
 - Validate theo catalog trong `@cuelingo/shared/events`
-- Ghi batch, idempotent theo `eventId`
-- Đẩy sang analytics (PostHog)
+- Gắn `user_id` từ session và ghi nguyên batch trong một transaction
+- Chặn tham chiếu `sessionId` hoặc `segmentId` thuộc người dùng khác
 
 ## Phạm vi MVP
 
@@ -16,7 +16,8 @@ Nhận và kiểm tra event học tập/sản phẩm, ghi vào bảng `events` (
 
 ## Interface
 
-- `POST /v1/events` (batch), hàm nội bộ `record(event)`
+- `POST /v1/events`: nhận 1–100 event hợp lệ, trả `204`; batch sai schema trả `400`
+- Không có route sửa hoặc xoá event
 
 ## Phụ thuộc
 
@@ -24,7 +25,8 @@ Nhận và kiểm tra event học tập/sản phẩm, ghi vào bảng `events` (
 
 ## Dữ liệu & sự kiện
 
-- Bảng `events`
+- Bảng `events`: append-only; UUID nội bộ do API sinh
+- `sessionId` và `segmentId` được lưu ở cột riêng; dữ liệu theo từng loại nằm trong `payload`
 
 ## Câu hỏi mở
 

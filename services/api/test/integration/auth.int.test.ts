@@ -5,6 +5,7 @@ import { buildApp } from '../../src/app';
 import { loadConfig } from '../../src/config';
 import { createInMemoryQueue } from '../../src/lib/queue';
 import { createAuthModule, type Mailer } from '../../src/modules/auth';
+import { createPostgresEventsRepository } from '../../src/modules/events';
 import { createPostgresGlossaryRepository } from '../../src/modules/glossary';
 import { startMigratedPostgres, type TestDatabase } from './postgres';
 
@@ -34,7 +35,10 @@ describe('auth on real Postgres (AC3, AC4)', () => {
     sql = postgres(db.url);
     authModule = createAuthModule(config(), mailer);
     app = await buildApp({
-      repos: { glossary: createPostgresGlossaryRepository(sql) },
+      repos: {
+        events: createPostgresEventsRepository(sql),
+        glossary: createPostgresGlossaryRepository(sql),
+      },
       queue: createInMemoryQueue(),
       resolveUserId: authModule.resolveUserId,
       authRoutes: authModule.routes,

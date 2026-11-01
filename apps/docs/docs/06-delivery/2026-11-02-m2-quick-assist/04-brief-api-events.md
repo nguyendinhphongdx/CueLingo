@@ -30,3 +30,18 @@ title: Brief M2-06 · api/events
 Không có mạng, không `pnpm add`. Được sửa/tạo: `services/api/**` (trừ `lib/auth.ts`, `lib/errors.ts`), `infra/db/migrations/**`, doc module. Không sửa: `packages/**`, `apps/**` (ngoài doc), `package.json`, lockfile. Không commit/push. `test:int` cần Docker + Node ≥ 22.19; nếu không chạy được, ghi rõ. Chạy `pnpm verify`.
 
 ## Kết quả _(implementer điền)_
+
+- Đã thêm module `services/api/src/modules/events/` theo cấu trúc glossary: routes → service → repository Postgres + repository in-memory; đăng ký qua `deps.repos.events` trong `app.ts` và nối repository thật trong `server.ts`.
+- `POST /v1/events` validate nguyên batch bằng `PostEventsRequestSchema`, lấy `userId` từ auth context, ghi transaction rồi trả `204`. Không thêm route sửa/xoá.
+- Repository sinh UUID nội bộ, tách `sessionId`/`segmentId` vào cột tương ứng và ghi dữ liệu riêng của từng loại vào `payload`. Trước khi insert, repository kiểm tra session/segment thuộc đúng người dùng; batch lỗi được rollback.
+- Không thêm migration: bảng `events` hiện có đã đủ các cột cần thiết cho contract đã khóa.
+- Test đã thêm:
+  - `services/api/src/modules/events/events.test.ts`: batch 1 và 100 event, `userId` từ session, schema sai không gọi repository, không có PATCH/DELETE, thiếu session trả `401`.
+  - `services/api/test/integration/events.int.test.ts`: insert/mapping trên Postgres thật và chặn session/segment chéo người dùng mà không ghi dở batch.
+- Tài liệu module đã đồng bộ tại `apps/docs/docs/04-modules/03-api/events.md`.
+- Kiểm tra:
+  - `pnpm verify`: xanh — 28 test files, 114 tests; không có dependency violation.
+  - `pnpm docs:build`: xanh.
+  - Luồng HTTP mới qua `app.inject`: xanh — 5/5 tests.
+  - Integration Postgres chưa chạy được: máy hiện dùng Node `22.14.0` (repo yêu cầu `>=22.19`), khiến `undici` lỗi khi nạp Testcontainers (`Cannot read properties of undefined (reading 'bind')`); Docker socket cũng bị sandbox từ chối truy cập.
+- Không làm khác brief; không còn câu hỏi mở.

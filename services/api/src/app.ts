@@ -4,11 +4,12 @@ import Fastify, { type FastifyInstance, type FastifyPluginAsync } from 'fastify'
 import { registerAuth, type AuthOptions } from './lib/auth';
 import { registerErrorHandler } from './lib/errors';
 import type { JobQueue } from './lib/queue';
+import { createEventsModule, type EventsRepository } from './modules/events';
 import { createGlossaryModule, type GlossaryRepository } from './modules/glossary';
 import { createRealtimeModule, type RealtimeDeps } from './modules/realtime';
 
 export interface AppDeps {
-  repos: { glossary: GlossaryRepository };
+  repos: { events: EventsRepository; glossary: GlossaryRepository };
   queue: JobQueue;
   resolveUserId: AuthOptions['resolveUserId'];
   /** Origin of apps/web, allowed by CORS (cookies included). */
@@ -36,6 +37,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   app.get('/healthz', async () => ({ ok: true }));
   if (deps.authRoutes) await app.register(deps.authRoutes);
+  await app.register(createEventsModule(deps.repos.events).routes, { prefix: '/v1/events' });
   await app.register(createGlossaryModule(deps.repos.glossary).routes, { prefix: '/v1/glossary' });
   if (deps.realtime) await app.register(createRealtimeModule(deps.realtime).routes);
 
