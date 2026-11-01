@@ -3,7 +3,7 @@
  * Command/event table: apps/docs/docs/04-modules/01-desktop/tauri-core.md
  */
 import { invoke } from '@tauri-apps/api/core';
-import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { z } from 'zod';
 
 export const AssistLevel = z.number().int().min(0).max(5);
@@ -29,6 +29,21 @@ export const TranscriptEvent = z.object({
 });
 export type TranscriptEvent = z.infer<typeof TranscriptEvent>;
 
+/** A speech segment from the native STT (partial while being spoken, final when the sentence ends). */
+export const SegmentEvent = z.object({
+  segmentId: z.uuid(),
+  stream: z.enum(['system', 'mic']),
+  startMs: z.number().nonnegative(),
+  endMs: z.number().nonnegative(),
+  text: z.string(),
+  words: z.array(z.object({ text: z.string(), startMs: z.number(), endMs: z.number() })),
+  partial: z.boolean(),
+});
+export type SegmentEvent = z.infer<typeof SegmentEvent>;
+
+export const SettingsEvent = z.object({ assistLevel: AssistLevel });
+export type SettingsEvent = z.infer<typeof SettingsEvent>;
+
 export const HotkeyEvent = z.object({
   action: z.enum(['toggle_overlay', 'recap', 'say_for_me']),
 });
@@ -46,6 +61,14 @@ export const native = {
   toggleOverlay: () => invoke('toggle_overlay').then((v) => z.boolean().parse(v)),
   onTranscript: (cb: (e: TranscriptEvent) => void): Promise<UnlistenFn> =>
     listen('transcript', (e) => cb(TranscriptEvent.parse(e.payload))),
+  /** Native STT output (emitted by the Rust core from the Swift sidecar). */
+  onSegment: (cb: (e: SegmentEvent) => void): Promise<UnlistenFn> =>
+    listen('segment', (e) => cb(SegmentEvent.parse(e.payload))),
+  /** Windows share state through global events: the main window publishes, the overlay listens. */
+  publishTranscript: (e: TranscriptEvent) => emit('transcript', TranscriptEvent.parse(e)),
+  publishSettings: (e: SettingsEvent) => emit('settings', SettingsEvent.parse(e)),
+  onSettings: (cb: (e: SettingsEvent) => void): Promise<UnlistenFn> =>
+    listen('settings', (e) => cb(SettingsEvent.parse(e.payload))),
   onHotkey: (cb: (e: HotkeyEvent) => void): Promise<UnlistenFn> =>
     listen('hotkey', (e) => cb(HotkeyEvent.parse(e.payload))),
 };
