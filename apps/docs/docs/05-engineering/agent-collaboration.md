@@ -36,11 +36,11 @@ Cỡ brief: ≤ 1 ngày làm, ≤ ~10 file, tốt nhất chạm **một** điể
 
 ```bash
 # lead tạo cho mỗi brief
-git worktree add ../cuelingo-<slug>-<agent> -b <feat|chore>/<slug>-<agent>
-cd ../cuelingo-<slug>-<agent> && pnpm install
+git worktree add .worktrees/<slug>-<agent> -b <feat|chore>/<slug>-<agent>
+cd .worktrees/<slug>-<agent> && pnpm install
 ```
 
-- Mỗi agent một worktree, không hai agent cùng sửa một file.
+- Mỗi agent một worktree trong `.worktrees/` (đã gitignore, bỏ qua trong ESLint/Prettier; agent bị giới hạn ghi trong thư mục repo vẫn làm được), không hai agent cùng sửa một file.
 - File dùng chung dễ đụng (`services/api/src/app.ts`, `packages/shared/src/index.ts`, `package.json`, `pnpm-lock.yaml`) → brief ghi rõ ai được sửa; mặc định **lead** sửa khi tích hợp.
 - Lead tích hợp bằng merge sau khi review xong; implementer không merge, không push.
 

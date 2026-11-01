@@ -4,7 +4,7 @@ title: Brief B2 · UI package
 
 # Brief — foundation · B2 UI package
 
-> Giao cho: Codex · Nhánh: `feat/foundation-ui-codex` (tách từ `feat/foundation`) · Worktree: `../cuelingo-foundation-ui-codex`
+> Giao cho: Codex · Nhánh: `feat/foundation-ui-codex` (tách từ `feat/foundation`) · Worktree: `.worktrees/foundation-ui-codex`
 > Quy tắc phối hợp: `apps/docs/docs/05-engineering/agent-collaboration.md`
 
 ## Mục tiêu

@@ -7,3 +7,4 @@ target
 ml/bench/results
 .docusaurus
 apps/docs/build
+.worktrees

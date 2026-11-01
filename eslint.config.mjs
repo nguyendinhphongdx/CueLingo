@@ -12,6 +12,7 @@ export default tseslint.config(
       '**/target/**',
       'ml/**',
       '**/.docusaurus/**',
+      '.worktrees/**',
       'apps/docs/build/**',
     ],
   },

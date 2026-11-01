@@ -1,6 +1,6 @@
 # Brief — <slug> · <phần việc>
 
-> Giao cho: _Codex / ts-engineer / native-engineer_ · Nhánh: `<feat|chore>/<slug>-<agent>` · Worktree: `../cuelingo-<slug>-<agent>`
+> Giao cho: _Codex / ts-engineer / native-engineer_ · Nhánh: `<feat|chore>/<slug>-<agent>` · Worktree: `.worktrees/<slug>-<agent>`
 > Quy tắc phối hợp: `apps/docs/docs/05-engineering/agent-collaboration.md`
 
 ## Mục tiêu
