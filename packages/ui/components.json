@@ -1,0 +1,17 @@
+{
+  "style": "new-york",
+  "tailwind": {
+    "config": "",
+    "css": "src/styles/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true
+  },
+  "iconLibrary": "lucide",
+  "aliases": {
+    "components": "@cuelingo/ui/components",
+    "utils": "@cuelingo/ui/lib/utils",
+    "hooks": "@cuelingo/ui/hooks",
+    "lib": "@cuelingo/ui/lib",
+    "ui": "@cuelingo/ui/components"
+  }
+}

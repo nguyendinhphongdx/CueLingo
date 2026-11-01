@@ -20,6 +20,14 @@ Dựng `@cuelingo/ui` (Tailwind 4 + shadcn/ui) theo công thức `apps/docs/docs
 | AC3 | WHEN `CaptionLine` nhận `text`, `translation`, `hardWords=['push back']` THE SYSTEM SHALL hiện câu gốc, bản dịch bên dưới, và bọc từng cụm trong `hardWords` bằng thẻ `<u>`; WHEN `partial` là true THE SYSTEM SHALL thêm `data-partial="true"` và kiểu mờ; WHEN không có `translation` THE SYSTEM SHALL không render dòng dịch | `packages/ui/src/components/caption-line.test.tsx`                         |
 | AC4 | WHEN Tailwind CLI biên dịch `src/styles/globals.css` THE SYSTEM SHALL thành công và đầu ra chứa biến màu cho cả `:root` (sáng) và `.dark` (tối)                                                                                                                                                                                 | script `pnpm --filter @cuelingo/ui build:css` (xem bước 6), chạy tay + DoD |
 
+## Môi trường (đọc kỹ)
+
+**Codex không có mạng** (lần chạy đầu thất bại vì `ENOTFOUND registry.npmjs.org`). Lead đã cài sẵn trong worktree này: `clsx tailwind-merge class-variance-authority lucide-react` (dependencies) và `tailwindcss @tailwindcss/cli react react-dom @types/react @types/react-dom` (devDependencies của `packages/ui`) — xem `packages/ui/package.json`. Vì vậy:
+
+- **Không** chạy `pnpm install` / `pnpm add` và **không** dùng shadcn CLI (cần mạng). Viết `button`, `input`, `card` **bằng tay** theo mã nguồn shadcn kiểu "new-york" (Radix `Slot` không cần cho bản này: `Button` không có `asChild`).
+- Cần thêm dependency khác → dừng và ghi câu hỏi (mục cuối).
+- Chạy lệnh qua `pnpm exec`/`pnpm --filter … <script>` (không tải gì).
+
 ## Đọc trước
 
 - `AGENTS.md` (gốc), `packages/shared/AGENTS.md` (mẫu một package `AGENTS.md`)
@@ -35,17 +43,17 @@ Dựng `@cuelingo/ui` (Tailwind 4 + shadcn/ui) theo công thức `apps/docs/docs
 | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `packages/ui/**` (kể cả `package.json`, `tsconfig.json`, `components.json`, `AGENTS.md`, `README.md`), `apps/docs/docs/04-modules/05-packages/ui.md` | `apps/**` (trừ `apps/docs/docs/04-modules/05-packages/ui.md`), `services/**`, `packages/{shared,core-sdk,learner-model,ai-gateway,prompts}/**`, `.dependency-cruiser.cjs`, `eslint.config.mjs`, `vitest.config.ts`, `package.json` gốc, `.github/**` |
 
-`pnpm-lock.yaml` sẽ đổi trong worktree của bạn khi cài dependency — điều đó bình thường, **đừng commit**; lead tạo lại lockfile khi tích hợp.
+`pnpm-lock.yaml` và `packages/ui/package.json` đã đổi do lead cài dependency; bạn **chỉ** sửa `packages/ui/package.json` ở phần `exports`, `peerDependencies`, `scripts`. Không commit.
 
-Component shadcn chạy lệnh `add` từ `apps/web` sẽ thêm `components.json` vào `apps/web`; việc đó thuộc brief web (B5), **không làm ở đây**. Ở brief này chạy CLI từ `packages/ui` (hoặc viết tay theo mã nguồn shadcn "new-york" nếu CLI không dùng được trong môi trường của bạn, ghi rõ vào Kết quả).
+`components.json` của `apps/web` và `apps/desktop` thuộc brief web (B5) và desktop (B3), **không làm ở đây**. Lead sẽ chạy CLI shadcn thật khi tích hợp để kiểm tra `components.json` hợp lệ.
 
 ## Các bước
 
-1. `pnpm install` trong worktree. Cài đúng như scaffold bước 1: `clsx tailwind-merge class-variance-authority lucide-react`; devDependencies: `tailwindcss @tailwindcss/cli react react-dom @types/react @types/react-dom`. Ghim major (`pnpm add <pkg>@<major>`); ghi các phiên bản vào mục Kết quả.
+1. Dependency **đã được lead cài sẵn** (xem Môi trường): chỉ đọc phiên bản trong `packages/ui/package.json` và ghi vào mục Kết quả.
 2. `packages/ui/package.json`: `exports` như scaffold (`./globals.css`, `./components/*`, `./lib/*`, `./hooks/*`), `peerDependencies: react ^19`, scripts `typecheck` (`tsc --noEmit`) và `build:css` (Tailwind CLI biên dịch `src/styles/globals.css` ra `$TMPDIR` hoặc `dist/globals.css` — `dist/` đã bị gitignore).
 3. `packages/ui/tsconfig.json`: `extends ../../tsconfig.base.json`, `jsx: react-jsx`, `lib: [ES2022, DOM, DOM.Iterable]`, `include: [src]`.
 4. `src/styles/globals.css`: `@import "tailwindcss";`, `@custom-variant dark (&:is(.dark *));`, token màu sáng (`:root`) và tối (`.dark`) dạng CSS variable theo shadcn (`--background`, `--foreground`, `--primary`, `--muted`, `--border`, `--ring`, `--radius`…), `@theme inline` ánh xạ sang tên màu Tailwind, và hai dòng `@source` tới `apps/web/src`, `apps/desktop/src` (đường dẫn theo scaffold).
-5. `src/lib/utils.ts` (`cn`), `components.json` đúng scaffold. Thêm `button`, `input`, `card` bằng shadcn (hoặc viết tay) vào `src/components/`. Tên file kebab-case (`button.tsx`).
+5. `src/lib/utils.ts` (`cn`), `components.json` đúng scaffold. Viết tay `button`, `input`, `card` (không có CLI) vào `src/components/`, đúng kiểu và biến thể của shadcn "new-york" (`Button`: variant default/secondary/outline/ghost/destructive, size default/sm/lg/icon dùng `cva`). Tên file kebab-case (`button.tsx`).
 6. `src/components/caption-line.tsx`: component thuần trình bày, **không gọi API, không dùng state ngoài props**. Props: `text: string`, `translation?: string`, `hardWords?: string[]`, `partial?: boolean`, `className?`. Gạch chân bằng `<u>` quanh cụm khớp (không phân biệt hoa thường, cụm dài ưu tiên trước). Export kiểu props.
 7. Test AC1–AC3 (Vitest chạy từ gốc repo: `pnpm test`). Test component dùng `react-dom/server` `renderToStaticMarkup`, **không** thêm jsdom hay testing-library.
 8. `AGENTS.md` cho `packages/ui` theo mẫu `packages/shared/AGENTS.md` (mục đích, luật cứng: không import `apps/*`, không gọi API, token thay vì mã màu cứng; link scaffold) + file `CLAUDE.md` chỉ chứa `@AGENTS.md`. Cập nhật `README.md` và trang `apps/docs/docs/04-modules/05-packages/ui.md` (Interface: các export; Phụ thuộc; Câu hỏi mở).
@@ -66,10 +74,10 @@ Component shadcn chạy lệnh `add` từ `apps/web` sẽ thêm `components.json
 
 ## Kết quả _(implementer điền)_
 
-- File đã đổi:
-- Test đã thêm:
-- Phiên bản đã cài (tailwindcss, shadcn CLI, react…):
-- `pnpm verify`:
-- Đã chạy thật:
-- Khác brief (và lý do):
-- Câu hỏi còn mở:
+- File đã đổi: `packages/ui/{package.json,tsconfig.json,components.json,AGENTS.md,CLAUDE.md,README.md}`, `packages/ui/src/styles/globals.css`, `packages/ui/src/lib/{utils.ts,utils.test.ts}`, `packages/ui/src/components/{button.tsx,input.tsx,card.tsx,caption-line.tsx,ui.test.tsx,caption-line.test.tsx}`, `apps/docs/docs/04-modules/05-packages/ui.md`, và mục Kết quả của brief này. `pnpm-lock.yaml` cùng phần dependency/devDependency ban đầu trong `packages/ui/package.json` là thay đổi có sẵn do lead cài dependency.
+- Test đã thêm: `utils.test.ts` (AC1), `ui.test.tsx` (AC2), `caption-line.test.tsx` (AC3); tổng cộng 8 test mới.
+- Phiên bản đã cài (tailwindcss, shadcn CLI, react…): `tailwindcss` và `@tailwindcss/cli` 4.3.3; `react`/`react-dom` 19.3.1; `@types/react`/`@types/react-dom` 19.3.0; `class-variance-authority` 0.7.1; `clsx` 2.1.1; `tailwind-merge` 3.7.0; `lucide-react` 1.66.0. Shadcn CLI không được cài hoặc chạy theo mục Môi trường.
+- `pnpm verify`: xanh — format, lint và typecheck xanh; Vitest 6 file/20 test xanh; dependency-cruiser không có vi phạm (67 module, 72 dependency). Turbo có cảnh báo sandbox `IO error: Operation not permitted` khi typecheck nhưng 10/10 task vẫn thành công và lệnh trả mã 0.
+- Đã chạy thật: `pnpm docs:build` sinh static site thành công; `pnpm --filter @cuelingo/ui build:css` bằng Tailwind CLI thành công và `dist/globals.css` có cả `:root` lẫn `.dark`; render server các component bằng `renderToStaticMarkup` qua test; thêm tạm import từ `packages/ui` tới `apps/web`, xác nhận `pnpm check:deps` báo rule `packages-not-to-apps-or-services`, rồi xóa file thử và chạy lại xanh.
+- Khác brief (và lý do): Không. Không sửa scaffold vì cấu hình và lệnh thực tế khớp; Button/Input/Card được viết tay như mục Môi trường yêu cầu.
+- Câu hỏi còn mở: Không có câu hỏi chặn task. Trang module ghi lại câu hỏi sản phẩm về thời điểm thay bảng màu neutral bằng bảng màu thương hiệu cuối cùng.
