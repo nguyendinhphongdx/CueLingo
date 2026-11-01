@@ -41,12 +41,27 @@ describe('CaptionOverlay', () => {
     }
   });
 
-  it('makes the translation prominent at level 3', () => {
+  it('puts the translation in the larger, bolder role under the original', () => {
     const markup = renderToStaticMarkup(
       <CaptionOverlay listen={false} level={3} segments={[segment]} receivedTranscript />,
     );
 
-    expect(markup).toContain('[&amp;&gt;p+p]:font-bold');
+    expect(markup).toContain('data-role="translation"');
+    expect(markup).toContain('font-semibold');
+    expect(markup.indexOf('data-role="original"')).toBeLessThan(
+      markup.indexOf('data-role="translation"'),
+    );
+  });
+
+  it('offers the display menu, hide and quick-assist actions', () => {
+    const markup = renderToStaticMarkup(
+      <CaptionOverlay listen={false} segments={[segment]} receivedTranscript />,
+    );
+
+    expect(markup).toContain('aria-label="Tuỳ chỉnh hiển thị"');
+    expect(markup).toContain('aria-label="Ẩn overlay"');
+    expect(markup).toContain('aria-label="Tóm tắt"');
+    expect(markup).toContain('aria-label="Nói giúp"');
   });
 
   it('keeps an empty frame at level 0', () => {
@@ -58,17 +73,15 @@ describe('CaptionOverlay', () => {
     expect(markup).not.toContain('data-slot="caption-line"');
   });
 
-  it('renders font and theme controls and clamps font size to 14–24 px', () => {
+  it('applies the theme and font size and clamps the size to 14–28 px', () => {
     const markup = renderToStaticMarkup(
       <CaptionOverlay listen={false} initialFontSize={20} initialTheme="light" />,
     );
 
-    expect(markup).toContain('aria-label="Giảm cỡ chữ"');
-    expect(markup).toContain('aria-label="Tăng cỡ chữ"');
     expect(markup).toContain('data-theme="light"');
     expect(markup).toContain('font-size:20px');
     expect(clampFontSize(10)).toBe(14);
-    expect(clampFontSize(30)).toBe(24);
+    expect(clampFontSize(40)).toBe(28);
   });
 
   it('applies assist level updates received from the main window', async () => {

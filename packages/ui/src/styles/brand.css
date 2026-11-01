@@ -1,5 +1,6 @@
 /* CueLingo brand tokens shared by desktop and web: indigo primary, faintly cool canvas. Import after globals.css. */
-:root {
+:root,
+.light {
   --primary: oklch(0.511 0.262 276.966);
   --primary-foreground: oklch(0.985 0 0);
   --ring: oklch(0.585 0.233 277.117);

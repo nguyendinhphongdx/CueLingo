@@ -21,7 +21,7 @@ function PanelFrame({
   return (
     <aside
       aria-label={title}
-      className="absolute inset-x-3 top-20 bottom-3 z-20 overflow-y-auto rounded-xl border border-current/20 bg-inherit p-4 text-inherit shadow-2xl"
+      className="bg-card absolute inset-x-3 top-14 bottom-3 z-20 overflow-y-auto rounded-xl border p-4 text-inherit shadow-2xl"
     >
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-lg font-bold">{title}</h2>

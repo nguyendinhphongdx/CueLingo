@@ -1,15 +1,19 @@
-import { useEffect, useRef, useState } from 'react';
-import type { TranscriptEvent } from '../lib/native';
-import { ClickableCaptionLine, QuickAssistPanel, useQuickAssist } from '../quick-assist';
+import { ArrowDown, EyeOff, ListChecks, MessageSquareQuote, SlidersHorizontal } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { native, type TranscriptEvent } from '../lib/native';
+import { QuickAssistPanel, useQuickAssist } from '../quick-assist';
+import { saveAssistLevel } from '../settings/use-assist-settings';
+import type { SelectableAssistLevel } from '../settings/settings-store';
+import { CaptionBlock } from './CaptionBlock';
+import { DisplayMenu } from './DisplayMenu';
+import { useOverlayPrefs, type OverlayTheme } from './overlay-prefs';
 import { sampleTranscript } from './sample';
 import { useTranscriptStore } from './transcript-store';
+import { useLiveStatus, type LiveStatus } from './use-live-status';
 import { useOverlayAssistLevel } from './use-overlay-settings';
 import { useTranscript } from './use-transcript';
 
-const MIN_FONT_SIZE = 14;
-const MAX_FONT_SIZE = 24;
-const DEFAULT_FONT_SIZE = 18;
-const FONT_SIZE_KEY = 'cuelingo.overlay.fontSize';
+export { clampFontSize, readFontSize, storeFontSize } from './overlay-prefs';
 
 interface CaptionOverlayProps {
   level?: number;
@@ -17,33 +21,47 @@ interface CaptionOverlayProps {
   receivedTranscript?: boolean;
   listen?: boolean;
   initialFontSize?: number;
-  initialTheme?: 'light' | 'dark';
-}
-
-export function clampFontSize(value: number) {
-  return Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, value));
-}
-
-export function readFontSize() {
-  try {
-    if (typeof localStorage === 'undefined') return DEFAULT_FONT_SIZE;
-    const stored = Number(localStorage.getItem(FONT_SIZE_KEY));
-    return Number.isFinite(stored) && stored > 0 ? clampFontSize(stored) : DEFAULT_FONT_SIZE;
-  } catch {
-    return DEFAULT_FONT_SIZE;
-  }
-}
-
-export function storeFontSize(value: number) {
-  try {
-    localStorage.setItem(FONT_SIZE_KEY, String(value));
-  } catch {
-    // The overlay remains usable when storage is blocked or full.
-  }
+  initialTheme?: OverlayTheme;
 }
 
 /** Within this distance of the bottom the overlay keeps following new captions. */
 const FOLLOW_MARGIN_PX = 48;
+/** The newest sentences stay at full strength; older ones recede. */
+const FRESH_COUNT = 2;
+
+const statusText: Record<LiveStatus, string> = {
+  waiting: 'Đang chờ giọng nói',
+  listening: 'Đang nghe',
+  quiet: 'Đang im lặng',
+};
+
+const iconButton =
+  'focus-visible:ring-ring text-muted-foreground hover:text-foreground hover:bg-foreground/10 flex size-9 cursor-pointer items-center justify-center rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none';
+
+function ActionButton({
+  icon,
+  label,
+  hint,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  hint: string;
+  onClick(): void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={`${label} (${hint})`}
+      className="focus-visible:ring-ring bg-foreground/10 hover:bg-foreground/15 flex h-9 cursor-pointer items-center gap-2 rounded-full px-3.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
 
 export function CaptionOverlay({
   level,
@@ -51,19 +69,22 @@ export function CaptionOverlay({
   receivedTranscript,
   listen = true,
   initialFontSize,
-  initialTheme = 'dark',
+  initialTheme,
 }: CaptionOverlayProps) {
   const storedSegments = useTranscriptStore((state) => state.segments);
   const storedReceived = useTranscriptStore((state) => state.hasReceivedTranscript);
   const syncedLevel = useOverlayAssistLevel(4, listen);
   const assistLevel = level ?? syncedLevel;
-  const [fontSize, setFontSize] = useState(() => clampFontSize(initialFontSize ?? readFontSize()));
-  const [theme, setTheme] = useState<'light' | 'dark'>(initialTheme);
+  const prefs = useOverlayPrefs({ fontSize: initialFontSize, theme: initialTheme });
   const quickAssist = useQuickAssist({ listen });
+  const [menuOpen, setMenuOpen] = useState(false);
   useTranscript(listen);
-  const visibleSegments =
-    (receivedTranscript ?? storedReceived) ? (segments ?? storedSegments) : sampleTranscript;
-  const captionSegments = visibleSegments;
+
+  const received = receivedTranscript ?? storedReceived;
+  const preview = !received;
+  const captionSegments = received ? (segments ?? storedSegments) : sampleTranscript;
+  const status = useLiveStatus(captionSegments, received);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const followingRef = useRef(true);
   const [following, setFollowing] = useState(true);
@@ -77,8 +98,8 @@ export function CaptionOverlay({
   function handleScroll() {
     const element = scrollRef.current;
     if (!element) return;
-    const distance = element.scrollHeight - element.scrollTop - element.clientHeight;
-    const near = distance <= FOLLOW_MARGIN_PX;
+    const near =
+      element.scrollHeight - element.scrollTop - element.clientHeight <= FOLLOW_MARGIN_PX;
     followingRef.current = near;
     setFollowing(near);
   }
@@ -91,114 +112,135 @@ export function CaptionOverlay({
 
   useEffect(() => {
     if (followingRef.current) scrollToBottom();
-  }, [captionSegments, fontSize, assistLevel]);
+  }, [captionSegments, prefs.fontSize, assistLevel]);
 
-  function resizeCaption(delta: number) {
-    const next = clampFontSize(fontSize + delta);
-    setFontSize(next);
-    storeFontSize(next);
-  }
+  const hidden = assistLevel === 0;
 
   return (
     <section
       aria-label="Caption trực tiếp"
-      data-theme={theme}
-      className={
-        theme === 'dark'
-          ? 'relative flex h-screen flex-col overflow-hidden rounded-xl bg-black/70 text-white shadow-lg'
-          : 'relative flex h-screen flex-col overflow-hidden rounded-xl bg-white/90 text-slate-950 shadow-lg'
-      }
+      data-theme={prefs.theme}
+      className={`${prefs.theme} text-foreground relative flex h-screen flex-col overflow-hidden rounded-2xl border`}
+      style={{
+        backgroundColor: `color-mix(in oklab, var(--background) ${prefs.opacity}%, transparent)`,
+      }}
     >
-      <div
+      <header
         data-tauri-drag-region
-        className="flex h-5 cursor-move items-center justify-center"
-        aria-label="Kéo cửa sổ caption"
+        aria-label="Kéo để di chuyển"
+        className="flex h-12 shrink-0 cursor-grab items-center gap-3 px-4 active:cursor-grabbing"
       >
-        <span className="h-1 w-10 rounded-full bg-current opacity-30" aria-hidden="true" />
-      </div>
-      <div className="flex items-center justify-end gap-1 px-3 pb-2">
-        <button
-          type="button"
-          aria-label="Họ vừa nói gì?"
-          className="focus-visible:ring-ring min-h-11 cursor-pointer rounded px-3 py-1 text-sm hover:bg-current/10 focus-visible:ring-2 focus-visible:outline-none"
-          onClick={quickAssist.openRecap}
+        <span
+          data-tauri-drag-region
+          className="pointer-events-none flex min-w-0 items-center gap-2 text-sm font-medium"
         >
-          Tóm tắt
-        </button>
-        <button
-          type="button"
-          aria-label="Nói giúp"
-          className="focus-visible:ring-ring min-h-11 cursor-pointer rounded px-3 py-1 text-sm hover:bg-current/10 focus-visible:ring-2 focus-visible:outline-none"
-          onClick={quickAssist.openCompose}
-        >
-          Nói giúp
-        </button>
-        <button
-          type="button"
-          aria-label="Giảm cỡ chữ"
-          className="focus-visible:ring-ring min-h-11 min-w-11 cursor-pointer rounded px-2 py-1 font-semibold hover:bg-current/10 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-default disabled:opacity-40"
-          disabled={fontSize <= MIN_FONT_SIZE}
-          onClick={() => resizeCaption(-2)}
-        >
-          A−
-        </button>
-        <span className="min-w-10 text-center text-xs" aria-label={`Cỡ chữ ${fontSize} px`}>
-          {fontSize}px
+          <span className="relative flex size-2.5 shrink-0" aria-hidden="true">
+            {status === 'listening' ? (
+              <span className="bg-primary/60 absolute inline-flex size-full animate-ping rounded-full" />
+            ) : null}
+            <span
+              className={`relative inline-flex size-2.5 rounded-full ${
+                status === 'listening' ? 'bg-primary' : 'bg-muted-foreground/50'
+              }`}
+            />
+          </span>
+          <span className="truncate" aria-live="polite">
+            {preview ? 'Xem trước' : statusText[status]}
+          </span>
         </span>
+        <span className="flex-1" data-tauri-drag-region />
         <button
           type="button"
-          aria-label="Tăng cỡ chữ"
-          className="focus-visible:ring-ring min-h-11 min-w-11 cursor-pointer rounded px-2 py-1 font-semibold hover:bg-current/10 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-default disabled:opacity-40"
-          disabled={fontSize >= MAX_FONT_SIZE}
-          onClick={() => resizeCaption(2)}
+          aria-label="Tuỳ chỉnh hiển thị"
+          aria-expanded={menuOpen}
+          title="Tuỳ chỉnh hiển thị"
+          onClick={() => setMenuOpen((open) => !open)}
+          className={`${iconButton} ${menuOpen ? 'bg-foreground/10 text-foreground' : ''}`}
         >
-          A+
+          <SlidersHorizontal aria-hidden="true" className="size-[18px]" />
         </button>
         <button
           type="button"
-          aria-label={theme === 'dark' ? 'Chuyển sang nền sáng' : 'Chuyển sang nền tối'}
-          className="focus-visible:ring-ring ml-1 min-h-11 cursor-pointer rounded px-3 py-1 text-sm hover:bg-current/10 focus-visible:ring-2 focus-visible:outline-none"
-          onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+          aria-label="Ẩn overlay"
+          title="Ẩn overlay (⌘⇧L)"
+          onClick={() => void native.toggleOverlay()}
+          className={iconButton}
         >
-          {theme === 'dark' ? 'Sáng' : 'Tối'}
+          <EyeOff aria-hidden="true" className="size-[18px]" />
         </button>
-      </div>
+      </header>
+
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="scroll-auto-hide flex-1 space-y-3 overflow-y-auto px-5 pb-5"
-        style={{ fontSize }}
+        className="scroll-auto-hide flex-1 overflow-y-auto px-5 pb-4"
+        style={{ fontSize: prefs.fontSize }}
       >
-        {assistLevel === 0
-          ? null
-          : captionSegments.map((segment) => (
-              <ClickableCaptionLine
-                key={segment.segmentId}
-                text={assistLevel === 1 ? (segment.translation ?? 'Đang dịch…') : segment.text}
-                translation={assistLevel === 1 ? undefined : (segment.translation ?? undefined)}
-                partial={segment.partial}
-                lookupEnabled={assistLevel !== 1}
-                onLookup={(term) => quickAssist.lookup(term, segment.text)}
-                className={`text-inherit! [&>p]:text-inherit! ${
-                  segment.partial ? 'font-normal opacity-60' : 'font-semibold'
-                } ${
-                  assistLevel === 3
-                    ? '[&>p:first-child]:opacity-70 [&>p+p]:text-inherit! [&>p+p]:font-bold'
-                    : '[&>p+p]:text-inherit! [&>p+p]:opacity-80'
-                }`}
-              />
-            ))}
+        {hidden ? (
+          <p className="text-muted-foreground pt-6 text-center text-sm">
+            Caption đang ẩn. Mở “Tuỳ chỉnh hiển thị” để bật lại.
+          </p>
+        ) : captionSegments.length === 0 ? (
+          <p className="text-muted-foreground pt-6 text-center text-sm">Đang chờ giọng nói…</p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {captionSegments.map((segment, index) => {
+              const previous = captionSegments[index - 1];
+              return (
+                <CaptionBlock
+                  key={segment.segmentId}
+                  segment={segment}
+                  level={assistLevel}
+                  faded={index < captionSegments.length - FRESH_COUNT}
+                  showSpeaker={!previous || previous.stream !== segment.stream}
+                  onLookup={(term) => quickAssist.lookup(term, segment.text)}
+                />
+              );
+            })}
+          </div>
+        )}
       </div>
-      {following ? null : (
-        <button
-          type="button"
-          aria-label="Cuộn xuống caption mới nhất"
-          className="focus-visible:ring-ring absolute right-4 bottom-4 min-h-11 cursor-pointer rounded-full bg-sky-600 px-4 py-1 text-sm font-semibold text-white shadow-lg focus-visible:ring-2 focus-visible:outline-none"
-          onClick={resumeFollowing}
-        >
-          ↓ Mới nhất
-        </button>
-      )}
+
+      <footer className="flex h-14 shrink-0 items-center gap-2 px-4">
+        <ActionButton
+          icon={<ListChecks aria-hidden="true" className="size-4" />}
+          label="Tóm tắt"
+          hint="⌘⇧W"
+          onClick={quickAssist.openRecap}
+        />
+        <ActionButton
+          icon={<MessageSquareQuote aria-hidden="true" className="size-4" />}
+          label="Nói giúp"
+          hint="⌘⇧S"
+          onClick={quickAssist.openCompose}
+        />
+        <span className="flex-1" />
+        {following ? null : (
+          <button
+            type="button"
+            aria-label="Cuộn xuống caption mới nhất"
+            onClick={resumeFollowing}
+            className="focus-visible:ring-ring bg-primary text-primary-foreground flex h-9 cursor-pointer items-center gap-1.5 rounded-full px-3.5 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <ArrowDown aria-hidden="true" className="size-4" />
+            Mới nhất
+          </button>
+        )}
+      </footer>
+
+      {menuOpen ? (
+        <DisplayMenu
+          level={assistLevel}
+          onLevel={(next) => void saveAssistLevel(next as SelectableAssistLevel)}
+          fontSize={prefs.fontSize}
+          onFontSize={prefs.setFontSize}
+          opacity={prefs.opacity}
+          onOpacity={prefs.setOpacity}
+          theme={prefs.theme}
+          onTheme={prefs.setTheme}
+          onClose={() => setMenuOpen(false)}
+        />
+      ) : null}
       <QuickAssistPanel state={quickAssist.state} actions={quickAssist} />
     </section>
   );

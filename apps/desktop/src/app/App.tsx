@@ -5,6 +5,7 @@ import { useColorScheme } from './use-color-scheme';
 import { PermissionsStep } from '../onboarding';
 import { RecentSessions, SessionPanel } from '../session';
 import { AssistSettings } from '../settings';
+import { useSyncAssistLevel } from '../settings/use-assist-settings';
 import { AboutCard, ShortcutList } from './AboutCard';
 import { Button } from '@cuelingo/ui/components/button';
 import { ComingSoon } from '@cuelingo/ui/components/coming-soon';
@@ -18,6 +19,7 @@ import { openWeb } from './open-web';
 
 export function App() {
   useColorScheme();
+  useSyncAssistLevel();
   const [view, setView] = useState('home');
 
   return (
