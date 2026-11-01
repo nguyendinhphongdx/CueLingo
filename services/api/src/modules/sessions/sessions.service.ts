@@ -24,5 +24,10 @@ export function createSessionsService(repo: SessionsRepository, queue: JobQueue)
       if (result.endedNow) await queue.enqueue(JobName.DebriefGenerate, { sessionId: id });
       return result.session;
     },
+    async remove(userId: string, id: string): Promise<void> {
+      if (!(await repo.softDelete(userId, id))) {
+        throw new AppError(ErrorCode.NotFound, 'Session not found');
+      }
+    },
   };
 }

@@ -3,6 +3,7 @@ import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { useState } from 'react';
 import { useColorScheme } from './use-color-scheme';
 import { PermissionsStep } from '../onboarding';
+import { PrivacyPanel } from '../privacy';
 import { RecentSessions, SessionPanel } from '../session';
 import { AssistSettings } from '../settings';
 import { useSyncAssistLevel } from '../settings/use-assist-settings';
@@ -82,6 +83,7 @@ function CurrentView({ view }: { view: string }) {
       <>
         <PageHeader title="Cài đặt" />
         <PermissionsStep />
+        <PrivacyPanel />
         <AboutCard />
         <Section title="Đang trên lộ trình">
           <ListCard>

@@ -13,6 +13,7 @@ export interface SessionsApi {
   create(input: CreateSessionRequest): Promise<Session>;
   end(sessionId: string): Promise<Session>;
   list(): Promise<SessionList>;
+  remove(sessionId: string): Promise<void>;
 }
 
 interface SessionsApiOptions {
@@ -52,6 +53,13 @@ export function createSessionsApi({ apiUrl, token, fetch: request = fetch }: Ses
       const response = await request(`${baseUrl}/v1/sessions`, { headers });
       if (!response.ok) throw new Error(`Session request failed with status ${response.status}`);
       return SessionListSchema.parse(await response.json());
+    },
+    async remove(sessionId: string) {
+      const response = await request(`${baseUrl}/v1/sessions/${encodeURIComponent(sessionId)}`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (!response.ok) throw new Error(`Session request failed with status ${response.status}`);
     },
   } satisfies SessionsApi;
 }

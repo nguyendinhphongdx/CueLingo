@@ -11,7 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@cuelingo/ui/component
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { Section } from '@cuelingo/ui/components/section';
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { useState, type ReactNode } from 'react';
 import { useDebrief } from './use-debrief';
 
 type BlockName = DebriefFeedbackRequest['block'];
@@ -98,6 +99,8 @@ export interface DebriefPageViewProps {
   onFeedback: (block: BlockName, useful: boolean) => void;
   onSavePhrase: (input: SavePhraseRequest) => void;
   onExport: () => void;
+  deleting: boolean;
+  onDelete: () => void;
 }
 
 export function SavePhraseButton({
@@ -137,7 +140,10 @@ export function DebriefPageView({
   onFeedback,
   onSavePhrase,
   onExport,
+  deleting,
+  onDelete,
 }: DebriefPageViewProps) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   if (loading)
     return (
       <>
@@ -172,6 +178,29 @@ export function DebriefPageView({
             >
               Quay lại danh sách cuộc họp
             </Link>
+            {!confirmingDelete ? (
+              <Button variant="destructive" onClick={() => setConfirmingDelete(true)}>
+                Xoá cuộc họp
+              </Button>
+            ) : (
+              <div
+                className="flex flex-wrap items-center gap-2"
+                role="group"
+                aria-label="Xác nhận xoá cuộc họp"
+              >
+                <span className="text-sm">Xoá vĩnh viễn?</span>
+                <Button variant="destructive" disabled={deleting} onClick={onDelete}>
+                  {deleting ? 'Đang xoá…' : 'Xác nhận'}
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={deleting}
+                  onClick={() => setConfirmingDelete(false)}
+                >
+                  Huỷ
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </>
@@ -200,9 +229,38 @@ export function DebriefPageView({
               : `${Math.round(debrief.comprehensionPct)}%`
           }`}
           action={
-            <Button variant="outline" className="min-h-11" onClick={onExport}>
-              Xuất Markdown
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" className="min-h-11" onClick={onExport}>
+                Xuất Markdown
+              </Button>
+              {!confirmingDelete ? (
+                <Button
+                  variant="destructive"
+                  className="min-h-11"
+                  onClick={() => setConfirmingDelete(true)}
+                >
+                  Xoá cuộc họp
+                </Button>
+              ) : (
+                <span
+                  className="flex flex-wrap items-center gap-2"
+                  role="group"
+                  aria-label="Xác nhận xoá cuộc họp"
+                >
+                  <span className="text-sm">Xoá vĩnh viễn?</span>
+                  <Button variant="destructive" disabled={deleting} onClick={onDelete}>
+                    {deleting ? 'Đang xoá…' : 'Xác nhận'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={deleting}
+                    onClick={() => setConfirmingDelete(false)}
+                  >
+                    Huỷ
+                  </Button>
+                </span>
+              )}
+            </div>
           }
         />
       </div>
@@ -368,7 +426,8 @@ export function DebriefPageView({
 }
 
 export function DebriefPage({ sessionId }: { sessionId: string }) {
-  const state = useDebrief(sessionId);
+  const router = useRouter();
+  const state = useDebrief(sessionId, () => router.replace('/sessions'));
   return (
     <DebriefPageView
       session={state.session}
@@ -384,6 +443,8 @@ export function DebriefPage({ sessionId }: { sessionId: string }) {
       onFeedback={state.sendFeedback}
       onSavePhrase={(input) => void state.savePhrase(input)}
       onExport={state.exportMarkdown}
+      deleting={state.deleting}
+      onDelete={state.deleteSession}
     />
   );
 }

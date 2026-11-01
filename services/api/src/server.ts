@@ -7,6 +7,7 @@ import { createAuthModule } from './modules/auth';
 import { createPostgresDebriefRepository } from './modules/debrief';
 import { createPostgresEventsRepository } from './modules/events';
 import { createPostgresGlossaryRepository } from './modules/glossary';
+import { createPostgresPrivacyRepository } from './modules/privacy';
 import { createPostgresSessionsRepository } from './modules/sessions';
 import { createPostgresPhrasesRepository, createPostgresStudyRepository } from './modules/review';
 
@@ -18,6 +19,7 @@ const authModule = createAuthModule(config);
 const debriefRepository = createPostgresDebriefRepository(sql);
 const eventsRepository = createPostgresEventsRepository(sql);
 const glossaryRepository = createPostgresGlossaryRepository(sql);
+const privacyRepository = createPostgresPrivacyRepository(sql);
 const sessionsRepository = createPostgresSessionsRepository(sql);
 const phrasesRepository = createPostgresPhrasesRepository(sql);
 const studyRepository = createPostgresStudyRepository(sql);
@@ -55,6 +57,7 @@ const app = await buildApp({
     debrief: debriefRepository,
     events: eventsRepository,
     glossary: glossaryRepository,
+    privacy: privacyRepository,
     sessions: sessionsRepository,
     phrases: phrasesRepository,
     study: studyRepository,

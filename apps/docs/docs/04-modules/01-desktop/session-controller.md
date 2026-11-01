@@ -23,6 +23,8 @@ Máy trạng thái của một cuộc họp phía client: nhận segment từ ST
 - `describeNativeError(error)`: chuyển mã lỗi native thành thông báo tiếng Việt
 - `createSessionController({ native, createRealtime, now })`: controller inject dependency để test không cần Tauri/WebSocket
 - `useSession()`: snapshot `{status, error}` và action `start()`, `stop()`, `runDemo()`
+- `<RecentSessions />`: mở debrief hoặc xoá mềm cuộc họp sau bước xác nhận
+- Trang Cài đặt: tải JSON hoặc xoá toàn bộ dữ liệu sau khi gõ `XOA DU LIEU`
 - Cấu hình: `VITE_API_URL` (mặc định `ws://localhost:4000`) và `VITE_REALTIME_TOKEN` (mặc định `dev-token`)
 
 ## Phụ thuộc

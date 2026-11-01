@@ -23,6 +23,7 @@ export interface SessionsRepository {
   findDetail(userId: string, id: string): Promise<SessionDetail | null>;
   create(userId: string, input: CreateSessionRequest): Promise<Session>;
   end(userId: string, id: string): Promise<EndSessionResult | null>;
+  softDelete(userId: string, id: string): Promise<boolean>;
   saveSegment(input: SaveSegmentInput): Promise<boolean>;
   saveTranslation(segmentId: string, textVi: string): Promise<void>;
 }
@@ -68,19 +69,19 @@ export function createPostgresSessionsRepository(sql: Sql): SessionsRepository {
     async list(userId) {
       const rows = await sql<SessionRow[]>`
         SELECT id, title, started_at, ended_at, status, assist_level FROM sessions
-        WHERE user_id = ${userId} ORDER BY started_at DESC`;
+        WHERE user_id = ${userId} AND status <> 'deleted' ORDER BY started_at DESC`;
       return rows.map(toSession);
     },
     async findById(userId, id) {
       const [row] = await sql<SessionRow[]>`
         SELECT id, title, started_at, ended_at, status, assist_level FROM sessions
-        WHERE user_id = ${userId} AND id = ${id}`;
+        WHERE user_id = ${userId} AND id = ${id} AND status <> 'deleted'`;
       return row ? toSession(row) : null;
     },
     async findDetail(userId, id) {
       const [row] = await sql<SessionRow[]>`
         SELECT id, title, started_at, ended_at, status, assist_level FROM sessions
-        WHERE user_id = ${userId} AND id = ${id}`;
+        WHERE user_id = ${userId} AND id = ${id} AND status <> 'deleted'`;
       if (!row) return null;
       const segments = await sql<SegmentRow[]>`
         SELECT segments.id, source, start_ms, end_ms, text_en, text_vi
@@ -104,8 +105,14 @@ export function createPostgresSessionsRepository(sql: Sql): SessionsRepository {
       if (ended) return { session: toSession(ended), endedNow: true };
       const [existing] = await sql<SessionRow[]>`
         SELECT id, title, started_at, ended_at, status, assist_level FROM sessions
-        WHERE user_id = ${userId} AND id = ${id}`;
+        WHERE user_id = ${userId} AND id = ${id} AND status <> 'deleted'`;
       return existing ? { session: toSession(existing), endedNow: false } : null;
+    },
+    async softDelete(userId, id) {
+      const result = await sql`
+        UPDATE sessions SET status = 'deleted', ended_at = now()
+        WHERE user_id = ${userId} AND id = ${id} AND status <> 'deleted'`;
+      return result.count > 0;
     },
     async saveSegment(input) {
       const inserted = await sql<{ id: string }[]>`
@@ -114,6 +121,7 @@ export function createPostgresSessionsRepository(sql: Sql): SessionsRepository {
           ${input.endMs}, ${input.textEn}
         FROM sessions
         WHERE sessions.id = ${input.sessionId} AND sessions.user_id = ${input.userId}
+          AND sessions.status <> 'deleted'
         ON CONFLICT (id) DO NOTHING
         RETURNING id`;
       if (inserted.length > 0) return true;
@@ -122,7 +130,8 @@ export function createPostgresSessionsRepository(sql: Sql): SessionsRepository {
         JOIN sessions ON sessions.id = segments.session_id
         WHERE segments.id = ${input.segmentId}
           AND sessions.id = ${input.sessionId}
-          AND sessions.user_id = ${input.userId}`;
+          AND sessions.user_id = ${input.userId}
+          AND sessions.status <> 'deleted'`;
       return existing.length > 0;
     },
     async saveTranslation(segmentId, textVi) {

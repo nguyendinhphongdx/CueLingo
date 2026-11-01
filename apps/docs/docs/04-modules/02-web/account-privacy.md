@@ -6,9 +6,9 @@ Cài đặt tài khoản, quyền riêng tư, xoá dữ liệu.
 
 ## Trách nhiệm
 
-- Xoá một cuộc họp, xoá tài khoản
-- Thời hạn lưu audio
-- Xuất dữ liệu
+- Xoá một cuộc họp từ trang chi tiết sau bước xác nhận
+- Xoá toàn bộ dữ liệu sau hai bước xác nhận, giữ tài khoản
+- Tải dữ liệu cá nhân dạng JSON
 
 ## Phạm vi MVP
 
@@ -16,15 +16,17 @@ Cài đặt tài khoản, quyền riêng tư, xoá dữ liệu.
 
 ## Interface
 
-- `DELETE /v1/sessions/:id`, `DELETE /v1/me`
+- `DELETE /v1/sessions/:id`
+- `DELETE /v1/me/data` với chuỗi xác nhận `XOA DU LIEU`
+- `GET /v1/me/export`
 
 ## Phụ thuộc
 
-- (chưa có)
+- API `privacy`, thư viện cuộc họp và debrief
 
 ## Dữ liệu & sự kiện
 
-- Events: `data_deleted`
+- Hiện trạng thái đang xoá, lỗi và thành công; làm mới cache sau khi xoá
 
 ## Câu hỏi mở
 

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { AUDIO_RETENTION_DAYS, sweepExpiredAudio, type RetentionRepository } from './index';
+import {
+  AUDIO_RETENTION_DAYS,
+  DELETED_SESSION_RETENTION_DAYS,
+  sweepDeletedSessions,
+  sweepExpiredAudio,
+  type RetentionRepository,
+} from './index';
 
 const DAY = 24 * 60 * 60 * 1000;
 const NOW = new Date('2026-11-01T00:00:00Z');
@@ -16,6 +22,9 @@ function setup(segments: Array<{ id: string; key: string | null; startedDaysAgo:
     },
     async clearAudioKeys(ids) {
       for (const r of rows) if (ids.includes(r.id)) r.key = null;
+    },
+    async deleteExpiredSessions() {
+      return 0;
     },
   };
   const storage = {
@@ -65,5 +74,38 @@ describe('sweepExpiredAudio', () => {
 
     await expect(sweepExpiredAudio(failing)).rejects.toThrow('storage down');
     expect(rows[0]?.key).toBe('audio/old');
+  });
+});
+
+describe('sweepDeletedSessions', () => {
+  it('hard-deletes only soft-deleted sessions older than seven days and is idempotent', async () => {
+    const sessions = [
+      { id: 'old-deleted', status: 'deleted', startedDaysAgo: 8 },
+      { id: 'recent-deleted', status: 'deleted', startedDaysAgo: 6 },
+      { id: 'old-ended', status: 'ended', startedDaysAgo: 30 },
+    ];
+    const retention: RetentionRepository = {
+      async findExpiredAudio() {
+        return [];
+      },
+      async clearAudioKeys() {},
+      async deleteExpiredSessions(cutoff, limit) {
+        const expired = sessions
+          .filter(
+            (session) =>
+              session.status === 'deleted' &&
+              NOW.getTime() - session.startedDaysAgo * DAY < cutoff.getTime(),
+          )
+          .slice(0, limit);
+        for (const session of expired) sessions.splice(sessions.indexOf(session), 1);
+        return expired.length;
+      },
+    };
+    const deps = { retention, now: () => NOW };
+
+    expect(await sweepDeletedSessions(deps)).toEqual({ removed: 1 });
+    expect(await sweepDeletedSessions(deps)).toEqual({ removed: 0 });
+    expect(sessions.map((session) => session.id)).toEqual(['recent-deleted', 'old-ended']);
+    expect(DELETED_SESSION_RETENTION_DAYS).toBe(7);
   });
 });

@@ -42,6 +42,7 @@ export function createPostgresDebriefRepository(sql: Sql): DebriefRepository {
           debriefs.rephrase, debriefs.comprehension_pct, debriefs.created_at
         FROM debriefs JOIN sessions ON sessions.id = debriefs.session_id
         WHERE sessions.user_id = ${userId} AND sessions.id = ${sessionId}
+          AND sessions.status <> 'deleted'
         ORDER BY debriefs.version DESC LIMIT 1`;
       return row ? toDebrief(row) : null;
     },
@@ -52,6 +53,7 @@ export function createPostgresDebriefRepository(sql: Sql): DebriefRepository {
           ${sql.json(input)}, now()
         FROM debriefs JOIN sessions ON sessions.id = debriefs.session_id
         WHERE debriefs.id = ${debriefId} AND sessions.user_id = ${userId}
+          AND sessions.status <> 'deleted'
         RETURNING id`;
       return rows.length > 0;
     },

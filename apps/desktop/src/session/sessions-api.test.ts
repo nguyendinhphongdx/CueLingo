@@ -21,7 +21,8 @@ describe('sessions api', () => {
           endedAt: '2026-11-03T01:00:00.000Z',
           status: 'ended',
         }),
-      );
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
     const api = createSessionsApi({
       apiUrl: 'ws://api.test/',
       token: 'secret-token',
@@ -30,10 +31,12 @@ describe('sessions api', () => {
 
     await api.create({ assistLevel: 3 });
     await api.end(session.id);
+    await api.remove(session.id);
 
     expect(request.mock.calls.map(([url]) => url)).toEqual([
       'http://api.test/v1/sessions',
       `http://api.test/v1/sessions/${session.id}/end`,
+      `http://api.test/v1/sessions/${session.id}`,
     ]);
     expect(request.mock.calls[0]?.[1]).toMatchObject({
       method: 'POST',
@@ -44,6 +47,7 @@ describe('sessions api', () => {
       method: 'POST',
       headers: { Authorization: 'Bearer secret-token' },
     });
+    expect(request.mock.calls[2]?.[1]).toMatchObject({ method: 'DELETE' });
   });
 
   it('parses responses with the shared session schema', async () => {

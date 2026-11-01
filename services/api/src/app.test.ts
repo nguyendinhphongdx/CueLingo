@@ -66,7 +66,7 @@ describe('local development bearer token', () => {
     expect(response.statusCode).toBe(200);
   });
 
-  it('accepts the token at the events auth boundary but nowhere else', async () => {
+  it('accepts the token at the events and privacy auth boundaries but nowhere else', async () => {
     const events = await app.inject({
       method: 'POST',
       url: '/v1/events',
@@ -74,6 +74,13 @@ describe('local development bearer token', () => {
       payload: {},
     });
     expect(events.statusCode).toBe(400);
+
+    const privacy = await app.inject({
+      method: 'GET',
+      url: '/v1/me/export',
+      headers: { authorization: `Bearer ${DEV_TOKEN}` },
+    });
+    expect(privacy.statusCode).toBe(200);
 
     const glossary = await app.inject({
       method: 'GET',

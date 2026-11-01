@@ -55,6 +55,8 @@ const defaultProps = {
   onFeedback: vi.fn(),
   onSavePhrase: vi.fn(),
   onExport: vi.fn(),
+  deleting: false,
+  onDelete: vi.fn(),
 };
 
 describe('DebriefPageView', () => {
@@ -82,6 +84,7 @@ describe('DebriefPageView', () => {
     expect(markup).toContain('Let us circle back tomorrow.');
     expect(markup).toContain('Ngày mai chúng ta trao đổi lại nhé.');
     expect(markup.match(/👍 Hữu ích/g)).toHaveLength(5);
+    expect(markup).toContain('Xoá cuộc họp');
   });
 
   it('shows the saved state for a saved phrase', () => {
