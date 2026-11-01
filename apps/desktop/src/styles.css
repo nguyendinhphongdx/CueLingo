@@ -1,0 +1,13 @@
+@import 'tailwindcss';
+@import '@cuelingo/ui/globals.css';
+
+html,
+body,
+#root {
+  min-height: 100%;
+  background: transparent;
+}
+
+body {
+  margin: 0;
+}

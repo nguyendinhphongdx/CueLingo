@@ -17,16 +17,22 @@ Cài đặt trong app: phím tắt, Assist mặc định, lưu audio, nguồn ST
 
 ## Interface
 
-- `GET/PATCH /v1/me/settings`
+- `<AssistSettings />`: chọn Assist level `4`, `3` hoặc `1`
+- `useSettings`: store `{assistLevel, setAssistLevel()}` trong bộ nhớ của webview
+- Gọi `native.setAssistLevel(level)` khi người dùng đổi mức
+- Giai đoạn sau dùng `GET/PATCH /v1/me/settings` để lưu bền
 
 ## Phụ thuộc
 
-- `@cuelingo/core-sdk`
+- Zustand
+- TanStack Query
+- Cầu nối `apps/desktop/src/lib/native.ts`
+- `@cuelingo/core-sdk` (lưu bền, chưa triển khai)
 
 ## Dữ liệu & sự kiện
 
-- (chưa có)
+- Assist level hiện chỉ nằm trong bộ nhớ của cửa sổ `main`
 
 ## Câu hỏi mở
 
-- (chưa có)
+- Lưu cài đặt bền ở local hay đồng bộ qua API?
