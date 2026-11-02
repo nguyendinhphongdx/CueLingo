@@ -87,6 +87,9 @@ export const native = {
     listen('segment', (e) => cb(SegmentEvent.parse(e.payload))),
   /** Windows share state through global events: the main window publishes, the overlay listens. */
   publishTranscript: (e: TranscriptEvent) => emit('transcript', TranscriptEvent.parse(e)),
+  /** Tells the other windows (the overlay has its own JS context) that the signed-in person changed. */
+  publishAuthChanged: () => emit('auth-changed'),
+  onAuthChanged: (cb: () => void): Promise<UnlistenFn> => listen('auth-changed', () => cb()),
   publishSettings: (e: SettingsEvent) => emit('settings', SettingsEvent.parse(e)),
   onSettings: (cb: (e: SettingsEvent) => void): Promise<UnlistenFn> =>
     listen('settings', (e) => cb(SettingsEvent.parse(e.payload))),

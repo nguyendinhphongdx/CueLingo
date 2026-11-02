@@ -40,6 +40,7 @@ export function useAuth() {
           const newToken = await exchangeCode(code);
           await native.authTokenSet(newToken);
           set('signedIn', newToken);
+          void native.publishAuthChanged();
           setPhase('idle');
         } catch {
           setPhase('failed');
@@ -68,6 +69,7 @@ export function useAuth() {
     if (token) await revokeThisDevice(token);
     await native.authTokenClear().catch(() => undefined);
     set('signedOut', null);
+    void native.publishAuthChanged();
     setPhase('idle');
   }, [set, token]);
 

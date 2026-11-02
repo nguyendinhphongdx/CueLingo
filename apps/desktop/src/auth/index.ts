@@ -5,3 +5,4 @@ export { resolveToken, type TokenSource } from './token';
 export { useAuth } from './use-auth';
 export { UserChip } from './UserChip';
 export { useMe } from './use-me';
+export { useAuthSync } from './use-auth-sync';
