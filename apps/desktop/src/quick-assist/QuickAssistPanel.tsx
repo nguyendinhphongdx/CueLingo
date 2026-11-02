@@ -1,35 +1,71 @@
+import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import type { QuickAssistActions, QuickAssistState } from './use-quick-assist';
 
 interface QuickAssistPanelProps {
   state: QuickAssistState;
   actions: QuickAssistActions;
+  /** Only the title bar shows; what the person typed and the results are kept. */
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
 const buttonClass =
   'min-h-11 cursor-pointer rounded-lg border border-current/20 px-4 py-2 text-sm font-semibold text-inherit hover:bg-current/10 focus-visible:ring-2 focus-visible:outline-none';
 
+const iconButton =
+  'focus-visible:ring-ring text-muted-foreground hover:text-foreground hover:bg-foreground/10 flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none';
+
+/**
+ * Docked under the captions, so the transcript stays visible while you work. The title bar is always
+ * there; the chevron folds the body away and the cross closes the panel.
+ */
 function PanelFrame({
   title,
   close,
+  collapsed = false,
+  onToggleCollapsed,
   children,
 }: {
   title: string;
   close(): void;
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
   children: ReactNode;
 }) {
   return (
-    <aside
-      aria-label={title}
-      className="bg-card absolute inset-x-3 top-14 bottom-3 z-20 overflow-y-auto rounded-xl border p-4 text-inherit shadow-2xl"
-    >
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-bold">{title}</h2>
-        <button type="button" aria-label={`Đóng ${title}`} className={buttonClass} onClick={close}>
-          Đóng
+    <aside aria-label={title} className="bg-card flex max-h-[58%] shrink-0 flex-col border-t">
+      <div className="flex h-11 shrink-0 items-center gap-1 pr-2 pl-4">
+        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">{title}</h2>
+        {onToggleCollapsed ? (
+          <button
+            type="button"
+            aria-label={collapsed ? `Mở rộng ${title}` : `Thu gọn ${title}`}
+            aria-expanded={!collapsed}
+            title={collapsed ? 'Mở rộng' : 'Thu gọn'}
+            className={iconButton}
+            onClick={onToggleCollapsed}
+          >
+            {collapsed ? (
+              <ChevronUp aria-hidden="true" className="size-4" />
+            ) : (
+              <ChevronDown aria-hidden="true" className="size-4" />
+            )}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          aria-label={`Đóng ${title}`}
+          title="Đóng"
+          className={iconButton}
+          onClick={close}
+        >
+          <X aria-hidden="true" className="size-4" />
         </button>
       </div>
-      {children}
+      {collapsed ? null : (
+        <div className="scroll-auto-hide overflow-y-auto px-4 pb-4">{children}</div>
+      )}
     </aside>
   );
 }
@@ -45,12 +81,18 @@ function RequestError({ message, retry }: { message: string; retry(): void }) {
   );
 }
 
-export function QuickAssistPanel({ state, actions }: QuickAssistPanelProps) {
+export function QuickAssistPanel({
+  state,
+  actions,
+  collapsed,
+  onToggleCollapsed,
+}: QuickAssistPanelProps) {
+  const frame = { collapsed, onToggleCollapsed };
   if (state.view === 'closed') return null;
 
   if (state.view === 'lookup') {
     return (
-      <PanelFrame title={`Tra từ: ${state.term}`} close={actions.close}>
+      <PanelFrame title={`Tra từ: ${state.term}`} close={actions.close} {...frame}>
         {state.status === 'loading' ? (
           <p aria-live="polite">Đang tra nghĩa…</p>
         ) : state.status === 'error' ? (
@@ -80,7 +122,7 @@ export function QuickAssistPanel({ state, actions }: QuickAssistPanelProps) {
 
   if (state.view === 'recap') {
     return (
-      <PanelFrame title="Họ vừa nói gì?" close={actions.close}>
+      <PanelFrame title="Họ vừa nói gì?" close={actions.close} {...frame}>
         {state.status === 'loading' ? (
           <p aria-live="polite">Đang tóm tắt…</p>
         ) : state.status === 'error' ? (
@@ -108,27 +150,29 @@ export function QuickAssistPanel({ state, actions }: QuickAssistPanelProps) {
   }
 
   return (
-    <PanelFrame title="Nói giúp" close={actions.close}>
-      <form className="space-y-3" onSubmit={submit}>
-        <label htmlFor="compose-intent" className="block font-semibold">
+    <PanelFrame title="Nói giúp" close={actions.close} {...frame}>
+      <form className="space-y-2" onSubmit={submit}>
+        <label htmlFor="compose-intent" className="text-muted-foreground block text-sm">
           Bạn muốn nói gì bằng tiếng Anh?
         </label>
-        <input
-          id="compose-intent"
-          aria-label="Ý muốn nói bằng tiếng Việt"
-          className="min-h-11 w-full rounded-lg border border-current/30 bg-transparent px-3 text-base text-inherit placeholder:text-inherit/60 focus-visible:ring-2 focus-visible:outline-none"
-          placeholder="Ví dụ: Tôi cần thêm một ngày để hoàn thành"
-          value={state.intent}
-          disabled={state.status === 'loading'}
-          onChange={(event) => actions.setComposeIntent(event.target.value)}
-        />
-        <button
-          type="submit"
-          className={buttonClass}
-          disabled={state.status === 'loading' || !state.intent.trim()}
-        >
-          {state.status === 'loading' ? 'Đang soạn…' : 'Soạn câu'}
-        </button>
+        <div className="flex gap-2">
+          <input
+            id="compose-intent"
+            aria-label="Ý muốn nói bằng tiếng Việt"
+            className="border-input bg-background focus-visible:ring-ring min-h-11 min-w-0 flex-1 rounded-lg border px-3 text-base focus-visible:ring-2 focus-visible:outline-none"
+            placeholder="Ví dụ: Tôi cần thêm một ngày để hoàn thành"
+            value={state.intent}
+            disabled={state.status === 'loading'}
+            onChange={(event) => actions.setComposeIntent(event.target.value)}
+          />
+          <button
+            type="submit"
+            className={buttonClass}
+            disabled={state.status === 'loading' || !state.intent.trim()}
+          >
+            {state.status === 'loading' ? 'Đang soạn…' : 'Soạn câu'}
+          </button>
+        </div>
       </form>
 
       {state.status === 'error' ? (

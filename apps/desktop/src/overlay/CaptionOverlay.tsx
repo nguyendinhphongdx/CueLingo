@@ -42,11 +42,14 @@ function ActionButton({
   icon,
   label,
   hint,
+  active = false,
   onClick,
 }: {
   icon: ReactNode;
   label: string;
   hint: string;
+  /** The panel for this action is open. */
+  active?: boolean;
   onClick(): void;
 }) {
   return (
@@ -54,8 +57,11 @@ function ActionButton({
       type="button"
       onClick={onClick}
       aria-label={label}
+      aria-pressed={active}
       title={`${label} (${hint})`}
-      className="focus-visible:ring-ring bg-foreground/10 hover:bg-foreground/15 flex h-9 cursor-pointer items-center gap-2 rounded-full px-3.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      className={`focus-visible:ring-ring flex h-9 cursor-pointer items-center gap-2 rounded-full px-3.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+        active ? 'bg-primary text-primary-foreground' : 'bg-foreground/10 hover:bg-foreground/15'
+      }`}
     >
       {icon}
       {label}
@@ -78,6 +84,7 @@ export function CaptionOverlay({
   const prefs = useOverlayPrefs({ fontSize: initialFontSize, theme: initialTheme });
   const quickAssist = useQuickAssist({ listen });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [panelCollapsed, setPanelCollapsed] = useState(false);
   useTranscript(listen);
 
   const received = receivedTranscript ?? storedReceived;
@@ -113,6 +120,25 @@ export function CaptionOverlay({
   useEffect(() => {
     if (followingRef.current) scrollToBottom();
   }, [captionSegments, prefs.fontSize, assistLevel]);
+
+  const panelView = quickAssist.state.view;
+
+  // Opening something new always shows it expanded.
+  useEffect(() => {
+    if (panelView !== 'closed') setPanelCollapsed(false);
+  }, [panelView]);
+
+  // The docked panel changes how tall the captions are: stay on the newest line if the reader was there.
+  useEffect(() => {
+    if (followingRef.current) scrollToBottom();
+  }, [panelView, panelCollapsed]);
+
+  /** The footer buttons open their panel, and fold or unfold it when it is already the one showing. */
+  function togglePanel(view: 'recap' | 'compose') {
+    if (panelView === view) setPanelCollapsed((collapsed) => !collapsed);
+    else if (view === 'recap') quickAssist.openRecap();
+    else quickAssist.openCompose();
+  }
 
   const hidden = assistLevel === 0;
 
@@ -173,7 +199,7 @@ export function CaptionOverlay({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="scroll-auto-hide flex-1 overflow-y-auto px-5 pb-4"
+        className="scroll-auto-hide min-h-0 flex-1 overflow-y-auto px-5 pb-4"
         style={{ fontSize: prefs.fontSize }}
       >
         {hidden ? (
@@ -201,18 +227,27 @@ export function CaptionOverlay({
         )}
       </div>
 
+      <QuickAssistPanel
+        state={quickAssist.state}
+        actions={quickAssist}
+        collapsed={panelCollapsed}
+        onToggleCollapsed={() => setPanelCollapsed((collapsed) => !collapsed)}
+      />
+
       <footer className="flex h-14 shrink-0 items-center gap-2 px-4">
         <ActionButton
           icon={<ListChecks aria-hidden="true" className="size-4" />}
           label="Tóm tắt"
           hint="⌘⇧W"
-          onClick={quickAssist.openRecap}
+          active={panelView === 'recap' && !panelCollapsed}
+          onClick={() => togglePanel('recap')}
         />
         <ActionButton
           icon={<MessageSquareQuote aria-hidden="true" className="size-4" />}
           label="Nói giúp"
           hint="⌘⇧S"
-          onClick={quickAssist.openCompose}
+          active={panelView === 'compose' && !panelCollapsed}
+          onClick={() => togglePanel('compose')}
         />
         <span className="flex-1" />
         {following ? null : (
@@ -241,7 +276,6 @@ export function CaptionOverlay({
           onClose={() => setMenuOpen(false)}
         />
       ) : null}
-      <QuickAssistPanel state={quickAssist.state} actions={quickAssist} />
     </section>
   );
 }
