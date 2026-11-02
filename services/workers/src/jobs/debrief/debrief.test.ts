@@ -40,6 +40,7 @@ function setup(session: DebriefSession | null, output: DebriefContent = generate
 
 const transcript = (count = SEGMENT_IDS.length): DebriefSession => ({
   id: SESSION_ID,
+  language: 'en',
   segments: SEGMENT_IDS.slice(0, count).map((id, index) => ({
     id,
     source: index % 2 === 0 ? 'system' : 'mic',

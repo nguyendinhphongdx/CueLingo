@@ -11,6 +11,8 @@ export const SUPPORTED_LANGUAGES = {
     /** Name in Vietnamese, for the interface. */
     name: 'Tiếng Anh',
     nativeName: 'English',
+    /** The name used inside prompts, which are written in English. */
+    promptName: 'English',
     /** On-device recognition model the sidecar loads for this language. */
     recognizer: 'parakeet-tdt-v2-en',
     /** How words are told apart, for tap-to-look-up and typed answers. */
@@ -24,6 +26,7 @@ export const SUPPORTED_LANGUAGES = {
     code: 'ja',
     name: 'Tiếng Nhật',
     nativeName: '日本語',
+    promptName: 'Japanese',
     recognizer: 'parakeet-tdt-ja',
     wordBreaks: 'dictionary',
     hasReading: true,

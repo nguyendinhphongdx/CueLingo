@@ -18,6 +18,13 @@ describe('translate.realtime v1', () => {
     expect(buildTranslatePrompt({ text: 'Hi.' }).prompt).toBe('Last sentence:\nHi.');
   });
 
+  it('names the meeting language in the system prompt, English by default', () => {
+    expect(buildTranslatePrompt({ text: 'Hi.' }).system).toContain('an English business meeting');
+    expect(buildTranslatePrompt({ text: 'こんにちは。', language: 'ja' }).system).toContain(
+      'a Japanese business meeting',
+    );
+  });
+
   it('rejects empty text and more than three context sentences', () => {
     expect(TranslateInputSchema.safeParse({ text: '  ' }).success).toBe(false);
     expect(

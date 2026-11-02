@@ -1,4 +1,4 @@
-import type { DebriefContent } from '@cuelingo/shared';
+import type { DebriefContent, LanguageCode } from '@cuelingo/shared';
 import type { Sql } from '../../lib/db';
 
 export interface DebriefSegment {
@@ -9,6 +9,7 @@ export interface DebriefSegment {
 
 export interface DebriefSession {
   id: string;
+  language: LanguageCode;
   segments: DebriefSegment[];
 }
 
@@ -20,8 +21,8 @@ export interface DebriefRepository {
 export function createPostgresDebriefRepository(sql: Sql): DebriefRepository {
   return {
     async findSession(sessionId) {
-      const [session] = await sql<{ id: string }[]>`
-        SELECT id FROM sessions WHERE id = ${sessionId}`;
+      const [session] = await sql<{ id: string; language: LanguageCode }[]>`
+        SELECT id, language FROM sessions WHERE id = ${sessionId}`;
       if (!session) return null;
 
       const segments = await sql<DebriefSegment[]>`
@@ -29,7 +30,7 @@ export function createPostgresDebriefRepository(sql: Sql): DebriefRepository {
         FROM segments
         WHERE session_id = ${sessionId}
         ORDER BY start_ms, id`;
-      return { id: session.id, segments };
+      return { id: session.id, language: session.language, segments };
     },
 
     async save(sessionId, content, promptVersion) {

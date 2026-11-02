@@ -26,7 +26,7 @@ export async function generateDebrief(
 
   const generated = await deps.ai.json(
     'debrief.generate',
-    { segments: session.segments },
+    { segments: session.segments, language: session.language },
     DebriefContentSchema,
     { sessionId: session.id },
   );

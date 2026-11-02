@@ -25,3 +25,12 @@ describe('assist.lookup v1', () => {
     expect(LookupOutputSchema.safeParse({ term: 'table', meaningVi: 'hoãn' }).success).toBe(false);
   });
 });
+
+describe('assist.lookup language', () => {
+  it('asks for a reading only for languages that have one', () => {
+    const japanese = buildLookupPrompt({ term: '検討', language: 'ja' }).system;
+    expect(japanese).toContain('Japanese');
+    expect(japanese).toContain('reading');
+    expect(buildLookupPrompt({ term: 'review' }).system).not.toContain('reading');
+  });
+});

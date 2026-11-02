@@ -1,4 +1,6 @@
+import { LanguageCodeSchema } from '@cuelingo/shared';
 import { z } from 'zod';
+import { promptLanguage, withArticle } from '../language';
 
 export const TRANSLATE_PROMPT_VERSION = 'translate.realtime@v1';
 
@@ -10,22 +12,25 @@ export const TranslateInputSchema = z.object({
     .array(z.object({ term: z.string(), translation: z.string().nullable() }))
     .max(50)
     .default([]),
+  /** Language being spoken; English when left out. */
+  language: LanguageCodeSchema.optional(),
 });
 export type TranslateInput = z.input<typeof TranslateInputSchema>;
 
-const SYSTEM = [
-  'You are a live interpreter for a Vietnamese professional listening to an English business meeting.',
-  'Translate the LAST sentence into natural, concise Vietnamese that a colleague would say aloud.',
-  'Rules:',
-  '- Output only the Vietnamese translation, no quotes, notes or explanations.',
-  '- The earlier sentences are context only; never translate or repeat them.',
-  '- Keep proper nouns, product names, code and acronyms as spoken.',
-  '- Use the glossary translation whenever its term appears.',
-  '- If the sentence is already Vietnamese, return it unchanged.',
-].join('\n');
+const system = (language: string) =>
+  [
+    `You are a live interpreter for a Vietnamese professional listening to ${withArticle(language)} business meeting.`,
+    'Translate the LAST sentence into natural, concise Vietnamese that a colleague would say aloud.',
+    'Rules:',
+    '- Output only the Vietnamese translation, no quotes, notes or explanations.',
+    '- The earlier sentences are context only; never translate or repeat them.',
+    '- Keep proper nouns, product names, code and acronyms as spoken.',
+    '- Use the glossary translation whenever its term appears.',
+    '- If the sentence is already Vietnamese, return it unchanged.',
+  ].join('\n');
 
 export function buildTranslatePrompt(input: TranslateInput) {
-  const { text, previous, glossary } = TranslateInputSchema.parse(input);
+  const { text, previous, glossary, language } = TranslateInputSchema.parse(input);
   const parts: string[] = [];
   if (glossary.length > 0) {
     parts.push(
@@ -35,5 +40,5 @@ export function buildTranslatePrompt(input: TranslateInput) {
   if (previous.length > 0)
     parts.push('Earlier sentences:\n' + previous.map((s) => `- ${s}`).join('\n'));
   parts.push(`Last sentence:\n${text}`);
-  return { system: SYSTEM, prompt: parts.join('\n\n') };
+  return { system: system(promptLanguage(language)), prompt: parts.join('\n\n') };
 }

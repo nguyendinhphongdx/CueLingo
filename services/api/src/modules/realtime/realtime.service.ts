@@ -1,6 +1,8 @@
 import {
+  DEFAULT_LANGUAGE,
   ErrorCode,
   type GlossaryTerm,
+  type LanguageCode,
   type SegmentFinalMessage,
   type ServerMessage,
 } from '@cuelingo/shared';
@@ -10,8 +12,11 @@ import type { SessionsRepository } from '../sessions';
 export interface RealtimeDeps {
   gateway: Pick<AiGateway, 'llm'>;
   verifyToken(token: string): Promise<string | null>;
-  glossary(userId: string): Promise<Array<Pick<GlossaryTerm, 'term' | 'translation'>>>;
-  store?: Pick<SessionsRepository, 'saveSegment' | 'saveTranslation'>;
+  glossary(
+    userId: string,
+    language: LanguageCode,
+  ): Promise<Array<Pick<GlossaryTerm, 'term' | 'translation'>>>;
+  store?: Pick<SessionsRepository, 'saveSegment' | 'saveTranslation' | 'findById'>;
 }
 
 export type RealtimeConnection = ReturnType<typeof createRealtimeConnection>;
@@ -24,6 +29,8 @@ export function createRealtimeConnection(
 ) {
   let userId: string | null = null;
   let sessionId: string | null = null;
+  // The language is the meeting's own; the socket does not get to choose it.
+  let language: LanguageCode = DEFAULT_LANGUAGE;
   let translationQueue = Promise.resolve();
   const previousSystem: string[] = [];
   const storedSegments = new Map<string, Promise<boolean>>();
@@ -41,6 +48,8 @@ export function createRealtimeConnection(
       }
       // Ownership is checked by saveSegment. Missing/foreign sessions remain usable but are not stored.
       sessionId = requestedSessionId;
+      language =
+        (await deps.store?.findById(userId, requestedSessionId))?.language ?? DEFAULT_LANGUAGE;
       send({ type: 'ready', sessionId: requestedSessionId });
       return true;
     },
@@ -51,6 +60,7 @@ export function createRealtimeConnection(
         return false;
       }
       const authenticatedUserId = userId;
+      const meetingLanguage = language;
       const activeSessionId = sessionId;
       if (deps.store && activeSessionId) {
         const stored = Promise.resolve()
@@ -77,13 +87,14 @@ export function createRealtimeConnection(
       previousSystem.push(message.text);
       translationQueue = translationQueue.then(async () => {
         try {
-          const glossary = await deps.glossary(authenticatedUserId);
+          const glossary = await deps.glossary(authenticatedUserId, meetingLanguage);
           const result = await deps.gateway.llm(
             'translate.realtime',
             {
               text: message.text,
               previous: context,
               glossary,
+              language: meetingLanguage,
             },
             {
               userId: authenticatedUserId,

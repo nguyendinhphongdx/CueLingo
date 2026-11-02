@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LanguageCodeSchema } from '../languages';
 
 /** Quick Assist: contextual word lookup, recap of the last minute, and VI → EN composing. */
 export const LookupRequestSchema = z
@@ -6,6 +7,8 @@ export const LookupRequestSchema = z
     term: z.string().trim().min(1).max(80),
     /** Sentence(s) the term appeared in. */
     context: z.string().max(600).optional(),
+    /** Language of the term; English when left out. */
+    language: LanguageCodeSchema.optional(),
   })
   .strict();
 export type LookupRequest = z.infer<typeof LookupRequestSchema>;
@@ -16,6 +19,8 @@ export const LookupResponseSchema = z
     pos: z.string().optional(),
     meaningVi: z.string(),
     exampleEn: z.string().optional(),
+    /** How the term is read aloud (furigana for Japanese); only for languages that have readings. */
+    reading: z.string().optional(),
     noteVi: z.string().optional(),
   })
   .strict();
@@ -31,6 +36,7 @@ export const RecapRequestSchema = z
       )
       .min(1)
       .max(40),
+    language: LanguageCodeSchema.optional(),
   })
   .strict();
 export type RecapRequest = z.infer<typeof RecapRequestSchema>;
@@ -48,6 +54,8 @@ export const ComposeRequestSchema = z
     intentVi: z.string().trim().min(1).max(400),
     /** Recent meeting sentences so the reply fits the conversation. */
     context: z.array(z.string().max(2_000)).max(10).optional(),
+    /** Language the sentence should be spoken in; English when left out. */
+    language: LanguageCodeSchema.optional(),
   })
   .strict();
 export type ComposeRequest = z.infer<typeof ComposeRequestSchema>;

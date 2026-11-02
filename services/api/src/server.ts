@@ -20,7 +20,7 @@ import { createPostgresAccountRepository } from './modules/account';
 import { createDeviceService, createPostgresDeviceRepository } from './modules/device';
 import { createPostgresPhrasesRepository, createPostgresStudyRepository } from './modules/review';
 import { createPostgresAdminRepository } from './modules/admin';
-import { DEFAULT_LANGUAGE } from '@cuelingo/shared';
+import type { LanguageCode } from '@cuelingo/shared';
 
 const config = loadConfig();
 
@@ -67,8 +67,8 @@ const realtime = gateway
       verifyToken: async (token: string) =>
         (await deviceService.verifyToken(token)) ??
         (config.NODE_ENV === 'production' ? null : await verifyDevToken(token)),
-      async glossary(userId: string) {
-        return (await glossaryRepository.list(userId, DEFAULT_LANGUAGE))
+      async glossary(userId: string, language: LanguageCode) {
+        return (await glossaryRepository.list(userId, language))
           .slice(0, 50)
           .map(({ term, translation }) => ({ term, translation }));
       },

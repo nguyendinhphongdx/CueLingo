@@ -152,10 +152,11 @@ describe('realtime module', () => {
         text: 'four',
         previous: ['one', 'two', 'three'],
         glossary: [{ term: 'SLA', translation: 'cam kết dịch vụ' }],
+        language: 'en',
       },
       expect.objectContaining({ userId: USER_ID }),
     );
-    expect(deps.glossary).toHaveBeenCalledWith(USER_ID);
+    expect(deps.glossary).toHaveBeenCalledWith(USER_ID, 'en');
   });
 
   it('does not translate mic segments or include them in system context', async () => {
@@ -178,10 +179,31 @@ describe('realtime module', () => {
     );
   });
 
+  it("translates and looks up the glossary in the meeting's own language", async () => {
+    deps.store = {
+      saveSegment: vi.fn(async () => true),
+      saveTranslation: vi.fn(async () => undefined),
+      findById: vi.fn(async () => ({ language: 'ja' }) as never),
+    };
+    await connect();
+    await authenticate();
+
+    const response = nextMessage(socket);
+    socket.send(JSON.stringify(segment('検討します', 0)));
+    await response;
+
+    expect(llm).toHaveBeenLastCalledWith(
+      'translate.realtime',
+      expect.objectContaining({ language: 'ja' }),
+      expect.anything(),
+    );
+    expect(deps.glossary).toHaveBeenCalledWith(USER_ID, 'ja');
+  });
+
   it('stores final mic and system segments, then stores the system translation', async () => {
     const saveSegment = vi.fn(async () => true);
     const saveTranslation = vi.fn(async () => undefined);
-    deps.store = { saveSegment, saveTranslation };
+    deps.store = { saveSegment, saveTranslation, findById: vi.fn(async () => null) };
     await connect();
     await authenticate();
 
@@ -213,7 +235,7 @@ describe('realtime module', () => {
     const saveTranslation = vi.fn(async () => {
       throw new Error('translation write failed');
     });
-    deps.store = { saveSegment, saveTranslation };
+    deps.store = { saveSegment, saveTranslation, findById: vi.fn(async () => null) };
     await connect();
     await authenticate();
 
@@ -230,7 +252,7 @@ describe('realtime module', () => {
   it('does not store translations when the session is missing or belongs to another user', async () => {
     const saveSegment = vi.fn(async () => false);
     const saveTranslation = vi.fn(async () => undefined);
-    deps.store = { saveSegment, saveTranslation };
+    deps.store = { saveSegment, saveTranslation, findById: vi.fn(async () => null) };
     await connect();
     await authenticate();
 
