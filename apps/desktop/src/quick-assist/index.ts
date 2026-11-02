@@ -3,5 +3,5 @@
  * Design: apps/docs/docs/04-modules/01-desktop/quick-assist.md
  */
 export { ClickableCaptionLine, splitCaptionWords } from './ClickableCaptionLine';
-export { QuickAssistPanel } from './QuickAssistPanel';
+export { DRAWER_WIDTH, QuickAssistPanel } from './QuickAssistPanel';
 export { useQuickAssist } from './use-quick-assist';

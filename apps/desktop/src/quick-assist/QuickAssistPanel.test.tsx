@@ -92,7 +92,7 @@ describe('Quick Assist UI', () => {
     expect(callback).toHaveBeenNthCalledWith(2, { action: 'say_for_me' });
   });
 
-  it('renders recap content and a compose form whose options are at least 20 px', () => {
+  it('renders recap content and a compose form with readable options in a right-hand drawer', () => {
     const recap = renderPanel({
       view: 'recap',
       status: 'success',
@@ -107,7 +107,8 @@ describe('Quick Assist UI', () => {
 
     expect(recap).toContain('Nhóm đã chốt kế hoạch.');
     expect(compose).toContain('Ý muốn nói bằng tiếng Việt');
-    expect(compose).toContain('text-xl');
+    expect(compose).toContain('text-base');
+    expect(compose).toContain('border-l');
     expect(compose).toContain('I agree with the plan.');
   });
 });

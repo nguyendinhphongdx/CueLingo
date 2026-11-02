@@ -1,7 +1,7 @@
 import { ArrowDown, EyeOff, ListChecks, MessageSquareQuote, SlidersHorizontal } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { native, type TranscriptEvent } from '../lib/native';
-import { QuickAssistPanel, useQuickAssist } from '../quick-assist';
+import { DRAWER_WIDTH, QuickAssistPanel, useQuickAssist } from '../quick-assist';
 import { saveAssistLevel } from '../settings/use-assist-settings';
 import type { SelectableAssistLevel } from '../settings/settings-store';
 import { CaptionBlock } from './CaptionBlock';
@@ -11,6 +11,7 @@ import { sampleTranscript } from './sample';
 import { useTranscriptStore } from './transcript-store';
 import { useLiveStatus, type LiveStatus } from './use-live-status';
 import { useOverlayAssistLevel } from './use-overlay-settings';
+import { useDrawerWindow } from './use-drawer-window';
 import { useTranscript } from './use-transcript';
 
 export { clampFontSize, readFontSize, storeFontSize } from './overlay-prefs';
@@ -140,6 +141,9 @@ export function CaptionOverlay({
     else quickAssist.openCompose();
   }
 
+  const drawerOpen = panelView !== 'closed' && !panelCollapsed;
+  useDrawerWindow(drawerOpen, DRAWER_WIDTH);
+
   const hidden = assistLevel === 0;
 
   return (
@@ -196,43 +200,44 @@ export function CaptionOverlay({
         </button>
       </header>
 
-      <div
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="scroll-auto-hide min-h-0 flex-1 overflow-y-auto px-5 pb-4"
-        style={{ fontSize: prefs.fontSize }}
-      >
-        {hidden ? (
-          <p className="text-muted-foreground pt-6 text-center text-sm">
-            Caption đang ẩn. Mở “Tuỳ chỉnh hiển thị” để bật lại.
-          </p>
-        ) : captionSegments.length === 0 ? (
-          <p className="text-muted-foreground pt-6 text-center text-sm">Đang chờ giọng nói…</p>
-        ) : (
-          <div className="flex flex-col gap-4">
-            {captionSegments.map((segment, index) => {
-              const previous = captionSegments[index - 1];
-              return (
-                <CaptionBlock
-                  key={segment.segmentId}
-                  segment={segment}
-                  level={assistLevel}
-                  faded={index < captionSegments.length - FRESH_COUNT}
-                  showSpeaker={!previous || previous.stream !== segment.stream}
-                  onLookup={(term) => quickAssist.lookup(term, segment.text)}
-                />
-              );
-            })}
-          </div>
-        )}
+      <div className="flex min-h-0 flex-1">
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="scroll-auto-hide min-h-0 min-w-0 flex-1 overflow-y-auto px-5 pb-4"
+          style={{ fontSize: prefs.fontSize }}
+        >
+          {hidden ? (
+            <p className="text-muted-foreground pt-6 text-center text-sm">
+              Caption đang ẩn. Mở “Tuỳ chỉnh hiển thị” để bật lại.
+            </p>
+          ) : captionSegments.length === 0 ? (
+            <p className="text-muted-foreground pt-6 text-center text-sm">Đang chờ giọng nói…</p>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {captionSegments.map((segment, index) => {
+                const previous = captionSegments[index - 1];
+                return (
+                  <CaptionBlock
+                    key={segment.segmentId}
+                    segment={segment}
+                    level={assistLevel}
+                    faded={index < captionSegments.length - FRESH_COUNT}
+                    showSpeaker={!previous || previous.stream !== segment.stream}
+                    onLookup={(term) => quickAssist.lookup(term, segment.text)}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <QuickAssistPanel
+          state={quickAssist.state}
+          actions={quickAssist}
+          collapsed={panelCollapsed}
+          onToggleCollapsed={() => setPanelCollapsed((collapsed) => !collapsed)}
+        />
       </div>
-
-      <QuickAssistPanel
-        state={quickAssist.state}
-        actions={quickAssist}
-        collapsed={panelCollapsed}
-        onToggleCollapsed={() => setPanelCollapsed((collapsed) => !collapsed)}
-      />
 
       <footer className="flex h-14 shrink-0 items-center gap-2 px-4">
         <ActionButton

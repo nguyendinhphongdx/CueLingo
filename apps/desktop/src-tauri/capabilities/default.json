@@ -3,5 +3,15 @@
   "identifier": "default",
   "description": "Both windows may call our commands and listen to events",
   "windows": ["main", "overlay"],
-  "permissions": ["core:default", "core:window:allow-start-dragging", "deep-link:default"]
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    "deep-link:default",
+    "core:window:allow-set-size",
+    "core:window:allow-set-position",
+    "core:window:allow-inner-size",
+    "core:window:allow-outer-position",
+    "core:window:allow-scale-factor",
+    "core:window:allow-current-monitor"
+  ]
 }
