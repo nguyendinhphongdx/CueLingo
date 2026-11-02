@@ -1,20 +1,47 @@
 import { ApiError } from '@cuelingo/core-sdk';
 import type { DebriefFeedbackRequest, SavePhraseRequest } from '@cuelingo/shared';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { client } from '../../lib/client';
 import { describeError } from '../../lib/errors';
 import { buildDebriefMarkdown } from './markdown';
 
 const POLL_INTERVAL_MS = 5_000;
-const POLL_LIMIT_MS = 2 * 60_000;
+export const LONG_WAIT_MS = 90_000;
+export const COPY_CONFIRMATION_MS = 2_000;
+
+export interface ClipboardFeedback {
+  key: string;
+  status: 'copied' | 'error';
+}
 
 export function isDebriefNotFound(error: unknown) {
   return error instanceof ApiError && error.status === 404;
 }
 
 export function shouldPollDebrief(error: unknown, elapsedMs: number) {
-  return isDebriefNotFound(error) && elapsedMs < POLL_LIMIT_MS;
+  return isDebriefNotFound(error) && elapsedMs < LONG_WAIT_MS;
+}
+
+export function getProcessingStatus(startedAt: number, now = Date.now()) {
+  const elapsedMs = Math.max(0, now - startedAt);
+  return {
+    elapsedMs,
+    seconds: Math.floor(elapsedMs / 1_000),
+    timedOut: elapsedMs >= LONG_WAIT_MS,
+  };
+}
+
+export function scheduleClipboardFeedbackClear(clear: () => void) {
+  return setTimeout(clear, COPY_CONFIRMATION_MS);
+}
+
+export async function writeClipboardText(
+  text: string,
+  clipboard: Pick<Clipboard, 'writeText'> | undefined = globalThis.navigator?.clipboard,
+) {
+  if (!clipboard) throw new Error('Clipboard API is unavailable');
+  await clipboard.writeText(text);
 }
 
 function phraseKey(input: Pick<SavePhraseRequest, 'phrase' | 'meaningVi'>) {
@@ -23,7 +50,10 @@ function phraseKey(input: Pick<SavePhraseRequest, 'phrase' | 'meaningVi'>) {
 
 export function useDebrief(sessionId: string, onDeleted?: () => void) {
   const pollingStartedAt = useRef(Date.now());
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const [savedPhraseKeys, setSavedPhraseKeys] = useState<ReadonlySet<string>>(new Set());
+  const [clipboardFeedback, setClipboardFeedback] = useState<ClipboardFeedback | null>(null);
 
   const session = useQuery({
     queryKey: ['sessions', sessionId],
@@ -54,12 +84,45 @@ export function useDebrief(sessionId: string, onDeleted?: () => void) {
   });
 
   const debriefNotFound = isDebriefNotFound(debrief.error);
+  const processingStatus = getProcessingStatus(pollingStartedAt.current, now);
+  const processingElapsedMs = debriefNotFound ? processingStatus.elapsedMs : 0;
+
+  useEffect(() => {
+    if (!debriefNotFound || processingElapsedMs >= LONG_WAIT_MS) return;
+    const timer = setInterval(() => setNow(Date.now()), 1_000);
+    return () => clearInterval(timer);
+  }, [debriefNotFound, processingElapsedMs]);
+
+  useEffect(
+    () => () => {
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+    },
+    [],
+  );
+
+  const copyText = async (key: string, text: string) => {
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+    try {
+      await writeClipboardText(text);
+      setClipboardFeedback({ key, status: 'copied' });
+    } catch {
+      setClipboardFeedback({ key, status: 'error' });
+    }
+    copyTimer.current = scheduleClipboardFeedbackClear(() => setClipboardFeedback(null));
+  };
 
   return {
     session: session.data,
     debrief: debrief.data,
     loading: session.isPending || debrief.isPending,
     processing: debriefNotFound,
+    processingSeconds: debriefNotFound ? processingStatus.seconds : 0,
+    processingTimedOut: debriefNotFound && processingStatus.timedOut,
+    retryDebrief: () => {
+      pollingStartedAt.current = Date.now();
+      setNow(pollingStartedAt.current);
+      void debrief.refetch();
+    },
     error:
       describeError(session.error) ??
       (debriefNotFound ? null : describeError(debrief.error)) ??
@@ -75,11 +138,21 @@ export function useDebrief(sessionId: string, onDeleted?: () => void) {
     savedPhraseKeys,
     savingPhraseKey: save.isPending && save.variables ? phraseKey(save.variables) : null,
     savePhrase: (input: SavePhraseRequest) => save.mutateAsync(input),
-    exportMarkdown: () => {
+    clipboardFeedback,
+    copyText,
+    exportMarkdown: (includeTranscript = false) => {
       if (!debrief.data) return;
-      const blob = new Blob([buildDebriefMarkdown(debrief.data)], {
-        type: 'text/markdown;charset=utf-8',
-      });
+      const blob = new Blob(
+        [
+          buildDebriefMarkdown(debrief.data, {
+            session: session.data,
+            includeTranscript,
+          }),
+        ],
+        {
+          type: 'text/markdown;charset=utf-8',
+        },
+      );
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
