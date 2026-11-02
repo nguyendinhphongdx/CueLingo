@@ -1,4 +1,5 @@
 import type { FsrsState } from '@cuelingo/learner-model';
+import type { ExerciseType } from '@cuelingo/shared';
 import type { Sql } from '../../lib/db';
 
 /** One Phrase Bank row with the data a review card needs. */
@@ -12,7 +13,7 @@ export interface StudyItem {
 }
 
 export interface StudyAnswerLog {
-  exercise: 'recognize' | 'cloze';
+  exercise: ExerciseType;
   rating: number;
   responseMs?: number;
   at: Date;

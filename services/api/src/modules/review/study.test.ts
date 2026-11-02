@@ -2,7 +2,7 @@ import { newFsrsState } from '@cuelingo/learner-model';
 import { describe, expect, it } from 'vitest';
 import { buildTestApp, TEST_USER_HEADER } from '../../testing';
 import { createInMemoryStudyRepository, type StudyItem } from './study.repository';
-import { createStudyService, streakDays } from './study.service';
+import { createStudyService, streakDays, wantsDictation } from './study.service';
 
 const NOW = new Date('2026-11-05T09:00:00Z');
 const item = (n: number, patch: Partial<StudyItem> = {}): StudyItem => ({
@@ -43,8 +43,9 @@ describe('review queue', () => {
     const { repo, service } = setup();
     for (let n = 0; n < 4; n++) repo.seed('alice', item(n));
     const { cards } = await service.queue('alice');
-    for (const card of cards) {
-      expect(card.exercise).toBe('recognize');
+    const recognize = cards.filter((card) => card.exercise === 'recognize');
+    expect(recognize.length).toBeGreaterThan(0);
+    for (const card of recognize) {
       expect(new Set(card.choices).size).toBe(card.choices.length);
       expect(card.choices.filter((choice) => choice === card.answer)).toHaveLength(1);
     }
@@ -52,18 +53,21 @@ describe('review queue', () => {
 
   it('builds a cloze card with a blank when the context sentence contains the phrase', async () => {
     const { repo, service } = setup();
-    const clozeItem = item(0, {
-      contextEn: 'We must circle back on the budget next week.',
+    // Pick a phrase that is not read aloud, so this card is a cloze.
+    const index = [0, 1, 2, 3, 4].find((n) => !wantsDictation(item(n)))!;
+    const phrase = item(index).phrase;
+    const clozeItem = item(index, {
+      contextEn: `We must ${phrase} on the budget next week.`,
       meaningVi: null,
     });
     repo.seed('alice', clozeItem);
-    repo.seed('alice', item(1));
+    repo.seed('alice', item((index + 1) % 5));
     const { cards } = await service.queue('alice');
     const card = cards.find((c) => c.itemId === clozeItem.itemId)!;
     expect(card.exercise).toBe('cloze');
     expect(card.prompt).toContain('____');
-    expect(card.prompt).not.toContain('circle back');
-    expect(card.answer).toBe('circle back');
+    expect(card.prompt).not.toContain(phrase);
+    expect(card.answer).toBe(phrase);
   });
 
   it('skips phrases that are not due yet and phrases removed from review', async () => {
@@ -82,6 +86,42 @@ describe('review queue', () => {
     await expect(
       service.answer('bob', { itemId: item(0).itemId, exercise: 'recognize', rating: 3 }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+});
+
+describe('dictation cards', () => {
+  const many = (count: number): StudyItem[] =>
+    Array.from({ length: count }, (_, n) => ({
+      itemId: `00000000-0000-4000-8000-${String(n + 100).padStart(12, '0')}`,
+      phrase: `phrase number ${n}`,
+      meaningVi: `nghĩa ${n}`,
+      contextEn: null,
+      inReview: true,
+      fsrs: null,
+    }));
+
+  it('reads some phrases aloud and asks for them to be typed, with no choices', async () => {
+    const { repo, service } = setup();
+    for (const entry of many(30)) repo.seed('alice', entry);
+    const { cards } = await service.queue('alice', { dictation: true });
+    const without = await service.queue('alice');
+    expect(without.cards.some((card) => card.exercise === 'dictation')).toBe(false);
+    // The queue is capped, so look at the builder across all items too.
+    const dictation = many(30).filter(wantsDictation);
+    expect(dictation.length).toBeGreaterThan(3);
+    expect(dictation.length).toBeLessThan(20);
+
+    const card = cards.find((candidate) => candidate.exercise === 'dictation');
+    if (card) {
+      expect(card.choices).toEqual([]);
+      expect(card.prompt).toBe(card.phrase);
+      expect(card.answer).toBe(card.phrase);
+    }
+  });
+
+  it('is stable: the same phrase is always the same kind of exercise', () => {
+    const [entry] = many(1);
+    expect(wantsDictation(entry!)).toBe(wantsDictation({ ...entry! }));
   });
 });
 

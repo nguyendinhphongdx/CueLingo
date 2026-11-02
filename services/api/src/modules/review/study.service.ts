@@ -52,7 +52,28 @@ function pickDistractors(
 }
 
 /** Builds one exercise for an item; cloze needs a context sentence that really contains the phrase. */
-export function buildCard(item: StudyItem, all: StudyItem[]): ReviewCard | null {
+/** Every third phrase is practised by ear: it is read aloud and the person types it. */
+export const wantsDictation = (item: StudyItem) => hash(`dictation:${item.itemId}`) % 3 === 0;
+
+/** `dictation: true` only for clients that know how to play and grade it (they ask with `?dictation=1`). */
+export function buildCard(
+  item: StudyItem,
+  all: StudyItem[],
+  options: { dictation?: boolean } = {},
+): ReviewCard | null {
+  if (options.dictation && wantsDictation(item) && item.phrase.length <= 60) {
+    return {
+      itemId: item.itemId,
+      exercise: 'dictation',
+      phrase: item.phrase,
+      prompt: item.phrase,
+      choices: [],
+      answer: item.phrase,
+      meaningVi: item.meaningVi,
+      contextEn: item.contextEn,
+    };
+  }
+
   const sentence = item.contextEn?.replace(new RegExp(escapeRegExp(item.phrase), 'i'), '____');
   const clozeReady = Boolean(item.contextEn && sentence && sentence !== item.contextEn);
   const recognizeReady = item.meaningVi !== null;
@@ -120,7 +141,7 @@ export function streakDays(reviewDays: Set<string>, now: Date): number {
 
 export function createStudyService(repo: StudyRepository, clock: () => Date = () => new Date()) {
   return {
-    async queue(userId: string): Promise<ReviewQueue> {
+    async queue(userId: string, options: { dictation?: boolean } = {}): Promise<ReviewQueue> {
       const now = clock();
       const items = await repo.listItems(userId);
       const due = items
@@ -129,7 +150,7 @@ export function createStudyService(repo: StudyRepository, clock: () => Date = ()
       const cards: ReviewCard[] = [];
       for (const item of due) {
         if (cards.length === QUEUE_SIZE) break;
-        const card = buildCard(item, items);
+        const card = buildCard(item, items, options);
         if (card) cards.push(card);
       }
       return { dueCount: due.length, cards };

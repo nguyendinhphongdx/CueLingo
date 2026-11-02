@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Spaced review of the Phrase Bank: the API builds each exercise, the client only renders and grades locally. */
-export const ExerciseTypeSchema = z.enum(['recognize', 'cloze']);
+export const ExerciseTypeSchema = z.enum(['recognize', 'cloze', 'dictation']);
 export type ExerciseType = z.infer<typeof ExerciseTypeSchema>;
 
 export const ReviewCardSchema = z
@@ -9,10 +9,13 @@ export const ReviewCardSchema = z
     itemId: z.uuid(),
     exercise: ExerciseTypeSchema,
     phrase: z.string(),
-    /** recognize: the English phrase to translate. cloze: a sentence with `____` where the phrase goes. */
+    /**
+     * recognize: the English phrase to translate. cloze: a sentence with `____` where the phrase goes.
+     * dictation: the text to read aloud (`POST /v1/tts`); show it only after the person has answered.
+     */
     prompt: z.string(),
-    /** recognize: Vietnamese meanings (one correct). cloze: English phrases (one correct). */
-    choices: z.array(z.string()).min(2).max(4),
+    /** recognize: Vietnamese meanings (one correct). cloze: English phrases (one correct). dictation: none, the answer is typed. */
+    choices: z.array(z.string()).max(4),
     answer: z.string(),
     /** Meaning and the sentence the phrase first appeared in, shown after answering. */
     meaningVi: z.string().nullable(),
