@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { UserSettings } from '@cuelingo/shared';
 
 export type OverlayTheme = 'light' | 'dark';
 
@@ -40,6 +41,12 @@ function readNumber(key: string, fallback: number, bound: (value: number) => num
 export const readFontSize = () => readNumber(KEYS.fontSize, FONT_SIZE.default, clampFontSize);
 export const storeFontSize = (value: number) => write(KEYS.fontSize, String(value));
 
+export function storeOverlaySettings(overlay: UserSettings['overlay']) {
+  storeFontSize(overlay.fontSize);
+  write(KEYS.opacity, String(overlay.opacity));
+  write(KEYS.theme, overlay.theme);
+}
+
 /** Display preferences of the overlay, kept per machine. */
 export function useOverlayPrefs(initial: { fontSize?: number; theme?: OverlayTheme } = {}) {
   const [fontSize, setFontSize] = useState(() => clampFontSize(initial.fontSize ?? readFontSize()));
@@ -54,6 +61,17 @@ export function useOverlayPrefs(initial: { fontSize?: number; theme?: OverlayThe
   useEffect(() => storeFontSize(fontSize), [fontSize]);
   useEffect(() => write(KEYS.opacity, String(opacity)), [opacity]);
   useEffect(() => write(KEYS.theme, theme), [theme]);
+
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === KEYS.fontSize) setFontSize(readFontSize());
+      if (event.key === KEYS.opacity)
+        setOpacity(readNumber(KEYS.opacity, OPACITY.default, clampOpacity));
+      if (event.key === KEYS.theme) setTheme(read(KEYS.theme) === 'light' ? 'light' : 'dark');
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   return {
     fontSize,

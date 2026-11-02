@@ -18,6 +18,7 @@ Backend modular monolith: REST + realtime WebSocket, điều phối dịch, Lear
 | [Progress](./progress.md)               | `src/modules/progress` | Tổng hợp chỉ số tiến bộ theo tuần.                                                               |
 | [Glossary](./glossary.md)               | `src/modules/glossary` | CRUD thuật ngữ cá nhân; cung cấp glossary cho realtime và STT.                                   |
 | [Privacy](./privacy.md)                 | `src/modules/privacy`  | Xoá dữ liệu, thời hạn lưu, xuất dữ liệu, consent.                                                |
+| [Settings](./settings.md)               | `src/modules/settings` | Đọc và cập nhật cài đặt cá nhân dùng chung giữa web và desktop.                                  |
 | [Events](./events.md)                   | `src/modules/events`   | Nhận và kiểm tra event học tập/sản phẩm, ghi vào bảng `events` (append-only).                    |
 
 ## Quan hệ với phần khác

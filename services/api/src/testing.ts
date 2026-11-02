@@ -6,6 +6,7 @@ import { createInMemoryEventsRepository } from './modules/events';
 import { createInMemoryGlossaryRepository } from './modules/glossary';
 import type { PrivacyRepository } from './modules/privacy';
 import { createInMemorySessionsRepository } from './modules/sessions';
+import { createInMemorySettingsRepository } from './modules/settings';
 import { createInMemoryAccountRepository } from './modules/account';
 import { createInMemoryDeviceRepository } from './modules/device';
 import { createInMemoryPhrasesRepository, createInMemoryStudyRepository } from './modules/review';
@@ -20,6 +21,8 @@ const emptyPrivacyRepository = (): PrivacyRepository => ({
   },
 });
 
+const emptySettingsRepository = () => createInMemorySettingsRepository();
+
 /** App wired with in-memory repositories, an in-memory queue and a header-based session. */
 export async function buildTestApp(
   overrides: Partial<Omit<AppDeps, 'repos'>> & { repos?: Partial<AppDeps['repos']> } = {},
@@ -33,6 +36,7 @@ export async function buildTestApp(
       glossary: createInMemoryGlossaryRepository(),
       privacy: emptyPrivacyRepository(),
       sessions: createInMemorySessionsRepository(),
+      settings: emptySettingsRepository(),
       account: createInMemoryAccountRepository(),
       device: createInMemoryDeviceRepository(),
       phrases: createInMemoryPhrasesRepository(),

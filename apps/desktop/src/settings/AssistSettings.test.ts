@@ -5,12 +5,16 @@ const { setAssistLevel, publishSettings } = vi.hoisted(() => ({
   publishSettings: vi.fn(),
 }));
 
+const { queueSettingsPatch } = vi.hoisted(() => ({ queueSettingsPatch: vi.fn() }));
+
 vi.mock('../lib/native', () => ({ native: { setAssistLevel, publishSettings } }));
+vi.mock('./settings-api', () => ({ queueSettingsPatch }));
 
 describe('AssistSettings', () => {
   beforeEach(() => {
     setAssistLevel.mockReset().mockResolvedValue(undefined);
     publishSettings.mockReset().mockResolvedValue(undefined);
+    queueSettingsPatch.mockReset();
   });
 
   it('sends each selectable assist level to native', async () => {
@@ -27,6 +31,12 @@ describe('AssistSettings', () => {
       [{ assistLevel: 3 }],
       [{ assistLevel: 1 }],
       [{ assistLevel: 0 }],
+    ]);
+    expect(queueSettingsPatch.mock.calls).toEqual([
+      [{ assistDefault: 4 }],
+      [{ assistDefault: 3 }],
+      [{ assistDefault: 1 }],
+      [{ assistDefault: 0 }],
     ]);
   });
 });
