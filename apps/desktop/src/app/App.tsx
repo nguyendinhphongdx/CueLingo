@@ -34,7 +34,7 @@ export function App() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <AppShell view={view} onNavigate={setView}>
+      <AppShell view={view} onNavigate={setView} onSignOut={() => void auth.signOut()}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={view}

@@ -12,11 +12,12 @@ import { Input } from '@cuelingo/ui/components/input';
 import { Logo } from '@cuelingo/ui/components/logo';
 import { useState, type FormEvent } from 'react';
 import { GOOGLE_ENABLED, IS_DEV } from '../../lib/config';
+import { GoogleIcon } from './GoogleIcon';
 import { useLogin } from './use-login';
 
 /** Passwordless sign-in: a magic link by email, plus Google when it is configured (US-01). */
 export function LoginPage() {
-  const { sendLink, sending, sent, signInWithGoogle, error } = useLogin();
+  const { sendLink, sending, sent, signInWithGoogle, googleWaiting, error } = useLogin();
   const [email, setEmail] = useState('');
 
   const onSubmit = (e: FormEvent) => {
@@ -75,10 +76,12 @@ export function LoginPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="min-h-11 w-full"
+                className="min-h-11 w-full gap-2.5"
+                disabled={googleWaiting}
                 onClick={() => signInWithGoogle()}
               >
-                Tiếp tục với Google
+                <GoogleIcon />
+                {googleWaiting ? 'Đang chờ cửa sổ Google…' : 'Tiếp tục với Google'}
               </Button>
             )}
           </CardContent>

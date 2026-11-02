@@ -1,5 +1,5 @@
 import type { Me } from '@cuelingo/shared';
-import { Button } from '@cuelingo/ui/components/button';
+import { LogOut } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -7,9 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@cuelingo/ui/components/card';
-import { useEffect, useState } from 'react';
 import { isDevToken, useAuthStore } from './auth-store';
-import { describeMeError, meApi } from './me-api';
+import { useMe } from './use-me';
 
 export function AccountCardView({
   dev,
@@ -38,31 +37,49 @@ export function AccountCardView({
             : 'Thiết bị này đã đăng nhập. Cuộc họp và cụm từ được đồng bộ với web.'}
         </CardDescription>
       </CardHeader>
-      {signedIn ? (
-        <CardContent className="space-y-4">
+      {signedIn || me ? (
+        <CardContent className="space-y-3">
           {loading ? <p className="text-muted-foreground text-sm">Đang tải tài khoản…</p> : null}
           {me ? (
             <div className="flex items-center gap-3">
               <span
                 aria-hidden="true"
-                className="bg-foreground text-background flex size-11 shrink-0 items-center justify-center rounded-full font-semibold"
+                className="bg-foreground text-background flex size-12 shrink-0 items-center justify-center rounded-full text-lg font-semibold"
               >
                 {initial}
               </span>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{me.name}</p>
                 <p className="text-muted-foreground truncate text-sm">{me.email}</p>
               </div>
+              {signedIn ? (
+                <button
+                  type="button"
+                  onClick={onSignOut}
+                  aria-label="Đăng xuất khỏi thiết bị này"
+                  title="Đăng xuất khỏi thiết bị này"
+                  className="focus-visible:ring-ring text-muted-foreground hover:text-foreground hover:bg-foreground/10 flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                >
+                  <LogOut aria-hidden="true" className="size-[18px]" />
+                </button>
+              ) : null}
             </div>
+          ) : signedIn ? (
+            <button
+              type="button"
+              onClick={onSignOut}
+              aria-label="Đăng xuất khỏi thiết bị này"
+              title="Đăng xuất khỏi thiết bị này"
+              className="focus-visible:ring-ring text-muted-foreground hover:text-foreground hover:bg-foreground/10 flex size-9 cursor-pointer items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <LogOut aria-hidden="true" className="size-[18px]" />
+            </button>
           ) : null}
           {error ? (
             <p role="alert" className="text-destructive text-sm">
               {error}
             </p>
           ) : null}
-          <Button variant="outline" className="min-h-11 cursor-pointer" onClick={onSignOut}>
-            Đăng xuất khỏi thiết bị này
-          </Button>
         </CardContent>
       ) : null}
     </Card>
@@ -73,30 +90,7 @@ export function AccountCardView({
 export function AccountCard({ onSignOut }: { onSignOut(): void }) {
   const token = useAuthStore((state) => state.token);
   const dev = isDevToken();
-  const [me, setMe] = useState<Me | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!token || dev) return;
-    let active = true;
-    setLoading(true);
-    setError(null);
-    void meApi
-      .get()
-      .then((value) => {
-        if (active) setMe(value);
-      })
-      .catch((cause: unknown) => {
-        if (active) setError(describeMeError(cause));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [dev, token]);
+  const { me, loading, error } = useMe();
 
   return (
     <AccountCardView

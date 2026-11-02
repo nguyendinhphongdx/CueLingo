@@ -1,16 +1,18 @@
 import { AppFrame } from '@cuelingo/ui/components/app-frame';
 import { Logo } from '@cuelingo/ui/components/logo';
 import type { ReactNode } from 'react';
-import { APP_NAME, APP_TAGLINE, APP_VERSION } from './Logo';
+import { UserChip } from '../auth';
+import { APP_NAME, APP_VERSION } from './Logo';
 
 interface AppShellProps {
   view: string;
   onNavigate: (view: string) => void;
+  onSignOut: () => void;
   children: ReactNode;
 }
 
 /** Window frame: brand and navigation on the left, the current view on the right. */
-export function AppShell({ view, onNavigate, children }: AppShellProps) {
+export function AppShell({ view, onNavigate, onSignOut, children }: AppShellProps) {
   return (
     <AppFrame
       dragRegion
@@ -37,7 +39,7 @@ export function AppShell({ view, onNavigate, children }: AppShellProps) {
           </button>
         ),
       }}
-      footer={<p className="text-muted-foreground text-xs leading-relaxed">{APP_TAGLINE}</p>}
+      footer={<UserChip onOpen={() => onNavigate('settings')} onSignOut={onSignOut} />}
     >
       {children}
     </AppFrame>
