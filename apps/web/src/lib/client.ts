@@ -8,6 +8,9 @@ import {
   ExportSchema,
   MeSchema,
   PhraseListSchema,
+  PlacementResultSchema,
+  PlacementTestSchema,
+  SubmitPlacementRequestSchema,
   PhraseSchema,
   ProgressSchema,
   ReviewAnswerRequestSchema,
@@ -32,6 +35,7 @@ import {
   type DebriefFeedbackRequest,
   type ReviewAnswerRequest,
   type SavePhraseRequest,
+  type SubmitPlacementRequest,
   type UpdateMeRequest,
   type UpdateUserSettings,
 } from '@cuelingo/shared';
@@ -170,6 +174,17 @@ export const client = {
         '/v1/review/answer',
         ReviewAnswerResponseSchema,
         ReviewAnswerRequestSchema.parse(input),
+      ),
+  },
+  placement: {
+    get: (language: LanguageCode) =>
+      request('GET', `/v1/placement?language=${language}`, PlacementTestSchema),
+    submit: (input: SubmitPlacementRequest) =>
+      request(
+        'POST',
+        '/v1/placement',
+        PlacementResultSchema,
+        SubmitPlacementRequestSchema.parse(input),
       ),
   },
   progress: (language: LanguageCode) =>

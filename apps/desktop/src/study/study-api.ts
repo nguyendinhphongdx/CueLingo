@@ -7,7 +7,13 @@ import {
   type ReviewAnswerRequest,
   TtsRequestSchema,
   DEFAULT_LANGUAGE,
+  PlacementResultSchema,
+  PlacementTestSchema,
+  SubmitPlacementRequestSchema,
   type LanguageCode,
+  type PlacementResult,
+  type PlacementTest,
+  type SubmitPlacementRequest,
 } from '@cuelingo/shared';
 import { currentToken, resolveToken, type TokenSource } from '../auth';
 import type { z } from 'zod';
@@ -19,6 +25,8 @@ export interface StudyApi {
   answerReview(input: ReviewAnswerRequest): Promise<z.infer<typeof ReviewAnswerResponseSchema>>;
   getPhrases(language?: LanguageCode): Promise<z.infer<typeof PhraseListSchema>>;
   removePhrase(id: string): Promise<void>;
+  getPlacement(language?: LanguageCode): Promise<PlacementTest>;
+  submitPlacement(input: SubmitPlacementRequest): Promise<PlacementResult>;
   /** Spoken audio for a short English text. */
   speak(text: string): Promise<Blob>;
 }
@@ -73,6 +81,17 @@ export function createStudyApi({
       });
       if (!response.ok) throw new Error(`Study request failed with status ${response.status}`);
       return ReviewAnswerResponseSchema.parse(await response.json());
+    },
+    getPlacement: (language = DEFAULT_LANGUAGE) =>
+      get(`/v1/placement?language=${language}`, PlacementTestSchema),
+    async submitPlacement(input) {
+      const response = await request(`${baseUrl}/v1/placement`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(SubmitPlacementRequestSchema.parse(input)),
+      });
+      if (!response.ok) throw new Error(`Study request failed with status ${response.status}`);
+      return PlacementResultSchema.parse(await response.json());
     },
     getPhrases: (language = DEFAULT_LANGUAGE) =>
       get(`/v1/phrases?language=${language}`, PhraseListSchema),

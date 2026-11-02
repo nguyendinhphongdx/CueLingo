@@ -12,6 +12,7 @@ import {
 } from '../onboarding';
 import { PrivacyPanel } from '../privacy';
 import { RecentSessions, SessionPanel } from '../session';
+import { PlacementSection } from '../study';
 import { CalendarHintCard, CalendarSettings } from '../calendar';
 import { AssistSettings, AssistSuggestionBanner, useLanguage, useSettingsSync } from '../settings';
 import { useSyncAssistLevel } from '../settings/use-assist-settings';
@@ -145,6 +146,7 @@ function CurrentView({
         <AccountCard onSignOut={onSignOut} />
         <PermissionsStep />
         <CalendarSettings />
+        <PlacementSection />
         <Section title="Hướng dẫn">
           <div className="bg-card flex items-center justify-between gap-4 rounded-xl border px-4 py-3">
             <div>
