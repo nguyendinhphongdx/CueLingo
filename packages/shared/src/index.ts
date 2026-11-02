@@ -18,4 +18,5 @@ export * from './dto/tts.dto';
 export * from './dto/settings.dto';
 export * from './errors/error-code';
 export * from './jobs';
+export * from './languages';
 export * from './ws/ws';

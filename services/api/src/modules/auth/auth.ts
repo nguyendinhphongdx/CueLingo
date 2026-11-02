@@ -1,3 +1,4 @@
+import { DEFAULT_LANGUAGE } from '@cuelingo/shared';
 import { betterAuth } from 'better-auth';
 import { magicLink } from 'better-auth/plugins';
 import type { Pool } from 'pg';
@@ -53,6 +54,10 @@ export function createAuth(config: Config, mailer: Mailer, pool: Pool) {
             await pool.query(
               'INSERT INTO learner_profiles (user_id) VALUES ($1) ON CONFLICT DO NOTHING',
               [user.id],
+            );
+            await pool.query(
+              'INSERT INTO learner_languages (user_id, language) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+              [user.id, DEFAULT_LANGUAGE],
             );
           },
         },

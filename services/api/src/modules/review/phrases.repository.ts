@@ -1,4 +1,4 @@
-import type { Phrase, SavePhraseRequest } from '@cuelingo/shared';
+import { DEFAULT_LANGUAGE, type Phrase, type SavePhraseRequest } from '@cuelingo/shared';
 import type { Sql } from '../../lib/db';
 
 /** Phrase Bank persistence. Every operation is scoped by the authenticated user's id. */
@@ -38,9 +38,9 @@ export function createPostgresPhrasesRepository(sql: Sql): PhrasesRepository {
     async save(userId, input) {
       const [row] = await sql<PhraseRow[]>`
         WITH item AS (
-          INSERT INTO lexical_items (lemma, type)
-          VALUES (${input.phrase}, 'phrase')
-          ON CONFLICT (lemma, type) DO UPDATE SET lemma = EXCLUDED.lemma
+          INSERT INTO lexical_items (language, lemma, type)
+          VALUES (${DEFAULT_LANGUAGE}, ${input.phrase}, 'phrase')
+          ON CONFLICT (language, lemma, type) DO UPDATE SET lemma = EXCLUDED.lemma
           RETURNING id, lemma
         ), owned_context AS (
           SELECT segments.id

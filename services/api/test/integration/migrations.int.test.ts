@@ -19,10 +19,11 @@ const EXPECTED_TABLES = [
   'review_logs',
   'device_codes',
   'device_tokens',
+  'learner_languages',
 ];
 
 /** Created by the latest migration (device sign-in); the first one owns everything else. */
-const LATEST_TABLES = ['device_codes', 'device_tokens'];
+const LATEST_TABLES = ['learner_languages'];
 
 describe('migrations (AC2)', () => {
   let db: TestDatabase;
