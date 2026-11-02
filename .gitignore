@@ -38,3 +38,8 @@ apps/desktop/src-tauri/gen/
 # SwiftPM
 .build/
 **/src-tauri/binaries/
+
+# end-to-end run output
+e2e/.mail/
+e2e/test-results/
+e2e/playwright-report/

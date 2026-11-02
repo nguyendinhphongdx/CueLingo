@@ -32,6 +32,42 @@ jobs:
       - run: docker build -f services/api/Dockerfile -t cuelingo-api:ci .
       - run: docker build -f services/workers/Dockerfile -t cuelingo-workers:ci .
 
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cuelingo_e2e
+        ports: ['5544:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5544/cuelingo_e2e
+      E2E_CHROME: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @cuelingo/e2e exec playwright install --with-deps chromium
+      - run: pnpm db:migrate
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5544/cuelingo_e2e?sslmode=disable
+      # Web (Next dev server) and API start themselves; the journey signs in, reads a debrief, reviews, checks progress
+      - run: pnpm --filter @cuelingo/e2e exec playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+
   desktop:
     runs-on: macos-latest
     defaults:
