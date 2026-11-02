@@ -6,7 +6,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@cuelingo/ui/components/card';
-import { APP_NAME, APP_TAGLINE, APP_VERSION, Logo } from './Logo';
+import { Logo } from '@cuelingo/ui/components/logo';
+import { APP_NAME, APP_TAGLINE, APP_VERSION } from './brand';
 
 const shortcuts = [
   { keys: '⌘⇧L', label: 'Hiện hoặc ẩn overlay caption' },

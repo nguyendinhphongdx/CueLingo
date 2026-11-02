@@ -1,6 +1,7 @@
 'use client';
 
 import { DELETE_ACCOUNT_CONFIRMATION, type DeviceToken, type Me } from '@cuelingo/shared';
+import { Avatar } from '@cuelingo/ui/components/avatar';
 import { Button } from '@cuelingo/ui/components/button';
 import { Input } from '@cuelingo/ui/components/input';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
@@ -48,18 +49,6 @@ export async function deleteAccountAndSignOut(
   await actions.signOut();
   actions.redirect();
   return true;
-}
-
-function Avatar({ name, email, small = false }: { name: string; email: string; small?: boolean }) {
-  const initial = (name.trim() || email.trim() || '?').charAt(0).toLocaleUpperCase('vi');
-  return (
-    <span
-      aria-hidden="true"
-      className={`bg-foreground text-background flex shrink-0 items-center justify-center rounded-full font-semibold ${small ? 'size-9 text-sm' : 'size-14 text-xl'}`}
-    >
-      {initial}
-    </span>
-  );
 }
 
 interface AccountSettingsViewProps {
@@ -201,7 +190,7 @@ export function AccountSettingsView({
           {loading && !me ? <p className="text-muted-foreground text-sm">Đang tải hồ sơ…</p> : null}
           {me ? (
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-              <Avatar name={me.name} email={me.email} />
+              <Avatar name={me.name} email={me.email} size="lg" />
               <form className="grid min-w-0 flex-1 gap-4 sm:grid-cols-2" onSubmit={saveName}>
                 <label className="text-sm font-medium" htmlFor="account-name">
                   Tên

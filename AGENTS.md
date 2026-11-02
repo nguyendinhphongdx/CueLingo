@@ -59,8 +59,9 @@ Mỗi phần có `AGENTS.md` (quy ước riêng, kèm link scaffold/workflow) v�
 8. **Quyền riêng tư:** không log transcript/audio/token; không lưu audio nếu người dùng chưa bật; nhà cung cấp mới nhận dữ liệu → ADR.
 9. **Spec ↔ code đồng bộ:** đổi interface/dữ liệu của module → sửa trang module trong `apps/docs/docs/04-modules/` trong cùng commit. Tài liệu chỉ nằm trong `apps/docs/docs/` ([cách viết](apps/docs/docs/05-engineering/conventions/writing-docs.md)).
 10. **UI tiếng Việt; code, comment, commit tiếng Anh. Docs tiếng Việt.**
+11. **Giao diện dùng chung nằm ở `@cuelingo/ui`.** Cái gì hiện ở hơn một client (web, desktop, overlay) hoặc là một phần của hệ thống thiết kế (avatar, hàng thông tin người dùng, nút icon, phím tắt, khung, thanh bên, trang "sắp ra mắt"…) thì viết **một lần** ở `packages/ui`, các client chỉ dùng. Client không tự vẽ lại; cần khác thì thêm tuỳ chọn (prop) cho component chung. Danh sách tính năng dùng chung ở `packages/ui/src/lib/roadmap.ts`. Máy kiểm bằng `packages/ui/src/shared-ui.test.ts` ([chi tiết](apps/docs/docs/05-engineering/conventions/shared-ui.md)).
 
-Luật 2–7 phần lớn được **máy kiểm** (`pnpm check:deps`, ESLint, typecheck). Vi phạm là CI đỏ.
+Luật 2–7 và 11 phần lớn được **máy kiểm** (`pnpm check:deps`, ESLint, typecheck, test). Vi phạm là CI đỏ.
 
 ## Cách làm việc
 
