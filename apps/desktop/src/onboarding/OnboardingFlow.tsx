@@ -81,7 +81,7 @@ function SampleCaptionStep() {
       <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
         Caption nổi trên các app họp và luôn giữ bản dịch ở dòng dễ đọc nhất.
       </p>
-      <div className="bg-foreground text-background mt-6 space-y-5 rounded-xl px-6 py-5 text-[17px] shadow-sm">
+      <div className="bg-card mt-6 space-y-5 rounded-xl border px-6 py-5 text-[17px]">
         {sampleTranscript.slice(0, 2).map((segment, index) => (
           <CaptionBlock
             key={segment.segmentId}

@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "tauri": "tauri",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "sidecar": "node scripts/sidecar.mjs",
+    "sidecar:rebuild": "node scripts/sidecar.mjs --rebuild",
+    "build:app": "tauri build"
   },
   "dependencies": {
     "@animate-ui/react": "^2.4.1",

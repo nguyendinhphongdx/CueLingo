@@ -51,6 +51,9 @@ jobs:
           components: rustfmt, clippy
       - run: pnpm --filter @cuelingo/desktop build
         working-directory: .
+      # Tauri checks that the bundled sidecar exists; these steps only compile Rust, so a stand-in will do.
+      - run: node scripts/sidecar.mjs --placeholder
+        working-directory: apps/desktop
       - run: cargo fmt --check
       - run: cargo clippy -- -D warnings
       - run: cargo test

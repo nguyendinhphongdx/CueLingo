@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "vn.cmcai.cuelingo",
   "build": {
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": "node scripts/sidecar.mjs && pnpm dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm build",
+    "beforeBuildCommand": "node scripts/sidecar.mjs && pnpm build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -66,7 +66,8 @@
     "publisher": "CMC AI",
     "macOS": {
       "minimumSystemVersion": "14.2"
-    }
+    },
+    "externalBin": ["binaries/cuelingo-audio"]
   },
   "plugins": {
     "deep-link": {
