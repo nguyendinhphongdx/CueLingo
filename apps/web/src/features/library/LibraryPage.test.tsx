@@ -10,6 +10,7 @@ const session = (overrides: Partial<Session> = {}): Session => ({
   endedAt: '2026-11-01T08:30:00.000Z',
   status: 'ended',
   assistLevel: 2,
+  language: 'en',
   ...overrides,
 });
 

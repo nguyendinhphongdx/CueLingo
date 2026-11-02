@@ -79,4 +79,21 @@ describe('phrases module', () => {
     expect((await save(ALICE, { phrase: '' })).statusCode).toBe(400);
     expect((await app.inject({ method: 'GET', url: '/v1/phrases' })).statusCode).toBe(401);
   });
+
+  it('reads one language at a time and defaults to English', async () => {
+    await save(ALICE, { phrase: 'circle back' });
+    const japanese = await app.inject({
+      method: 'GET',
+      url: '/v1/phrases?language=ja',
+      headers: as(ALICE),
+    });
+    expect(japanese.statusCode).toBe(200);
+    expect(japanese.json().phrases).toEqual([]);
+    const bad = await app.inject({
+      method: 'GET',
+      url: '/v1/phrases?language=xx',
+      headers: as(ALICE),
+    });
+    expect(bad.statusCode).toBe(400);
+  });
 });

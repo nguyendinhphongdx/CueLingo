@@ -1,10 +1,10 @@
-import { ReviewAnswerRequestSchema } from '@cuelingo/shared';
+import { LanguageQuerySchema, ReviewAnswerRequestSchema } from '@cuelingo/shared';
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { parse } from '../../lib/http';
 
 /** `?dictation=1` tells the API this client can play and grade listen-and-type cards. */
-const QueueQuerySchema = z.object({
+const QueueQuerySchema = LanguageQuerySchema.extend({
   dictation: z
     .enum(['1', 'true', '0', 'false'])
     .optional()
@@ -17,8 +17,8 @@ export const reviewRoutes =
   (service: StudyService): FastifyPluginAsync =>
   async (app) => {
     app.get('/queue', async (request) => {
-      const { dictation } = parse(QueueQuerySchema, request.query);
-      return service.queue(request.userId, { dictation });
+      const { dictation, language } = parse(QueueQuerySchema, request.query);
+      return service.queue(request.userId, { dictation, language });
     });
     app.post('/answer', async (request) =>
       service.answer(request.userId, parse(ReviewAnswerRequestSchema, request.body)),
@@ -28,5 +28,7 @@ export const reviewRoutes =
 export const progressRoutes =
   (service: StudyService): FastifyPluginAsync =>
   async (app) => {
-    app.get('/', async (request) => service.progress(request.userId));
+    app.get('/', async (request) =>
+      service.progress(request.userId, parse(LanguageQuerySchema, request.query).language),
+    );
   };

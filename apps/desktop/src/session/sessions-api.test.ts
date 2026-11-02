@@ -8,6 +8,7 @@ const session = {
   endedAt: null,
   status: 'live',
   assistLevel: 3,
+  language: 'en',
 } as const;
 
 describe('sessions api', () => {

@@ -7,7 +7,13 @@ describe('CreateGlossaryTermSchema', () => {
       term: 'Sprint review',
       translation: null,
       note: null,
+      language: 'en',
     });
+  });
+
+  it('rejects a language that is not switched on yet', () => {
+    expect(CreateGlossaryTermSchema.safeParse({ term: 'x', language: 'ja' }).success).toBe(false);
+    expect(CreateGlossaryTermSchema.safeParse({ term: 'x', language: 'xx' }).success).toBe(false);
   });
 
   it('rejects an empty term', () => {

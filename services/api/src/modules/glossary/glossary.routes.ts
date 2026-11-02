@@ -1,5 +1,6 @@
 import {
   CreateGlossaryTermSchema,
+  LanguageQuerySchema,
   UpdateGlossaryTermSchema,
   type GlossaryTerm,
   type GlossaryTermList,
@@ -11,9 +12,10 @@ import type { GlossaryService } from './glossary.service';
 /** HTTP surface only: parse input, call the service, return a shared DTO. No business logic here. */
 export function glossaryRoutes(service: GlossaryService): FastifyPluginAsync {
   return async (app) => {
-    app.get('/', async (request): Promise<GlossaryTermList> => ({
-      items: await service.list(request.userId),
-    }));
+    app.get('/', async (request): Promise<GlossaryTermList> => {
+      const { language } = parse(LanguageQuerySchema, request.query);
+      return { items: await service.list(request.userId, language) };
+    });
 
     app.post('/', async (request, reply): Promise<GlossaryTerm> => {
       const input = parse(CreateGlossaryTermSchema, request.body);

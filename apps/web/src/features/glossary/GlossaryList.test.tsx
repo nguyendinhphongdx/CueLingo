@@ -8,6 +8,7 @@ const term = (id: string, text: string, translation: string | null = null) => ({
   translation,
   note: null,
   createdAt: '2026-11-01T00:00:00.000Z',
+  language: 'en' as const,
 });
 
 describe('GlossaryList', () => {

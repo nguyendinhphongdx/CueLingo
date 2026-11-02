@@ -122,4 +122,15 @@ describe('sessions module', () => {
     expect(invalid.statusCode).toBe(400);
     expect(anonymous.statusCode).toBe(401);
   });
+
+  it('stores the meeting language, defaulting to English, and refuses one that is not on yet', async () => {
+    expect((await create()).json().language).toBe('en');
+    const bad = await app.inject({
+      method: 'POST',
+      url: '/v1/sessions',
+      headers: as(ALICE),
+      payload: { assistLevel: 3, language: 'ja' },
+    });
+    expect(bad.statusCode).toBe(400);
+  });
 });

@@ -57,6 +57,7 @@ function setup() {
         endedAt: null,
         status: 'live' as const,
         assistLevel: input.assistLevel,
+        language: 'en' as const,
       };
     }),
     end: vi.fn(async () => ({
@@ -66,6 +67,7 @@ function setup() {
       endedAt: '2026-11-03T01:00:00.000Z',
       status: 'ended' as const,
       assistLevel: 3,
+      language: 'en' as const,
     })),
   };
   const controller = createSessionController({

@@ -90,7 +90,9 @@ describe('phrases on real Postgres (AC1-AC3)', () => {
       headers: { [TEST_USER_HEADER]: bob },
     });
     expect(deleted.statusCode).toBe(404);
-    expect(await createPostgresPhrasesRepository(sql).list(alice)).toContainEqual(created.json());
+    expect(await createPostgresPhrasesRepository(sql).list(alice, 'en')).toContainEqual(
+      created.json(),
+    );
   });
 
   it('removes only the user lexicon row and keeps the shared lexical item', async () => {

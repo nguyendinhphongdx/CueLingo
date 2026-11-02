@@ -1,4 +1,4 @@
-import type { Debrief, Export, ExportSession } from '@cuelingo/shared';
+import type { Debrief, Export, ExportSession, LanguageCode } from '@cuelingo/shared';
 import type { Sql } from '../../lib/db';
 
 export interface PrivacyRepository {
@@ -13,6 +13,7 @@ interface SessionRow {
   ended_at: Date | null;
   status: ExportSession['status'];
   assist_level: number;
+  language: LanguageCode;
 }
 
 interface SegmentRow {
@@ -53,7 +54,7 @@ export function createPostgresPrivacyRepository(sql: Sql): PrivacyRepository {
     async exportMyData(userId, exportedAt) {
       return sql.begin(async (tx) => {
         const sessionRows = await tx<SessionRow[]>`
-          SELECT id, title, started_at, ended_at, status, assist_level
+          SELECT id, title, started_at, ended_at, status, assist_level, language
           FROM sessions
           WHERE user_id = ${userId} AND status <> 'deleted'
           ORDER BY started_at DESC`;
@@ -89,9 +90,10 @@ export function createPostgresPrivacyRepository(sql: Sql): PrivacyRepository {
             translation: string | null;
             note: string | null;
             created_at: Date;
+            language: LanguageCode;
           }>
         >`
-          SELECT id, term, translation, note, created_at
+          SELECT id, term, translation, note, created_at, language
           FROM glossary_terms
           WHERE user_id = ${userId}
           ORDER BY lower(term)`;
@@ -136,6 +138,7 @@ export function createPostgresPrivacyRepository(sql: Sql): PrivacyRepository {
             endedAt: row.ended_at?.toISOString() ?? null,
             status: row.status,
             assistLevel: row.assist_level,
+            language: row.language,
             segments: segmentsBySession.get(row.id) ?? [],
             debrief: debriefs.get(row.id) ?? null,
           })),
@@ -151,6 +154,7 @@ export function createPostgresPrivacyRepository(sql: Sql): PrivacyRepository {
             translation: row.translation,
             note: row.note,
             createdAt: row.created_at.toISOString(),
+            language: row.language,
           })),
         };
       });

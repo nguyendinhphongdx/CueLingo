@@ -1,26 +1,32 @@
 import { randomUUID } from 'node:crypto';
-import type { Phrase } from '@cuelingo/shared';
+import { DEFAULT_LANGUAGE, type Phrase } from '@cuelingo/shared';
 import type { PhrasesRepository } from './phrases.repository';
 
 /** In-memory implementation with the same user boundaries, for tests and local demos. */
 export function createInMemoryPhrasesRepository(): PhrasesRepository {
   const items = new Map<string, string>();
-  const rows: Array<Phrase & { userId: string }> = [];
-  const strip = ({ userId: _userId, ...phrase }: Phrase & { userId: string }): Phrase => phrase;
+  const rows: Array<Phrase & { userId: string; language: string }> = [];
+  const strip = ({
+    userId: _userId,
+    language: _language,
+    ...phrase
+  }: Phrase & { userId: string; language: string }): Phrase => phrase;
 
   return {
-    async list(userId) {
+    async list(userId, language) {
       return rows
-        .filter((row) => row.userId === userId)
+        .filter((row) => row.userId === userId && row.language === language)
         .sort((a, b) => a.phrase.localeCompare(b.phrase))
         .map(strip);
     },
 
     async save(userId, input) {
-      let id = items.get(input.phrase);
+      const language = input.language ?? DEFAULT_LANGUAGE;
+      const key = `${language}:${input.phrase}`;
+      let id = items.get(key);
       if (!id) {
         id = randomUUID();
-        items.set(input.phrase, id);
+        items.set(key, id);
       }
       const existing = rows.find((row) => row.userId === userId && row.id === id);
       if (existing) {
@@ -34,6 +40,7 @@ export function createInMemoryPhrasesRepository(): PhrasesRepository {
         meaningVi: input.meaningVi ?? null,
         inReview: true,
         userId,
+        language,
       };
       rows.push(row);
       return strip(row);

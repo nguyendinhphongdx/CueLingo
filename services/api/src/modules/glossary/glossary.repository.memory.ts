@@ -10,8 +10,9 @@ export function createInMemoryGlossaryRepository(): GlossaryRepository {
   const own = (userId: string) => rows.filter((r) => r.userId === userId);
 
   return {
-    async list(userId) {
+    async list(userId, language) {
       return own(userId)
+        .filter((r) => r.language === language)
         .sort((a, b) => a.term.toLowerCase().localeCompare(b.term.toLowerCase()))
         .map(strip);
     },
@@ -19,8 +20,10 @@ export function createInMemoryGlossaryRepository(): GlossaryRepository {
       const row = own(userId).find((r) => r.id === id);
       return row ? strip(row) : null;
     },
-    async findByTerm(userId, term) {
-      const row = own(userId).find((r) => r.term.toLowerCase() === term.toLowerCase());
+    async findByTerm(userId, language, term) {
+      const row = own(userId).find(
+        (r) => r.language === language && r.term.toLowerCase() === term.toLowerCase(),
+      );
       return row ? strip(row) : null;
     },
     async create(userId, input) {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEFAULT_LANGUAGE, EnabledLanguageSchema, LanguageCodeSchema } from '../languages';
 
 /** A term the user wants STT and translation to get right (names, product terms, jargon). */
 export const GlossaryTermSchema = z.object({
@@ -7,6 +8,7 @@ export const GlossaryTermSchema = z.object({
   translation: z.string().trim().max(200).nullable(),
   note: z.string().trim().max(500).nullable(),
   createdAt: z.iso.datetime(),
+  language: LanguageCodeSchema,
 });
 export type GlossaryTerm = z.infer<typeof GlossaryTermSchema>;
 
@@ -14,6 +16,7 @@ export const CreateGlossaryTermSchema = z.object({
   term: GlossaryTermSchema.shape.term,
   translation: GlossaryTermSchema.shape.translation.optional().default(null),
   note: GlossaryTermSchema.shape.note.optional().default(null),
+  language: EnabledLanguageSchema.optional().default(DEFAULT_LANGUAGE),
 });
 export type CreateGlossaryTermInput = z.input<typeof CreateGlossaryTermSchema>;
 export type CreateGlossaryTerm = z.output<typeof CreateGlossaryTermSchema>;

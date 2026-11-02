@@ -1,9 +1,14 @@
-import { DEFAULT_LANGUAGE, type Phrase, type SavePhraseRequest } from '@cuelingo/shared';
+import {
+  DEFAULT_LANGUAGE,
+  type LanguageCode,
+  type Phrase,
+  type SavePhraseRequest,
+} from '@cuelingo/shared';
 import type { Sql } from '../../lib/db';
 
 /** Phrase Bank persistence. Every operation is scoped by the authenticated user's id. */
 export interface PhrasesRepository {
-  list(userId: string): Promise<Phrase[]>;
+  list(userId: string, language: LanguageCode): Promise<Phrase[]>;
   save(userId: string, input: SavePhraseRequest): Promise<Phrase>;
   delete(userId: string, id: string): Promise<boolean>;
 }
@@ -24,22 +29,30 @@ const toPhrase = (row: PhraseRow): Phrase => ({
 
 export function createPostgresPhrasesRepository(sql: Sql): PhrasesRepository {
   return {
-    async list(userId) {
+    async list(userId, language) {
       const rows = await sql<PhraseRow[]>`
         SELECT lexical_items.id, lexical_items.lemma AS phrase,
                user_lexicon.meaning_vi, user_lexicon.in_review
         FROM user_lexicon
         JOIN lexical_items ON lexical_items.id = user_lexicon.item_id
         WHERE user_lexicon.user_id = ${userId} AND lexical_items.type = 'phrase'
+          AND lexical_items.language = ${language}
         ORDER BY lexical_items.lemma`;
       return rows.map(toPhrase);
     },
 
     async save(userId, input) {
       const [row] = await sql<PhraseRow[]>`
-        WITH item AS (
+        WITH lang AS (
+          -- A phrase saved from a meeting belongs to that meeting's language.
+          SELECT COALESCE(
+            (SELECT language FROM sessions
+             WHERE id = ${input.sessionId ?? null} AND user_id = ${userId}),
+            ${input.language ?? DEFAULT_LANGUAGE}
+          ) AS code
+        ), item AS (
           INSERT INTO lexical_items (language, lemma, type)
-          VALUES (${DEFAULT_LANGUAGE}, ${input.phrase}, 'phrase')
+          SELECT lang.code, ${input.phrase}, 'phrase' FROM lang
           ON CONFLICT (language, lemma, type) DO UPDATE SET lemma = EXCLUDED.lemma
           RETURNING id, lemma
         ), owned_context AS (

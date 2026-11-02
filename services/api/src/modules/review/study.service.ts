@@ -1,6 +1,8 @@
 import { isDue, newFsrsState, reviewCard, type ReviewRating } from '@cuelingo/learner-model';
 import {
+  DEFAULT_LANGUAGE,
   ErrorCode,
+  type LanguageCode,
   type Progress,
   type ReviewAnswerRequest,
   type ReviewAnswerResponse,
@@ -141,9 +143,12 @@ export function streakDays(reviewDays: Set<string>, now: Date): number {
 
 export function createStudyService(repo: StudyRepository, clock: () => Date = () => new Date()) {
   return {
-    async queue(userId: string, options: { dictation?: boolean } = {}): Promise<ReviewQueue> {
+    async queue(
+      userId: string,
+      options: { dictation?: boolean; language?: LanguageCode } = {},
+    ): Promise<ReviewQueue> {
       const now = clock();
-      const items = await repo.listItems(userId);
+      const items = await repo.listItems(userId, options.language ?? DEFAULT_LANGUAGE);
       const due = items
         .filter((item) => item.inReview && (item.fsrs === null || isDue(item.fsrs, now)))
         .sort((a, b) => (a.fsrs?.due ?? '').localeCompare(b.fsrs?.due ?? ''));
@@ -158,6 +163,7 @@ export function createStudyService(repo: StudyRepository, clock: () => Date = ()
 
     async answer(userId: string, input: ReviewAnswerRequest): Promise<ReviewAnswerResponse> {
       const now = clock();
+      // The answered item names its own language, so look across all of them.
       const items = await repo.listItems(userId);
       const item = items.find((candidate) => candidate.itemId === input.itemId);
       if (!item) throw new AppError(ErrorCode.NotFound, 'Phrase not found');
@@ -171,13 +177,13 @@ export function createStudyService(repo: StudyRepository, clock: () => Date = ()
       return { nextDue: next.due };
     },
 
-    async progress(userId: string): Promise<Progress> {
+    async progress(userId: string, language: LanguageCode = DEFAULT_LANGUAGE): Promise<Progress> {
       const now = clock();
       const today = new Date(`${dayKey(now)}T00:00:00Z`);
       const since = new Date(today.getTime() - 27 * DAY_MS);
       const [items, facts] = await Promise.all([
-        repo.listItems(userId),
-        repo.progressFacts(userId, since),
+        repo.listItems(userId, language),
+        repo.progressFacts(userId, language, since),
       ]);
       const reviewDays = new Map<string, number>();
       for (const time of facts.reviewTimes) {

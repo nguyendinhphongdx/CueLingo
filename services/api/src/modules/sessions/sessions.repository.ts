@@ -1,4 +1,10 @@
-import type { CreateSessionRequest, Session, SessionDetail, StoredSegment } from '@cuelingo/shared';
+import {
+  DEFAULT_LANGUAGE,
+  type CreateSessionRequest,
+  type Session,
+  type SessionDetail,
+  type StoredSegment,
+} from '@cuelingo/shared';
 import type { Sql } from '../../lib/db';
 
 export interface SaveSegmentInput {
@@ -35,6 +41,7 @@ interface SessionRow {
   ended_at: Date | null;
   status: Session['status'];
   assist_level: number;
+  language: Session['language'];
 }
 
 interface SegmentRow {
@@ -53,6 +60,7 @@ const toSession = (row: SessionRow): Session => ({
   endedAt: row.ended_at?.toISOString() ?? null,
   status: row.status,
   assistLevel: row.assist_level,
+  language: row.language,
 });
 
 const toSegment = (row: SegmentRow): StoredSegment => ({
@@ -68,19 +76,19 @@ export function createPostgresSessionsRepository(sql: Sql): SessionsRepository {
   return {
     async list(userId) {
       const rows = await sql<SessionRow[]>`
-        SELECT id, title, started_at, ended_at, status, assist_level FROM sessions
+        SELECT id, title, started_at, ended_at, status, assist_level, language FROM sessions
         WHERE user_id = ${userId} AND status <> 'deleted' ORDER BY started_at DESC`;
       return rows.map(toSession);
     },
     async findById(userId, id) {
       const [row] = await sql<SessionRow[]>`
-        SELECT id, title, started_at, ended_at, status, assist_level FROM sessions
+        SELECT id, title, started_at, ended_at, status, assist_level, language FROM sessions
         WHERE user_id = ${userId} AND id = ${id} AND status <> 'deleted'`;
       return row ? toSession(row) : null;
     },
     async findDetail(userId, id) {
       const [row] = await sql<SessionRow[]>`
-        SELECT id, title, started_at, ended_at, status, assist_level FROM sessions
+        SELECT id, title, started_at, ended_at, status, assist_level, language FROM sessions
         WHERE user_id = ${userId} AND id = ${id} AND status <> 'deleted'`;
       if (!row) return null;
       const segments = await sql<SegmentRow[]>`
@@ -92,19 +100,19 @@ export function createPostgresSessionsRepository(sql: Sql): SessionsRepository {
     },
     async create(userId, input) {
       const [row] = await sql<SessionRow[]>`
-        INSERT INTO sessions (user_id, title, assist_level)
-        VALUES (${userId}, ${input.title ?? null}, ${input.assistLevel})
-        RETURNING id, title, started_at, ended_at, status, assist_level`;
+        INSERT INTO sessions (user_id, title, assist_level, language)
+        VALUES (${userId}, ${input.title ?? null}, ${input.assistLevel}, ${input.language ?? DEFAULT_LANGUAGE})
+        RETURNING id, title, started_at, ended_at, status, assist_level, language`;
       return toSession(row!);
     },
     async end(userId, id) {
       const [ended] = await sql<SessionRow[]>`
         UPDATE sessions SET ended_at = now(), status = 'ended'
         WHERE user_id = ${userId} AND id = ${id} AND status = 'live'
-        RETURNING id, title, started_at, ended_at, status, assist_level`;
+        RETURNING id, title, started_at, ended_at, status, assist_level, language`;
       if (ended) return { session: toSession(ended), endedNow: true };
       const [existing] = await sql<SessionRow[]>`
-        SELECT id, title, started_at, ended_at, status, assist_level FROM sessions
+        SELECT id, title, started_at, ended_at, status, assist_level, language FROM sessions
         WHERE user_id = ${userId} AND id = ${id} AND status <> 'deleted'`;
       return existing ? { session: toSession(existing), endedNow: false } : null;
     },

@@ -46,3 +46,15 @@ export const isLanguageCode = (value: unknown): value is LanguageCode =>
 /** Languages a person may pick today. */
 export const enabledLanguages = (): LanguageInfo[] =>
   Object.values(SUPPORTED_LANGUAGES).filter((language) => language.enabled);
+
+/** A language a person may use today: known to the registry and switched on. */
+export const EnabledLanguageSchema = LanguageCodeSchema.refine(
+  (code) => SUPPORTED_LANGUAGES[code].enabled,
+  { message: 'This language is not available yet' },
+);
+
+/** `?language=` on every read of per-language learning data. Missing means the default language. */
+export const LanguageQuerySchema = z.object({
+  language: LanguageCodeSchema.default(DEFAULT_LANGUAGE),
+});
+export type LanguageQuery = z.output<typeof LanguageQuerySchema>;

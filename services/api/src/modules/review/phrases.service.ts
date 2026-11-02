@@ -1,4 +1,9 @@
-import { ErrorCode, type Phrase, type SavePhraseRequest } from '@cuelingo/shared';
+import {
+  ErrorCode,
+  type LanguageCode,
+  type Phrase,
+  type SavePhraseRequest,
+} from '@cuelingo/shared';
 import { AppError } from '../../lib/errors';
 import type { PhrasesRepository } from './phrases.repository';
 
@@ -8,8 +13,8 @@ const normalizePhrase = (phrase: string): string => phrase.replace(/\s+/g, ' ').
 
 export function createPhrasesService(repo: PhrasesRepository) {
   return {
-    list(userId: string): Promise<Phrase[]> {
-      return repo.list(userId);
+    list(userId: string, language: LanguageCode): Promise<Phrase[]> {
+      return repo.list(userId, language);
     },
 
     save(userId: string, input: SavePhraseRequest): Promise<Phrase> {

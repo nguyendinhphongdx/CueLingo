@@ -22,6 +22,7 @@ const session: SessionDetail = {
   endedAt: '2026-11-01T08:30:00.000Z',
   status: 'debriefed',
   assistLevel: 2,
+  language: 'en',
   segments: [
     {
       id: '6237275b-4e70-4d79-9622-5ab353cc7725',

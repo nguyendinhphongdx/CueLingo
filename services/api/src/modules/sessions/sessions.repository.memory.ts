@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Session, StoredSegment } from '@cuelingo/shared';
+import { DEFAULT_LANGUAGE, type Session, type StoredSegment } from '@cuelingo/shared';
 import type { SessionsRepository } from './sessions.repository';
 
 /** In-memory session and segment store for tests. */
@@ -43,6 +43,7 @@ export function createInMemorySessionsRepository(): SessionsRepository {
         endedAt: null,
         status: 'live',
         assistLevel: input.assistLevel,
+        language: input.language ?? DEFAULT_LANGUAGE,
         userId,
       };
       sessions.push(row);

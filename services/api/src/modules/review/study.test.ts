@@ -21,6 +21,32 @@ function setup() {
   return { repo, service };
 }
 
+describe('languages', () => {
+  it('builds the queue and progress from one language only', async () => {
+    const { repo, service } = setup();
+    repo.seed('alice', item(0));
+    repo.seed('alice', item(1), 'ja');
+    repo.seed('alice', item(2), 'ja');
+
+    expect((await service.queue('alice')).cards.map((card) => card.phrase)).toEqual([
+      'circle back',
+    ]);
+    expect((await service.queue('alice', { language: 'ja' })).dueCount).toBe(2);
+    expect((await service.progress('alice')).phrasesSaved).toBe(1);
+    expect((await service.progress('alice', 'ja')).phrasesSaved).toBe(2);
+  });
+
+  it('counts a review towards the language of the answered phrase', async () => {
+    const { repo, service } = setup();
+    const japanese = item(1);
+    repo.seed('alice', japanese, 'ja');
+    await service.answer('alice', { itemId: japanese.itemId, exercise: 'recognize', rating: 3 });
+
+    expect((await service.progress('alice', 'ja')).reviewsLast7Days.at(-1)?.count).toBe(1);
+    expect((await service.progress('alice')).reviewsLast7Days.at(-1)?.count).toBe(0);
+  });
+});
+
 describe('review queue', () => {
   it('contains new phrases and drops them after a good answer until they are due again', async () => {
     const { repo, service } = setup();

@@ -15,6 +15,7 @@ describe('glossary client', () => {
             translation: null,
             note: null,
             createdAt: '2026-10-31T00:00:00.000Z',
+            language: 'en',
           },
         ],
       }),

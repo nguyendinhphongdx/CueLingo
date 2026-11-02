@@ -9,6 +9,7 @@ const item: GlossaryTerm = {
   translation: 'Khám phá sản phẩm',
   note: 'Dùng trong planning',
   createdAt: '2026-11-01T00:00:00.000Z',
+  language: 'en',
 };
 
 const props = {

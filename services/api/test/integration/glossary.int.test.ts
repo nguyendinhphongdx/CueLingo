@@ -35,19 +35,40 @@ describe('glossary on real Postgres (AC5)', () => {
       term: 'Sprint Review',
       translation: null,
       note: null,
+      language: 'en',
     });
     expect(created.term).toBe('Sprint Review');
-    expect((await repo.findByTerm(alice, 'sprint review'))?.id).toBe(created.id);
+    expect((await repo.findByTerm(alice, 'en', 'sprint review'))?.id).toBe(created.id);
     await expect(
-      repo.create(alice, { term: 'SPRINT REVIEW', translation: null, note: null }),
+      repo.create(alice, {
+        term: 'SPRINT REVIEW',
+        translation: null,
+        note: null,
+        language: 'en',
+      }),
     ).rejects.toThrow();
+  });
+
+  it('keeps the same term separate in each language', async () => {
+    const repo = createPostgresGlossaryRepository(sql);
+    const base = { translation: null, note: null };
+    const english = await repo.create(alice, { ...base, term: 'Kanban', language: 'en' });
+    const japanese = await repo.create(alice, { ...base, term: 'Kanban', language: 'ja' });
+    expect(japanese.id).not.toBe(english.id);
+    expect((await repo.list(alice, 'ja')).map((term) => term.id)).toEqual([japanese.id]);
+    expect((await repo.findByTerm(alice, 'ja', 'kanban'))?.id).toBe(japanese.id);
   });
 
   it("never exposes, updates or deletes another user's term", async () => {
     const repo = createPostgresGlossaryRepository(sql);
-    const mine = await repo.create(alice, { term: 'Roadmap', translation: null, note: null });
+    const mine = await repo.create(alice, {
+      term: 'Roadmap',
+      translation: null,
+      note: null,
+      language: 'en',
+    });
 
-    expect(await repo.list(bob)).toEqual([]);
+    expect(await repo.list(bob, 'en')).toEqual([]);
     expect(await repo.findById(bob, mine.id)).toBeNull();
     expect(await repo.update(bob, mine.id, { note: 'hijack' })).toBeNull();
     expect(await repo.delete(bob, mine.id)).toBe(false);
