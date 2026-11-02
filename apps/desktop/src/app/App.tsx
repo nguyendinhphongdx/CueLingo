@@ -1,8 +1,15 @@
 import { spring } from '@animate-ui/react/utils/motion';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useColorScheme } from './use-color-scheme';
-import { PermissionsStep } from '../onboarding';
+import {
+  clearOnboarding,
+  completeOnboarding,
+  type OnboardingMode,
+  OnboardingFlow,
+  PermissionsStep,
+  shouldShowOnboarding,
+} from '../onboarding';
 import { PrivacyPanel } from '../privacy';
 import { RecentSessions, SessionPanel } from '../session';
 import { AssistSettings } from '../settings';
@@ -15,7 +22,7 @@ import { ListCard, Section } from '@cuelingo/ui/components/section';
 import { SoonBadge } from '@cuelingo/ui/components/soon-badge';
 import { features, upcoming } from '@cuelingo/ui/lib/roadmap';
 import { ExternalLink } from 'lucide-react';
-import { AccountCard, isDevToken, LoginScreen, useAuth } from '../auth';
+import { AccountCard, isDevToken, LoginScreen, useAuth, useMe } from '../auth';
 import { AppShell } from './AppShell';
 import { views } from './views';
 import { openWeb } from './open-web';
@@ -23,14 +30,38 @@ import { openWeb } from './open-web';
 export function App() {
   useColorScheme();
   const auth = useAuth();
+  const account = useMe();
   useSyncAssistLevel();
   const [view, setView] = useState('home');
+  const [onboardingMode, setOnboardingMode] = useState<OnboardingMode>('auto');
+
+  const userId = account.me?.id ?? 'dev';
+  useEffect(() => setOnboardingMode('auto'), [userId]);
 
   if (auth.status === 'loading') return <div className="bg-background h-screen" />;
   // A development token in the environment lets the app run without an account.
   if (auth.status === 'signedOut' && !isDevToken()) {
     return <LoginScreen phase={auth.phase} onSignIn={() => void auth.signIn()} />;
   }
+  if (auth.status === 'signedIn' && account.loading)
+    return <div className="bg-background h-screen" />;
+
+  const showOnboarding = shouldShowOnboarding(onboardingMode, userId);
+  if (showOnboarding) {
+    return (
+      <OnboardingFlow
+        onFinish={() => {
+          completeOnboarding(userId);
+          setOnboardingMode('complete');
+        }}
+      />
+    );
+  }
+
+  const reviewOnboarding = () => {
+    clearOnboarding(userId);
+    setOnboardingMode('open');
+  };
 
   return (
     <MotionConfig reducedMotion="user">
@@ -43,7 +74,11 @@ export function App() {
             animate={{ opacity: 1, y: 0, transition: spring.pop }}
             exit={{ opacity: 0, transition: { duration: 0.12 } }}
           >
-            <CurrentView view={view} onSignOut={() => void auth.signOut()} />
+            <CurrentView
+              view={view}
+              onSignOut={() => void auth.signOut()}
+              onReviewOnboarding={reviewOnboarding}
+            />
           </motion.div>
         </AnimatePresence>
       </AppShell>
@@ -51,7 +86,15 @@ export function App() {
   );
 }
 
-function CurrentView({ view, onSignOut }: { view: string; onSignOut(): void }) {
+function CurrentView({
+  view,
+  onSignOut,
+  onReviewOnboarding,
+}: {
+  view: string;
+  onSignOut(): void;
+  onReviewOnboarding(): void;
+}) {
   const feature = features.find((item) => item.id === view)!;
   const Page = views[view];
   if (Page) {
@@ -92,6 +135,19 @@ function CurrentView({ view, onSignOut }: { view: string; onSignOut(): void }) {
         <PageHeader title="Cài đặt" />
         <AccountCard onSignOut={onSignOut} />
         <PermissionsStep />
+        <Section title="Hướng dẫn">
+          <div className="bg-card flex items-center justify-between gap-4 rounded-xl border px-4 py-3">
+            <div>
+              <p className="text-sm font-medium">Làm quen với CueLingo</p>
+              <p className="text-muted-foreground mt-0.5 text-sm">
+                Xem lại bốn bước về quyền, caption và mức hỗ trợ.
+              </p>
+            </div>
+            <Button variant="outline" className="shrink-0" onClick={onReviewOnboarding}>
+              Xem lại hướng dẫn
+            </Button>
+          </div>
+        </Section>
         <PrivacyPanel />
         <AboutCard />
         <Section title="Đang trên lộ trình">

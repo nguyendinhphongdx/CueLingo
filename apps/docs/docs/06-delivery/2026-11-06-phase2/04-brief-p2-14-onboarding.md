@@ -35,3 +35,11 @@ Cờ đã xong lưu bằng `localStorage` khoá `cuelingo.onboarded.<userId ho�
 Quy tắc chung: đọc `AGENTS.md` gốc và của thư mục bạn sửa, `apps/docs/docs/05-engineering/agent-collaboration.md`, mục "Giai đoạn 2" trong `apps/docs/docs/02-product/06-backlog.md`. Không có mạng, không `pnpm add`, không commit/push; dependency đã cài sẵn. Không sửa `packages/ui/src/lib/roadmap.ts`, `package.json`, `pnpm-lock.yaml` (lead sửa khi gộp). Giao diện: dùng `@cuelingo/ui` và các skill thiết kế trong `.claude/skills/` (màu chỉ cho dữ liệu, không gradient, không thẻ icon giống nhau, nhãn câu thường, chữ trong app nhỏ và gọn). Mọi chuỗi giao diện tiếng Việt. Chạy `pnpm verify` trước khi báo; điền mục Kết quả, nêu rõ cái gì chưa kiểm được.
 
 ## Kết quả _(implementer điền)_
+
+- **Đã làm:** thêm cổng onboarding 4 bước trước `AppShell`; lưu cờ theo `cuelingo.onboarded.<userId|dev>` với mọi thao tác storage được bọc `try/catch`; thêm nút **Xem lại hướng dẫn** trong Cài đặt.
+- **UI/luồng:** dùng lại `PermissionsStep`, `sampleTranscript`, `CaptionBlock`, `Segmented` và `saveAssistLevel`; có tiến trình 1/4–4/4, Quay lại, Enter/Esc, `aria-current="step"`, thử overlay và hướng dẫn ⌘⇧L.
+- **File đổi/tạo:** `apps/desktop/src/app/App.tsx`; `apps/desktop/src/onboarding/{OnboardingFlow.tsx,OnboardingFlow.test.tsx,onboarding-storage.ts,PermissionsStep.tsx,PermissionsStep.test.tsx,index.ts}`.
+- **Test:** thêm test cờ theo người dùng, xoá cờ để xem lại, storage ném lỗi, nội dung các bước/caption mẫu, bốn mức hỗ trợ và kết quả thử âm thanh hệ thống. `pnpm verify` xanh (72 file, 314 test); `pnpm --filter @cuelingo/desktop build` xanh.
+- **Chạy thật:** chưa chạy được cửa sổ Tauri/quyền macOS/overlay thật vì sandbox chặn bind dev server (`listen EPERM 127.0.0.1:1420`). Cần lead thử lại luồng trong app desktop đã đóng gói, gồm cấp quyền, thử âm thanh và bật overlay.
+- **Lưu ý môi trường:** các lệnh có cảnh báo Node 22.14.0 thấp hơn mức repo yêu cầu ≥22.19; không gây lỗi verify/build trong worktree này.
+- **Khác brief/câu hỏi mở:** không có thay đổi phạm vi; không có câu hỏi mở.

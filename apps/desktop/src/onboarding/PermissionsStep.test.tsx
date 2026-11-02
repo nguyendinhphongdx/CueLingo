@@ -1,6 +1,10 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { describePermission, PermissionsStatusView } from './PermissionsStep';
+import {
+  describePermission,
+  describeSystemAudioCheck,
+  PermissionsStatusView,
+} from './PermissionsStep';
 
 describe('PermissionsStep', () => {
   it('describes each permission state in Vietnamese', () => {
@@ -27,5 +31,12 @@ describe('PermissionsStep', () => {
     expect(markup).toContain('Micrô đã được cấp quyền');
     expect(markup).toContain('Âm thanh hệ thống đã được cấp quyền');
     expect(markup).not.toContain('Mở Cài đặt hệ thống');
+  });
+
+  it('describes every result of the system audio check', () => {
+    expect(describeSystemAudioCheck('granted')).toContain('nghe được');
+    expect(describeSystemAudioCheck('silent')).toContain('Không nghe thấy');
+    expect(describeSystemAudioCheck('error')).toContain('Không thử được');
+    expect(describeSystemAudioCheck('unknown')).toContain('Chưa kiểm tra được');
   });
 });
