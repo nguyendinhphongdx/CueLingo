@@ -17,7 +17,12 @@ const EXPECTED_TABLES = [
   'user_lexicon',
   'debriefs',
   'review_logs',
+  'device_codes',
+  'device_tokens',
 ];
+
+/** Created by the latest migration (device sign-in); the first one owns everything else. */
+const LATEST_TABLES = ['device_codes', 'device_tokens'];
 
 describe('migrations (AC2)', () => {
   let db: TestDatabase;
@@ -45,7 +50,9 @@ describe('migrations (AC2)', () => {
 
   it('rolls the last migration back and applies it again', async () => {
     dbmate(db.url, 'rollback');
-    expect(await tables()).toEqual([]);
+    expect((await tables()).sort()).toEqual(
+      EXPECTED_TABLES.filter((table) => !LATEST_TABLES.includes(table)).sort(),
+    );
     dbmate(db.url, 'up');
     expect(await tables()).toHaveLength(EXPECTED_TABLES.length);
   });
