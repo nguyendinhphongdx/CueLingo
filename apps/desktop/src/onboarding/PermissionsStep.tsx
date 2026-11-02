@@ -44,6 +44,8 @@ const checkText: Record<SystemAudioCheck, string> = {
   unknown: 'Chưa kiểm tra được.',
 };
 
+export const describeSystemAudioCheck = (result: SystemAudioCheck) => checkText[result];
+
 function StateIcon({ state }: { state: PermissionState | SystemAudioCheck | 'checking' }) {
   if (state === 'checking') {
     return <Loader2 aria-hidden="true" className="text-muted-foreground size-5 animate-spin" />;
@@ -127,7 +129,7 @@ export function PermissionsStep() {
               title="Micrô"
               text={describePermission('microphone', permissions.data.microphone)}
             >
-              {mic === 'denied' ? (
+              {mic !== 'granted' ? (
                 <Button
                   variant="outline"
                   className="cursor-pointer"
@@ -144,7 +146,7 @@ export function PermissionsStep() {
                 audio.isPending
                   ? 'Đang phát một tiếng chuông ngắn để thử…'
                   : audio.data
-                    ? checkText[audio.data]
+                    ? describeSystemAudioCheck(audio.data)
                     : 'macOS không cho biết trước quyền này, nên CueLingo thử bằng một tiếng chuông ngắn.'
               }
             >
@@ -156,7 +158,7 @@ export function PermissionsStep() {
               >
                 {audio.isPending ? 'Đang thử…' : 'Thử nghe âm thanh'}
               </Button>
-              {audio.data === 'silent' ? (
+              {audio.data !== 'granted' ? (
                 <Button
                   variant="outline"
                   className="cursor-pointer"
