@@ -1,9 +1,12 @@
 import { ApiError, createClient } from '@cuelingo/core-sdk';
 import {
+  DeleteAccountRequestSchema,
   DebriefFeedbackRequestSchema,
   DebriefSchema,
+  DeviceTokenListSchema,
   ErrorResponseSchema,
   ExportSchema,
+  MeSchema,
   PhraseListSchema,
   PhraseSchema,
   ProgressSchema,
@@ -15,10 +18,13 @@ import {
   SessionListSchema,
   DeleteMyDataRequestSchema,
   DeviceCodeResponseSchema,
+  UpdateMeRequestSchema,
+  type DeleteAccountRequest,
   type DeleteMyDataRequest,
   type DebriefFeedbackRequest,
   type ReviewAnswerRequest,
   type SavePhraseRequest,
+  type UpdateMeRequest,
 } from '@cuelingo/shared';
 import { API_URL } from './config';
 
@@ -80,9 +86,19 @@ async function request<T>(
 /** Web endpoints that are not yet part of core-sdk still stay behind this single client boundary. */
 export const client = {
   ...coreClient,
+  me: {
+    get: () => request('GET', '/v1/me', MeSchema),
+    update: (input: UpdateMeRequest) =>
+      request('PATCH', '/v1/me', MeSchema, UpdateMeRequestSchema.parse(input)),
+    remove: (input: DeleteAccountRequest) =>
+      request('DELETE', '/v1/me', null, DeleteAccountRequestSchema.parse(input)),
+  },
   device: {
     /** A one-time code the desktop app trades for its own token. Needs the web session. */
     createCode: () => request('POST', '/v1/device/code', DeviceCodeResponseSchema),
+    listTokens: () => request('GET', '/v1/device/tokens', DeviceTokenListSchema),
+    revokeToken: (id: string) =>
+      request('DELETE', `/v1/device/tokens/${encodeURIComponent(id)}`, null),
   },
   sessions: {
     list: () => request('GET', '/v1/sessions', SessionListSchema),

@@ -9,7 +9,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('../../lib/auth-client', () => ({
   authClient: {
     useSession: () => ({
-      data: { user: { email: 'lan@example.com' } },
+      data: { user: { name: 'Lan Anh', email: 'lan@example.com' } },
       isPending: false,
     }),
     signOut: vi.fn(),
@@ -31,7 +31,8 @@ describe('AppShell', () => {
     expect(markup).toContain('aria-current="page"');
     expect(markup).toContain('Sắp ra mắt');
     expect(markup).toContain('overflow-y-auto');
-    expect(markup).toContain('lan@example.com');
+    expect(markup).toContain('Lan Anh');
+    expect(markup).not.toContain('title="lan@example.com"');
   });
 
   it('renders an accessible compact navigation trigger below the md breakpoint', () => {

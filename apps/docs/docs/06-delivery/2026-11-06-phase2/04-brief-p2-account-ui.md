@@ -42,3 +42,10 @@ title: Brief · Tài khoản đầy đủ (giao diện web và desktop)
 Quy tắc chung: đọc `AGENTS.md` gốc và của thư mục bạn sửa, `apps/docs/docs/05-engineering/agent-collaboration.md`. Dùng `@cuelingo/ui` và các skill thiết kế trong `.claude/skills/` (màu chỉ cho dữ liệu, không gradient, không thẻ icon giống nhau). Không có mạng, không `pnpm add`, không commit/push. Chạy `pnpm verify`; điền mục Kết quả.
 
 ## Kết quả _(implementer điền)_
+
+- **Web:** mở rộng `client.ts` với `me` và danh sách/revoke device token; thêm hook account; hoàn thiện `/settings` với hồ sơ, avatar chữ cái, sửa tên, ngày tham gia, thiết bị, phiên trình duyệt, bước hỏi tên lần đầu, đóng tài khoản hai bước; sidebar ưu tiên hiện tên.
+- **Desktop:** thêm `me-api.ts` dùng `currentToken`; `AccountCard` tải và hiện avatar/tên/email, giữ nút đăng xuất khi lỗi và giữ nguyên nội dung token dev.
+- **Test:** thêm/cập nhật 15 test cho validation + trim tên, client `GET/PATCH/DELETE`, danh sách/revoke thiết bị, xác nhận đóng tài khoản và thứ tự xoá → đăng xuất → chuyển trang, prompt tên + trạng thái bỏ qua, desktop API/card và lỗi mạng.
+- **Verify:** `pnpm verify` xanh (67 file, 285 test; không vi phạm dependency); `pnpm --filter @cuelingo/web build` xanh.
+- **Chạy thật:** production build sinh thành công route `/settings`; component được render với dữ liệu hồ sơ/thiết bị giả trong test. Đã thử mở preview bằng `next dev` trên cả `0.0.0.0` và `127.0.0.1`, nhưng sandbox chặn mở cổng với `listen EPERM`, nên không thể kiểm bằng trình duyệt trong môi trường này; route preview tạm đã xoá, không nằm trong diff.
+- **Môi trường:** pnpm cảnh báo Node `22.14.0` thấp hơn mức repo yêu cầu `>=22.19`; các lệnh trên vẫn hoàn tất. Không thay đổi ngoài brief, không còn câu hỏi mở.
