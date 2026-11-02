@@ -1,6 +1,13 @@
 import type { RealtimeClient, RealtimeClientOptions, RealtimeState } from '@cuelingo/core-sdk';
-import { DEFAULT_LANGUAGE, type LanguageCode, type ServerMessage } from '@cuelingo/shared';
+import {
+  DEFAULT_LANGUAGE,
+  isLanguageCode,
+  languageOptions,
+  type LanguageCode,
+  type ServerMessage,
+} from '@cuelingo/shared';
 import type {
+  AudioModelEvent,
   SegmentEvent,
   SessionStartInput,
   SessionStartResult,
@@ -15,18 +22,22 @@ export interface SessionSnapshot {
   status: SessionStatus;
   error: Error | null;
   completedSessionId: string | null;
+  /** Another language the speakers seem to be using; offered to the person, never applied alone. */
+  suggestedLanguage: LanguageCode | null;
 }
 
 interface NativeSessionBridge {
   sessionStart(input: SessionStartInput): Promise<SessionStartResult>;
   sessionStop(): Promise<void>;
   onSegment(callback: (event: SegmentEvent) => void): Promise<() => void>;
+  onAudioModel(callback: (event: AudioModelEvent) => void): Promise<() => void>;
+  setLanguage(language: string): Promise<void>;
   publishTranscript(event: TranscriptEvent): Promise<void>;
 }
 
 interface SessionControllerOptions {
   native: NativeSessionBridge;
-  sessions: Pick<SessionsApi, 'create' | 'end'>;
+  sessions: Pick<SessionsApi, 'create' | 'end' | 'setLanguage'>;
   createRealtime(options: RealtimeClientOptions): RealtimeClient;
   now?: () => number;
   apiUrl?: string;
@@ -38,6 +49,9 @@ export interface SessionController {
   subscribe(listener: () => void): () => void;
   start(assistLevel: SelectableAssistLevel, language?: LanguageCode): Promise<void>;
   stop(): Promise<void>;
+  /** Switch the running meeting to the language the native side heard. */
+  acceptSuggestedLanguage(): Promise<void>;
+  dismissSuggestedLanguage(): void;
   runDemo(): void;
   dispose(): void;
 }
@@ -85,12 +99,18 @@ export function createSessionController({
   apiUrl = 'ws://localhost:4000',
   token = '',
 }: SessionControllerOptions): SessionController {
-  let snapshot: SessionSnapshot = { status: 'idle', error: null, completedSessionId: null };
+  let snapshot: SessionSnapshot = {
+    status: 'idle',
+    error: null,
+    completedSessionId: null,
+    suggestedLanguage: null,
+  };
   let realtime: RealtimeClient | null = null;
   let activeSessionId: string | null = null;
   let meetingLanguage: LanguageCode = DEFAULT_LANGUAGE;
   let stopPromise: Promise<void> | null = null;
   let stopSegmentListener: (() => void) | null = null;
+  let stopModelListener: (() => void) | null = null;
   let listenerRegistration = 0;
   let runtimeGeneration = 0;
   let demoTimers: ReturnType<typeof setTimeout>[] = [];
@@ -154,11 +174,27 @@ export function createSessionController({
     else stopSegmentListener = unlisten;
   }
 
+  function handleAudioModel(event: AudioModelEvent) {
+    if (event.type !== 'language-suggestion') return;
+    if (isLanguageCode(event.language) && event.language !== meetingLanguage) {
+      update({ suggestedLanguage: event.language });
+    }
+  }
+
+  async function listenForAudioModel() {
+    const registration = listenerRegistration;
+    const unlisten = await native.onAudioModel(handleAudioModel);
+    if (registration !== listenerRegistration) unlisten();
+    else stopModelListener = unlisten;
+  }
+
   function clearRuntime() {
     runtimeGeneration += 1;
     listenerRegistration += 1;
     stopSegmentListener?.();
     stopSegmentListener = null;
+    stopModelListener?.();
+    stopModelListener = null;
     realtime?.close();
     realtime = null;
     demoTimers.forEach(clearTimeout);
@@ -177,7 +213,12 @@ export function createSessionController({
       clearRuntime();
       meetingLanguage = language;
       const generation = runtimeGeneration;
-      update({ status: 'connecting', error: null, completedSessionId: null });
+      update({
+        status: 'connecting',
+        error: null,
+        completedSessionId: null,
+        suggestedLanguage: null,
+      });
 
       try {
         const session = await sessions.create({ assistLevel, language });
@@ -187,8 +228,15 @@ export function createSessionController({
         }
         activeSessionId = session.id;
         await listenForSegments();
+        await listenForAudioModel();
         if (generation !== runtimeGeneration) return;
-        await native.sessionStart({ assistLevel, language });
+        await native.sessionStart({
+          assistLevel,
+          language,
+          detect: languageOptions()
+            .map((option) => option.value)
+            .filter((code) => code !== language),
+        });
         if (generation !== runtimeGeneration) {
           await native.sessionStop();
           return;
@@ -238,6 +286,24 @@ export function createSessionController({
         stopPromise = null;
       });
       return stopPromise;
+    },
+    async acceptSuggestedLanguage() {
+      const target = snapshot.suggestedLanguage;
+      const sessionId = activeSessionId;
+      update({ suggestedLanguage: null });
+      if (!target || !sessionId) return;
+      try {
+        // The server first (the realtime side re-reads it), then the open socket, then the speech model.
+        await sessions.setLanguage(sessionId, target);
+        realtime?.send({ type: 'language.set' });
+        await native.setLanguage(target);
+        meetingLanguage = target;
+      } catch (error) {
+        fail(error);
+      }
+    },
+    dismissSuggestedLanguage() {
+      update({ suggestedLanguage: null });
     },
     runDemo() {
       demoTimers.forEach(clearTimeout);

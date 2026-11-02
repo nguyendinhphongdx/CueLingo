@@ -200,6 +200,29 @@ describe('realtime module', () => {
     expect(deps.glossary).toHaveBeenCalledWith(USER_ID, 'ja');
   });
 
+  it('follows a language change made over REST when told to re-read the session', async () => {
+    let language: 'en' | 'ja' = 'en';
+    deps.store = {
+      saveSegment: vi.fn(async () => true),
+      saveTranslation: vi.fn(async () => undefined),
+      findById: vi.fn(async () => ({ language }) as never),
+    };
+    await connect();
+    await authenticate();
+    language = 'ja';
+    socket.send(JSON.stringify({ type: 'language.set' }));
+
+    const response = nextMessage(socket);
+    socket.send(JSON.stringify(segment('検討します', 0)));
+    await response;
+
+    expect(llm).toHaveBeenLastCalledWith(
+      'translate.realtime',
+      expect.objectContaining({ language: 'ja' }),
+      expect.anything(),
+    );
+  });
+
   it('stores final mic and system segments, then stores the system translation', async () => {
     const saveSegment = vi.fn(async () => true);
     const saveTranslation = vi.fn(async () => undefined);
@@ -224,6 +247,7 @@ describe('realtime module', () => {
       startMs: 0,
       endMs: 900,
       textEn: 'my voice',
+      language: 'en',
     });
   });
 

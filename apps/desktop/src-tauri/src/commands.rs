@@ -21,6 +21,8 @@ pub struct SessionStartOpts {
     assist_level: u8,
     /// Meeting language; the sidecar loads the matching recognition model. English when left out.
     language: Option<String>,
+    /// Other languages to listen for in the first seconds; the sidecar suggests a switch if one fits better.
+    detect: Option<Vec<String>>,
 }
 
 /// A language code is two or three lowercase letters; anything else never reaches the sidecar.
@@ -65,7 +67,11 @@ pub fn session_start(
     if !valid_language(language) {
         return Err("invalid_language".into());
     }
-    state.audio.start(&app, language)?;
+    let detect = opts.detect.unwrap_or_default();
+    if !detect.iter().all(|code| valid_language(code)) {
+        return Err("invalid_language".into());
+    }
+    state.audio.start(&app, language, &detect)?;
     *current = Some(id.clone());
     Ok(SessionStartResult { session_id: id })
 }

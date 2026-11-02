@@ -39,14 +39,14 @@ pub fn route_line(line: &str) -> Option<(&'static str, Value)> {
     match value.get("type")?.as_str()? {
         "segment" => Some(("segment", value)),
         "status" => Some(("audio-status", value)),
-        "model" | "stats" => Some(("audio-model", value)),
+        "model" | "stats" | "language-suggestion" => Some(("audio-model", value)),
         _ => None,
     }
 }
 
 impl AudioBridge {
     /// `language` picks the recognition model the sidecar loads first (a short code such as `en` or `ja`).
-    pub fn start(&self, app: &AppHandle, language: &str) -> Result<(), String> {
+    pub fn start(&self, app: &AppHandle, language: &str, detect: &[String]) -> Result<(), String> {
         let mut running = self.running.lock().map_err(|e| e.to_string())?;
         if running.is_some() {
             return Err("session_already_running".into());
@@ -54,6 +54,7 @@ impl AudioBridge {
         let path = sidecar_path().ok_or("audio_sidecar_missing")?;
         let mut child = Command::new(path)
             .env("CUELINGO_LANGUAGE", language)
+            .env("CUELINGO_DETECT", detect.join(","))
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
@@ -116,6 +117,8 @@ mod tests {
         assert_eq!(route_line(model).unwrap().0, "audio-model");
         let stats = r#"{"type":"stats","language":"ja","count":9,"p50Ms":210,"p95Ms":480}"#;
         assert_eq!(route_line(stats).unwrap().0, "audio-model");
+        let suggestion = r#"{"type":"language-suggestion","language":"ja","confidence":0.99}"#;
+        assert_eq!(route_line(suggestion).unwrap().0, "audio-model");
     }
 
     #[test]

@@ -68,6 +68,14 @@ export function createInMemorySessionsRepository(): SessionsRepository {
       row.endedAt = new Date().toISOString();
       return true;
     },
+    async setLanguage(userId, id, language) {
+      const row = sessions.find(
+        (item) => item.userId === userId && item.id === id && item.status !== 'deleted',
+      );
+      if (!row) return null;
+      row.language = language;
+      return strip(row);
+    },
     async saveSegment(input) {
       if (
         !sessions.some(

@@ -54,6 +54,13 @@ export function createRealtimeConnection(
       return true;
     },
 
+    /** The meeting's language was changed over REST: read it again from the session, never from the socket. */
+    async languageChanged(): Promise<void> {
+      if (!userId || !sessionId) return;
+      const session = await deps.store?.findById(userId, sessionId);
+      if (session) language = session.language;
+    },
+
     segment(message: SegmentFinalMessage): boolean {
       if (!userId) {
         rejectUnauthorized();
@@ -73,6 +80,7 @@ export function createRealtimeConnection(
               startMs: message.startMs,
               endMs: message.endMs,
               textEn: message.text,
+              language: meetingLanguage,
             }),
           )
           .catch((error: unknown) => {

@@ -1,4 +1,10 @@
-import { ErrorCode, JobName, type CreateSessionRequest, type Session } from '@cuelingo/shared';
+import {
+  ErrorCode,
+  JobName,
+  type CreateSessionRequest,
+  type LanguageCode,
+  type Session,
+} from '@cuelingo/shared';
 import { AppError } from '../../lib/errors';
 import type { JobQueue } from '../../lib/queue';
 import type { SessionsRepository } from './sessions.repository';
@@ -23,6 +29,11 @@ export function createSessionsService(repo: SessionsRepository, queue: JobQueue)
       if (!result) throw new AppError(ErrorCode.NotFound, 'Session not found');
       if (result.endedNow) await queue.enqueue(JobName.DebriefGenerate, { sessionId: id });
       return result.session;
+    },
+    async setLanguage(userId: string, id: string, language: LanguageCode): Promise<Session> {
+      const session = await repo.setLanguage(userId, id, language);
+      if (!session) throw new AppError(ErrorCode.NotFound, 'Session not found');
+      return session;
     },
     async remove(userId: string, id: string): Promise<void> {
       if (!(await repo.softDelete(userId, id))) {

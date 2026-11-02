@@ -7,9 +7,12 @@ import LocalSTT
 // stdout events: {"type":"status","state":"loading|ready|error","message":…}
 //                {"type":"segment","segmentId","stream","startMs","endMs","text","words":[],"partial"}
 //                {"type":"model","language","state":"downloading|ready|error","progress":0...1,"message"}
+//                {"type":"language-suggestion","language","confidence"}  (the meeting sounds like another language)
 //                {"type":"stats","language","count","p50Ms","p95Ms"}  (recognition time, once at the end)
 // stdin: a line "stop" ends the session; "vocab ["SLA",...]" replaces the glossary terms;
 //        "language ja" switches the recognition model (captions continue on the old one until it is ready).
+// env CUELINGO_DETECT: comma-separated candidate languages to listen for in the first seconds (their models must
+// already be on this machine; nothing is downloaded for this).
 // env CUELINGO_VOCAB: the same JSON array, applied at start. env CUELINGO_LANGUAGE: language at start (default en).
 
 let out = FileHandle.standardOutput
@@ -35,6 +38,59 @@ final class ProgressGate: @unchecked Sendable {
     }
 }
 
+/// Listens to the first utterances of the meeting and, when another language fits clearly better, says so once.
+actor LanguageProbe {
+    private let candidates: [String]
+    private let current: @Sendable () async -> String
+    private var utterances: [[Float]] = []
+    private var attempts = 0
+    private var finished = false
+    private var probing = false
+    private let maxAttempts = 2
+    /// Enough speech to judge by: about three seconds.
+    private let samplesPerAttempt = 16_000 * 3
+
+    init(candidates: [String], current: @escaping @Sendable () async -> String) {
+        self.candidates = candidates
+        self.current = current
+    }
+
+    func hear(_ samples: [Float]) async {
+        guard !finished, !probing else { return }
+        utterances.append(samples)
+        guard utterances.reduce(0, { $0 + $1.count }) >= samplesPerAttempt else { return }
+        probing = true
+        let batch = Array(utterances.joined().prefix(16_000 * 8))
+        utterances = []
+        attempts += 1
+        if let verdict = await detect(batch) {
+            emit(["type": "language-suggestion", "language": verdict.language, "confidence": verdict.confidence])
+            finished = true
+        } else if attempts >= maxAttempts {
+            finished = true
+        }
+        probing = false
+    }
+
+    private func detect(_ samples: [Float]) async -> LanguageDetector.Verdict? {
+        let active = await current()
+        var readings: [LanguageDetector.Reading] = []
+        for language in [active] + candidates where Transcriber.isCached(language: language) {
+            // Each candidate model is loaded just for this and released right after.
+            let transcriber = Transcriber()
+            do { try await transcriber.load(language: language) } catch {
+                FileHandle.standardError.write(Data("probe load \(language) failed: \(error)\n".utf8)); continue
+            }
+            let heard: Transcriber.Recognition
+            do { heard = try await transcriber.recognize(samples) } catch {
+                FileHandle.standardError.write(Data("probe recognize \(language) failed: \(error)\n".utf8)); continue
+            }
+            readings.append(.init(language: language, text: heard.text, confidence: heard.confidence))
+        }
+        return LanguageDetector.verdict(current: active, readings: readings)
+    }
+}
+
 final class Pipeline: @unchecked Sendable {
     let stream: String
     let segmenter = UtteranceSegmenter()
@@ -43,9 +99,12 @@ final class Pipeline: @unchecked Sendable {
     private var busy = false
     private var epoch = Date()
 
-    init(stream: String, transcriber: Transcriber) {
+    private let probe: LanguageProbe?
+
+    init(stream: String, transcriber: Transcriber, probe: LanguageProbe? = nil) {
         self.stream = stream
         self.transcriber = transcriber
+        self.probe = probe
     }
 
     func feed(_ samples: [Int16]) {
@@ -84,6 +143,7 @@ final class Pipeline: @unchecked Sendable {
             defer { if partial { clearBusy() } }
             do {
                 let text = try await transcriber.transcribe(utterance.samples)
+                if !partial, let probe { await probe.hear(utterance.samples) }
                 guard !text.isEmpty else { return }
                 emit([
                     "type": "segment", "segmentId": utterance.id.uuidString.lowercased(), "stream": stream,
@@ -185,7 +245,11 @@ func applyVocabulary(_ json: String) async {
 }
 if let initial = ProcessInfo.processInfo.environment["CUELINGO_VOCAB"] { await applyVocabulary(initial) }
 
-let system = Pipeline(stream: "system", transcriber: transcriber)
+let detectCandidates = (ProcessInfo.processInfo.environment["CUELINGO_DETECT"] ?? "")
+    .split(separator: ",").map(String.init).filter { $0 != startLanguage && SpeechModels.isSupported($0) }
+let probe: LanguageProbe? = detectCandidates.isEmpty
+    ? nil : LanguageProbe(candidates: detectCandidates, current: { await transcriber.language ?? "en" })
+let system = Pipeline(stream: "system", transcriber: transcriber, probe: probe)
 
 // `--file x.wav` (16 kHz mono Int16): run a recording through the same pipeline, for tests and demos.
 if let flag = CommandLine.arguments.firstIndex(of: "--file"), flag + 1 < CommandLine.arguments.count {
@@ -200,7 +264,7 @@ if let flag = CommandLine.arguments.firstIndex(of: "--file"), flag + 1 < Command
     }
     system.feed([Int16](repeating: 0, count: 16_000))  // trailing silence closes the last sentence
     system.finish()
-    try? await Task.sleep(nanoseconds: 4_000_000_000)
+    try? await Task.sleep(nanoseconds: probe == nil ? 4_000_000_000 : 60_000_000_000)
     await reportLatency()
     status("stopped")
     exit(0)

@@ -15,6 +15,12 @@ export const CreateSessionRequestSchema = z
   .strict();
 export type CreateSessionRequest = z.infer<typeof CreateSessionRequestSchema>;
 
+/** Switches the language spoken in a meeting that is already running (the speakers changed language). */
+export const UpdateSessionLanguageRequestSchema = z
+  .object({ language: EnabledLanguageSchema })
+  .strict();
+export type UpdateSessionLanguageRequest = z.infer<typeof UpdateSessionLanguageRequestSchema>;
+
 export const SessionSchema = z
   .object({
     id: z.uuid(),

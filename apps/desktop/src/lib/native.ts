@@ -15,6 +15,11 @@ export const SessionStartInput = z.object({
     .string()
     .regex(/^[a-z]{2,3}$/)
     .optional(),
+  /** Other languages to listen for at the start; the native side suggests a switch if one fits better. */
+  detect: z
+    .array(z.string().regex(/^[a-z]{2,3}$/))
+    .max(8)
+    .optional(),
 });
 export type SessionStartInput = z.infer<typeof SessionStartInput>;
 
@@ -67,6 +72,11 @@ export const AudioModelEvent = z.discriminatedUnion('type', [
     state: z.enum(['downloading', 'ready', 'error']),
     progress: z.number().min(0).max(1).optional(),
     message: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('language-suggestion'),
+    language: z.string(),
+    confidence: z.number().min(0).max(1),
   }),
   z.object({
     type: z.literal('stats'),

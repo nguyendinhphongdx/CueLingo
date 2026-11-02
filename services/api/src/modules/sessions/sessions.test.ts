@@ -133,4 +133,15 @@ describe('sessions module', () => {
     });
     expect(bad.statusCode).toBe(400);
   });
+
+  it("switches a running meeting's language, only for its owner and only to a language that is on", async () => {
+    const created = await create();
+    const url = `/v1/sessions/${created.json().id}`;
+    const patch = (user: string, language: string) =>
+      app.inject({ method: 'PATCH', url, headers: as(user), payload: { language } });
+
+    expect((await patch(ALICE, 'en')).statusCode).toBe(200);
+    expect((await patch(ALICE, 'ja')).statusCode).toBe(400);
+    expect((await patch(BOB, 'en')).statusCode).toBe(404);
+  });
 });

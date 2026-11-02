@@ -1,6 +1,7 @@
 import {
   DEFAULT_LANGUAGE,
   type CreateSessionRequest,
+  type LanguageCode,
   type Session,
   type SessionDetail,
   type StoredSegment,
@@ -15,6 +16,8 @@ export interface SaveSegmentInput {
   startMs: number;
   endMs: number;
   textEn: string;
+  /** Language of this segment; stored only when it differs from the meeting's. */
+  language?: LanguageCode;
 }
 
 export interface EndSessionResult {
@@ -30,6 +33,7 @@ export interface SessionsRepository {
   create(userId: string, input: CreateSessionRequest): Promise<Session>;
   end(userId: string, id: string): Promise<EndSessionResult | null>;
   softDelete(userId: string, id: string): Promise<boolean>;
+  setLanguage(userId: string, id: string, language: LanguageCode): Promise<Session | null>;
   saveSegment(input: SaveSegmentInput): Promise<boolean>;
   saveTranslation(segmentId: string, textVi: string): Promise<void>;
 }
@@ -122,11 +126,20 @@ export function createPostgresSessionsRepository(sql: Sql): SessionsRepository {
         WHERE user_id = ${userId} AND id = ${id} AND status <> 'deleted'`;
       return result.count > 0;
     },
+    async setLanguage(userId, id, language) {
+      const [row] = await sql<SessionRow[]>`
+        UPDATE sessions SET language = ${language}
+        WHERE user_id = ${userId} AND id = ${id} AND status <> 'deleted'
+        RETURNING id, title, started_at, ended_at, status, assist_level, language`;
+      return row ? toSession(row) : null;
+    },
     async saveSegment(input) {
       const inserted = await sql<{ id: string }[]>`
-        INSERT INTO segments (id, session_id, source, start_ms, end_ms, text_en)
+        INSERT INTO segments (id, session_id, source, start_ms, end_ms, text_en, language)
         SELECT ${input.segmentId}, sessions.id, ${input.source}, ${input.startMs},
-          ${input.endMs}, ${input.textEn}
+          ${input.endMs}, ${input.textEn},
+          CASE WHEN ${input.language ?? null}::text IS NULL OR sessions.language = ${input.language ?? null}
+               THEN NULL ELSE ${input.language ?? null} END
         FROM sessions
         WHERE sessions.id = ${input.sessionId} AND sessions.user_id = ${input.userId}
           AND sessions.status <> 'deleted'

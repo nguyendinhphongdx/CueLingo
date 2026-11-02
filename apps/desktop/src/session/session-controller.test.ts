@@ -1,5 +1,5 @@
 import type { RealtimeClient, RealtimeClientOptions } from '@cuelingo/core-sdk';
-import type { SegmentEvent, TranscriptEvent } from '../lib/native';
+import type { AudioModelEvent, SegmentEvent, TranscriptEvent } from '../lib/native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSessionController } from './session-controller';
 
@@ -21,6 +21,7 @@ function segment(overrides: Partial<SegmentEvent> = {}): SegmentEvent {
 
 function setup() {
   let onSegment: ((event: SegmentEvent) => void) | undefined;
+  let onAudioModel: ((event: AudioModelEvent) => void) | undefined;
   let realtimeOptions: RealtimeClientOptions | undefined;
   const sent: unknown[] = [];
   const published: TranscriptEvent[] = [];
@@ -43,6 +44,11 @@ function setup() {
       onSegment = callback;
       return vi.fn();
     }),
+    onAudioModel: vi.fn(async (callback: (event: AudioModelEvent) => void) => {
+      onAudioModel = callback;
+      return vi.fn();
+    }),
+    setLanguage: vi.fn(async () => undefined),
     publishTranscript: vi.fn(async (event: TranscriptEvent) => {
       published.push(event);
     }),
@@ -60,6 +66,15 @@ function setup() {
         language: 'en' as const,
       };
     }),
+    setLanguage: vi.fn(async (_id: string, language: 'en' | 'ja') => ({
+      id: sessionId,
+      title: null,
+      startedAt: '2026-11-03T00:00:00.000Z',
+      endedAt: null,
+      status: 'live' as const,
+      assistLevel: 3,
+      language,
+    })),
     end: vi.fn(async () => ({
       id: sessionId,
       title: null,
@@ -92,6 +107,7 @@ function setup() {
     sent,
     published,
     emitSegment: (event: SegmentEvent) => onSegment?.(event),
+    emitAudioModel: (event: AudioModelEvent) => onAudioModel?.(event),
     getRealtimeOptions: () => realtimeOptions,
   };
 }
@@ -175,6 +191,34 @@ describe('session controller', () => {
     context.emitSegment(segment());
 
     expect(context.published.at(-1)?.language).toBe('ja');
+  });
+
+  it('offers a language the native side heard, and switches everything when accepted', async () => {
+    const context = setup();
+    await context.controller.start(4, 'en');
+    context.emitAudioModel({ type: 'language-suggestion', language: 'ja', confidence: 0.99 });
+    expect(context.controller.getSnapshot().suggestedLanguage).toBe('ja');
+
+    await context.controller.acceptSuggestedLanguage();
+
+    expect(context.sessions.setLanguage).toHaveBeenCalledWith(sessionId, 'ja');
+    expect(context.sent).toContainEqual({ type: 'language.set' });
+    expect(context.native.setLanguage).toHaveBeenCalledWith('ja');
+    expect(context.controller.getSnapshot().suggestedLanguage).toBeNull();
+    context.emitSegment(segment());
+    expect(context.published.at(-1)?.language).toBe('ja');
+  });
+
+  it('ignores a suggestion for the language already in use and lets one be dismissed', async () => {
+    const context = setup();
+    await context.controller.start(4, 'en');
+    context.emitAudioModel({ type: 'language-suggestion', language: 'en', confidence: 0.99 });
+    expect(context.controller.getSnapshot().suggestedLanguage).toBeNull();
+
+    context.emitAudioModel({ type: 'language-suggestion', language: 'ja', confidence: 0.99 });
+    context.controller.dismissSuggestedLanguage();
+    expect(context.controller.getSnapshot().suggestedLanguage).toBeNull();
+    expect(context.native.setLanguage).not.toHaveBeenCalled();
   });
 
   it('maps realtime states and configures the session websocket', async () => {

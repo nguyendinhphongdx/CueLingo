@@ -24,6 +24,8 @@ export function useSession() {
     ...snapshot,
     start: controller.start,
     stop: controller.stop,
+    acceptSuggestedLanguage: controller.acceptSuggestedLanguage,
+    dismissSuggestedLanguage: controller.dismissSuggestedLanguage,
     runDemo: controller.runDemo,
   };
 }

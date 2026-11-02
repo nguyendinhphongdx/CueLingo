@@ -48,7 +48,17 @@ public actor Transcriber {
     /// The model needs at least ~1 s of audio; shorter utterances are padded with silence.
     static let minSamples = 16_000
 
+    public struct Recognition: Sendable {
+        public let text: String
+        /// How sure the model is of what it heard, 0...1.
+        public let confidence: Double
+    }
+
     public func transcribe(_ input: [Float]) async throws -> String {
+        try await recognize(input).text
+    }
+
+    public func recognize(_ input: [Float]) async throws -> Recognition {
         guard let manager, let language else { throw TranscriberError.notLoaded }
         let samples = input.count < Self.minSamples
             ? input + [Float](repeating: 0, count: Self.minSamples - input.count) : input
@@ -57,7 +67,15 @@ public actor Transcriber {
         var state = TdtDecoderState.make(decoderLayers: await manager.decoderLayerCount)
         let result = try await manager.transcribe(samples, decoderState: &state)
         stats[language, default: LatencyStats()].record(Date().timeIntervalSince(started) * 1000)
-        return corrector.correct(result.text.trimmingCharacters(in: .whitespacesAndNewlines))
+        let text = corrector.correct(result.text.trimmingCharacters(in: .whitespacesAndNewlines))
+        return Recognition(text: text, confidence: Double(result.confidence))
+    }
+
+    /// Whether the model for `language` is already on this machine (no download needed).
+    public static func isCached(language: String) -> Bool {
+        guard let version = SpeechModels.version(for: language) else { return false }
+        return AsrModels.modelsExist(
+            at: AsrModels.defaultCacheDirectory(for: version), version: version)
     }
 
     /// Per language: how many recognitions ran and their p50/p95 in milliseconds.

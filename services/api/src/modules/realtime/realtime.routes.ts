@@ -45,6 +45,10 @@ export function realtimeRoutes(deps: RealtimeDeps): FastifyPluginAsync {
               if (!(await connection.hello(message.token, message.sessionId))) socket.close();
               return;
             }
+            if (message.type === 'language.set') {
+              await connection.languageChanged();
+              return;
+            }
             if (message.type === 'segment.final' && !connection.segment(message)) socket.close();
           })
           .catch((error: unknown) =>

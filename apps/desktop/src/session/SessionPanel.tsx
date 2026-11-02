@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useLanguage, useSettings } from '../settings';
 import { describeNativeError, openDebrief, toggleOverlay } from './session-actions';
 import type { SessionStatus } from './session-controller';
+import { SUPPORTED_LANGUAGES } from '@cuelingo/shared';
 import { describeModelProgress, useModelProgress } from './model-progress';
 import { useSession } from './use-session';
 
@@ -168,6 +169,32 @@ export function SessionPanel() {
         <p className="mt-4 text-sm text-white/80" aria-live="polite">
           {modelProgress}
         </p>
+      ) : null}
+      {session.suggestedLanguage ? (
+        <div
+          role="status"
+          className="mt-4 flex flex-wrap items-center gap-2 rounded-lg bg-white/15 px-3 py-2 text-sm"
+        >
+          <span className="mr-auto">
+            Nghe như {SUPPORTED_LANGUAGES[session.suggestedLanguage].name.toLowerCase()}. Đổi sang
+            ngôn ngữ này?
+          </span>
+          <Button
+            size="sm"
+            onClick={() => void session.acceptSuggestedLanguage()}
+            className="cursor-pointer bg-white text-slate-900 hover:bg-white/90"
+          >
+            Đổi
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={session.dismissSuggestedLanguage}
+            className="cursor-pointer text-white hover:bg-white/15 hover:text-white"
+          >
+            Bỏ qua
+          </Button>
+        </div>
       ) : null}
       <div className="sr-only" aria-live="polite">
         Trạng thái: {statusText[session.status]}

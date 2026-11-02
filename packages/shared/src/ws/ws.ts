@@ -38,12 +38,20 @@ export const SegmentFinalMessageSchema = z
   });
 export type SegmentFinalMessage = z.infer<typeof SegmentFinalMessageSchema>;
 
+/**
+ * The meeting's language was changed over REST. It carries no language itself: the server re-reads the
+ * session, so a socket cannot pick a language for a meeting it does not own.
+ */
+export const LanguageSetMessageSchema = z.object({ type: z.literal('language.set') }).strict();
+export type LanguageSetMessage = z.infer<typeof LanguageSetMessageSchema>;
+
 export const EventMessageSchema = z.object({ type: z.literal('event') }).strict();
 export type EventMessage = z.infer<typeof EventMessageSchema>;
 
 export const ClientMessageSchema = z.discriminatedUnion('type', [
   HelloMessageSchema,
   SegmentFinalMessageSchema,
+  LanguageSetMessageSchema,
   EventMessageSchema,
 ]);
 export type ClientMessage = z.infer<typeof ClientMessageSchema>;

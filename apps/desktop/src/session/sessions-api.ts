@@ -4,6 +4,7 @@ import {
   SessionListSchema,
   SessionSchema,
   type CreateSessionRequest,
+  type LanguageCode,
   type SessionList,
   type Session,
 } from '@cuelingo/shared';
@@ -13,6 +14,8 @@ type Fetch = typeof fetch;
 export interface SessionsApi {
   create(input: CreateSessionRequest): Promise<Session>;
   end(sessionId: string): Promise<Session>;
+  /** The speakers changed language part-way; the server keeps the meeting's language in step. */
+  setLanguage(sessionId: string, language: LanguageCode): Promise<Session>;
   list(): Promise<SessionList>;
   remove(sessionId: string): Promise<void>;
 }
@@ -52,6 +55,15 @@ export function createSessionsApi({ apiUrl, token, fetch: request = fetch }: Ses
     create: (input: CreateSessionRequest) =>
       post('/v1/sessions', CreateSessionRequestSchema.parse(input)),
     end: (sessionId: string) => post(`/v1/sessions/${sessionId}/end`),
+    async setLanguage(sessionId, language) {
+      const response = await request(`${baseUrl}/v1/sessions/${encodeURIComponent(sessionId)}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ language }),
+      });
+      if (!response.ok) throw new Error(`Session request failed with status ${response.status}`);
+      return SessionSchema.parse(await response.json());
+    },
     async list() {
       const response = await request(`${baseUrl}/v1/sessions`, { headers });
       if (!response.ok) throw new Error(`Session request failed with status ${response.status}`);

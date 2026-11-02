@@ -1,5 +1,6 @@
 import {
   CreateSessionRequestSchema,
+  UpdateSessionLanguageRequestSchema,
   type Session,
   type SessionDetail,
   type SessionList,
@@ -21,6 +22,11 @@ export function sessionsRoutes(service: SessionsService): FastifyPluginAsync {
     app.get('/:id', async (request): Promise<SessionDetail> => {
       const { id } = parse(IdParamsSchema, request.params);
       return service.detail(request.userId, id);
+    });
+    app.patch('/:id', async (request): Promise<Session> => {
+      const { id } = parse(IdParamsSchema, request.params);
+      const { language } = parse(UpdateSessionLanguageRequestSchema, request.body);
+      return service.setLanguage(request.userId, id, language);
     });
     app.post('/:id/end', async (request): Promise<Session> => {
       const { id } = parse(IdParamsSchema, request.params);
