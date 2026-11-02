@@ -10,11 +10,13 @@ import {
   CardTitle,
 } from '@cuelingo/ui/components/card';
 import { DictationCard } from '@cuelingo/ui/components/dictation-card';
+import { LanguageSwitcher } from '@cuelingo/ui/components/language-switcher';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { SpeakButton } from '@cuelingo/ui/components/speak-button';
 import Link from 'next/link';
 import { useEffect } from 'react';
 import { client } from '../../lib/client';
+import { useLanguage } from '../../lib/language';
 import { type ReviewResult, useReview } from './use-review';
 
 const RATINGS = [
@@ -225,7 +227,8 @@ export function ReviewEmptyState() {
 }
 
 export function ReviewPage() {
-  const review = useReview();
+  const { language, setLanguage, options } = useLanguage();
+  const review = useReview(language);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -280,7 +283,11 @@ export function ReviewPage() {
 
   return (
     <>
-      <PageHeader title="Ôn tập" description="Ôn lại cụm từ từ chính các cuộc họp của bạn." />
+      <PageHeader
+        title="Ôn tập"
+        description="Ôn lại cụm từ từ chính các cuộc họp của bạn."
+        action={<LanguageSwitcher options={options} value={language} onChange={setLanguage} />}
+      />
       {content}
     </>
   );

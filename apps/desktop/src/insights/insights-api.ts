@@ -11,17 +11,19 @@ import {
   type GlossaryTerm,
   type Progress,
   type UpdateGlossaryTerm,
+  DEFAULT_LANGUAGE,
+  type LanguageCode,
 } from '@cuelingo/shared';
 import type { z } from 'zod';
 
 type Fetch = typeof fetch;
 
 export interface InsightsApi {
-  listGlossary(): Promise<GlossaryTerm[]>;
+  listGlossary(language?: LanguageCode): Promise<GlossaryTerm[]>;
   createGlossary(input: CreateGlossaryTermInput): Promise<GlossaryTerm>;
   updateGlossary(id: string, patch: UpdateGlossaryTerm): Promise<GlossaryTerm>;
   removeGlossary(id: string): Promise<void>;
-  getProgress(): Promise<Progress>;
+  getProgress(language?: LanguageCode): Promise<Progress>;
 }
 
 interface InsightsApiOptions {
@@ -87,8 +89,8 @@ export function createInsightsApi({ apiUrl, token, fetch: request = fetch }: Ins
   }
 
   return {
-    async listGlossary() {
-      return (await call('GET', '/v1/glossary', GlossaryTermListSchema)).items;
+    async listGlossary(language = DEFAULT_LANGUAGE) {
+      return (await call('GET', `/v1/glossary?language=${language}`, GlossaryTermListSchema)).items;
     },
     createGlossary(input: CreateGlossaryTermInput) {
       return call(
@@ -109,8 +111,8 @@ export function createInsightsApi({ apiUrl, token, fetch: request = fetch }: Ins
     async removeGlossary(id: string) {
       await call('DELETE', `/v1/glossary/${id}`, null);
     },
-    getProgress() {
-      return call('GET', '/v1/progress', ProgressSchema);
+    getProgress(language = DEFAULT_LANGUAGE) {
+      return call('GET', `/v1/progress?language=${language}`, ProgressSchema);
     },
   } satisfies InsightsApi;
 }

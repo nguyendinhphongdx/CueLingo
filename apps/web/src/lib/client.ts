@@ -27,6 +27,7 @@ import {
   UpdateUserSettingsSchema,
   UserSettingsSchema,
   type DeleteAccountRequest,
+  type LanguageCode,
   type DeleteMyDataRequest,
   type DebriefFeedbackRequest,
   type ReviewAnswerRequest,
@@ -152,14 +153,16 @@ export const client = {
       ),
   },
   phrases: {
-    list: () => request('GET', '/v1/phrases', PhraseListSchema),
+    list: (language: LanguageCode) =>
+      request('GET', `/v1/phrases?language=${language}`, PhraseListSchema),
     save: (input: SavePhraseRequest) =>
       request('POST', '/v1/phrases', PhraseSchema, SavePhraseRequestSchema.parse(input)),
     remove: (id: string) => request('DELETE', `/v1/phrases/${encodeURIComponent(id)}`, null),
   },
   review: {
     // `dictation=1`: this client can play and grade listen-and-type cards.
-    queue: () => request('GET', '/v1/review/queue?dictation=1', ReviewQueueSchema),
+    queue: (language: LanguageCode) =>
+      request('GET', `/v1/review/queue?dictation=1&language=${language}`, ReviewQueueSchema),
     answer: (input: ReviewAnswerRequest) =>
       request(
         'POST',
@@ -168,7 +171,8 @@ export const client = {
         ReviewAnswerRequestSchema.parse(input),
       ),
   },
-  progress: () => request('GET', '/v1/progress', ProgressSchema),
+  progress: (language: LanguageCode) =>
+    request('GET', `/v1/progress?language=${language}`, ProgressSchema),
   admin: {
     metrics: () => request('GET', '/v1/admin/metrics', AdminMetricsSchema),
   },

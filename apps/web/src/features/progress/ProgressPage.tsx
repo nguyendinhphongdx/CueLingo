@@ -1,10 +1,13 @@
 'use client';
 
 import type { Progress } from '@cuelingo/shared';
+import type { ReactNode } from 'react';
 import { Card, CardContent } from '@cuelingo/ui/components/card';
+import { LanguageSwitcher } from '@cuelingo/ui/components/language-switcher';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { Section } from '@cuelingo/ui/components/section';
 import { AssistSuggestion } from '../assist-suggestion';
+import { useLanguage } from '../../lib/language';
 import { useProgress } from './use-progress';
 
 const dateLabel = (value: string, options: Intl.DateTimeFormatOptions) =>
@@ -64,7 +67,7 @@ function BarChart({
   );
 }
 
-export function ProgressView({ progress }: { progress: Progress }) {
+export function ProgressView({ progress, action }: { progress: Progress; action?: ReactNode }) {
   const stats = [
     ['Cụm đã lưu', progress.phrasesSaved],
     ['Đang ôn', progress.phrasesInReview],
@@ -91,7 +94,7 @@ export function ProgressView({ progress }: { progress: Progress }) {
 
   return (
     <>
-      <PageHeader title="Tiến độ" description="Theo dõi việc học qua từng tuần." />
+      <PageHeader title="Tiến độ" description="Theo dõi việc học qua từng tuần." action={action} />
       <Section title="Tổng quan">
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {stats.map(([label, value]) => (
@@ -132,18 +135,20 @@ export function ProgressView({ progress }: { progress: Progress }) {
 }
 
 export function ProgressPage() {
-  const { progress, loading, error } = useProgress();
+  const { language, setLanguage, options } = useLanguage();
+  const { progress, loading, error } = useProgress(language);
+  const switcher = <LanguageSwitcher options={options} value={language} onChange={setLanguage} />;
   if (loading)
     return (
       <>
-        <PageHeader title="Tiến độ" />
+        <PageHeader title="Tiến độ" action={switcher} />
         <p className="text-muted-foreground text-sm">Đang tải tiến độ…</p>
       </>
     );
   if (error)
     return (
       <>
-        <PageHeader title="Tiến độ" />
+        <PageHeader title="Tiến độ" action={switcher} />
         <p role="alert" className="text-destructive text-sm">
           {error}
         </p>
@@ -152,14 +157,14 @@ export function ProgressPage() {
   if (!progress)
     return (
       <>
-        <PageHeader title="Tiến độ" />
+        <PageHeader title="Tiến độ" action={switcher} />
         <p className="text-muted-foreground text-sm">Chưa có dữ liệu tiến độ.</p>
       </>
     );
   return (
     <>
       <AssistSuggestion />
-      <ProgressView progress={progress} />
+      <ProgressView progress={progress} action={switcher} />
     </>
   );
 }

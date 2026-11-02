@@ -1,18 +1,22 @@
+import type { LanguageCode } from '@cuelingo/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { studyApi } from './study-api';
-
-const PHRASES_KEY = ['study', 'phrases'] as const;
 
 export function confirmPhraseRemoval(phrase: string, confirm: (message: string) => boolean) {
   return confirm(`Xoá “${phrase}” khỏi danh sách cụm từ?`);
 }
 
-export function usePhrases() {
+const PHRASES_ROOT = ['study', 'phrases'] as const;
+
+export function usePhrases(language: LanguageCode) {
   const queryClient = useQueryClient();
-  const list = useQuery({ queryKey: PHRASES_KEY, queryFn: studyApi.getPhrases });
+  const list = useQuery({
+    queryKey: [...PHRASES_ROOT, language],
+    queryFn: () => studyApi.getPhrases(language),
+  });
   const remove = useMutation({
     mutationFn: studyApi.removePhrase,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: PHRASES_KEY }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: PHRASES_ROOT }),
   });
 
   return {

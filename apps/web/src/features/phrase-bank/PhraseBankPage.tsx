@@ -3,11 +3,13 @@
 import type { Phrase } from '@cuelingo/shared';
 import { Button } from '@cuelingo/ui/components/button';
 import { Card, CardContent } from '@cuelingo/ui/components/card';
+import { LanguageSwitcher } from '@cuelingo/ui/components/language-switcher';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { Section } from '@cuelingo/ui/components/section';
 import { SpeakButton } from '@cuelingo/ui/components/speak-button';
 import Link from 'next/link';
 import { client } from '../../lib/client';
+import { useLanguage } from '../../lib/language';
 import { usePhrases } from './use-phrases';
 
 export function PhraseList({
@@ -62,10 +64,15 @@ export function PhraseList({
 }
 
 export function PhraseBankPage() {
-  const { phrases, loading, removingId, error, remove } = usePhrases();
+  const { language, setLanguage, options } = useLanguage();
+  const { phrases, loading, removingId, error, remove } = usePhrases(language);
   return (
     <>
-      <PageHeader title="Cụm từ" description="Những cụm từ bạn đã lưu từ các cuộc họp." />
+      <PageHeader
+        title="Cụm từ"
+        description="Những cụm từ bạn đã lưu từ các cuộc họp."
+        action={<LanguageSwitcher options={options} value={language} onChange={setLanguage} />}
+      />
       <Section title="Kho cụm từ">
         <Card>
           <CardContent className="pt-6">

@@ -1,8 +1,8 @@
-import type { Progress } from '@cuelingo/shared';
+import type { LanguageCode, Progress } from '@cuelingo/shared';
 import { useCallback, useEffect, useState } from 'react';
 import { describeInsightsError, insightsApi, type InsightsApi } from './insights-api';
 
-export function useProgress(api: InsightsApi = insightsApi) {
+export function useProgress(language: LanguageCode, api: InsightsApi = insightsApi) {
   const [progress, setProgress] = useState<Progress | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -11,13 +11,13 @@ export function useProgress(api: InsightsApi = insightsApi) {
     setLoading(true);
     setError(null);
     try {
-      setProgress(await api.getProgress());
+      setProgress(await api.getProgress(language));
     } catch (cause) {
       setError(describeInsightsError(cause));
     } finally {
       setLoading(false);
     }
-  }, [api]);
+  }, [api, language]);
 
   useEffect(() => {
     void load();

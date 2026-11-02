@@ -6,6 +6,7 @@ import { SpeakButton } from '@cuelingo/ui/components/speak-button';
 import { useEffect } from 'react';
 import { studyApi } from './study-api';
 import { type ReviewResult, useReview } from './use-review';
+import { useLanguage } from '../settings';
 
 const RATINGS = [
   { value: 1, label: 'Lại' },
@@ -205,7 +206,7 @@ export function ReviewEmptyState() {
 }
 
 export function ReviewPage() {
-  const review = useReview();
+  const review = useReview(useLanguage().language);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

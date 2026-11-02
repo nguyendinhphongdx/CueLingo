@@ -1,5 +1,5 @@
 import type { RealtimeClient, RealtimeClientOptions, RealtimeState } from '@cuelingo/core-sdk';
-import type { ServerMessage } from '@cuelingo/shared';
+import { DEFAULT_LANGUAGE, type LanguageCode, type ServerMessage } from '@cuelingo/shared';
 import type {
   SegmentEvent,
   SessionStartInput,
@@ -36,7 +36,7 @@ interface SessionControllerOptions {
 export interface SessionController {
   getSnapshot(): SessionSnapshot;
   subscribe(listener: () => void): () => void;
-  start(assistLevel: SelectableAssistLevel): Promise<void>;
+  start(assistLevel: SelectableAssistLevel, language?: LanguageCode): Promise<void>;
   stop(): Promise<void>;
   runDemo(): void;
   dispose(): void;
@@ -170,14 +170,14 @@ export function createSessionController({
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-    async start(assistLevel) {
+    async start(assistLevel, language = DEFAULT_LANGUAGE) {
       if (snapshot.status !== 'idle' && snapshot.status !== 'error') return;
       clearRuntime();
       const generation = runtimeGeneration;
       update({ status: 'connecting', error: null, completedSessionId: null });
 
       try {
-        const session = await sessions.create({ assistLevel });
+        const session = await sessions.create({ assistLevel, language });
         if (generation !== runtimeGeneration) {
           await sessions.end(session.id).catch(() => undefined);
           return;

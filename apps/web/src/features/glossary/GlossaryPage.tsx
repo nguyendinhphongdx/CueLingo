@@ -3,15 +3,18 @@
 import { Button } from '@cuelingo/ui/components/button';
 import { Card, CardContent } from '@cuelingo/ui/components/card';
 import { Input } from '@cuelingo/ui/components/input';
+import { LanguageSwitcher } from '@cuelingo/ui/components/language-switcher';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { Section } from '@cuelingo/ui/components/section';
 import { useState, type FormEvent } from 'react';
 import { GlossaryList } from './GlossaryList';
+import { useLanguage } from '../../lib/language';
 import { useGlossary } from './use-glossary';
 
 /** Glossary screen (US-09): terms that STT and translation should get right. */
 export function GlossaryPage() {
-  const { items, loading, error, adding, add, remove } = useGlossary();
+  const { language, setLanguage, options } = useLanguage();
+  const { items, loading, error, adding, add, remove } = useGlossary(language);
   const [term, setTerm] = useState('');
   const [translation, setTranslation] = useState('');
 
@@ -32,6 +35,7 @@ export function GlossaryPage() {
       <PageHeader
         title="Thuật ngữ"
         description="Giúp nhận dạng giọng nói và bản dịch chính xác hơn."
+        action={<LanguageSwitcher options={options} value={language} onChange={setLanguage} />}
       />
       <Section title="Danh sách thuật ngữ">
         <Card>

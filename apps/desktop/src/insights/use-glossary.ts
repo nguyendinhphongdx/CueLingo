@@ -1,8 +1,13 @@
-import type { CreateGlossaryTermInput, GlossaryTerm, UpdateGlossaryTerm } from '@cuelingo/shared';
+import type {
+  CreateGlossaryTermInput,
+  GlossaryTerm,
+  LanguageCode,
+  UpdateGlossaryTerm,
+} from '@cuelingo/shared';
 import { useCallback, useEffect, useState } from 'react';
 import { describeInsightsError, insightsApi, type InsightsApi } from './insights-api';
 
-export function useGlossary(api: InsightsApi = insightsApi) {
+export function useGlossary(language: LanguageCode, api: InsightsApi = insightsApi) {
   const [items, setItems] = useState<GlossaryTerm[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -12,13 +17,13 @@ export function useGlossary(api: InsightsApi = insightsApi) {
     setLoading(true);
     setError(null);
     try {
-      setItems(await api.listGlossary());
+      setItems(await api.listGlossary(language));
     } catch (cause) {
       setError(describeInsightsError(cause));
     } finally {
       setLoading(false);
     }
-  }, [api]);
+  }, [api, language]);
 
   useEffect(() => {
     void load();
@@ -44,7 +49,8 @@ export function useGlossary(api: InsightsApi = insightsApi) {
     loading,
     saving,
     error,
-    add: (input: CreateGlossaryTermInput) => mutate(() => api.createGlossary(input)),
+    add: (input: Omit<CreateGlossaryTermInput, 'language'>) =>
+      mutate(() => api.createGlossary({ ...input, language })),
     update: (id: string, patch: UpdateGlossaryTerm) => mutate(() => api.updateGlossary(id, patch)),
     remove: (id: string) => mutate(() => api.removeGlossary(id)),
     retry: load,

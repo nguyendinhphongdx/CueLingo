@@ -1,4 +1,4 @@
-import type { ReviewAnswerRequest, ReviewQueue } from '@cuelingo/shared';
+import type { LanguageCode, ReviewAnswerRequest, ReviewQueue } from '@cuelingo/shared';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { client } from '../../lib/client';
@@ -10,8 +10,11 @@ function nowMs() {
   return typeof performance === 'undefined' ? Date.now() : performance.now();
 }
 
-export function useReview() {
-  const queueQuery = useQuery({ queryKey: ['review', 'queue'], queryFn: client.review.queue });
+export function useReview(language: LanguageCode) {
+  const queueQuery = useQuery({
+    queryKey: ['review', 'queue', language],
+    queryFn: () => client.review.queue(language),
+  });
   const answerMutation = useMutation({ mutationFn: client.review.answer });
   const [queue, setQueue] = useState<ReviewQueue | null>(null);
   const [cardIndex, setCardIndex] = useState(0);
@@ -32,6 +35,11 @@ export function useReview() {
   useEffect(() => {
     if (queueQuery.data && queue === null) reset(queueQuery.data);
   }, [queueQuery.data, queue, reset]);
+
+  // Another language has its own queue; drop the cards of the previous one.
+  useEffect(() => {
+    setQueue(null);
+  }, [language]);
 
   const card = queue?.cards[cardIndex] ?? null;
   const answered = selectedChoice !== null;

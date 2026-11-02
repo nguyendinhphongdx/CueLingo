@@ -1,15 +1,15 @@
+import type { LanguageCode } from '@cuelingo/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { client } from '../../lib/client';
 import { describeError } from '../../lib/errors';
 
-const PHRASES_KEY = ['phrases'] as const;
-
-export function usePhrases() {
+export function usePhrases(language: LanguageCode) {
+  const PHRASES_KEY = ['phrases', language] as const;
   const queryClient = useQueryClient();
-  const list = useQuery({ queryKey: PHRASES_KEY, queryFn: client.phrases.list });
+  const list = useQuery({ queryKey: PHRASES_KEY, queryFn: () => client.phrases.list(language) });
   const remove = useMutation({
     mutationFn: client.phrases.remove,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: PHRASES_KEY }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['phrases'] }),
   });
   return {
     phrases: list.data?.phrases ?? [],

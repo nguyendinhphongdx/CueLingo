@@ -1,4 +1,4 @@
-import type { ReviewAnswerRequest, ReviewCard, ReviewQueue } from '@cuelingo/shared';
+import type { LanguageCode, ReviewAnswerRequest, ReviewCard, ReviewQueue } from '@cuelingo/shared';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { studyApi, type StudyApi } from './study-api';
@@ -40,10 +40,10 @@ export async function submitReviewAnswer({
   }
 }
 
-export function useReview() {
+export function useReview(language: LanguageCode) {
   const queueQuery = useQuery({
-    queryKey: ['study', 'review-queue'],
-    queryFn: studyApi.getReviewQueue,
+    queryKey: ['study', 'review-queue', language],
+    queryFn: () => studyApi.getReviewQueue(language),
   });
   const answerMutation = useMutation({ mutationFn: studyApi.answerReview });
   const [queue, setQueue] = useState<ReviewQueue | null>(null);
@@ -61,6 +61,11 @@ export function useReview() {
     startedAt.current = nowMs();
     submitting.current = false;
   }, []);
+
+  // Another language has its own queue; drop the cards of the previous one.
+  useEffect(() => {
+    setQueue(null);
+  }, [language]);
 
   useEffect(() => {
     if (queueQuery.data && queue === null) reset(queueQuery.data);

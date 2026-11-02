@@ -1,18 +1,22 @@
-import type { CreateGlossaryTermInput } from '@cuelingo/shared';
+import type { CreateGlossaryTermInput, LanguageCode } from '@cuelingo/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { client } from '../../lib/client';
 import { describeError } from '../../lib/errors';
 
-const GLOSSARY_KEY = ['glossary'] as const;
+const GLOSSARY_ROOT = ['glossary'] as const;
 
 /** State + actions for the glossary screen. UI components stay free of API calls. */
-export function useGlossary() {
+export function useGlossary(language: LanguageCode) {
   const queryClient = useQueryClient();
-  const refresh = () => queryClient.invalidateQueries({ queryKey: GLOSSARY_KEY });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: GLOSSARY_ROOT });
 
-  const list = useQuery({ queryKey: GLOSSARY_KEY, queryFn: () => client.glossary.list() });
+  const list = useQuery({
+    queryKey: [...GLOSSARY_ROOT, language],
+    queryFn: () => client.glossary.list(language),
+  });
   const add = useMutation({
-    mutationFn: (input: CreateGlossaryTermInput) => client.glossary.create(input),
+    mutationFn: (input: Omit<CreateGlossaryTermInput, 'language'>) =>
+      client.glossary.create({ ...input, language }),
     onSuccess: refresh,
   });
   const remove = useMutation({

@@ -35,9 +35,9 @@ describe('study api', () => {
     await api.removePhrase('22222222-2222-4222-8222-222222222222');
 
     expect(request.mock.calls.map(([url]) => url)).toEqual([
-      'http://api.test/v1/review/queue?dictation=1',
+      'http://api.test/v1/review/queue?dictation=1&language=en',
       'http://api.test/v1/review/answer',
-      'http://api.test/v1/phrases',
+      'http://api.test/v1/phrases?language=en',
       'http://api.test/v1/phrases/22222222-2222-4222-8222-222222222222',
     ]);
     for (const [, init] of request.mock.calls) {
@@ -101,5 +101,14 @@ describe('study api speech', () => {
       fetch: (async () => new Response('{}', { status: 502 })) as unknown as typeof fetch,
     });
     await expect(api.speak('push back')).rejects.toThrow('502');
+  });
+
+  it('asks for the language it was given', async () => {
+    const request = vi.fn<typeof fetch>().mockResolvedValueOnce(Response.json({ phrases: [] }));
+    const api = createStudyApi({ apiUrl: 'ws://api.test/', token: 'secret-token', fetch: request });
+
+    await api.getPhrases('ja');
+
+    expect(request.mock.calls[0]?.[0]).toBe('http://api.test/v1/phrases?language=ja');
   });
 });

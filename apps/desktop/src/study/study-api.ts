@@ -6,6 +6,8 @@ import {
   ReviewQueueSchema,
   type ReviewAnswerRequest,
   TtsRequestSchema,
+  DEFAULT_LANGUAGE,
+  type LanguageCode,
 } from '@cuelingo/shared';
 import { currentToken, resolveToken, type TokenSource } from '../auth';
 import type { z } from 'zod';
@@ -13,9 +15,9 @@ import type { z } from 'zod';
 type Fetch = typeof fetch;
 
 export interface StudyApi {
-  getReviewQueue(): Promise<z.infer<typeof ReviewQueueSchema>>;
+  getReviewQueue(language?: LanguageCode): Promise<z.infer<typeof ReviewQueueSchema>>;
   answerReview(input: ReviewAnswerRequest): Promise<z.infer<typeof ReviewAnswerResponseSchema>>;
-  getPhrases(): Promise<z.infer<typeof PhraseListSchema>>;
+  getPhrases(language?: LanguageCode): Promise<z.infer<typeof PhraseListSchema>>;
   removePhrase(id: string): Promise<void>;
   /** Spoken audio for a short English text. */
   speak(text: string): Promise<Blob>;
@@ -52,7 +54,8 @@ export function createStudyApi({
 
   return {
     // `dictation=1`: this client can play and grade listen-and-type cards.
-    getReviewQueue: () => get('/v1/review/queue?dictation=1', ReviewQueueSchema),
+    getReviewQueue: (language = DEFAULT_LANGUAGE) =>
+      get(`/v1/review/queue?dictation=1&language=${language}`, ReviewQueueSchema),
     async speak(text) {
       const response = await request(`${baseUrl}/v1/tts`, {
         method: 'POST',
@@ -71,7 +74,8 @@ export function createStudyApi({
       if (!response.ok) throw new Error(`Study request failed with status ${response.status}`);
       return ReviewAnswerResponseSchema.parse(await response.json());
     },
-    getPhrases: () => get('/v1/phrases', PhraseListSchema),
+    getPhrases: (language = DEFAULT_LANGUAGE) =>
+      get(`/v1/phrases?language=${language}`, PhraseListSchema),
     async removePhrase(id) {
       const phraseId = PhraseSchema.shape.id.parse(id);
       const response = await request(`${baseUrl}/v1/phrases/${encodeURIComponent(phraseId)}`, {

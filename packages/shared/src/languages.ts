@@ -58,3 +58,7 @@ export const LanguageQuerySchema = z.object({
   language: LanguageCodeSchema.default(DEFAULT_LANGUAGE),
 });
 export type LanguageQuery = z.output<typeof LanguageQuerySchema>;
+
+/** The languages a person may pick, as `{ value, label }` for a language switcher. */
+export const languageOptions = (): Array<{ value: LanguageCode; label: string }> =>
+  enabledLanguages().map((language) => ({ value: language.code, label: language.name }));

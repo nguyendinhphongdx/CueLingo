@@ -12,11 +12,12 @@ import {
 } from '../onboarding';
 import { PrivacyPanel } from '../privacy';
 import { RecentSessions, SessionPanel } from '../session';
-import { AssistSettings, AssistSuggestionBanner, useSettingsSync } from '../settings';
+import { AssistSettings, AssistSuggestionBanner, useLanguage, useSettingsSync } from '../settings';
 import { useSyncAssistLevel } from '../settings/use-assist-settings';
 import { AboutCard, ShortcutList } from './AboutCard';
 import { Button } from '@cuelingo/ui/components/button';
 import { ComingSoon } from '@cuelingo/ui/components/coming-soon';
+import { LanguageSwitcher } from '@cuelingo/ui/components/language-switcher';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { ListCard, Section } from '@cuelingo/ui/components/section';
 import { SoonBadge } from '@cuelingo/ui/components/soon-badge';
@@ -97,11 +98,15 @@ function CurrentView({
   onReviewOnboarding(): void;
 }) {
   const feature = features.find((item) => item.id === view)!;
+  const { language, setLanguage, options } = useLanguage();
   const Page = views[view];
   if (Page) {
     return (
       <>
-        <PageHeader title={feature.label} />
+        <PageHeader
+          title={feature.label}
+          action={<LanguageSwitcher options={options} value={language} onChange={setLanguage} />}
+        />
         <Page />
       </>
     );

@@ -168,9 +168,17 @@ describe('session controller', () => {
 
     await context.controller.start(4);
 
-    expect(context.sessions.create).toHaveBeenCalledWith({ assistLevel: 4 });
+    expect(context.sessions.create).toHaveBeenCalledWith({ assistLevel: 4, language: 'en' });
     expect(context.calls).toEqual(['api.create', 'native.start', 'realtime.create']);
     expect(context.getRealtimeOptions()?.sessionId).toBe(sessionId);
+  });
+
+  it('creates the meeting in the language it was started with', async () => {
+    const context = setup();
+
+    await context.controller.start(3, 'en');
+
+    expect(context.sessions.create).toHaveBeenCalledWith({ assistLevel: 3, language: 'en' });
   });
 
   it('does not start native capture or realtime when session creation fails', async () => {

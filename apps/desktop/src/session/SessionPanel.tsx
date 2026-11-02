@@ -1,8 +1,9 @@
 import { Button as PressButton } from '@animate-ui/react/primitives/buttons/button';
 import { Button } from '@cuelingo/ui/components/button';
+import { LanguageSwitcher } from '@cuelingo/ui/components/language-switcher';
 import { PictureInPicture2, Play, Square } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useSettings } from '../settings';
+import { useLanguage, useSettings } from '../settings';
 import { describeNativeError, openDebrief, toggleOverlay } from './session-actions';
 import type { SessionStatus } from './session-controller';
 import { useSession } from './use-session';
@@ -64,6 +65,7 @@ function useElapsed(active: boolean): string {
 
 export function SessionPanel() {
   const assistLevel = useSettings((state) => state.assistLevel);
+  const { language, setLanguage, options } = useLanguage();
   const session = useSession();
   const running = session.status !== 'idle' && session.status !== 'error';
   const busy = session.status === 'connecting';
@@ -114,6 +116,9 @@ export function SessionPanel() {
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
+        {running ? null : (
+          <LanguageSwitcher options={options} value={language} onChange={setLanguage} />
+        )}
         {running ? (
           <PressButton asChild hoverScale={1} tapScale={0.97}>
             <Button
@@ -131,7 +136,7 @@ export function SessionPanel() {
             <Button
               size="lg"
               disabled={busy}
-              onClick={() => void session.start(assistLevel)}
+              onClick={() => void session.start(assistLevel, language)}
               className="cursor-pointer"
             >
               <Play aria-hidden="true" className="size-4 fill-current" />
