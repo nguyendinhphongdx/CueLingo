@@ -1,11 +1,19 @@
+import { ApiError } from '@cuelingo/core-sdk';
 import type { Debrief, SessionDetail } from '@cuelingo/shared';
 import type { ReactElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import { DebriefPageView, SavePhraseButton } from './DebriefPage';
+import { DebriefPageView, focusTranscriptSegment, SavePhraseButton } from './DebriefPage';
+import { buildBlockCopyText, countTranscriptSpeakers, filterTranscriptSegments } from './content';
 import { buildDebriefMarkdown } from './markdown';
-import { shouldPollDebrief } from './use-debrief';
-import { ApiError } from '@cuelingo/core-sdk';
+import {
+  COPY_CONFIRMATION_MS,
+  getProcessingStatus,
+  LONG_WAIT_MS,
+  scheduleClipboardFeedbackClear,
+  shouldPollDebrief,
+  writeClipboardText,
+} from './use-debrief';
 
 const session: SessionDetail = {
   id: '74cd2b16-1bd2-4c46-9ed4-b1f1bc376f31',
@@ -22,6 +30,14 @@ const session: SessionDetail = {
       endMs: 2_000,
       textEn: 'Let us circle back tomorrow.',
       textVi: 'Ngày mai chúng ta trao đổi lại nhé.',
+    },
+    {
+      id: '7237275b-4e70-4d79-9622-5ab353cc7726',
+      source: 'mic',
+      startMs: 65_000,
+      endMs: 67_000,
+      textEn: 'I will send it today.',
+      textVi: 'Tôi sẽ gửi hôm nay.',
     },
   ],
 };
@@ -46,15 +62,20 @@ const defaultProps = {
   debrief,
   loading: false,
   processing: false,
+  processingSeconds: 0,
+  processingTimedOut: false,
   error: null,
   feedbackBlock: null,
+  clipboardFeedback: null,
   savedPhraseKeys: new Set<string>(),
   savingPhraseKey: null,
   phraseKey: (input: { phrase: string; meaningVi?: string }) =>
     `${input.phrase}\u0000${input.meaningVi ?? ''}`,
   onFeedback: vi.fn(),
   onSavePhrase: vi.fn(),
+  onCopy: vi.fn(),
   onExport: vi.fn(),
+  onRetry: vi.fn(),
   deleting: false,
   onDelete: vi.fn(),
 };
@@ -64,8 +85,22 @@ describe('DebriefPageView', () => {
     const markup = renderToStaticMarkup(
       <DebriefPageView {...defaultProps} debrief={undefined} processing />,
     );
-    expect(markup).toContain('Đang xử lý debrief…');
-    expect(markup).toContain('mỗi 5 giây');
+    expect(markup).toContain('Đang tạo… 0 s');
+    expect(markup).toContain('tự kiểm tra lại');
+  });
+
+  it('shows the long-wait message and retry action after 90 seconds', () => {
+    const markup = renderToStaticMarkup(
+      <DebriefPageView
+        {...defaultProps}
+        debrief={undefined}
+        processing
+        processingSeconds={90}
+        processingTimedOut
+      />,
+    );
+    expect(markup).toContain('Lâu hơn bình thường, bạn có thể quay lại sau');
+    expect(markup).toContain('>Thử lại<');
   });
 
   it('shows all five blocks, comprehension, save action and bilingual transcript', () => {
@@ -83,6 +118,11 @@ describe('DebriefPageView', () => {
     expect(markup).toContain('>Lưu<');
     expect(markup).toContain('Let us circle back tomorrow.');
     expect(markup).toContain('Ngày mai chúng ta trao đổi lại nhé.');
+    expect(markup).toContain('Tất cả 2');
+    expect(markup).toContain('Họ 1');
+    expect(markup).toContain('Tôi 1');
+    expect(markup).toContain('Sao chép cả debrief');
+    expect(markup.match(/aria-label="Sao chép /g)).toHaveLength(4);
     expect(markup.match(/👍 Hữu ích/g)).toHaveLength(5);
     expect(markup).toContain('Xoá cuộc họp');
   });
@@ -93,6 +133,20 @@ describe('DebriefPageView', () => {
       <DebriefPageView {...defaultProps} savedPhraseKeys={savedPhraseKeys} />,
     );
     expect(markup).toContain('>Đã lưu<');
+  });
+
+  it('shows clipboard success and blocked-permission feedback near the action', () => {
+    const copied = renderToStaticMarkup(
+      <DebriefPageView
+        {...defaultProps}
+        clipboardFeedback={{ key: 'summary', status: 'copied' }}
+      />,
+    );
+    const blocked = renderToStaticMarkup(
+      <DebriefPageView {...defaultProps} clipboardFeedback={{ key: 'summary', status: 'error' }} />,
+    );
+    expect(copied).toContain('Đã sao chép');
+    expect(blocked).toContain('Không thể sao chép. Hãy kiểm tra quyền clipboard.');
   });
 
   it('passes SavePhraseRequest to the save action when clicked', () => {
@@ -117,13 +171,68 @@ describe('DebriefPageView', () => {
   });
 });
 
+describe('debrief interactions', () => {
+  it('filters Tôi to mic segments and counts each speaker', () => {
+    expect(countTranscriptSpeakers(session.segments)).toEqual({ all: 2, system: 1, mic: 1 });
+    expect(filterTranscriptSegments(session.segments, 'mic')).toEqual([session.segments[1]]);
+  });
+
+  it('scrolls and focuses the requested transcript segment with reduced motion respected', () => {
+    const scrollIntoView = vi.fn();
+    const focus = vi.fn();
+    const root = {
+      getElementById: vi.fn(() => ({ scrollIntoView, focus })),
+    } as unknown as Pick<Document, 'getElementById'>;
+
+    expect(focusTranscriptSegment(session.segments[0]!.id, root, true)).toBe(true);
+    expect(root.getElementById).toHaveBeenCalledWith(`segment-${session.segments[0]!.id}`);
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'auto', block: 'center' });
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+  });
+
+  it('writes the exact block content to the clipboard and reports a blocked clipboard', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const summary = buildBlockCopyText(debrief, 'summary');
+    await writeClipboardText(summary, { writeText });
+    expect(writeText).toHaveBeenCalledWith('Cập nhật tiến độ\n- Nhóm đã thống nhất phạm vi.');
+
+    await expect(
+      writeClipboardText(summary, { writeText: vi.fn().mockRejectedValue(new Error('blocked')) }),
+    ).rejects.toThrow('blocked');
+  });
+});
+
 describe('debrief polling', () => {
   const notFound = new ApiError(404, 'NOT_FOUND', 'Missing');
 
-  it('polls a 404 for less than two minutes only', () => {
-    expect(shouldPollDebrief(notFound, 119_999)).toBe(true);
-    expect(shouldPollDebrief(notFound, 120_000)).toBe(false);
+  it('polls a 404 for less than 90 seconds only', () => {
+    expect(shouldPollDebrief(notFound, LONG_WAIT_MS - 1)).toBe(true);
+    expect(shouldPollDebrief(notFound, LONG_WAIT_MS)).toBe(false);
     expect(shouldPollDebrief(new ApiError(500, 'INTERNAL_ERROR', 'Failed'), 0)).toBe(false);
+  });
+
+  it('changes to the long-wait state after 90 seconds with fake timers', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-01T08:00:00.000Z'));
+    const startedAt = Date.now();
+    vi.advanceTimersByTime(LONG_WAIT_MS);
+    expect(getProcessingStatus(startedAt)).toEqual({
+      elapsedMs: LONG_WAIT_MS,
+      seconds: 90,
+      timedOut: true,
+    });
+    vi.useRealTimers();
+  });
+
+  it('keeps clipboard confirmation for two seconds', () => {
+    vi.useFakeTimers();
+    const clear = vi.fn();
+    scheduleClipboardFeedbackClear(clear);
+    vi.advanceTimersByTime(COPY_CONFIRMATION_MS - 1);
+    expect(clear).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(clear).toHaveBeenCalledOnce();
+    vi.useRealTimers();
   });
 });
 
@@ -134,5 +243,20 @@ describe('buildDebriefMarkdown', () => {
     expect(markdown).toContain('Gửi bản nháp');
     expect(markdown).toContain('**circle back**');
     expect(markdown).toContain('I will send it to you.');
+    expect(markdown).not.toContain('## Transcript song ngữ');
+  });
+
+  it('optionally includes the bilingual transcript in chronological order', () => {
+    const reversedSession = { ...session, segments: [...session.segments].reverse() };
+    const markdown = buildDebriefMarkdown(debrief, {
+      session: reversedSession,
+      includeTranscript: true,
+    });
+    expect(markdown).toContain('## Transcript song ngữ');
+    expect(markdown).toContain('**00:00 · Họ**');
+    expect(markdown).toContain('**01:05 · Tôi**');
+    expect(markdown).toContain('EN: Let us circle back tomorrow.');
+    expect(markdown).toContain('VI: Tôi sẽ gửi hôm nay.');
+    expect(markdown.indexOf('00:00')).toBeLessThan(markdown.indexOf('01:05'));
   });
 });

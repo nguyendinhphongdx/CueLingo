@@ -1,6 +1,29 @@
-import type { Debrief } from '@cuelingo/shared';
+import type { Debrief, SessionDetail, StoredSegment } from '@cuelingo/shared';
 
-export function buildDebriefMarkdown(debrief: Debrief): string {
+export interface DebriefMarkdownOptions {
+  session?: SessionDetail;
+  includeTranscript?: boolean;
+}
+
+export function formatSegmentTime(startMs: number): string {
+  const totalSeconds = Math.max(0, Math.floor(startMs / 1_000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function segmentLines(segment: StoredSegment): string[] {
+  return [
+    `- **${formatSegmentTime(segment.startMs)} · ${segment.source === 'mic' ? 'Tôi' : 'Họ'}**`,
+    `  - EN: ${segment.textEn}`,
+    `  - VI: ${segment.textVi || 'Chưa có bản dịch'}`,
+  ];
+}
+
+export function buildDebriefMarkdown(
+  debrief: Debrief,
+  { session, includeTranscript = false }: DebriefMarkdownOptions = {},
+): string {
   const lines = [
     `# ${debrief.summary.headlineVi}`,
     '',
@@ -36,6 +59,19 @@ export function buildDebriefMarkdown(debrief: Debrief): string {
       : ['- Không có']),
     '',
   ];
+
+  if (includeTranscript) {
+    lines.push(
+      '## Transcript song ngữ',
+      '',
+      ...(session?.segments.length
+        ? [...session.segments]
+            .sort((left, right) => left.startMs - right.startMs)
+            .flatMap(segmentLines)
+        : ['- Chưa có transcript']),
+      '',
+    );
+  }
 
   return lines.join('\n');
 }
