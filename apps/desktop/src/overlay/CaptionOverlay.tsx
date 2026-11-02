@@ -1,11 +1,20 @@
-import { ArrowDown, EyeOff, ListChecks, MessageSquareQuote, SlidersHorizontal } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  ArrowDown,
+  ChevronDown,
+  EyeOff,
+  ListChecks,
+  MessageSquareQuote,
+  SlidersHorizontal,
+  Sparkles,
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { native, type TranscriptEvent } from '../lib/native';
 import { DRAWER_WIDTH, QuickAssistPanel, useQuickAssist } from '../quick-assist';
 import { saveAssistLevel } from '../settings/use-assist-settings';
 import type { SelectableAssistLevel } from '../settings/settings-store';
 import { CaptionBlock } from './CaptionBlock';
 import { DisplayMenu } from './DisplayMenu';
+import { ToolsMenu, type ToolItem } from './ToolsMenu';
 import { useOverlayPrefs, type OverlayTheme } from './overlay-prefs';
 import { sampleTranscript } from './sample';
 import { useTranscriptStore } from './transcript-store';
@@ -39,34 +48,6 @@ const statusText: Record<LiveStatus, string> = {
 const iconButton =
   'focus-visible:ring-ring text-muted-foreground hover:text-foreground hover:bg-foreground/10 flex size-9 cursor-pointer items-center justify-center rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none';
 
-function ToolbarAction({
-  icon,
-  label,
-  hint,
-  active = false,
-  onClick,
-}: {
-  icon: ReactNode;
-  label: string;
-  hint: string;
-  /** The drawer for this action is open. */
-  active?: boolean;
-  onClick(): void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      aria-pressed={active}
-      title={`${label} (${hint})`}
-      className={`${iconButton} ${active ? 'bg-primary! text-primary-foreground!' : ''}`}
-    >
-      {icon}
-    </button>
-  );
-}
-
 export function CaptionOverlay({
   level,
   segments,
@@ -81,7 +62,8 @@ export function CaptionOverlay({
   const assistLevel = level ?? syncedLevel;
   const prefs = useOverlayPrefs({ fontSize: initialFontSize, theme: initialTheme });
   const quickAssist = useQuickAssist({ listen });
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [menu, setMenu] = useState<'tools' | 'display' | null>(null);
+  const closeMenu = () => setMenu(null);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   useTranscript(listen);
 
@@ -139,6 +121,28 @@ export function CaptionOverlay({
   }
 
   const drawerOpen = panelView !== 'closed' && !panelCollapsed;
+
+  /** Every tool of the overlay. A new one is one more entry here. */
+  const tools: ToolItem[] = [
+    {
+      id: 'recap',
+      label: 'Tóm tắt',
+      description: 'Họ vừa nói gì, trong 1 phút qua',
+      hint: '⌘⇧W',
+      icon: <ListChecks aria-hidden="true" className="size-[18px]" />,
+      active: panelView === 'recap' && !panelCollapsed,
+      onSelect: () => togglePanel('recap'),
+    },
+    {
+      id: 'compose',
+      label: 'Nói giúp',
+      description: 'Soạn câu tiếng Anh từ ý của bạn',
+      hint: '⌘⇧S',
+      icon: <MessageSquareQuote aria-hidden="true" className="size-[18px]" />,
+      active: panelView === 'compose' && !panelCollapsed,
+      onSelect: () => togglePanel('compose'),
+    },
+  ];
   const drawerWidth = useDrawerWindow(drawerOpen, DRAWER_WIDTH);
   // While the drawer slides shut its content stays what it was, instead of vanishing on the first frame.
   const [shownPanel, setShownPanel] = useState(quickAssist.state);
@@ -181,28 +185,28 @@ export function CaptionOverlay({
           </span>
         </span>
         <span className="flex-1" data-tauri-drag-region />
-        <ToolbarAction
-          icon={<ListChecks aria-hidden="true" className="size-[18px]" />}
-          label="Tóm tắt"
-          hint="⌘⇧W"
-          active={panelView === 'recap' && !panelCollapsed}
-          onClick={() => togglePanel('recap')}
-        />
-        <ToolbarAction
-          icon={<MessageSquareQuote aria-hidden="true" className="size-[18px]" />}
-          label="Nói giúp"
-          hint="⌘⇧S"
-          active={panelView === 'compose' && !panelCollapsed}
-          onClick={() => togglePanel('compose')}
-        />
+        <button
+          type="button"
+          aria-label="Công cụ hỗ trợ"
+          aria-haspopup="menu"
+          aria-expanded={menu === 'tools'}
+          title="Công cụ hỗ trợ"
+          onClick={() => setMenu((open) => (open === 'tools' ? null : 'tools'))}
+          className={`${iconButton} w-auto gap-0.5 px-2 ${
+            menu === 'tools' || drawerOpen ? 'bg-foreground/10 text-foreground' : ''
+          }`}
+        >
+          <Sparkles aria-hidden="true" className="size-[18px]" />
+          <ChevronDown aria-hidden="true" className="size-3.5" />
+        </button>
         <span aria-hidden="true" className="bg-border mx-0.5 h-5 w-px" />
         <button
           type="button"
           aria-label="Tuỳ chỉnh hiển thị"
-          aria-expanded={menuOpen}
+          aria-expanded={menu === 'display'}
           title="Tuỳ chỉnh hiển thị"
-          onClick={() => setMenuOpen((open) => !open)}
-          className={`${iconButton} ${menuOpen ? 'bg-foreground/10 text-foreground' : ''}`}
+          onClick={() => setMenu((open) => (open === 'display' ? null : 'display'))}
+          className={`${iconButton} ${menu === 'display' ? 'bg-foreground/10 text-foreground' : ''}`}
         >
           <SlidersHorizontal aria-hidden="true" className="size-[18px]" />
         </button>
@@ -271,7 +275,9 @@ export function CaptionOverlay({
         </button>
       )}
 
-      {menuOpen ? (
+      {menu === 'tools' ? <ToolsMenu items={tools} onClose={closeMenu} /> : null}
+
+      {menu === 'display' ? (
         <DisplayMenu
           level={assistLevel}
           onLevel={(next) => void saveAssistLevel(next as SelectableAssistLevel)}
@@ -281,7 +287,7 @@ export function CaptionOverlay({
           onOpacity={prefs.setOpacity}
           theme={prefs.theme}
           onTheme={prefs.setTheme}
-          onClose={() => setMenuOpen(false)}
+          onClose={closeMenu}
         />
       ) : null}
     </section>

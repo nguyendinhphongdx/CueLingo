@@ -60,8 +60,8 @@ describe('CaptionOverlay', () => {
 
     expect(markup).toContain('aria-label="Tuỳ chỉnh hiển thị"');
     expect(markup).toContain('aria-label="Ẩn overlay"');
-    expect(markup).toContain('aria-label="Tóm tắt"');
-    expect(markup).toContain('aria-label="Nói giúp"');
+    expect(markup).toContain('aria-label="Công cụ hỗ trợ"');
+    expect(markup).toContain('aria-haspopup="menu"');
   });
 
   it('keeps an empty frame at level 0', () => {
