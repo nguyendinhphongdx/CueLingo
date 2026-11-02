@@ -15,6 +15,7 @@ Nơi xem lại cuộc họp, đọc debrief, ôn tập, xem tiến bộ và qu�
 | [Progress](./progress.md)                 | `src/features/progress`    | Tiến bộ theo tuần: % hiểu, số cụm đã học, streak.                |
 | [Glossary](./glossary.md)                 | `src/features/glossary`    | Quản lý thuật ngữ và tên riêng dùng cho STT và dịch.             |
 | [Account & privacy](./account-privacy.md) | `src/features/account`     | Cài đặt tài khoản, quyền riêng tư, xoá dữ liệu.                  |
+| [Số liệu nội bộ](./admin-metrics.md)      | `src/features/admin`       | Chỉ số vận hành tổng hợp cho admin trong allowlist.              |
 
 ## Quan hệ với phần khác
 

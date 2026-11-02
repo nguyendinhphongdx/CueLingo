@@ -52,6 +52,7 @@ describe('assist module', () => {
       'assist.lookup',
       { term: 'table', context: 'Let us table this.' },
       expect.anything(),
+      { userId: USER },
     );
   });
 

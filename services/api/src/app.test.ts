@@ -1,9 +1,70 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { Writable } from 'node:stream';
 import type { AiGateway } from '@cuelingo/ai-gateway';
 import type { FastifyInstance } from 'fastify';
 import { buildTestApp } from './testing';
 
 const WEB = 'http://localhost:3000';
+
+describe('request observability', () => {
+  const apps: FastifyInstance[] = [];
+  afterEach(async () => Promise.all(apps.splice(0).map((app) => app.close())));
+
+  it('keeps a safe client request id and replaces an unsafe one', async () => {
+    const app = await buildTestApp();
+    apps.push(app);
+    const kept = await app.inject({
+      method: 'GET',
+      url: '/healthz',
+      headers: { 'x-request-id': 'desktop:meeting_42' },
+    });
+    expect(kept.headers['x-request-id']).toBe('desktop:meeting_42');
+
+    const replaced = await app.inject({
+      method: 'GET',
+      url: '/healthz',
+      headers: { 'x-request-id': 'bad id with spaces' },
+    });
+    expect(replaced.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
+    expect(replaced.headers['x-request-id']).not.toBe('bad id with spaces');
+  });
+
+  it('returns the request id in error bodies', async () => {
+    const app = await buildTestApp();
+    apps.push(app);
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/glossary',
+      headers: { 'x-request-id': 'web.safe-7' },
+    });
+    expect(response.statusCode).toBe(401);
+    expect(response.json().error.requestId).toBe('web.safe-7');
+  });
+
+  it('never writes authorization, request bodies, or email values to request logs', async () => {
+    let logs = '';
+    const stream = new Writable({
+      write(chunk, _encoding, callback) {
+        logs += chunk.toString();
+        callback();
+      },
+    });
+    const app = await buildTestApp({ logger: { level: 'info', stream } });
+    apps.push(app);
+    await app.inject({
+      method: 'POST',
+      url: '/v1/events',
+      headers: {
+        authorization: 'Bearer super-secret-token',
+        'x-test-user-id': 'user@example.com',
+      },
+      payload: { email: 'private@example.com', transcript: 'confidential meeting words' },
+    });
+    expect(logs).not.toContain('super-secret-token');
+    expect(logs).not.toContain('private@example.com');
+    expect(logs).not.toContain('confidential meeting words');
+  });
+});
 
 describe('CORS for the web app', () => {
   let app: FastifyInstance;

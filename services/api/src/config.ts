@@ -22,6 +22,16 @@ const ConfigSchema = z
     GEMINI_API_KEY: z.string().min(1).optional(),
     REALTIME_DEV_TOKEN: z.string().min(16).optional(),
     REALTIME_DEV_USER_ID: z.uuid().optional(),
+    /** Comma-separated internal dashboard allowlist. Empty or absent denies everyone. */
+    ADMIN_EMAILS: z
+      .string()
+      .transform((value) =>
+        value
+          .split(',')
+          .map((email) => email.trim().toLowerCase())
+          .filter(Boolean),
+      )
+      .default([]),
   })
   .refine((c) => c.MAIL_PROVIDER !== 'resend' || Boolean(c.RESEND_API_KEY && c.MAIL_FROM), {
     message: 'MAIL_PROVIDER=resend needs RESEND_API_KEY and MAIL_FROM',

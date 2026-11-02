@@ -12,6 +12,15 @@ describe('loadConfig', () => {
     expect(config.PORT).toBe(4100);
     expect(config.NODE_ENV).toBe('development');
     expect(config.WEB_ORIGIN).toBe('http://localhost:3000');
+    expect(config.ADMIN_EMAILS).toEqual([]);
+  });
+
+  it('normalizes the admin email allowlist', () => {
+    const config = loadConfig({
+      ...valid,
+      ADMIN_EMAILS: ' Owner@Example.com, second@example.com ',
+    });
+    expect(config.ADMIN_EMAILS).toEqual(['owner@example.com', 'second@example.com']);
   });
 
   it('names the missing variable', () => {

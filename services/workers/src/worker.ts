@@ -7,6 +7,7 @@ import { createPostgresRetentionRepository } from './jobs/retention';
 import type { JobDeps } from './jobs/types';
 import { createSql } from './lib/db';
 import { createUnconfiguredStorage } from './lib/storage';
+import { createAiCallHook } from './lib/ai-calls';
 
 const config = loadConfig();
 const sql = createSql(config.DATABASE_URL);
@@ -16,8 +17,13 @@ const deps: JobDeps = {
   ai: config.GEMINI_API_KEY
     ? createAiGateway({
         googleApiKey: config.GEMINI_API_KEY,
-        onCall: ({ task, model, latencyMs }) =>
-          console.warn('worker: AI call completed', { task, model, latencyMs }),
+        onCall: createAiCallHook(sql, (error, record) =>
+          console.error('worker: AI call metrics persistence failed', {
+            error,
+            task: record.task,
+            model: record.model,
+          }),
+        ),
       })
     : undefined,
   log: { warn: (message, context) => console.warn(message, context) },

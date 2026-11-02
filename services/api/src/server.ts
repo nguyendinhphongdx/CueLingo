@@ -1,8 +1,10 @@
-import { createAiGateway, type AiCallRecord } from '@cuelingo/ai-gateway';
+import { createAiGateway } from '@cuelingo/ai-gateway';
+import type { FastifyInstance } from 'fastify';
 import { buildApp } from './app';
 import { loadConfig } from './config';
 import { createSql } from './lib/db';
 import { createPgBossQueue } from './lib/queue';
+import { createAiCallHook } from './lib/ai-calls';
 import { createAuthModule } from './modules/auth';
 import { createPostgresDebriefRepository } from './modules/debrief';
 import { createPostgresEventsRepository } from './modules/events';
@@ -12,6 +14,7 @@ import { createPostgresSessionsRepository } from './modules/sessions';
 import { createPostgresAccountRepository } from './modules/account';
 import { createDeviceService, createPostgresDeviceRepository } from './modules/device';
 import { createPostgresPhrasesRepository, createPostgresStudyRepository } from './modules/review';
+import { createPostgresAdminRepository } from './modules/admin';
 
 const config = loadConfig();
 
@@ -27,11 +30,19 @@ const phrasesRepository = createPostgresPhrasesRepository(sql);
 const deviceRepository = createPostgresDeviceRepository(sql);
 const deviceService = createDeviceService(deviceRepository);
 const studyRepository = createPostgresStudyRepository(sql);
+const adminRepository = createPostgresAdminRepository(sql);
+// The AI hook is created before the app exists, so it reaches the logger through this holder.
+const appRef: { current?: FastifyInstance } = {};
 
 const gateway = config.GEMINI_API_KEY
   ? createAiGateway({
       googleApiKey: config.GEMINI_API_KEY,
-      onCall: logAiCall,
+      onCall: createAiCallHook(sql, (error, record) =>
+        appRef.current?.log.error(
+          { err: error, task: record.task, model: record.model },
+          'AI call metrics persistence failed',
+        ),
+      ),
     })
   : undefined;
 
@@ -70,6 +81,7 @@ const app = await buildApp({
     device: deviceRepository,
     phrases: phrasesRepository,
     study: studyRepository,
+    admin: adminRepository,
   },
   queue,
   resolveUserId: authModule.resolveUserId,
@@ -79,12 +91,10 @@ const app = await buildApp({
   assist: gateway ? { gateway } : undefined,
   verifyDevToken: config.NODE_ENV === 'production' ? undefined : verifyDevToken,
   logger: true,
+  adminEmails: config.ADMIN_EMAILS,
 });
 
-function logAiCall({ task, model, latencyMs }: AiCallRecord): void {
-  app.log.info({ task, model, latencyMs }, 'AI call completed');
-}
-
+appRef.current = app;
 if (!gateway) app.log.warn('Realtime and Quick Assist disabled because GEMINI_API_KEY is not set');
 
 // Ctrl+C reaches the process as SIGINT and again as SIGTERM from the package manager: close everything once.

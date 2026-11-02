@@ -146,11 +146,15 @@ describe('realtime module', () => {
       });
     }
 
-    expect(llm).toHaveBeenLastCalledWith('translate.realtime', {
-      text: 'four',
-      previous: ['one', 'two', 'three'],
-      glossary: [{ term: 'SLA', translation: 'cam kết dịch vụ' }],
-    });
+    expect(llm).toHaveBeenLastCalledWith(
+      'translate.realtime',
+      {
+        text: 'four',
+        previous: ['one', 'two', 'three'],
+        glossary: [{ term: 'SLA', translation: 'cam kết dịch vụ' }],
+      },
+      expect.objectContaining({ userId: USER_ID }),
+    );
     expect(deps.glossary).toHaveBeenCalledWith(USER_ID);
   });
 
@@ -170,6 +174,7 @@ describe('realtime module', () => {
         text: 'their voice',
         previous: [],
       }),
+      expect.objectContaining({ userId: USER_ID }),
     );
   });
 

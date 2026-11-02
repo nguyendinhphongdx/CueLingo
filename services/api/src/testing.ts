@@ -9,6 +9,7 @@ import { createInMemorySessionsRepository } from './modules/sessions';
 import { createInMemoryAccountRepository } from './modules/account';
 import { createInMemoryDeviceRepository } from './modules/device';
 import { createInMemoryPhrasesRepository, createInMemoryStudyRepository } from './modules/review';
+import { createInMemoryAdminRepository } from './modules/admin';
 
 /** Header the test resolver reads in place of a real session. */
 export const TEST_USER_HEADER = 'x-test-user-id';
@@ -37,6 +38,7 @@ export async function buildTestApp(
       device: createInMemoryDeviceRepository(),
       phrases: createInMemoryPhrasesRepository(),
       study: createInMemoryStudyRepository(),
+      admin: createInMemoryAdminRepository(),
       ...repos,
     },
     queue,

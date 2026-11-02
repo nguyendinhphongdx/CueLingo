@@ -26,6 +26,13 @@ export interface AiCallRecord {
   outputTokens?: number;
   fallback: boolean;
   ok: boolean;
+  userId?: string;
+  sessionId?: string;
+}
+
+export interface AiCallContext {
+  userId?: string;
+  sessionId?: string;
 }
 
 export interface LlmResult {
@@ -62,11 +69,16 @@ export interface AiGatewayOptions {
 }
 
 export interface AiGateway {
-  llm(task: 'translate.realtime', input: TranslateInput): Promise<LlmResult>;
+  llm(
+    task: 'translate.realtime',
+    input: TranslateInput,
+    context?: AiCallContext,
+  ): Promise<LlmResult>;
   json<TTask extends JsonTaskName, TOutput>(
     task: TTask,
     input: JsonTaskInputMap[TTask],
     schema: JsonSchema<TOutput>,
+    context?: AiCallContext,
   ): Promise<TOutput>;
 }
 
@@ -106,6 +118,7 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
     system: string,
     prompt: string,
     version: string,
+    context?: AiCallContext,
   ) {
     const started = performance.now();
     const record: AiCallRecord = {
@@ -115,6 +128,7 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
       latencyMs: 0,
       fallback,
       ok: false,
+      ...context,
     };
     try {
       const out = await generate({
@@ -131,7 +145,10 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
       return { text, model, fallback, latencyMs: Math.round(performance.now() - started) };
     } finally {
       record.latencyMs = Math.round(performance.now() - started);
-      options.onCall?.(record);
+      // Observability must never add latency to, or change the outcome of, an AI request.
+      void Promise.resolve()
+        .then(() => options.onCall?.(record))
+        .catch(() => undefined);
     }
   }
 
@@ -140,13 +157,14 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
     system: string,
     prompt: string,
     version: string,
+    context?: AiCallContext,
   ): Promise<LlmResult> {
     const config = TASKS[task];
     try {
-      return await attempt(task, config.model, false, system, prompt, version);
+      return await attempt(task, config.model, false, system, prompt, version, context);
     } catch {
       try {
-        return await attempt(task, config.fallbackModel, true, system, prompt, version);
+        return await attempt(task, config.fallbackModel, true, system, prompt, version, context);
       } catch (error) {
         throw new AiGatewayError(task, error);
       }
@@ -170,12 +188,12 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
   }
 
   return {
-    async llm(task, input) {
+    async llm(task, input, context) {
       const { system, prompt } = buildTranslatePrompt(input);
-      return runTextTask(task, system, prompt, TRANSLATE_PROMPT_VERSION);
+      return runTextTask(task, system, prompt, TRANSLATE_PROMPT_VERSION, context);
     },
 
-    async json(task, input, schema) {
+    async json(task, input, schema, context) {
       const { system, prompt, version } = buildJsonTaskPrompt(task, input);
       let parseError: unknown;
       for (let attemptIndex = 0; attemptIndex < 2; attemptIndex += 1) {
@@ -183,7 +201,7 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
           attemptIndex === 0
             ? ''
             : '\n\nYour previous response was invalid. Return only valid JSON matching the requested shape.';
-        const result = await runTextTask(task, system, prompt + retryInstruction, version);
+        const result = await runTextTask(task, system, prompt + retryInstruction, version, context);
         try {
           return schema.parse(JSON.parse(result.text));
         } catch (error) {

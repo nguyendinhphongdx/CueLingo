@@ -50,6 +50,32 @@ describe('ai-gateway translate.realtime', () => {
     await make(generate).llm('translate.realtime', { text: 'Hi' });
     expect(generate).toHaveBeenCalled();
   });
+
+  it('passes attribution context to the hook without letting hook failures affect the call', async () => {
+    const onCall = vi.fn(() => {
+      throw new Error('metrics store unavailable');
+    });
+    const gateway = createAiGateway({
+      googleApiKey: 'test',
+      generate: async () => ({ text: 'Xin chào' }),
+      onCall,
+    });
+    await expect(
+      gateway.llm(
+        'translate.realtime',
+        { text: 'Hello' },
+        {
+          userId: 'user-1',
+          sessionId: 'session-1',
+        },
+      ),
+    ).resolves.toMatchObject({ text: 'Xin chào' });
+    await vi.waitFor(() =>
+      expect(onCall).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'user-1', sessionId: 'session-1' }),
+      ),
+    );
+  });
 });
 
 describe('ai-gateway structured assist tasks', () => {

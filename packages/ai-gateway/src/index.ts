@@ -5,6 +5,7 @@
 export { AiGatewayError, createAiGateway } from './gateway';
 export type {
   AiCallRecord,
+  AiCallContext,
   AiGateway,
   AiGatewayOptions,
   GenerateFn,
@@ -14,3 +15,5 @@ export type {
 } from './gateway';
 export { TASKS } from './tasks';
 export type { JsonTaskName, TaskName } from './tasks';
+export { estimateCostUsd, MODEL_PRICES } from './pricing';
+export type { ModelPrice } from './pricing';

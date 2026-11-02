@@ -28,16 +28,16 @@ export function createAssistService({ gateway }: AssistDeps) {
   }
 
   return {
-    lookup(input: LookupRequest): Promise<LookupResponse> {
-      return execute(() => gateway.json('assist.lookup', input, LookupOutputSchema));
+    lookup(userId: string, input: LookupRequest): Promise<LookupResponse> {
+      return execute(() => gateway.json('assist.lookup', input, LookupOutputSchema, { userId }));
     },
 
-    recap(input: RecapRequest): Promise<RecapResponse> {
-      return execute(() => gateway.json('assist.recap', input, RecapOutputSchema));
+    recap(userId: string, input: RecapRequest): Promise<RecapResponse> {
+      return execute(() => gateway.json('assist.recap', input, RecapOutputSchema, { userId }));
     },
 
-    compose(input: ComposeRequest): Promise<ComposeResponse> {
-      return execute(() => gateway.json('assist.compose', input, ComposeOutputSchema));
+    compose(userId: string, input: ComposeRequest): Promise<ComposeResponse> {
+      return execute(() => gateway.json('assist.compose', input, ComposeOutputSchema, { userId }));
     },
   };
 }

@@ -17,6 +17,7 @@ import {
   SessionDetailSchema,
   SessionListSchema,
   DeleteMyDataRequestSchema,
+  AdminMetricsSchema,
   DeviceCodeResponseSchema,
   UpdateMeRequestSchema,
   type DeleteAccountRequest,
@@ -134,6 +135,9 @@ export const client = {
       ),
   },
   progress: () => request('GET', '/v1/progress', ProgressSchema),
+  admin: {
+    metrics: () => request('GET', '/v1/admin/metrics', AdminMetricsSchema),
+  },
   privacy: {
     export: () => request('GET', '/v1/me/export', ExportSchema),
     deleteMyData: (input: DeleteMyDataRequest) =>
