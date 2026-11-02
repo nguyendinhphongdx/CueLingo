@@ -139,7 +139,12 @@ export function CaptionOverlay({
   }
 
   const drawerOpen = panelView !== 'closed' && !panelCollapsed;
-  useDrawerWindow(drawerOpen, DRAWER_WIDTH);
+  const drawerWidth = useDrawerWindow(drawerOpen, DRAWER_WIDTH);
+  // While the drawer slides shut its content stays what it was, instead of vanishing on the first frame.
+  const [shownPanel, setShownPanel] = useState(quickAssist.state);
+  useEffect(() => {
+    if (drawerOpen) setShownPanel(quickAssist.state);
+  }, [drawerOpen, quickAssist.state]);
 
   const hidden = assistLevel === 0;
 
@@ -243,12 +248,15 @@ export function CaptionOverlay({
             </div>
           )}
         </div>
-        <QuickAssistPanel
-          state={quickAssist.state}
-          actions={quickAssist}
-          collapsed={panelCollapsed}
-          onToggleCollapsed={() => setPanelCollapsed((collapsed) => !collapsed)}
-        />
+        {drawerWidth > 0.5 ? (
+          <div className="flex shrink-0 justify-end overflow-hidden" style={{ width: drawerWidth }}>
+            <QuickAssistPanel
+              state={shownPanel}
+              actions={quickAssist}
+              onToggleCollapsed={() => setPanelCollapsed(true)}
+            />
+          </div>
+        ) : null}
       </div>
 
       {following ? null : (
