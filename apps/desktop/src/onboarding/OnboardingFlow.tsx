@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@cuelingo/ui/components/button';
 import { Segmented } from '@cuelingo/ui/components/segmented';
 import { ArrowLeft, Captions, Languages, MessageSquareText } from 'lucide-react';
-import { Logo } from '../app/Logo';
+import { Logo } from '@cuelingo/ui/components/logo';
 import { native } from '../lib/native';
 import { CaptionBlock } from '../overlay/CaptionBlock';
 import { sampleTranscript } from '../overlay/sample';
