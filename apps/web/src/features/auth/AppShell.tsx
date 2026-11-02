@@ -61,8 +61,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       }}
       footer={
         <div className="space-y-2">
-          <p className="text-muted-foreground truncate text-xs" title={session.user.email}>
-            {session.user.email}
+          <p
+            className="text-muted-foreground truncate text-xs"
+            title={session.user.name || session.user.email}
+          >
+            {session.user.name || session.user.email}
           </p>
           <Button variant="outline" className="min-h-11 w-full cursor-pointer" onClick={signOut}>
             Đăng xuất
