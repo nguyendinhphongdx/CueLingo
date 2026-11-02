@@ -87,7 +87,11 @@ function logAiCall({ task, model, latencyMs }: AiCallRecord): void {
 
 if (!gateway) app.log.warn('Realtime and Quick Assist disabled because GEMINI_API_KEY is not set');
 
+// Ctrl+C reaches the process as SIGINT and again as SIGTERM from the package manager: close everything once.
+let shuttingDown = false;
 const shutdown = async () => {
+  if (shuttingDown) return;
+  shuttingDown = true;
   await app.close();
   await queue.stop();
   await authModule.close();
