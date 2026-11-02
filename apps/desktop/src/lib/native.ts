@@ -8,7 +8,14 @@ import { z } from 'zod';
 
 export const AssistLevel = z.number().int().min(0).max(5);
 
-export const SessionStartInput = z.object({ assistLevel: AssistLevel });
+export const SessionStartInput = z.object({
+  assistLevel: AssistLevel,
+  /** Meeting language (`en`, `ja`…); the native side loads the matching recognition model. */
+  language: z
+    .string()
+    .regex(/^[a-z]{2,3}$/)
+    .optional(),
+});
 export type SessionStartInput = z.infer<typeof SessionStartInput>;
 
 export const SessionStartResult = z.object({ sessionId: z.string().min(1) });
@@ -50,6 +57,25 @@ export const SegmentEvent = z.object({
 });
 export type SegmentEvent = z.infer<typeof SegmentEvent>;
 
+/** The speech model loading (or a language switch finishing), and recognition time once a session ends. */
+export const AudioModelEvent = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('model'),
+    language: z.string(),
+    state: z.enum(['downloading', 'ready', 'error']),
+    progress: z.number().min(0).max(1).optional(),
+    message: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('stats'),
+    language: z.string(),
+    count: z.number().int(),
+    p50Ms: z.number(),
+    p95Ms: z.number(),
+  }),
+]);
+export type AudioModelEvent = z.infer<typeof AudioModelEvent>;
+
 export const SettingsEvent = z.object({ assistLevel: AssistLevel });
 export type SettingsEvent = z.infer<typeof SettingsEvent>;
 
@@ -63,6 +89,16 @@ export const native = {
     invoke('session_start', { opts: SessionStartInput.parse(opts) }).then((v) =>
       SessionStartResult.parse(v),
     ),
+  /** Switches the running meeting's recognition model; captions go on with the old one until it is ready. */
+  setLanguage: (language: string) =>
+    invoke('session_set_language', {
+      language: z
+        .string()
+        .regex(/^[a-z]{2,3}$/)
+        .parse(language),
+    }).then(() => undefined),
+  onAudioModel: (cb: (e: AudioModelEvent) => void): Promise<UnlistenFn> =>
+    listen('audio-model', (e) => cb(AudioModelEvent.parse(e.payload))),
   sessionStop: () => invoke('session_stop').then(() => undefined),
   /** The device token kept in the macOS Keychain; null when nobody is signed in. */
   authTokenGet: () => invoke('auth_token_get').then((v) => z.string().nullable().parse(v)),

@@ -6,8 +6,11 @@ import LocalSTT
 // cuelingo-audio: captures system audio + mic, transcribes on-device, prints one JSON object per line.
 // stdout events: {"type":"status","state":"loading|ready|error","message":…}
 //                {"type":"segment","segmentId","stream","startMs","endMs","text","words":[],"partial"}
-// stdin: a line "stop" ends the session; "vocab ["SLA",...]" replaces the glossary terms.
-// env CUELINGO_VOCAB: the same JSON array, applied at start.
+//                {"type":"model","language","state":"downloading|ready|error","progress":0...1,"message"}
+//                {"type":"stats","language","count","p50Ms","p95Ms"}  (recognition time, once at the end)
+// stdin: a line "stop" ends the session; "vocab ["SLA",...]" replaces the glossary terms;
+//        "language ja" switches the recognition model (captions continue on the old one until it is ready).
+// env CUELINGO_VOCAB: the same JSON array, applied at start. env CUELINGO_LANGUAGE: language at start (default en).
 
 let out = FileHandle.standardOutput
 let writeLock = NSLock()
@@ -18,6 +21,19 @@ func emit(_ object: [String: Any]) {
     writeLock.unlock()
 }
 func status(_ state: String, _ message: String = "") { emit(["type": "status", "state": state, "message": message]) }
+
+/// Passes on download progress only when it moved by at least 5 points, so the pipe is not flooded.
+final class ProgressGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var last = -1.0
+    func shouldReport(_ fraction: Double) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard last < 1, fraction >= 1 || fraction - last >= 0.05 else { return false }
+        last = fraction
+        return true
+    }
+}
 
 final class Pipeline: @unchecked Sendable {
     let stream: String
@@ -125,8 +141,41 @@ if CommandLine.arguments.contains("--check-system-audio") {
 }
 
 let transcriber = Transcriber()
-do { try await transcriber.load() } catch {
-    status("error", "model load failed: \(error)")
+
+/// Loads the model for a language, reporting download progress. Returns false when it could not.
+func loadModel(_ language: String) async -> Bool {
+    guard SpeechModels.isSupported(language) else {
+        emit(["type": "model", "language": language, "state": "error", "message": "unsupported language"])
+        return false
+    }
+    let reported = ProgressGate()
+    do {
+        try await transcriber.load(language: language) { fraction in
+            if reported.shouldReport(fraction) {
+                emit(["type": "model", "language": language, "state": "downloading", "progress": fraction])
+            }
+        }
+        emit(["type": "model", "language": language, "state": "ready"])
+        return true
+    } catch {
+        emit(["type": "model", "language": language, "state": "error", "message": "\(error)"])
+        return false
+    }
+}
+
+/// Recognition time per language, reported once at the end so slow models show up in a real run.
+func reportLatency() async {
+    for entry in await transcriber.latencySummary() {
+        emit([
+            "type": "stats", "language": entry.language, "count": entry.count,
+            "p50Ms": entry.p50.rounded(), "p95Ms": entry.p95.rounded(),
+        ])
+    }
+}
+
+let startLanguage = ProcessInfo.processInfo.environment["CUELINGO_LANGUAGE"] ?? "en"
+if !(await loadModel(startLanguage)) {
+    status("error", "model load failed for \(startLanguage)")
     exit(2)
 }
 func applyVocabulary(_ json: String) async {
@@ -152,6 +201,7 @@ if let flag = CommandLine.arguments.firstIndex(of: "--file"), flag + 1 < Command
     system.feed([Int16](repeating: 0, count: 16_000))  // trailing silence closes the last sentence
     system.finish()
     try? await Task.sleep(nanoseconds: 4_000_000_000)
+    await reportLatency()
     status("stopped")
     exit(0)
 }
@@ -170,10 +220,16 @@ while let line = readLine() {
     let command = line.trimmingCharacters(in: .whitespaces)
     if command == "stop" { break }
     if command.hasPrefix("vocab ") { await applyVocabulary(String(command.dropFirst(6))) }
+    if command.hasPrefix("language ") {
+        let target = String(command.dropFirst(9)).trimmingCharacters(in: .whitespaces)
+        // Off the input loop so "stop" is never stuck behind a model download.
+        Task { _ = await loadModel(target) }
+    }
 }
 tap.stop()
 micCapture.stop()
 system.finish()
 mic.finish()
 try? await Task.sleep(nanoseconds: 1_500_000_000)  // let final recognitions flush
+await reportLatency()
 status("stopped")

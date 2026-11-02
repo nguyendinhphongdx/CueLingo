@@ -18,6 +18,7 @@ pub fn run() {
         .manage(commands::AppState::default())
         .invoke_handler(tauri::generate_handler![
             commands::session_start,
+            commands::session_set_language,
             commands::session_stop,
             commands::permissions_status,
             commands::check_system_audio,

@@ -59,7 +59,10 @@ Theo [native-desktop](../conventions/native-desktop.md): thread audio không c�
 
 ## Sidecar `cuelingo-audio` (M1)
 
-- stdout: mỗi dòng một JSON: `{"type":"status","state":"loading|ready|error|stopped"}` và `{"type":"segment","segmentId","stream","startMs","endMs","text","words":[],"partial"}`. stdin: dòng `stop` kết thúc phiên. `--file x.wav` (16 kHz mono Int16) chạy một file qua cùng đường xử lý (test/demo, không cần quyền).
+- stdout: mỗi dòng một JSON: `{"type":"status","state":"loading|ready|error|stopped"}` và `{"type":"segment","segmentId","stream","startMs","endMs","text","words":[],"partial"}`. stdin: dòng `stop` kết thúc phiên. Nhiều ngôn ngữ (ADR 0013): biến môi trường `CUELINGO_LANGUAGE` (mặc định `en`) chọn model nhận dạng lúc khởi động (`en` → Parakeet TDT v2, `ja` → Parakeet TDT Japanese). Dòng stdin `language <mã>` đổi model giữa chừng: model cũ vẫn nhận dạng cho đến khi model mới nạp xong, nên caption không dừng. Sidecar phát thêm `{"type":"model","language","state":"downloading|ready|error","progress"}` khi tải/nạp model và `{"type":"stats","language","count","p50Ms","p95Ms"}` một lần lúc kết thúc (thời gian nhận dạng mỗi câu). Lõi Rust chuyển hai loại này thành sự kiện `audio-model`, lệnh `session_set_language` ghi dòng `language` vào stdin. Đo thực tế trên máy phát triển: tiếng Anh p50 182 ms, p95 249 ms (5 câu); số liệu tiếng Nhật đo ở P3-05.
+
+`--file x.wav` (16 kHz mono Int16) chạy một file qua cùng đường xử lý (test/demo, không cần quyền).
+
 - Tách câu: VAD năng lượng (`UtteranceSegmenter`, im lặng 600 ms hoặc 15 s thì chốt câu), partial mỗi 0,7 s bằng cách nhận dạng lại đoạn đang nói. Model: Parakeet TDT v2 (tiếng Anh) của FluidAudio, tải ~500 MB lần đầu vào `~/Library/Application Support/FluidAudio`. Câu < 1 s được đệm im lặng (model lỗi "zero shape" nếu ngắn hơn).
 - Mic khởi động ở luồng riêng vì có thể treo chờ quyền; system audio không phụ thuộc mic.
 - Lỗi đã gặp: ký lại app ad-hoc mỗi lần build làm macOS hỏi lại quyền, và chờ hộp thoại làm treo tiến trình. Cần chứng chỉ ký ổn định (M5-05) để hết.

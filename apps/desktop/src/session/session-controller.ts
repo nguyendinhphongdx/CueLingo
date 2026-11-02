@@ -185,7 +185,7 @@ export function createSessionController({
         activeSessionId = session.id;
         await listenForSegments();
         if (generation !== runtimeGeneration) return;
-        await native.sessionStart({ assistLevel });
+        await native.sessionStart({ assistLevel, language });
         if (generation !== runtimeGeneration) {
           await native.sessionStop();
           return;

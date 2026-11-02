@@ -19,6 +19,13 @@ pub struct AppState {
 #[serde(rename_all = "camelCase")]
 pub struct SessionStartOpts {
     assist_level: u8,
+    /// Meeting language; the sidecar loads the matching recognition model. English when left out.
+    language: Option<String>,
+}
+
+/// A language code is two or three lowercase letters; anything else never reaches the sidecar.
+fn valid_language(code: &str) -> bool {
+    (2..=3).contains(&code.len()) && code.bytes().all(|b| b.is_ascii_lowercase())
 }
 
 #[derive(Serialize)]
@@ -54,9 +61,22 @@ pub fn session_start(
             .as_millis()
     );
     *state.assist_level.lock().map_err(|e| e.to_string())? = opts.assist_level.min(5);
-    state.audio.start(&app)?;
+    let language = opts.language.as_deref().unwrap_or("en");
+    if !valid_language(language) {
+        return Err("invalid_language".into());
+    }
+    state.audio.start(&app, language)?;
     *current = Some(id.clone());
     Ok(SessionStartResult { session_id: id })
+}
+
+/// Switches the running meeting's recognition model (for example when the speakers change language).
+#[tauri::command]
+pub fn session_set_language(state: State<AppState>, language: String) -> Result<(), String> {
+    if !valid_language(&language) {
+        return Err("invalid_language".into());
+    }
+    state.audio.set_language(&language)
 }
 
 #[tauri::command]
@@ -152,6 +172,16 @@ pub fn toggle_overlay(app: AppHandle) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_short_lowercase_codes_are_languages() {
+        assert!(valid_language("en"));
+        assert!(valid_language("ja"));
+        assert!(!valid_language(""));
+        assert!(!valid_language("EN"));
+        assert!(!valid_language("en; rm"));
+        assert!(!valid_language("english"));
+    }
 
     #[test]
     fn only_web_pages_and_privacy_panes_open() {

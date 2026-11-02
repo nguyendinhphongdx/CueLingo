@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useLanguage, useSettings } from '../settings';
 import { describeNativeError, openDebrief, toggleOverlay } from './session-actions';
 import type { SessionStatus } from './session-controller';
+import { describeModelProgress, useModelProgress } from './model-progress';
 import { useSession } from './use-session';
 
 const statusText: Record<SessionStatus, string> = {
@@ -72,6 +73,7 @@ export function SessionPanel() {
   const live = session.status === 'running';
   const elapsed = useElapsed(live);
   const error = describeNativeError(session.error);
+  const modelProgress = describeModelProgress(useModelProgress());
 
   return (
     <section
@@ -162,6 +164,11 @@ export function SessionPanel() {
           <DebriefButton sessionId={session.completedSessionId} />
         ) : null}
       </div>
+      {modelProgress && busy ? (
+        <p className="mt-4 text-sm text-white/80" aria-live="polite">
+          {modelProgress}
+        </p>
+      ) : null}
       <div className="sr-only" aria-live="polite">
         Trạng thái: {statusText[session.status]}
       </div>
