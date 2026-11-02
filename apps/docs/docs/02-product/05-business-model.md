@@ -8,22 +8,26 @@ title: Mô hình kinh doanh & chỉ số
 
 ## Gói dịch vụ
 
-| Gói                   | Dành cho           | Bao gồm                                                                               |
-| --------------------- | ------------------ | ------------------------------------------------------------------------------------- |
-| **Free**              | Dùng thử           | Vài giờ Copilot/tháng, Phrase Bank, SRS cơ bản                                        |
-| **Pro**               | Cá nhân            | Copilot nhiều giờ hơn, debrief đầy đủ, Daily Mix, Speech Coach, Tutor                 |
-| **Pro+**              | Cá nhân dùng nhiều | Roleplay persona, voice mode, podcast cá nhân, nhiều ngôn ngữ                         |
-| **Team / Enterprise** | Doanh nghiệp       | Theo seat, glossary công ty, dashboard L&D, SSO, lưu trữ theo khu vực, on-premise/VPC |
-| **Add-on**            | Tuỳ chọn           | Human coach review, luyện thi chứng chỉ                                               |
+| Gói                   | Dành cho           | Bao gồm                                                                                                                                            |
+| --------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Free**              | Dùng thử           | Vài giờ Copilot/tháng, Phrase Bank, SRS cơ bản, debrief rút gọn                                                                                    |
+| **Pro**               | Cá nhân            | Copilot nhiều giờ hơn, debrief đầy đủ, briefing và follow-up, Daily Mix, Speech Coach                                                              |
+| **Pro+**              | Cá nhân dùng nhiều | Roleplay persona, voice mode, podcast cá nhân, nhiều ngôn ngữ, tutor                                                                               |
+| **Team / Enterprise** | Doanh nghiệp       | **Sau cổng B2C** (xem [lộ trình](./04-roadmap.md#điều-kiện-mở-các-hướng-ở-đợt-4)): theo seat, glossary công ty, dashboard L&D, SSO, on-premise/VPC |
+| **Add-on**            | Tuỳ chọn           | Human coach review, luyện thi chứng chỉ                                                                                                            |
 
-Giá cụ thể chốt sau khi đo chi phí AI thực tế/giờ họp trong beta (giả thuyết H5 ở [Phạm vi MVP](./03-mvp-scope.md)). Beta MVP miễn phí hoặc thu tay.
+Hướng đi hiện tại là **B2C trước** (2026-11-02): Free và Pro là hai gói cần có ở Đợt 2; Pro+ và Team chỉ làm khi có số liệu. Phần chia tính năng giữa Free và Pro ở trên là **giả định**, chưa chốt.
+
+Giá và giới hạn Free chốt sau khi đo chi phí AI thực tế/giờ họp trong beta (giả thuyết H5 ở [Phạm vi MVP](./03-mvp-scope.md)). Beta kín miễn phí hoặc thu tay. Nhà cung cấp thanh toán cần ADR và hỏi người trước khi chọn.
 
 ## Chỉ số
 
 | Nhóm       | Chỉ số                                                                                                                                       |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | Học tập    | % hiểu trong họp thật · Assist level trung bình · CEFR theo kỹ năng · số cụm productive mới/tháng · độ chính xác phát âm · thời gian phản xạ |
-| Tương tác  | Số cuộc họp/tuần có Copilot · tỷ lệ mở debrief · tỷ lệ hoàn thành phiên ôn · streak                                                          |
+| Tương tác  | Số cuộc họp/tuần có Copilot · tỷ lệ mở debrief · tỷ lệ hoàn thành phiên ôn · streak · tỷ lệ cuộc họp có mở briefing hoặc follow-up           |
+| Kích hoạt  | Thời gian từ cài tới caption đầu tiên · tỷ lệ người cài có cuộc họp đầu tiên trong 7 ngày · D1/D7                                            |
+| Phễu B2C   | Free → trả phí · tỷ lệ chạm quota · chi phí AI/giờ họp so với doanh thu/giờ họp · churn theo tháng                                           |
 | Kinh doanh | Retention D30/D90 · chuyển đổi free → trả phí · chi phí AI/user/tháng · seat B2B đang hoạt động                                              |
 | Chất lượng | Độ trễ caption p50/p95 · lỗi dịch thuật ngữ · điểm hài lòng debrief                                                                          |
 
