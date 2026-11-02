@@ -39,7 +39,7 @@ const statusText: Record<LiveStatus, string> = {
 const iconButton =
   'focus-visible:ring-ring text-muted-foreground hover:text-foreground hover:bg-foreground/10 flex size-9 cursor-pointer items-center justify-center rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none';
 
-function ActionButton({
+function ToolbarAction({
   icon,
   label,
   hint,
@@ -49,7 +49,7 @@ function ActionButton({
   icon: ReactNode;
   label: string;
   hint: string;
-  /** The panel for this action is open. */
+  /** The drawer for this action is open. */
   active?: boolean;
   onClick(): void;
 }) {
@@ -60,12 +60,9 @@ function ActionButton({
       aria-label={label}
       aria-pressed={active}
       title={`${label} (${hint})`}
-      className={`focus-visible:ring-ring flex h-9 cursor-pointer items-center gap-2 rounded-full px-3.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
-        active ? 'bg-primary text-primary-foreground' : 'bg-foreground/10 hover:bg-foreground/15'
-      }`}
+      className={`${iconButton} ${active ? 'bg-primary! text-primary-foreground!' : ''}`}
     >
       {icon}
-      {label}
     </button>
   );
 }
@@ -179,6 +176,21 @@ export function CaptionOverlay({
           </span>
         </span>
         <span className="flex-1" data-tauri-drag-region />
+        <ToolbarAction
+          icon={<ListChecks aria-hidden="true" className="size-[18px]" />}
+          label="Tóm tắt"
+          hint="⌘⇧W"
+          active={panelView === 'recap' && !panelCollapsed}
+          onClick={() => togglePanel('recap')}
+        />
+        <ToolbarAction
+          icon={<MessageSquareQuote aria-hidden="true" className="size-[18px]" />}
+          label="Nói giúp"
+          hint="⌘⇧S"
+          active={panelView === 'compose' && !panelCollapsed}
+          onClick={() => togglePanel('compose')}
+        />
+        <span aria-hidden="true" className="bg-border mx-0.5 h-5 w-px" />
         <button
           type="button"
           aria-label="Tuỳ chỉnh hiển thị"
@@ -204,7 +216,7 @@ export function CaptionOverlay({
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="scroll-auto-hide min-h-0 min-w-0 flex-1 overflow-y-auto px-5 pb-4"
+          className="scroll-auto-hide min-h-0 min-w-0 flex-1 overflow-y-auto px-5 pb-5"
           style={{ fontSize: prefs.fontSize }}
         >
           {hidden ? (
@@ -239,34 +251,17 @@ export function CaptionOverlay({
         />
       </div>
 
-      <footer className="flex h-14 shrink-0 items-center gap-2 px-4">
-        <ActionButton
-          icon={<ListChecks aria-hidden="true" className="size-4" />}
-          label="Tóm tắt"
-          hint="⌘⇧W"
-          active={panelView === 'recap' && !panelCollapsed}
-          onClick={() => togglePanel('recap')}
-        />
-        <ActionButton
-          icon={<MessageSquareQuote aria-hidden="true" className="size-4" />}
-          label="Nói giúp"
-          hint="⌘⇧S"
-          active={panelView === 'compose' && !panelCollapsed}
-          onClick={() => togglePanel('compose')}
-        />
-        <span className="flex-1" />
-        {following ? null : (
-          <button
-            type="button"
-            aria-label="Cuộn xuống caption mới nhất"
-            onClick={resumeFollowing}
-            className="focus-visible:ring-ring bg-primary text-primary-foreground flex h-9 cursor-pointer items-center gap-1.5 rounded-full px-3.5 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
-          >
-            <ArrowDown aria-hidden="true" className="size-4" />
-            Mới nhất
-          </button>
-        )}
-      </footer>
+      {following ? null : (
+        <button
+          type="button"
+          aria-label="Cuộn xuống caption mới nhất"
+          onClick={resumeFollowing}
+          className="focus-visible:ring-ring bg-primary text-primary-foreground absolute bottom-4 left-1/2 flex h-9 -translate-x-1/2 cursor-pointer items-center gap-1.5 rounded-full px-3.5 text-sm font-medium shadow-lg focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <ArrowDown aria-hidden="true" className="size-4" />
+          Mới nhất
+        </button>
+      )}
 
       {menuOpen ? (
         <DisplayMenu
