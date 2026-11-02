@@ -4,6 +4,7 @@ import type { Progress } from '@cuelingo/shared';
 import { Card, CardContent } from '@cuelingo/ui/components/card';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { Section } from '@cuelingo/ui/components/section';
+import { AssistSuggestion } from '../assist-suggestion';
 import { useProgress } from './use-progress';
 
 const dateLabel = (value: string, options: Intl.DateTimeFormatOptions) =>
@@ -155,5 +156,10 @@ export function ProgressPage() {
         <p className="text-muted-foreground text-sm">Chưa có dữ liệu tiến độ.</p>
       </>
     );
-  return <ProgressView progress={progress} />;
+  return (
+    <>
+      <AssistSuggestion />
+      <ProgressView progress={progress} />
+    </>
+  );
 }

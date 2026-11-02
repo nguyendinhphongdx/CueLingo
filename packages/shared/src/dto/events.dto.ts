@@ -17,6 +17,15 @@ export const LearningEventSchema = z.discriminatedUnion('type', [
   z
     .object({ ...base, type: z.literal('phrase_saved'), phrase: z.string().min(1).max(200) })
     .strict(),
+  /** The person's answer to a suggestion to change the assist level; it starts the quiet week. */
+  z
+    .object({
+      ...base,
+      type: z.literal('assist_suggestion'),
+      action: z.enum(['applied', 'dismissed']),
+      level: z.union([z.literal(0), z.literal(1), z.literal(3), z.literal(4)]),
+    })
+    .strict(),
 ]);
 export type LearningEvent = z.infer<typeof LearningEventSchema>;
 

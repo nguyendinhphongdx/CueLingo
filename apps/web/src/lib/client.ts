@@ -16,6 +16,9 @@ import {
   SavePhraseRequestSchema,
   SessionDetailSchema,
   SessionListSchema,
+  AssistSuggestionSchema,
+  PostEventsRequestSchema,
+  type LearningEvent,
   TtsRequestSchema,
   DeleteMyDataRequestSchema,
   AdminMetricsSchema,
@@ -109,6 +112,14 @@ async function speak(text: string): Promise<Blob> {
 export const client = {
   ...coreClient,
   tts: { speak },
+  assist: {
+    /** Whether to offer a different assist level; the server decides from recent meetings. */
+    suggestion: () => request('GET', '/v1/me/assist-suggestion', AssistSuggestionSchema),
+  },
+  events: {
+    record: (event: LearningEvent) =>
+      request('POST', '/v1/events', null, PostEventsRequestSchema.parse({ events: [event] })),
+  },
   me: {
     get: () => request('GET', '/v1/me', MeSchema),
     update: (input: UpdateMeRequest) =>

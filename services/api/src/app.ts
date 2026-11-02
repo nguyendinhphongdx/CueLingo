@@ -13,6 +13,7 @@ import { createAssistModule, type AssistDeps } from './modules/assist';
 import { createTtsModule, type TtsDeps } from './modules/tts';
 import { createDebriefModule, type DebriefRepository } from './modules/debrief';
 import { createEventsModule, type EventsRepository } from './modules/events';
+import { createDialModule, type DialRepository } from './modules/dial';
 import { createAccountModule, type AccountRepository } from './modules/account';
 import { createDeviceModule, type DeviceRepository } from './modules/device';
 import { createGlossaryModule, type GlossaryRepository } from './modules/glossary';
@@ -52,6 +53,7 @@ export interface AppDeps {
     events: EventsRepository;
     glossary: GlossaryRepository;
     account: AccountRepository;
+    dial: DialRepository;
     device: DeviceRepository;
     phrases: PhrasesRepository;
     privacy: PrivacyRepository;
@@ -121,6 +123,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   await app.register(device.routes, { prefix: '/v1/device' });
   await app.register(createAccountModule(deps.repos.account).routes);
+  await app.register(createDialModule(deps.repos.dial).routes);
   await app.register(createAdminModule(deps.repos.admin, deps.adminEmails ?? []).routes, {
     prefix: '/v1/admin',
   });

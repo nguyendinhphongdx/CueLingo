@@ -15,6 +15,7 @@ import { createPostgresSettingsRepository } from './modules/settings';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createFileTtsCache } from './modules/tts';
+import { createPostgresDialRepository } from './modules/dial';
 import { createPostgresAccountRepository } from './modules/account';
 import { createDeviceService, createPostgresDeviceRepository } from './modules/device';
 import { createPostgresPhrasesRepository, createPostgresStudyRepository } from './modules/review';
@@ -83,6 +84,7 @@ const app = await buildApp({
     sessions: sessionsRepository,
     settings: createPostgresSettingsRepository(sql),
     account: createPostgresAccountRepository(sql),
+    dial: createPostgresDialRepository(sql),
     device: deviceRepository,
     phrases: phrasesRepository,
     study: studyRepository,

@@ -12,7 +12,7 @@ import {
 } from '../onboarding';
 import { PrivacyPanel } from '../privacy';
 import { RecentSessions, SessionPanel } from '../session';
-import { AssistSettings, useSettingsSync } from '../settings';
+import { AssistSettings, AssistSuggestionBanner, useSettingsSync } from '../settings';
 import { useSyncAssistLevel } from '../settings/use-assist-settings';
 import { AboutCard, ShortcutList } from './AboutCard';
 import { Button } from '@cuelingo/ui/components/button';
@@ -111,6 +111,7 @@ function CurrentView({
     return (
       <>
         <PageHeader title="Phiên họp" />
+        <AssistSuggestionBanner />
         <SessionPanel />
         <AssistSettings />
         <RecentSessions />
