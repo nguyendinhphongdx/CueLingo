@@ -86,6 +86,7 @@ export function ReviewSession({
         {card.exercise === 'dictation' ? (
           <DictationCard
             card={card}
+            language={card.language}
             loadAudio={loadAudio}
             onAnswer={(result) => onChoose(result.correct ? card.answer : result.typed || '—')}
           />

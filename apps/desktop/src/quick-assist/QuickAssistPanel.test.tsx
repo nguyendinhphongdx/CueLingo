@@ -111,4 +111,10 @@ describe('Quick Assist UI', () => {
     expect(compose).toContain('border-l');
     expect(compose).toContain('I agree with the plan.');
   });
+
+  it('splits Japanese captions into tappable words', () => {
+    const parts = splitCaptionWords('来週の会議に参加します。', 'ja');
+    expect(parts.join('')).toBe('来週の会議に参加します。');
+    expect(parts.length).toBeGreaterThan(3);
+  });
 });

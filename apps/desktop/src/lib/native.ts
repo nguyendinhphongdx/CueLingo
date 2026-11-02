@@ -42,6 +42,8 @@ export const TranscriptEvent = z.object({
   text: z.string(),
   translation: z.string().nullable(),
   partial: z.boolean(),
+  /** Language of `text` (the meeting's); English when left out. */
+  language: z.string().optional(),
 });
 export type TranscriptEvent = z.infer<typeof TranscriptEvent>;
 

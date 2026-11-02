@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LanguageCodeSchema } from '../languages';
 
 /** Spaced review of the Phrase Bank: the API builds each exercise, the client only renders and grades locally. */
 export const ExerciseTypeSchema = z.enum(['recognize', 'cloze', 'dictation']);
@@ -20,6 +21,8 @@ export const ReviewCardSchema = z
     /** Meaning and the sentence the phrase first appeared in, shown after answering. */
     meaningVi: z.string().nullable(),
     contextEn: z.string().nullable(),
+    /** Language of the phrase; decides how a typed answer is compared. English when left out. */
+    language: LanguageCodeSchema.optional(),
   })
   .strict();
 export type ReviewCard = z.infer<typeof ReviewCardSchema>;

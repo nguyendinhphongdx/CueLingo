@@ -1,7 +1,5 @@
 import type { TranscriptEvent } from '../lib/native';
-import { splitCaptionWords } from '../quick-assist';
-
-const WORD_ONLY = /^[\p{L}\p{M}\p{N}]+(?:['’][\p{L}\p{M}\p{N}]+)*$/u;
+import { splitParts } from '@cuelingo/ui/lib/text-units';
 
 interface CaptionBlockProps {
   segment: TranscriptEvent;
@@ -13,20 +11,22 @@ interface CaptionBlockProps {
   onLookup(term: string): void;
 }
 
-function EnglishText({
+function OriginalText({
   text,
+  language,
   lookup,
   onLookup,
 }: {
   text: string;
+  language: string;
   lookup: boolean;
   onLookup(term: string): void;
 }) {
   if (!lookup) return <>{text}</>;
   return (
     <>
-      {splitCaptionWords(text).map((part, index) =>
-        WORD_ONLY.test(part) ? (
+      {splitParts(text, language).map(({ text: part, isWord }, index) =>
+        isWord ? (
           <button
             key={`${index}-${part}`}
             type="button"
@@ -45,7 +45,7 @@ function EnglishText({
   );
 }
 
-/** One sentence of the meeting: English on top, the Vietnamese rendering under it. */
+/** One sentence of the meeting: the spoken language on top, the Vietnamese rendering under it. */
 export function CaptionBlock({ segment, level, faded, showSpeaker, onLookup }: CaptionBlockProps) {
   const mine = segment.stream === 'mic';
   const showEnglish = level !== 1;
@@ -66,7 +66,12 @@ export function CaptionBlock({ segment, level, faded, showSpeaker, onLookup }: C
           className={`text-muted-foreground leading-snug ${segment.partial ? 'opacity-70' : ''}`}
           style={{ fontSize: '0.86em' }}
         >
-          <EnglishText text={segment.text} lookup={!mine} onLookup={onLookup} />
+          <OriginalText
+            text={segment.text}
+            language={segment.language ?? 'en'}
+            lookup={!mine}
+            onLookup={onLookup}
+          />
           {segment.partial ? (
             <span
               aria-hidden="true"

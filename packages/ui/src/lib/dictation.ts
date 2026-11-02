@@ -1,4 +1,6 @@
-/** Comparing what someone typed after hearing a phrase with the phrase itself. Pure, English-oriented. */
+import { answerUnits, foldWidth, usesSpaces } from './text-units';
+
+/** Comparing what someone typed after hearing a phrase with the phrase itself. Pure; spaced languages compare words, others characters. */
 
 /** Lower case, accents and punctuation removed, spaces collapsed: "Push-back!" and "push back" match. */
 export function normalizeText(text: string): string {
@@ -12,8 +14,10 @@ export function normalizeText(text: string): string {
     .trim();
 }
 
-export const isSameText = (typed: string, answer: string): boolean =>
-  normalizeText(typed) === normalizeText(answer);
+export const isSameText = (typed: string, answer: string, language = 'en'): boolean =>
+  usesSpaces(language)
+    ? normalizeText(typed) === normalizeText(answer)
+    : answerUnits(typed, language).join('') === answerUnits(answer, language).join('');
 
 export type WordState = 'ok' | 'wrong';
 
@@ -26,10 +30,13 @@ export interface AnswerWord {
  * The words of the answer, each marked right (it appears in the typed text, in order) or wrong (it
  * was missed or misspelled). Uses the longest common subsequence so one slip does not flag the rest.
  */
-export function markAnswerWords(typed: string, answer: string): AnswerWord[] {
-  const shown = answer.trim().split(/\s+/).filter(Boolean);
-  const want = shown.map((word) => normalizeText(word));
-  const have = normalizeText(typed).split(' ').filter(Boolean);
+export function markAnswerWords(typed: string, answer: string, language = 'en'): AnswerWord[] {
+  const shown = answerUnits(answer, language);
+  const fold = (unit: string) => (usesSpaces(language) ? normalizeText(unit) : foldWidth(unit));
+  const want = shown.map(fold);
+  const have = usesSpaces(language)
+    ? normalizeText(typed).split(' ').filter(Boolean)
+    : answerUnits(typed, language).map(fold);
 
   const table = Array.from({ length: want.length + 1 }, () =>
     new Array<number>(have.length + 1).fill(0),

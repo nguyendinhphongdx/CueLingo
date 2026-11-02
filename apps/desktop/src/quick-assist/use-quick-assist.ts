@@ -1,3 +1,4 @@
+import { DEFAULT_LANGUAGE, isLanguageCode, type LanguageCode } from '@cuelingo/shared';
 import type { ComposeResponse, LookupResponse, RecapResponse } from '@cuelingo/shared';
 import { useCallback, useEffect, useState } from 'react';
 import { native, type HotkeyEvent } from '../lib/native';
@@ -34,6 +35,12 @@ export function listenForQuickAssistHotkeys(
   return source.onHotkey(callback);
 }
 
+/** The language of the meeting being captioned: that of the latest caption, English before any arrives. */
+export function meetingLanguage(): LanguageCode {
+  const code = useTranscriptStore.getState().segments.at(-1)?.language;
+  return isLanguageCode(code) ? code : DEFAULT_LANGUAGE;
+}
+
 function now() {
   return new Date().toISOString();
 }
@@ -52,7 +59,7 @@ export function useQuickAssist({
       setState({ view: 'lookup', status: 'loading', term, context });
       void api.record({ type: 'lookup', term, at: now() }).catch(() => undefined);
       try {
-        const result = await api.lookup({ term, context });
+        const result = await api.lookup({ term, context, language: meetingLanguage() });
         setState({ view: 'lookup', status: 'success', term, context, result });
       } catch {
         setState({ view: 'lookup', status: 'error', term, context });
@@ -71,7 +78,10 @@ export function useQuickAssist({
 
     void api.record({ type: 'recap_used', at: now() }).catch(() => undefined);
     try {
-      const result = await api.recap({ sentences: sentences.map((text) => ({ text })) });
+      const result = await api.recap({
+        sentences: sentences.map((text) => ({ text })),
+        language: meetingLanguage(),
+      });
       setState({ view: 'recap', status: 'success', result });
     } catch {
       setState({ view: 'recap', status: 'error' });
@@ -91,6 +101,7 @@ export function useQuickAssist({
       try {
         const result = await api.compose({
           intentVi: trimmedIntent,
+          language: meetingLanguage(),
           ...(context.length > 0 ? { context } : {}),
         });
         setState({ view: 'compose', status: 'success', intent: trimmedIntent, result });

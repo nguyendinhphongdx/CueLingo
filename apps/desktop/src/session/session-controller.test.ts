@@ -109,9 +109,30 @@ describe('session controller', () => {
     context.emitSegment(segment());
 
     expect(context.published).toEqual([
-      { segmentId, stream: 'system', text: 'Original text', translation: null, partial: true },
-      { segmentId, stream: 'mic', text: 'Original text', translation: null, partial: false },
-      { segmentId, stream: 'system', text: 'Original text', translation: null, partial: false },
+      {
+        segmentId,
+        stream: 'system',
+        text: 'Original text',
+        translation: null,
+        partial: true,
+        language: 'en',
+      },
+      {
+        segmentId,
+        stream: 'mic',
+        text: 'Original text',
+        translation: null,
+        partial: false,
+        language: 'en',
+      },
+      {
+        segmentId,
+        stream: 'system',
+        text: 'Original text',
+        translation: null,
+        partial: false,
+        language: 'en',
+      },
     ]);
     expect(context.sent).toEqual([
       {
@@ -144,7 +165,16 @@ describe('session controller', () => {
       text: 'Original text',
       translation: 'Bản dịch',
       partial: false,
+      language: 'en',
     });
+  });
+
+  it("publishes captions in the meeting's language", async () => {
+    const context = setup();
+    await context.controller.start(4, 'ja');
+    context.emitSegment(segment());
+
+    expect(context.published.at(-1)?.language).toBe('ja');
   });
 
   it('maps realtime states and configures the session websocket', async () => {

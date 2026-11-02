@@ -36,6 +36,19 @@ describe('languages', () => {
     expect((await service.progress('alice', 'ja')).phrasesSaved).toBe(2);
   });
 
+  it('tags cards with their language and never mixes in English stand-in answers', async () => {
+    const { repo, service } = setup();
+    repo.seed('alice', item(1, { phrase: '検討', meaningVi: 'xem xét' }), 'ja');
+    repo.seed('alice', item(2, { phrase: '納期', meaningVi: 'thời hạn giao' }), 'ja');
+
+    const { cards } = await service.queue('alice', { language: 'ja' });
+
+    expect(cards.every((card) => card.language === 'ja')).toBe(true);
+    const choices = cards.flatMap((card) => card.choices);
+    expect(choices).not.toContain('theo dõi tiếp');
+    expect(choices).not.toContain('follow up');
+  });
+
   it('counts a review towards the language of the answered phrase', async () => {
     const { repo, service } = setup();
     const japanese = item(1);

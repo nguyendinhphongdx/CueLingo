@@ -1,6 +1,8 @@
+import { SUPPORTED_LANGUAGES } from '@cuelingo/shared';
 import { IconButton } from '@cuelingo/ui/components/icon-button';
 import { ChevronRight, X } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
+import { meetingLanguage } from './use-quick-assist';
 import type { QuickAssistActions, QuickAssistState } from './use-quick-assist';
 
 interface QuickAssistPanelProps {
@@ -80,6 +82,7 @@ export function QuickAssistPanel({
   onToggleCollapsed,
 }: QuickAssistPanelProps) {
   const frame = { collapsed, onToggleCollapsed };
+  const languageName = SUPPORTED_LANGUAGES[meetingLanguage()].name.toLowerCase();
   // Slid away: nothing renders, but the hook keeps what was typed.
   if (collapsed) return null;
   if (state.view === 'closed') return null;
@@ -97,6 +100,9 @@ export function QuickAssistPanel({
         ) : state.result ? (
           <div aria-live="polite" className="space-y-3">
             <p className="text-base font-semibold">{state.result.meaningVi}</p>
+            {state.result.reading ? (
+              <p className="text-muted-foreground text-sm">{state.result.reading}</p>
+            ) : null}
             {state.result.pos ? <p className="text-sm opacity-70">{state.result.pos}</p> : null}
             {state.result.exampleEn ? (
               <p>
@@ -147,7 +153,7 @@ export function QuickAssistPanel({
     <PanelFrame title="Nói giúp" close={actions.close} {...frame}>
       <form className="space-y-2" onSubmit={submit}>
         <label htmlFor="compose-intent" className="text-muted-foreground block text-sm">
-          Bạn muốn nói gì bằng tiếng Anh?
+          Bạn muốn nói gì bằng {languageName}?
         </label>
         <div className="flex gap-2">
           <input

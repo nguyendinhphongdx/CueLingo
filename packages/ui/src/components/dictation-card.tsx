@@ -1,6 +1,7 @@
 import { Check, Snail, Volume2, X } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { isSameText, markAnswerWords } from '../lib/dictation';
+import { usesSpaces } from '../lib/text-units';
 import { Button } from './button';
 import { useSpeaker } from './speak-button';
 
@@ -26,8 +27,11 @@ export function DictationCard({
   card,
   loadAudio,
   onAnswer,
+  language = 'en',
 }: {
   card: DictationCardData;
+  /** Language of the phrase; decides whether answers are compared by word or by character. */
+  language?: string;
   loadAudio: (text: string) => Promise<Blob>;
   onAnswer(result: DictationResult): void;
 }) {
@@ -56,10 +60,11 @@ export function DictationCard({
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (typed.trim()) finish(typed, isSameText(typed, card.answer));
+    if (typed.trim()) finish(typed, isSameText(typed, card.answer, language));
   }
 
-  const words = result ? markAnswerWords(result.typed, card.answer) : [];
+  const gap = usesSpaces(language) ? 'mr-1.5' : '';
+  const words = result ? markAnswerWords(result.typed, card.answer, language) : [];
 
   return (
     <div className="space-y-4">
@@ -107,8 +112,8 @@ export function DictationCard({
                 key={`${index}-${word}`}
                 className={
                   state === 'ok'
-                    ? 'mr-1.5'
-                    : 'mr-1.5 text-red-600 underline decoration-wavy underline-offset-4 dark:text-red-400'
+                    ? gap
+                    : `${gap} text-red-600 underline decoration-wavy underline-offset-4 dark:text-red-400`
                 }
               >
                 {word}

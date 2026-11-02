@@ -61,8 +61,12 @@ export const wantsDictation = (item: StudyItem) => hash(`dictation:${item.itemId
 export function buildCard(
   item: StudyItem,
   all: StudyItem[],
-  options: { dictation?: boolean } = {},
+  options: { dictation?: boolean; language?: LanguageCode } = {},
 ): ReviewCard | null {
+  const language = options.language ?? DEFAULT_LANGUAGE;
+  // Stand-in wrong answers are English; other languages use only the person's own phrases.
+  const fallbackPhrases = language === DEFAULT_LANGUAGE ? FALLBACK_PHRASES : [];
+  const fallbackMeanings = language === DEFAULT_LANGUAGE ? FALLBACK_MEANINGS : [];
   if (options.dictation && wantsDictation(item) && item.phrase.length <= 60) {
     return {
       itemId: item.itemId,
@@ -73,6 +77,7 @@ export function buildCard(
       answer: item.phrase,
       meaningVi: item.meaningVi,
       contextEn: item.contextEn,
+      language,
     };
   }
 
@@ -87,7 +92,7 @@ export function buildCard(
     const wrong = pickDistractors(
       others.map((o) => o.phrase),
       item.phrase,
-      FALLBACK_PHRASES,
+      fallbackPhrases,
       item.itemId,
     );
     return {
@@ -99,13 +104,14 @@ export function buildCard(
       answer: item.phrase,
       meaningVi: item.meaningVi,
       contextEn: item.contextEn,
+      language,
     };
   }
   const meaning = item.meaningVi ?? '';
   const wrong = pickDistractors(
     others.flatMap((o) => (o.meaningVi ? [o.meaningVi] : [])),
     meaning,
-    FALLBACK_MEANINGS,
+    fallbackMeanings,
     item.itemId,
   );
   return {
@@ -117,6 +123,7 @@ export function buildCard(
     answer: meaning,
     meaningVi: item.meaningVi,
     contextEn: item.contextEn,
+    language,
   };
 }
 
@@ -155,7 +162,10 @@ export function createStudyService(repo: StudyRepository, clock: () => Date = ()
       const cards: ReviewCard[] = [];
       for (const item of due) {
         if (cards.length === QUEUE_SIZE) break;
-        const card = buildCard(item, items, options);
+        const card = buildCard(item, items, {
+          ...options,
+          language: options.language ?? DEFAULT_LANGUAGE,
+        });
         if (card) cards.push(card);
       }
       return { dueCount: due.length, cards };

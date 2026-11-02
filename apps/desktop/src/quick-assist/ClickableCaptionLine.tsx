@@ -1,4 +1,5 @@
 import { CaptionLine } from '@cuelingo/ui/components/caption-line';
+import { splitParts } from '@cuelingo/ui/lib/text-units';
 
 interface ClickableCaptionLineProps {
   text: string;
@@ -6,14 +7,14 @@ interface ClickableCaptionLineProps {
   partial?: boolean;
   lookupEnabled?: boolean;
   className?: string;
+  /** Language of `text`; decides where one word ends and the next begins. */
+  language?: string;
   onLookup(term: string): void;
 }
 
-const WORD_PATTERN = /([\p{L}\p{M}\p{N}]+(?:['’][\p{L}\p{M}\p{N}]+)*)/gu;
-const WORD_ONLY_PATTERN = /^[\p{L}\p{M}\p{N}]+(?:['’][\p{L}\p{M}\p{N}]+)*$/u;
-
-export function splitCaptionWords(text: string) {
-  return text.split(WORD_PATTERN).filter(Boolean);
+/** The pieces of a caption, as plain strings; use `splitParts` when you need to know which are words. */
+export function splitCaptionWords(text: string, language = 'en') {
+  return splitParts(text, language).map((part) => part.text);
 }
 
 export function ClickableCaptionLine({
@@ -22,6 +23,7 @@ export function ClickableCaptionLine({
   partial = false,
   lookupEnabled = true,
   className,
+  language = 'en',
   onLookup,
 }: ClickableCaptionLineProps) {
   if (!lookupEnabled) {
@@ -37,8 +39,8 @@ export function ClickableCaptionLine({
       className={`text-foreground transition-opacity ${partial ? 'opacity-60' : ''} ${className ?? ''}`}
     >
       <p>
-        {splitCaptionWords(text).map((part, index) =>
-          WORD_ONLY_PATTERN.test(part) ? (
+        {splitParts(text, language).map(({ text: part, isWord }, index) =>
+          isWord ? (
             <button
               key={`${index}-${part}`}
               type="button"

@@ -88,6 +88,7 @@ export function createSessionController({
   let snapshot: SessionSnapshot = { status: 'idle', error: null, completedSessionId: null };
   let realtime: RealtimeClient | null = null;
   let activeSessionId: string | null = null;
+  let meetingLanguage: LanguageCode = DEFAULT_LANGUAGE;
   let stopPromise: Promise<void> | null = null;
   let stopSegmentListener: (() => void) | null = null;
   let listenerRegistration = 0;
@@ -108,7 +109,8 @@ export function createSessionController({
     });
   }
 
-  function publish(event: TranscriptEvent) {
+  function publish(input: TranscriptEvent) {
+    const event = { ...input, language: input.language ?? meetingLanguage };
     transcriptById.set(event.segmentId, event);
     void native.publishTranscript(event).catch(fail);
   }
@@ -173,6 +175,7 @@ export function createSessionController({
     async start(assistLevel, language = DEFAULT_LANGUAGE) {
       if (snapshot.status !== 'idle' && snapshot.status !== 'error') return;
       clearRuntime();
+      meetingLanguage = language;
       const generation = runtimeGeneration;
       update({ status: 'connecting', error: null, completedSessionId: null });
 
