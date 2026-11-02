@@ -39,6 +39,7 @@ export type SystemAudioCheck = z.infer<typeof SystemAudioCheck>;
 export const PRIVACY_PANES = {
   microphone: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone',
   systemAudio: 'x-apple.systempreferences:com.apple.preference.security?Privacy_AudioCapture',
+  calendar: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars',
 } as const;
 
 export const TranscriptEvent = z.object({
@@ -88,6 +89,24 @@ export const AudioModelEvent = z.discriminatedUnion('type', [
 ]);
 export type AudioModelEvent = z.infer<typeof AudioModelEvent>;
 
+/** The calendar on this machine, read by the native side; null when the native side is missing. */
+export const CalendarResult = z.object({
+  type: z.literal('calendar'),
+  state: z.enum(['granted', 'denied', 'undetermined']),
+  events: z
+    .array(
+      z.object({
+        title: z.string(),
+        startMs: z.number(),
+        endMs: z.number(),
+        location: z.string(),
+        attendeeDomains: z.array(z.string()),
+      }),
+    )
+    .optional(),
+});
+export type CalendarResult = z.infer<typeof CalendarResult>;
+
 export const SettingsEvent = z.object({ assistLevel: AssistLevel });
 export type SettingsEvent = z.infer<typeof SettingsEvent>;
 
@@ -111,6 +130,9 @@ export const native = {
     }).then(() => undefined),
   onAudioModel: (cb: (e: AudioModelEvent) => void): Promise<UnlistenFn> =>
     listen('audio-model', (e) => cb(AudioModelEvent.parse(e.payload))),
+  /** `request` shows macOS's own permission prompt the first time; `events` lists the next meetings. */
+  calendar: (mode: 'status' | 'request' | 'events') =>
+    invoke('calendar', { mode }).then((v) => CalendarResult.nullable().parse(v)),
   sessionStop: () => invoke('session_stop').then(() => undefined),
   /** The device token kept in the macOS Keychain; null when nobody is signed in. */
   authTokenGet: () => invoke('auth_token_get').then((v) => z.string().nullable().parse(v)),

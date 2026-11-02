@@ -27,3 +27,11 @@ final class LatencyStatsTests: XCTestCase {
         XCTAssertNil(LatencyStats().percentile(95))
     }
 }
+
+final class CalendarEventsTests: XCTestCase {
+    func testKeepsOnlyTheDomainOfAnAddress() {
+        XCTAssertEqual(CalendarEvents.domain(ofAddress: "mailto:Ken@Acme.co.jp"), "acme.co.jp")
+        XCTAssertNil(CalendarEvents.domain(ofAddress: "not an address"))
+        XCTAssertNil(CalendarEvents.domain(ofAddress: "ken@"))
+    }
+}

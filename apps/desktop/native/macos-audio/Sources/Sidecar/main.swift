@@ -170,6 +170,26 @@ if CommandLine.arguments.contains("--permissions") {
     exit(0)
 }
 
+// `--calendar-status` / `--calendar-request` / `--calendar-events`: calendar access and the next meetings, for
+// suggesting a language before a meeting. Read on this machine only; attendees are reduced to their domains.
+func calendarArgument() -> String? {
+    CommandLine.arguments.first { $0.hasPrefix("--calendar-") }
+}
+if let mode = calendarArgument() {
+    let access = mode == "--calendar-request" ? await CalendarEvents.request() : CalendarEvents.access()
+    var message: [String: Any] = ["type": "calendar", "state": access.rawValue]
+    if mode == "--calendar-events", access == .granted {
+        message["events"] = CalendarEvents.upcoming().map { item -> [String: Any] in
+            [
+                "title": item.title, "startMs": item.startMs, "endMs": item.endMs,
+                "location": item.location, "attendeeDomains": item.attendeeDomains,
+            ]
+        }
+    }
+    emit(message)
+    exit(0)
+}
+
 // `--check-system-audio`: macOS has no API to read the system-audio permission, so play a short system
 // sound and see whether the tap hears it. Silence means no permission or a muted speaker.
 if CommandLine.arguments.contains("--check-system-audio") {

@@ -6,5 +6,9 @@
   <string>CueLingo nghe giọng của bạn trong cuộc họp để hiện caption.</string>
   <key>NSAudioCaptureUsageDescription</key>
   <string>CueLingo nghe âm thanh cuộc họp để hiện caption và bản dịch.</string>
+  <key>NSCalendarsFullAccessUsageDescription</key>
+  <string>CueLingo đọc lịch trên máy bạn để gợi ý ngôn ngữ cho cuộc họp sắp tới. Nội dung lịch không rời khỏi máy.</string>
+  <key>NSCalendarsUsageDescription</key>
+  <string>CueLingo đọc lịch trên máy bạn để gợi ý ngôn ngữ cho cuộc họp sắp tới. Nội dung lịch không rời khỏi máy.</string>
 </dict>
 </plist>

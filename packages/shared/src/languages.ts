@@ -13,6 +13,8 @@ export const SUPPORTED_LANGUAGES = {
     nativeName: 'English',
     /** The name used inside prompts, which are written in English. */
     promptName: 'English',
+    /** What in a calendar event points to this language; English is the default so it has none. */
+    calendarHints: { keywords: [] as string[], domains: [] as string[] },
     /** On-device recognition model the sidecar loads for this language. */
     recognizer: 'parakeet-tdt-v2-en',
     /** How words are told apart, for tap-to-look-up and typed answers. */
@@ -27,6 +29,10 @@ export const SUPPORTED_LANGUAGES = {
     name: 'Tiếng Nhật',
     nativeName: '日本語',
     promptName: 'Japanese',
+    calendarHints: {
+      keywords: ['日本', '日本語', 'japan', 'japanese', 'tokyo', 'osaka', 'nhật', '(jp)', '[jp]'],
+      domains: ['.jp'],
+    },
     recognizer: 'parakeet-tdt-ja',
     wordBreaks: 'dictionary',
     hasReading: true,
@@ -65,3 +71,33 @@ export type LanguageQuery = z.output<typeof LanguageQuerySchema>;
 /** The languages a person may pick, as `{ value, label }` for a language switcher. */
 export const languageOptions = (): Array<{ value: LanguageCode; label: string }> =>
   enabledLanguages().map((language) => ({ value: language.code, label: language.name }));
+
+/** What a calendar event tells about the meeting. Titles and domains stay on the device. */
+export interface CalendarEventHint {
+  title: string;
+  location?: string;
+  /** Domains of the attendees' email addresses, such as `example.co.jp`. */
+  attendeeDomains?: string[];
+}
+
+/**
+ * The language a calendar event points to, or null when it says nothing or points two ways. Only
+ * languages that are switched on count, and English (the default) is never suggested from a calendar.
+ */
+export function guessLanguageFromEvent(
+  event: CalendarEventHint,
+  candidates: readonly LanguageInfo[] = enabledLanguages(),
+): LanguageCode | null {
+  const text = `${event.title} ${event.location ?? ''}`.toLowerCase();
+  const domains = (event.attendeeDomains ?? []).map((domain) => domain.toLowerCase());
+  const matches = candidates
+    .filter((language) => language.code !== DEFAULT_LANGUAGE)
+    .filter(({ calendarHints }) => {
+      const byWord = calendarHints.keywords.some((word) => text.includes(word.toLowerCase()));
+      const byDomain = calendarHints.domains.some((suffix) =>
+        domains.some((domain) => domain.endsWith(suffix)),
+      );
+      return byWord || byDomain;
+    });
+  return matches.length === 1 ? (matches[0]!.code as LanguageCode) : null;
+}

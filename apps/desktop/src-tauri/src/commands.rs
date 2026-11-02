@@ -124,6 +124,22 @@ pub async fn permissions_status() -> PermissionsStatus {
     }
 }
 
+/// Runs the sidecar's calendar mode (`status`, `request` or `events`) and returns its JSON line, or null.
+/// The sidecar reads the calendar on this machine only and cuts attendees down to their domains.
+#[tauri::command]
+pub async fn calendar(mode: String) -> Option<serde_json::Value> {
+    let flag = match mode.as_str() {
+        "status" => "--calendar-status",
+        "request" => "--calendar-request",
+        "events" => "--calendar-events",
+        _ => return None,
+    };
+    tauri::async_runtime::spawn_blocking(move || probe_sidecar(flag, "calendar"))
+        .await
+        .ok()
+        .flatten()
+}
+
 /// Plays a short system sound and reports `granted`, `silent` (no permission or muted) or `error`.
 #[tauri::command]
 pub async fn check_system_audio() -> String {
@@ -145,6 +161,7 @@ fn is_openable(url: &str) -> bool {
             "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
                 | "x-apple.systempreferences:com.apple.preference.security?Privacy_AudioCapture"
                 | "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
+                | "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars"
         )
 }
 
@@ -194,6 +211,9 @@ mod tests {
         assert!(is_openable("https://cuelingo.app/sessions/1"));
         assert!(is_openable(
             "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
+        ));
+        assert!(is_openable(
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars"
         ));
         assert!(!is_openable("file:///etc/passwd"));
         assert!(!is_openable(
