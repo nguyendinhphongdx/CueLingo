@@ -23,6 +23,29 @@ pub struct SessionStartOpts {
     language: Option<String>,
     /// Other languages to listen for in the first seconds; the sidecar suggests a switch if one fits better.
     detect: Option<Vec<String>>,
+    /// Terms (glossary, names) the recognizer should favor. Cleaned before it reaches the sidecar.
+    #[serde(default)]
+    vocabulary: Option<Vec<String>>,
+}
+
+const MAX_VOCAB_TERMS: usize = 200;
+const MAX_VOCAB_TERM_CHARS: usize = 120;
+
+/// Rejects only oversized raw lists; silently drops empty, control-character or overlong terms.
+/// Errors never carry term text (terms come from the user's own glossary and are private).
+pub(crate) fn clean_vocabulary(terms: Vec<String>) -> Result<Vec<String>, String> {
+    if terms.len() > MAX_VOCAB_TERMS {
+        return Err("vocabulary_too_large".into());
+    }
+    Ok(terms
+        .into_iter()
+        .map(|t| t.trim().to_string())
+        .filter(|t| {
+            !t.is_empty()
+                && !t.chars().any(char::is_control)
+                && t.chars().count() <= MAX_VOCAB_TERM_CHARS
+        })
+        .collect())
 }
 
 /// A language code is two or three lowercase letters; anything else never reaches the sidecar.
@@ -71,7 +94,8 @@ pub fn session_start(
     if !detect.iter().all(|code| valid_language(code)) {
         return Err("invalid_language".into());
     }
-    state.audio.start(&app, language, &detect)?;
+    let vocabulary = clean_vocabulary(opts.vocabulary.unwrap_or_default())?;
+    state.audio.start(&app, language, &detect, &vocabulary)?;
     *current = Some(id.clone());
     Ok(SessionStartResult { session_id: id })
 }
@@ -83,6 +107,12 @@ pub fn session_set_language(state: State<AppState>, language: String) -> Result<
         return Err("invalid_language".into());
     }
     state.audio.set_language(&language)
+}
+
+/// Replaces the running meeting's recognition vocabulary.
+#[tauri::command]
+pub fn session_set_vocabulary(state: State<AppState>, terms: Vec<String>) -> Result<(), String> {
+    state.audio.set_vocabulary(&clean_vocabulary(terms)?)
 }
 
 #[tauri::command]
@@ -204,6 +234,40 @@ mod tests {
         assert!(!valid_language("EN"));
         assert!(!valid_language("en; rm"));
         assert!(!valid_language("english"));
+    }
+
+    #[test]
+    fn vocabulary_is_trimmed_and_empties_dropped() {
+        let out = clean_vocabulary(vec!["  foo ".into(), "".into(), "   ".into(), "bar".into()]);
+        assert_eq!(out.unwrap(), vec!["foo", "bar"]);
+    }
+
+    #[test]
+    fn vocabulary_drops_bad_entries_instead_of_failing() {
+        let out = clean_vocabulary(vec!["a\tb".into(), "valid".into()]).unwrap();
+        assert_eq!(out, vec!["valid"]);
+        for bad in ["secret\nterm", "secret\u{0}term", "secret\rterm", "x\ny"] {
+            assert!(clean_vocabulary(vec![bad.into()]).unwrap().is_empty());
+        }
+        let out = clean_vocabulary(vec!["s".repeat(121), "ok".into(), "s".repeat(120)]).unwrap();
+        assert_eq!(out.len(), 2);
+        assert_eq!(out[0], "ok");
+    }
+
+    #[test]
+    fn vocabulary_size_limits() {
+        let too_many: Vec<String> = (0..201).map(|i| format!("secret{i}")).collect();
+        let err = clean_vocabulary(too_many).unwrap_err();
+        assert_eq!(err, "vocabulary_too_large");
+        assert!(!err.contains("secret"));
+
+        assert!(clean_vocabulary(vec![String::new(); 201]).is_err());
+        let mut raw = vec![String::new(); 200];
+        raw.push("valid".into());
+        assert_eq!(clean_vocabulary(raw).unwrap_err(), "vocabulary_too_large");
+
+        let max: Vec<String> = (0..200).map(|i| format!("{i:0>120}")).collect();
+        assert_eq!(clean_vocabulary(max).unwrap().len(), 200);
     }
 
     #[test]
