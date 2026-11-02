@@ -20,6 +20,7 @@ export const ErrorResponseSchema = z.object({
     code: z.enum(ErrorCode),
     message: z.string(),
     details: z.unknown().optional(),
+    requestId: z.string().optional(),
   }),
 });
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;

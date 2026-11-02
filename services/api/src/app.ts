@@ -1,6 +1,11 @@
+import { randomUUID } from 'node:crypto';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
-import Fastify, { type FastifyInstance, type FastifyPluginAsync } from 'fastify';
+import Fastify, {
+  type FastifyInstance,
+  type FastifyPluginAsync,
+  type FastifyServerOptions,
+} from 'fastify';
 import { registerAuth, type AuthOptions } from './lib/auth';
 import { registerErrorHandler } from './lib/errors';
 import type { JobQueue } from './lib/queue';
@@ -19,9 +24,25 @@ import {
   type StudyRepository,
 } from './modules/review';
 import { createSessionsModule, type SessionsRepository } from './modules/sessions';
+import { createAdminModule, type AdminRepository } from './modules/admin';
 
 /** Origins of the desktop webview (bundled app, Windows bundle, `tauri dev`). It signs in with a bearer token, not cookies. */
 const DESKTOP_ORIGINS = ['tauri://localhost', 'http://tauri.localhost', 'http://localhost:1420'];
+const SAFE_REQUEST_ID = /^[A-Za-z0-9._:-]{1,64}$/;
+const LOG_REDACT = {
+  paths: [
+    'req.headers.authorization',
+    'req.headers.cookie',
+    'req.body',
+    'res.headers.set-cookie',
+    'authorization',
+    'body',
+    'email',
+    '*.email',
+    '*.*.email',
+  ],
+  censor: '[Redacted]',
+};
 
 export interface AppDeps {
   repos: {
@@ -34,6 +55,7 @@ export interface AppDeps {
     privacy: PrivacyRepository;
     study: StudyRepository;
     sessions: SessionsRepository;
+    admin: AdminRepository;
   };
   queue: JobQueue;
   resolveUserId: AuthOptions['resolveUserId'];
@@ -47,12 +69,34 @@ export interface AppDeps {
   assist?: AssistDeps;
   /** Development-only bearer-token verifier for assist and event ingestion. */
   verifyDevToken?: AuthOptions['verifyDevToken'];
-  logger?: boolean;
+  /** False disables logs. Object form is mainly a test seam for an in-memory stream. */
+  logger?: FastifyServerOptions['logger'];
+  adminEmails?: readonly string[];
 }
 
 /** Composition root: the only place that wires repositories, services and routes together. */
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
-  const app = Fastify({ logger: deps.logger ?? false });
+  const requestedLogger = deps.logger ?? false;
+  const logger =
+    requestedLogger && typeof requestedLogger === 'object'
+      ? { ...requestedLogger, redact: LOG_REDACT }
+      : requestedLogger
+        ? { redact: LOG_REDACT }
+        : false;
+  const app = Fastify({
+    logger,
+    // Not `requestIdHeader`: Fastify would take the client's value as is. `genReqId` checks it first.
+    requestIdHeader: false,
+    genReqId: (request) => {
+      const candidate = request.headers['x-request-id'];
+      return typeof candidate === 'string' && SAFE_REQUEST_ID.test(candidate)
+        ? candidate
+        : randomUUID();
+    },
+  });
+  app.addHook('onSend', async (request, reply) => {
+    reply.header('x-request-id', request.id);
+  });
   if (deps.realtime) await app.register(websocket);
   registerErrorHandler(app);
   // CORS first, so preflight requests are answered before the auth hook runs.
@@ -72,6 +116,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   await app.register(device.routes, { prefix: '/v1/device' });
   await app.register(createAccountModule(deps.repos.account).routes);
+  await app.register(createAdminModule(deps.repos.admin, deps.adminEmails ?? []).routes, {
+    prefix: '/v1/admin',
+  });
   app.get('/healthz', async () => ({ ok: true }));
   if (deps.authRoutes) await app.register(deps.authRoutes);
   await app.register(createDebriefModule(deps.repos.debrief).routes);

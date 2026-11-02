@@ -28,6 +28,7 @@ export async function generateDebrief(
     'debrief.generate',
     { segments: session.segments },
     DebriefContentSchema,
+    { sessionId: session.id },
   );
   const validSegmentIds = new Set(session.segments.map(({ id }) => id));
   const content: DebriefContent = {

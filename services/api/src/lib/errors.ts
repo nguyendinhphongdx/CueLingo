@@ -34,17 +34,26 @@ export function registerErrorHandler(app: FastifyInstance): void {
   app.setErrorHandler((error: FastifyError | AppError, request, reply) => {
     if (error instanceof AppError) {
       const body: ErrorResponse = {
-        error: { code: error.code, message: error.message, details: error.details },
+        error: {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          requestId: request.id,
+        },
       };
       return reply.status(error.status).send(body);
     }
     // Fastify's own client errors (malformed JSON, payload too large...).
     if (error.statusCode && error.statusCode < 500) {
-      const body: ErrorResponse = { error: { code: ErrorCode.Validation, message: error.message } };
+      const body: ErrorResponse = {
+        error: { code: ErrorCode.Validation, message: error.message, requestId: request.id },
+      };
       return reply.status(error.statusCode).send(body);
     }
     request.log.error({ err: error }, 'unhandled error');
-    const body: ErrorResponse = { error: { code: ErrorCode.Internal, message: 'Internal error' } };
+    const body: ErrorResponse = {
+      error: { code: ErrorCode.Internal, message: 'Internal error', requestId: request.id },
+    };
     return reply.status(500).send(body);
   });
 }

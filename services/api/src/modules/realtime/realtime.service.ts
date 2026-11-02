@@ -78,11 +78,18 @@ export function createRealtimeConnection(
       translationQueue = translationQueue.then(async () => {
         try {
           const glossary = await deps.glossary(authenticatedUserId);
-          const result = await deps.gateway.llm('translate.realtime', {
-            text: message.text,
-            previous: context,
-            glossary,
-          });
+          const result = await deps.gateway.llm(
+            'translate.realtime',
+            {
+              text: message.text,
+              previous: context,
+              glossary,
+            },
+            {
+              userId: authenticatedUserId,
+              sessionId: activeSessionId ?? undefined,
+            },
+          );
           send({
             type: 'translation',
             segmentId: message.segmentId,

@@ -14,15 +14,15 @@ import type { AssistService } from './assist.service';
 export function assistRoutes(service: AssistService): FastifyPluginAsync {
   return async (app) => {
     app.post('/lookup', async (request): Promise<LookupResponse> => {
-      return service.lookup(parse(LookupRequestSchema, request.body));
+      return service.lookup(request.userId, parse(LookupRequestSchema, request.body));
     });
 
     app.post('/recap', async (request): Promise<RecapResponse> => {
-      return service.recap(parse(RecapRequestSchema, request.body));
+      return service.recap(request.userId, parse(RecapRequestSchema, request.body));
     });
 
     app.post('/compose', async (request): Promise<ComposeResponse> => {
-      return service.compose(parse(ComposeRequestSchema, request.body));
+      return service.compose(request.userId, parse(ComposeRequestSchema, request.body));
     });
   };
 }
