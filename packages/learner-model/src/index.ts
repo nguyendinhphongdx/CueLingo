@@ -3,3 +3,4 @@
  * Design: apps/docs/docs/04-modules/05-packages/learner-model.md
  */
 export * from './fsrs';
+export * from './assist-dial';
