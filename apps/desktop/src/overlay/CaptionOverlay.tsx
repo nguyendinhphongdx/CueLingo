@@ -13,6 +13,7 @@ import { native, type TranscriptEvent } from '../lib/native';
 import { DRAWER_WIDTH, QuickAssistPanel, useQuickAssist } from '../quick-assist';
 import { saveAssistLevel } from '../settings/use-assist-settings';
 import type { SelectableAssistLevel } from '../settings/settings-store';
+import { queueSettingsPatch } from '../settings/settings-api';
 import { CaptionBlock } from './CaptionBlock';
 import { DisplayMenu } from './DisplayMenu';
 import { ToolsMenu, type ToolItem } from './ToolsMenu';
@@ -274,11 +275,20 @@ export function CaptionOverlay({
           level={assistLevel}
           onLevel={(next) => void saveAssistLevel(next as SelectableAssistLevel)}
           fontSize={prefs.fontSize}
-          onFontSize={prefs.setFontSize}
+          onFontSize={(fontSize) => {
+            prefs.setFontSize(fontSize);
+            queueSettingsPatch({ overlay: { fontSize } });
+          }}
           opacity={prefs.opacity}
-          onOpacity={prefs.setOpacity}
+          onOpacity={(opacity) => {
+            prefs.setOpacity(opacity);
+            queueSettingsPatch({ overlay: { opacity } });
+          }}
           theme={prefs.theme}
-          onTheme={prefs.setTheme}
+          onTheme={(theme) => {
+            prefs.setTheme(theme);
+            queueSettingsPatch({ overlay: { theme } });
+          }}
           onClose={closeMenu}
         />
       ) : null}

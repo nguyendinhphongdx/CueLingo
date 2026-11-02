@@ -12,7 +12,7 @@ import {
 } from '../onboarding';
 import { PrivacyPanel } from '../privacy';
 import { RecentSessions, SessionPanel } from '../session';
-import { AssistSettings } from '../settings';
+import { AssistSettings, useSettingsSync } from '../settings';
 import { useSyncAssistLevel } from '../settings/use-assist-settings';
 import { AboutCard, ShortcutList } from './AboutCard';
 import { Button } from '@cuelingo/ui/components/button';
@@ -31,6 +31,7 @@ export function App() {
   useColorScheme();
   const auth = useAuth();
   const account = useMe();
+  useSettingsSync();
   useSyncAssistLevel();
   const [view, setView] = useState('home');
   const [onboardingMode, setOnboardingMode] = useState<OnboardingMode>('auto');

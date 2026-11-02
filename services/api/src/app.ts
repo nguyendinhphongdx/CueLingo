@@ -25,6 +25,7 @@ import {
 } from './modules/review';
 import { createSessionsModule, type SessionsRepository } from './modules/sessions';
 import { createAdminModule, type AdminRepository } from './modules/admin';
+import { createSettingsModule, type SettingsRepository } from './modules/settings';
 
 /** Origins of the desktop webview (bundled app, Windows bundle, `tauri dev`). It signs in with a bearer token, not cookies. */
 const DESKTOP_ORIGINS = ['tauri://localhost', 'http://tauri.localhost', 'http://localhost:1420'];
@@ -56,6 +57,7 @@ export interface AppDeps {
     study: StudyRepository;
     sessions: SessionsRepository;
     admin: AdminRepository;
+    settings: SettingsRepository;
   };
   queue: JobQueue;
   resolveUserId: AuthOptions['resolveUserId'];
@@ -125,6 +127,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(createEventsModule(deps.repos.events).routes, { prefix: '/v1/events' });
   await app.register(createGlossaryModule(deps.repos.glossary).routes, { prefix: '/v1/glossary' });
   await app.register(createPrivacyModule(deps.repos.privacy).routes);
+  await app.register(createSettingsModule(deps.repos.settings).routes);
   await app.register(createSessionsModule(deps.repos.sessions, deps.queue).routes, {
     prefix: '/v1/sessions',
   });

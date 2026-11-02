@@ -11,6 +11,7 @@ import { createPostgresEventsRepository } from './modules/events';
 import { createPostgresGlossaryRepository } from './modules/glossary';
 import { createPostgresPrivacyRepository } from './modules/privacy';
 import { createPostgresSessionsRepository } from './modules/sessions';
+import { createPostgresSettingsRepository } from './modules/settings';
 import { createPostgresAccountRepository } from './modules/account';
 import { createDeviceService, createPostgresDeviceRepository } from './modules/device';
 import { createPostgresPhrasesRepository, createPostgresStudyRepository } from './modules/review';
@@ -77,6 +78,7 @@ const app = await buildApp({
     glossary: glossaryRepository,
     privacy: privacyRepository,
     sessions: sessionsRepository,
+    settings: createPostgresSettingsRepository(sql),
     account: createPostgresAccountRepository(sql),
     device: deviceRepository,
     phrases: phrasesRepository,

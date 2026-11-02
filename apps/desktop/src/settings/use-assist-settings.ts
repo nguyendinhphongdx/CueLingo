@@ -2,10 +2,12 @@ import { useMutation } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { native } from '../lib/native';
 import { useSettings, type SelectableAssistLevel } from './settings-store';
+import { queueSettingsPatch } from './settings-api';
 
 export const saveAssistLevel = async (level: SelectableAssistLevel) => {
   await native.setAssistLevel(level);
   await native.publishSettings({ assistLevel: level });
+  queueSettingsPatch({ assistDefault: level });
 };
 
 export function useAssistSettings() {

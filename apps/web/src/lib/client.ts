@@ -20,12 +20,15 @@ import {
   AdminMetricsSchema,
   DeviceCodeResponseSchema,
   UpdateMeRequestSchema,
+  UpdateUserSettingsSchema,
+  UserSettingsSchema,
   type DeleteAccountRequest,
   type DeleteMyDataRequest,
   type DebriefFeedbackRequest,
   type ReviewAnswerRequest,
   type SavePhraseRequest,
   type UpdateMeRequest,
+  type UpdateUserSettings,
 } from '@cuelingo/shared';
 import { API_URL } from './config';
 
@@ -142,5 +145,15 @@ export const client = {
     export: () => request('GET', '/v1/me/export', ExportSchema),
     deleteMyData: (input: DeleteMyDataRequest) =>
       request('DELETE', '/v1/me/data', null, DeleteMyDataRequestSchema.parse(input)),
+  },
+  settings: {
+    get: () => request('GET', '/v1/me/settings', UserSettingsSchema),
+    update: (input: UpdateUserSettings) =>
+      request(
+        'PATCH',
+        '/v1/me/settings',
+        UserSettingsSchema,
+        UpdateUserSettingsSchema.parse(input),
+      ),
   },
 };
