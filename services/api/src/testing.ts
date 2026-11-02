@@ -8,6 +8,7 @@ import type { PrivacyRepository } from './modules/privacy';
 import { createInMemorySessionsRepository } from './modules/sessions';
 import { createInMemorySettingsRepository } from './modules/settings';
 import { createInMemoryDialRepository } from './modules/dial';
+import { createInMemoryPlacementRepository } from './modules/placement';
 import { createInMemoryAccountRepository } from './modules/account';
 import { createInMemoryDeviceRepository } from './modules/device';
 import { createInMemoryPhrasesRepository, createInMemoryStudyRepository } from './modules/review';
@@ -41,6 +42,7 @@ export async function buildTestApp(
       settings: emptySettingsRepository(),
       account: createInMemoryAccountRepository(),
       dial: createInMemoryDialRepository(),
+      placement: createInMemoryPlacementRepository(),
       device: createInMemoryDeviceRepository(),
       phrases: createInMemoryPhrasesRepository(),
       study: createInMemoryStudyRepository(),

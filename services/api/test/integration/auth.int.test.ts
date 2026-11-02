@@ -15,6 +15,7 @@ import {
   createPostgresStudyRepository,
 } from '../../src/modules/review';
 import { createPostgresDialRepository } from '../../src/modules/dial';
+import { createPostgresPlacementRepository } from '../../src/modules/placement';
 import { createPostgresAccountRepository } from '../../src/modules/account';
 import { createPostgresDeviceRepository } from '../../src/modules/device';
 import { createPostgresAdminRepository } from '../../src/modules/admin';
@@ -55,6 +56,7 @@ describe('auth on real Postgres (AC3, AC4)', () => {
         sessions: createPostgresSessionsRepository(sql),
         account: createPostgresAccountRepository(sql),
         dial: createPostgresDialRepository(sql),
+        placement: createPostgresPlacementRepository(sql),
         device: createPostgresDeviceRepository(sql),
         phrases: createPostgresPhrasesRepository(sql),
         study: createPostgresStudyRepository(sql),

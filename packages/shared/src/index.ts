@@ -20,3 +20,4 @@ export * from './errors/error-code';
 export * from './jobs';
 export * from './languages';
 export * from './ws/ws';
+export * from './dto/placement.dto';

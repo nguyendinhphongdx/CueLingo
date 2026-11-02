@@ -4,6 +4,7 @@ import {
   createPostgresPhrasesRepository,
   createPostgresStudyRepository,
 } from '../../src/modules/review';
+import { createPostgresPlacementRepository } from '../../src/modules/placement';
 import { startMigratedPostgres, type TestDatabase } from './postgres';
 
 describe('learning data per language on real Postgres', () => {
@@ -48,5 +49,15 @@ describe('learning data per language on real Postgres', () => {
     expect((await study.listItems(user)).length).toBe(2);
     expect((await study.progressFacts(user, 'ja', since)).meetingStarts.length).toBe(1);
     expect((await study.progressFacts(user, 'en', since)).meetingStarts.length).toBe(0);
+  });
+
+  it('saves a placement result as the level and starting assist level of that language only', async () => {
+    const placement = createPostgresPlacementRepository(sql);
+    await placement.save(user, 'ja', { listeningLevel: 'b1', assistDefault: 3 });
+    await placement.save(user, 'ja', { listeningLevel: 'b2', assistDefault: 1 });
+
+    const rows = await sql<{ language: string; listening_level: string; assist_default: number }[]>`
+      SELECT language, listening_level, assist_default FROM learner_languages WHERE user_id = ${user}`;
+    expect(rows).toEqual([{ language: 'ja', listening_level: 'b2', assist_default: 1 }]);
   });
 });
