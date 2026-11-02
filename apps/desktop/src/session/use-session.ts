@@ -1,17 +1,23 @@
 import { createRealtimeClient } from '@cuelingo/core-sdk';
 import { useSyncExternalStore } from 'react';
 import { currentToken } from '../auth';
+import { insightsApi } from '../insights';
 import { native } from '../lib/native';
+import { refreshOnGlossaryChange } from './glossary-refresh';
 import { createSessionController } from './session-controller';
 import { sessionsApi } from './sessions-api';
 
 const controller = createSessionController({
   native,
   sessions: sessionsApi,
+  glossary: { list: insightsApi.listGlossary },
   createRealtime: createRealtimeClient,
   apiUrl: import.meta.env.VITE_API_URL || 'ws://localhost:4000',
   token: currentToken,
 });
+
+// A glossary edit on the Terms page reaches the running meeting's speech model.
+refreshOnGlossaryChange(controller);
 
 export function useSession() {
   const snapshot = useSyncExternalStore(

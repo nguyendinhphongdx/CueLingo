@@ -1,5 +1,11 @@
+import type { GlossaryTerm, LanguageCode } from '@cuelingo/shared';
 import type { RealtimeClient, RealtimeClientOptions } from '@cuelingo/core-sdk';
-import type { AudioModelEvent, SegmentEvent, TranscriptEvent } from '../lib/native';
+import type {
+  AudioModelEvent,
+  SegmentEvent,
+  SessionStartInput,
+  TranscriptEvent,
+} from '../lib/native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSessionController } from './session-controller';
 
@@ -19,7 +25,20 @@ function segment(overrides: Partial<SegmentEvent> = {}): SegmentEvent {
   };
 }
 
-function setup() {
+function term(text: string, createdAt = '2026-11-01T00:00:00.000Z'): GlossaryTerm {
+  return {
+    id: crypto.randomUUID(),
+    term: text,
+    translation: null,
+    note: null,
+    createdAt,
+    language: 'en',
+  };
+}
+
+type GlossaryList = (language: LanguageCode) => Promise<GlossaryTerm[]>;
+
+function setup(glossaryList?: GlossaryList) {
   let onSegment: ((event: SegmentEvent) => void) | undefined;
   let onAudioModel: ((event: AudioModelEvent) => void) | undefined;
   let realtimeOptions: RealtimeClientOptions | undefined;
@@ -35,7 +54,7 @@ function setup() {
     },
   };
   const native = {
-    sessionStart: vi.fn(async () => {
+    sessionStart: vi.fn(async (_input: SessionStartInput) => {
       calls.push('native.start');
       return { sessionId: 'local-native-session' };
     }),
@@ -49,6 +68,7 @@ function setup() {
       return vi.fn();
     }),
     setLanguage: vi.fn(async () => undefined),
+    setVocabulary: vi.fn(async () => undefined),
     publishTranscript: vi.fn(async (event: TranscriptEvent) => {
       published.push(event);
     }),
@@ -88,6 +108,7 @@ function setup() {
   const controller = createSessionController({
     native,
     sessions,
+    glossary: glossaryList ? { list: glossaryList } : undefined,
     createRealtime: (options) => {
       calls.push('realtime.create');
       realtimeOptions = options;
@@ -318,5 +339,352 @@ describe('session controller', () => {
       true,
       false,
     ]);
+  });
+
+  describe('glossary vocabulary', () => {
+    it('passes the newest terms (at most 200) to native start', async () => {
+      const items = Array.from({ length: 205 }, (_, i) =>
+        term(`T${i}`, new Date(Date.UTC(2026, 0, 1, 0, 0, i)).toISOString()),
+      );
+      const list = vi.fn(async () => items);
+      const context = setup(list);
+
+      await context.controller.start(3, 'en');
+
+      expect(list).toHaveBeenCalledWith('en');
+      const vocabulary = context.native.sessionStart.mock.calls[0]![0].vocabulary!;
+      expect(vocabulary).toHaveLength(200);
+      expect(vocabulary[0]).toBe('T204');
+      expect(vocabulary).not.toContain('T0');
+    });
+
+    it('does not wait more than 1.5 s for a slow glossary, then applies it late', async () => {
+      let resolveList!: (items: GlossaryTerm[]) => void;
+      const context = setup(() => new Promise((resolve) => (resolveList = resolve)));
+
+      const starting = context.controller.start(3, 'en');
+      await vi.advanceTimersByTimeAsync(1_499);
+      expect(context.native.sessionStart).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(2);
+      await starting;
+      expect(context.native.sessionStart.mock.calls[0]![0].vocabulary).toEqual([]);
+
+      resolveList([term('SLA')]);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(context.native.setVocabulary).toHaveBeenCalledWith(['SLA']);
+    });
+
+    it('drops a late glossary when the meeting stopped meanwhile', async () => {
+      let resolveList!: (items: GlossaryTerm[]) => void;
+      const context = setup(() => new Promise((resolve) => (resolveList = resolve)));
+      const starting = context.controller.start(3, 'en');
+      await vi.advanceTimersByTimeAsync(1_501);
+      await starting;
+      await context.controller.stop();
+
+      resolveList([term('SLA')]);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(context.native.setVocabulary).not.toHaveBeenCalled();
+    });
+
+    it('refreshes within 500 ms of a change, coalescing a burst, without stopping capture', async () => {
+      const list = vi.fn<GlossaryList>(async () => [term('SLA')]);
+      const context = setup(list);
+      await context.controller.start(3, 'en');
+      list.mockResolvedValue([term('SLA'), term('OKR')]);
+
+      context.controller.refreshVocabulary();
+      await vi.advanceTimersByTimeAsync(200);
+      context.controller.refreshVocabulary();
+      context.controller.refreshVocabulary();
+      await vi.advanceTimersByTimeAsync(499);
+      expect(context.native.setVocabulary).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(2);
+
+      expect(context.native.setVocabulary).toHaveBeenCalledOnce();
+      expect(context.native.setVocabulary).toHaveBeenCalledWith(['SLA', 'OKR']);
+      expect(context.native.sessionStop).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when no meeting is running', async () => {
+      const list = vi.fn<GlossaryList>(async () => [term('SLA')]);
+      const context = setup(list);
+
+      context.controller.refreshVocabulary();
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      expect(list).not.toHaveBeenCalled();
+      expect(context.native.setVocabulary).not.toHaveBeenCalled();
+    });
+
+    it('reloads after a language switch, and sends no terms for Japanese', async () => {
+      const list = vi.fn<GlossaryList>(async () => [term('SLA')]);
+      const context = setup(list);
+      await context.controller.start(3, 'en');
+      context.emitAudioModel({ type: 'language-suggestion', language: 'ja', confidence: 0.99 });
+
+      await context.controller.acceptSuggestedLanguage();
+      await vi.advanceTimersByTimeAsync(600);
+
+      expect(context.native.setVocabulary).toHaveBeenCalledWith([]);
+      expect(list).toHaveBeenCalledTimes(1);
+    });
+
+    it('asks for the new list when the language switches back to English', async () => {
+      const list = vi.fn<GlossaryList>(async () => [term('SLA')]);
+      const context = setup(list);
+      await context.controller.start(3, 'ja');
+      expect(context.native.sessionStart.mock.calls[0]![0].vocabulary).toEqual([]);
+      context.emitAudioModel({ type: 'language-suggestion', language: 'en', confidence: 0.99 });
+
+      await context.controller.acceptSuggestedLanguage();
+      await vi.advanceTimersByTimeAsync(600);
+
+      expect(list).toHaveBeenCalledWith('en');
+      expect(context.native.setVocabulary).toHaveBeenCalledWith(['SLA']);
+    });
+
+    it('starts with no terms when the glossary fails or nobody is signed in', async () => {
+      const context = setup(() => Promise.reject(new Error('401')));
+
+      await context.controller.start(3, 'en');
+
+      expect(context.native.sessionStart.mock.calls[0]![0].vocabulary).toEqual([]);
+      expect(context.controller.getSnapshot()).toMatchObject({ error: null });
+      expect(context.controller.getSnapshot().status).not.toBe('error');
+    });
+
+    it('swallows a failing refresh', async () => {
+      const context = setup(async () => [term('SLA')]);
+      await context.controller.start(3, 'en');
+      context.native.setVocabulary.mockRejectedValueOnce(new Error('native down'));
+
+      context.controller.refreshVocabulary();
+      await vi.advanceTimersByTimeAsync(600);
+
+      expect(context.controller.getSnapshot().status).not.toBe('error');
+    });
+
+    describe('ordering and races', () => {
+      /** A glossary whose first call answers at once (the start) and later calls wait to be resolved by hand. */
+      function manual(first: GlossaryTerm[] = [term('SLA')]) {
+        const pending: ((items: GlossaryTerm[]) => void)[] = [];
+        let calls = 0;
+        const list = vi.fn<GlossaryList>(() => {
+          calls += 1;
+          if (calls === 1) return Promise.resolve(first);
+          return new Promise((resolve) => pending.push(resolve));
+        });
+        return { list, pending };
+      }
+      const advance = (ms: number) => vi.advanceTimersByTimeAsync(ms);
+      const suggest = (context: ReturnType<typeof setup>, language: 'en' | 'ja') =>
+        context.emitAudioModel({ type: 'language-suggestion', language, confidence: 0.99 });
+
+      it('keeps a refresh result when the slow start-time load resolves after it', async () => {
+        let resolveStart!: (items: GlossaryTerm[]) => void;
+        const resolvers: ((items: GlossaryTerm[]) => void)[] = [];
+        let calls = 0;
+        const context = setup(() => {
+          calls += 1;
+          return new Promise((resolve) => {
+            if (calls === 1) resolveStart = resolve;
+            else resolvers.push(resolve);
+          });
+        });
+        const starting = context.controller.start(3, 'en');
+        await advance(1_501);
+        await starting;
+
+        context.controller.refreshVocabulary();
+        await advance(500);
+        resolvers[0]!([term('NEW')]);
+        await advance(0);
+        resolveStart([term('OLD')]);
+        await advance(0);
+
+        expect(context.native.setVocabulary.mock.calls).toEqual([[['NEW']]]);
+      });
+
+      it('keeps the second refresh when the first one resolves last', async () => {
+        const { list, pending } = manual();
+        const context = setup(list);
+        await context.controller.start(3, 'en');
+
+        context.controller.refreshVocabulary();
+        await advance(500);
+        context.controller.refreshVocabulary();
+        await advance(500);
+        expect(pending).toHaveLength(2);
+        pending[1]!([term('SECOND')]);
+        await advance(0);
+        pending[0]!([term('FIRST')]);
+        await advance(0);
+
+        expect(context.native.setVocabulary.mock.calls).toEqual([[['SECOND']]]);
+      });
+
+      it('ignores a load from before en -> ja -> en', async () => {
+        const { list, pending } = manual();
+        const context = setup(list);
+        await context.controller.start(3, 'en');
+        context.controller.refreshVocabulary();
+        await advance(500);
+
+        suggest(context, 'ja');
+        await context.controller.acceptSuggestedLanguage();
+        await advance(0);
+        suggest(context, 'en');
+        await context.controller.acceptSuggestedLanguage();
+        await advance(0);
+        expect(pending).toHaveLength(2);
+        pending[1]!([term('NEW')]);
+        await advance(0);
+        pending[0]!([term('OLD')]);
+        await advance(0);
+
+        expect(context.native.setVocabulary.mock.calls).toEqual([[[]], [['NEW']]]);
+      });
+
+      it('drops a load that finishes after the language changed', async () => {
+        const { list, pending } = manual();
+        const context = setup(list);
+        await context.controller.start(3, 'en');
+        context.controller.refreshVocabulary();
+        await advance(500);
+
+        suggest(context, 'ja');
+        await context.controller.acceptSuggestedLanguage();
+        await advance(0);
+        pending[0]!([term('ENGLISH')]);
+        await advance(0);
+
+        expect(context.native.setVocabulary.mock.calls).toEqual([[[]]]);
+      });
+
+      it('sends nothing when stop() comes while a refresh is loading', async () => {
+        const { list, pending } = manual();
+        const context = setup(list);
+        await context.controller.start(3, 'en');
+        context.controller.refreshVocabulary();
+        await advance(500);
+
+        await context.controller.stop();
+        pending[0]!([term('LATE')]);
+        await advance(0);
+
+        expect(context.native.setVocabulary).not.toHaveBeenCalled();
+      });
+
+      it('sends nothing when dispose() comes while a refresh is loading', async () => {
+        const { list, pending } = manual();
+        const context = setup(list);
+        await context.controller.start(3, 'en');
+        context.controller.refreshVocabulary();
+        await advance(500);
+
+        context.controller.dispose();
+        pending[0]!([term('LATE')]);
+        await advance(0);
+
+        expect(context.native.setVocabulary).not.toHaveBeenCalled();
+      });
+
+      it.each(['stop', 'dispose'] as const)(
+        'does not load after %s() while the debounce is pending',
+        async (how) => {
+          const { list } = manual();
+          const context = setup(list);
+          await context.controller.start(3, 'en');
+          context.controller.refreshVocabulary();
+          await advance(200);
+
+          if (how === 'stop') await context.controller.stop();
+          else context.controller.dispose();
+          await advance(2_000);
+
+          expect(list).toHaveBeenCalledTimes(1);
+          expect(context.native.setVocabulary).not.toHaveBeenCalled();
+        },
+      );
+
+      it('refreshes once after capture starts when the glossary changed during startup', async () => {
+        const list = vi.fn<GlossaryList>(async () => [term('A')]);
+        const context = setup(list);
+
+        const starting = context.controller.start(3, 'en');
+        list.mockResolvedValue([term('A'), term('B')]);
+        context.controller.refreshVocabulary();
+        context.controller.refreshVocabulary();
+        await starting;
+        await advance(0);
+
+        expect(context.native.sessionStart.mock.calls[0]![0].vocabulary).toEqual(['A']);
+        expect(list).toHaveBeenCalledTimes(2);
+        expect(context.native.setVocabulary.mock.calls).toEqual([[['A', 'B']]]);
+      });
+
+      it('forgets a startup edit when the session is stopped before capture runs', async () => {
+        const list = vi.fn<GlossaryList>(async () => [term('A')]);
+        const context = setup(list);
+        const starting = context.controller.start(3, 'en');
+        context.controller.refreshVocabulary();
+        await context.controller.stop();
+        await starting;
+        await context.controller.start(3, 'en');
+        await advance(0);
+
+        expect(list).toHaveBeenCalledTimes(2);
+        expect(context.native.setVocabulary).not.toHaveBeenCalled();
+      });
+
+      it('replaces the list at once on a language change, without the debounce', async () => {
+        const list = vi.fn<GlossaryList>(async () => [term('SLA')]);
+        const context = setup(list);
+        await context.controller.start(3, 'en');
+
+        suggest(context, 'ja');
+        await context.controller.acceptSuggestedLanguage();
+        await advance(0);
+        expect(context.native.setVocabulary.mock.calls).toEqual([[[]]]);
+
+        suggest(context, 'en');
+        await context.controller.acceptSuggestedLanguage();
+        await advance(0);
+        expect(context.native.setVocabulary.mock.calls).toEqual([[[]], [['SLA']]]);
+      });
+
+      it('drops terms with control characters or over 120 characters', async () => {
+        const context = setup(async () => [
+          term('Acme\tCloud'),
+          term('Bell\u007f'),
+          term('a'.repeat(121)),
+          term('SLA'),
+        ]);
+
+        await context.controller.start(3, 'en');
+
+        expect(context.native.sessionStart.mock.calls[0]![0].vocabulary).toEqual(['SLA']);
+      });
+
+      it('swallows a rejected or throwing setVocabulary', async () => {
+        const context = setup(async () => [term('SLA')]);
+        await context.controller.start(3, 'en');
+        context.native.setVocabulary.mockImplementationOnce(() =>
+          Promise.reject(new Error('invalid vocabulary')),
+        );
+        context.native.setVocabulary.mockImplementationOnce(() => {
+          throw new Error('thrown');
+        });
+
+        context.controller.refreshVocabulary();
+        await advance(600);
+        context.controller.refreshVocabulary();
+        await advance(600);
+
+        expect(context.native.setVocabulary).toHaveBeenCalledTimes(2);
+        expect(context.controller.getSnapshot().status).not.toBe('error');
+      });
+    });
   });
 });
