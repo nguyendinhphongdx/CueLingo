@@ -8,6 +8,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { IconButton } from '@cuelingo/ui/components/icon-button';
 import { native, type TranscriptEvent } from '../lib/native';
 import { DRAWER_WIDTH, QuickAssistPanel, useQuickAssist } from '../quick-assist';
 import { saveAssistLevel } from '../settings/use-assist-settings';
@@ -45,9 +46,6 @@ const statusText: Record<LiveStatus, string> = {
   listening: 'Đang nghe',
   quiet: 'Đang im lặng',
 };
-
-const iconButton =
-  'focus-visible:ring-ring text-muted-foreground hover:text-foreground hover:bg-foreground/10 flex size-9 cursor-pointer items-center justify-center rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none';
 
 export function CaptionOverlay({
   level,
@@ -186,40 +184,34 @@ export function CaptionOverlay({
           </span>
         </span>
         <span className="flex-1" data-tauri-drag-region />
-        <button
-          type="button"
-          aria-label="Công cụ hỗ trợ"
+        <IconButton
+          label="Công cụ hỗ trợ"
           aria-haspopup="menu"
           aria-expanded={menu === 'tools'}
-          title="Công cụ hỗ trợ"
+          active={menu === 'tools' || drawerOpen}
+          className="w-auto gap-0.5 px-2"
+          icon={
+            <>
+              <Sparkles aria-hidden="true" className="size-[18px]" />
+              <ChevronDown aria-hidden="true" className="size-3.5" />
+            </>
+          }
           onClick={() => setMenu((open) => (open === 'tools' ? null : 'tools'))}
-          className={`${iconButton} w-auto gap-0.5 px-2 ${
-            menu === 'tools' || drawerOpen ? 'bg-foreground/10 text-foreground' : ''
-          }`}
-        >
-          <Sparkles aria-hidden="true" className="size-[18px]" />
-          <ChevronDown aria-hidden="true" className="size-3.5" />
-        </button>
+        />
         <span aria-hidden="true" className="bg-border mx-0.5 h-5 w-px" />
-        <button
-          type="button"
-          aria-label="Tuỳ chỉnh hiển thị"
+        <IconButton
+          label="Tuỳ chỉnh hiển thị"
           aria-expanded={menu === 'display'}
-          title="Tuỳ chỉnh hiển thị"
+          active={menu === 'display'}
+          icon={<SlidersHorizontal aria-hidden="true" className="size-[18px]" />}
           onClick={() => setMenu((open) => (open === 'display' ? null : 'display'))}
-          className={`${iconButton} ${menu === 'display' ? 'bg-foreground/10 text-foreground' : ''}`}
-        >
-          <SlidersHorizontal aria-hidden="true" className="size-[18px]" />
-        </button>
-        <button
-          type="button"
-          aria-label="Ẩn overlay"
+        />
+        <IconButton
+          label="Ẩn overlay"
           title="Ẩn overlay (⌘⇧L)"
+          icon={<EyeOff aria-hidden="true" className="size-[18px]" />}
           onClick={() => void native.toggleOverlay()}
-          className={iconButton}
-        >
-          <EyeOff aria-hidden="true" className="size-[18px]" />
-        </button>
+        />
       </header>
 
       <div className="flex min-h-0 flex-1">

@@ -1,3 +1,4 @@
+import { IconButton } from '@cuelingo/ui/components/icon-button';
 import { ChevronRight, X } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import type { QuickAssistActions, QuickAssistState } from './use-quick-assist';
@@ -12,9 +13,6 @@ interface QuickAssistPanelProps {
 
 const buttonClass =
   'focus-visible:ring-ring hover:bg-foreground/10 min-h-9 cursor-pointer rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none';
-
-const iconButton =
-  'focus-visible:ring-ring text-muted-foreground hover:text-foreground hover:bg-foreground/10 flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none';
 
 /**
  * A drawer on the right of the captions, so the transcript stays in view while you work. The header
@@ -41,25 +39,19 @@ function PanelFrame({
       <div className="flex h-11 shrink-0 items-center gap-1 pr-2 pl-4">
         <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">{title}</h2>
         {onToggleCollapsed ? (
-          <button
-            type="button"
-            aria-label={`Thu gọn ${title}`}
+          <IconButton
+            label={`Thu gọn ${title}`}
             title="Thu gọn"
-            className={iconButton}
+            icon={<ChevronRight aria-hidden="true" className="size-4" />}
             onClick={onToggleCollapsed}
-          >
-            <ChevronRight aria-hidden="true" className="size-4" />
-          </button>
+          />
         ) : null}
-        <button
-          type="button"
-          aria-label={`Đóng ${title}`}
+        <IconButton
+          label={`Đóng ${title}`}
           title="Đóng"
-          className={iconButton}
+          icon={<X aria-hidden="true" className="size-4" />}
           onClick={close}
-        >
-          <X aria-hidden="true" className="size-4" />
-        </button>
+        />
       </div>
       <div className="scroll-auto-hide min-h-0 flex-1 overflow-y-auto px-4 pb-4 text-sm">
         {children}

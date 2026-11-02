@@ -1,7 +1,7 @@
 'use client';
 
 import { AppFrame } from '@cuelingo/ui/components/app-frame';
-import { Button } from '@cuelingo/ui/components/button';
+import { AccountChip } from '@cuelingo/ui/components/account-chip';
 import { Logo } from '@cuelingo/ui/components/logo';
 import { features } from '@cuelingo/ui/lib/roadmap';
 import Link from 'next/link';
@@ -60,17 +60,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         ),
       }}
       footer={
-        <div className="space-y-2">
-          <p
-            className="text-muted-foreground truncate text-xs"
-            title={session.user.name || session.user.email}
-          >
-            {session.user.name || session.user.email}
-          </p>
-          <Button variant="outline" className="min-h-11 w-full cursor-pointer" onClick={signOut}>
-            Đăng xuất
-          </Button>
-        </div>
+        <AccountChip
+          name={session.user.name}
+          email={session.user.email}
+          onOpen={() => router.push('/settings')}
+          onSignOut={signOut}
+        />
       }
     >
       {children}
