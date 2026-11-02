@@ -2,7 +2,7 @@ import { AppFrame } from '@cuelingo/ui/components/app-frame';
 import { Logo } from '@cuelingo/ui/components/logo';
 import type { ReactNode } from 'react';
 import { UserChip } from '../auth';
-import { APP_NAME, APP_VERSION } from './Logo';
+import { APP_NAME, APP_VERSION } from './brand';
 
 interface AppShellProps {
   view: string;
