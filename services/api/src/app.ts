@@ -7,6 +7,7 @@ import type { JobQueue } from './lib/queue';
 import { createAssistModule, type AssistDeps } from './modules/assist';
 import { createDebriefModule, type DebriefRepository } from './modules/debrief';
 import { createEventsModule, type EventsRepository } from './modules/events';
+import { createAccountModule, type AccountRepository } from './modules/account';
 import { createDeviceModule, type DeviceRepository } from './modules/device';
 import { createGlossaryModule, type GlossaryRepository } from './modules/glossary';
 import { createPrivacyModule, type PrivacyRepository } from './modules/privacy';
@@ -27,6 +28,7 @@ export interface AppDeps {
     debrief: DebriefRepository;
     events: EventsRepository;
     glossary: GlossaryRepository;
+    account: AccountRepository;
     device: DeviceRepository;
     phrases: PhrasesRepository;
     privacy: PrivacyRepository;
@@ -69,6 +71,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   });
 
   await app.register(device.routes, { prefix: '/v1/device' });
+  await app.register(createAccountModule(deps.repos.account).routes);
   app.get('/healthz', async () => ({ ok: true }));
   if (deps.authRoutes) await app.register(deps.authRoutes);
   await app.register(createDebriefModule(deps.repos.debrief).routes);

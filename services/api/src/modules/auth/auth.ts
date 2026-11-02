@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth';
 import { magicLink } from 'better-auth/plugins';
 import type { Pool } from 'pg';
 import type { Config } from '../../config';
+import { MAGIC_LINK_MINUTES } from './auth.email';
 import type { Mailer } from './auth.mailer';
 
 /**
@@ -30,7 +31,21 @@ export function createAuth(config: Config, mailer: Mailer, pool: Pool) {
             },
           }
         : {},
-    plugins: [magicLink({ sendMagicLink: ({ email, url }) => mailer.sendMagicLink(email, url) })],
+    // Magic links can be abused to spam a mailbox: five per hour and address in production.
+    rateLimit: {
+      enabled: true,
+      window: 60,
+      max: 100,
+      customRules: {
+        '/sign-in/magic-link': { window: 3600, max: config.NODE_ENV === 'production' ? 5 : 100 },
+      },
+    },
+    plugins: [
+      magicLink({
+        expiresIn: MAGIC_LINK_MINUTES * 60,
+        sendMagicLink: ({ email, url }) => mailer.sendMagicLink(email, url),
+      }),
+    ],
     databaseHooks: {
       user: {
         create: {

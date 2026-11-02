@@ -12,9 +12,29 @@ const ConfigSchema = z
     BETTER_AUTH_SECRET: z.string().min(32),
     GOOGLE_CLIENT_ID: z.string().min(1).optional(),
     GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+    /** How sign-in emails leave the server: `console` only prints them and is for local development. */
+    MAIL_PROVIDER: z.enum(['console', 'resend', 'smtp']).default('console'),
+    /** Sender shown to people, e.g. `CueLingo <login@your-domain.com>`; the domain must be verified with the provider. */
+    MAIL_FROM: z.string().min(3).optional(),
+    RESEND_API_KEY: z.string().min(1).optional(),
+    /** SMTP connection, e.g. `smtps://user:password@smtp.example.com:465`. */
+    SMTP_URL: z.string().min(1).optional(),
     GEMINI_API_KEY: z.string().min(1).optional(),
     REALTIME_DEV_TOKEN: z.string().min(16).optional(),
     REALTIME_DEV_USER_ID: z.uuid().optional(),
+  })
+  .refine((c) => c.MAIL_PROVIDER !== 'resend' || Boolean(c.RESEND_API_KEY && c.MAIL_FROM), {
+    message: 'MAIL_PROVIDER=resend needs RESEND_API_KEY and MAIL_FROM',
+    path: ['RESEND_API_KEY'],
+  })
+  .refine((c) => c.MAIL_PROVIDER !== 'smtp' || Boolean(c.SMTP_URL && c.MAIL_FROM), {
+    message: 'MAIL_PROVIDER=smtp needs SMTP_URL and MAIL_FROM',
+    path: ['SMTP_URL'],
+  })
+  .refine((c) => c.NODE_ENV !== 'production' || c.MAIL_PROVIDER !== 'console', {
+    message:
+      'production needs a real MAIL_PROVIDER (resend or smtp): sign-in links must be emailed',
+    path: ['MAIL_PROVIDER'],
   })
   .refine((c) => Boolean(c.GOOGLE_CLIENT_ID) === Boolean(c.GOOGLE_CLIENT_SECRET), {
     message: 'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set together',

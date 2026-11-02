@@ -6,6 +6,7 @@ import { createInMemoryEventsRepository } from './modules/events';
 import { createInMemoryGlossaryRepository } from './modules/glossary';
 import type { PrivacyRepository } from './modules/privacy';
 import { createInMemorySessionsRepository } from './modules/sessions';
+import { createInMemoryAccountRepository } from './modules/account';
 import { createInMemoryDeviceRepository } from './modules/device';
 import { createInMemoryPhrasesRepository, createInMemoryStudyRepository } from './modules/review';
 
@@ -32,6 +33,7 @@ export async function buildTestApp(
       glossary: createInMemoryGlossaryRepository(),
       privacy: emptyPrivacyRepository(),
       sessions: createInMemorySessionsRepository(),
+      account: createInMemoryAccountRepository(),
       device: createInMemoryDeviceRepository(),
       phrases: createInMemoryPhrasesRepository(),
       study: createInMemoryStudyRepository(),
