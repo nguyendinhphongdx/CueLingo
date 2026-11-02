@@ -8,6 +8,8 @@ export const ErrorCode = {
   NotFound: 'NOT_FOUND',
   Conflict: 'CONFLICT',
   AssistFailed: 'ASSIST_FAILED',
+  TtsFailed: 'TTS_FAILED',
+  RateLimited: 'RATE_LIMITED',
   Internal: 'INTERNAL_ERROR',
   WsUnauthorized: 'ws_unauthorized',
   WsBadMessage: 'ws_bad_message',

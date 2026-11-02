@@ -10,6 +10,7 @@ import { registerAuth, type AuthOptions } from './lib/auth';
 import { registerErrorHandler } from './lib/errors';
 import type { JobQueue } from './lib/queue';
 import { createAssistModule, type AssistDeps } from './modules/assist';
+import { createTtsModule, type TtsDeps } from './modules/tts';
 import { createDebriefModule, type DebriefRepository } from './modules/debrief';
 import { createEventsModule, type EventsRepository } from './modules/events';
 import { createAccountModule, type AccountRepository } from './modules/account';
@@ -69,6 +70,8 @@ export interface AppDeps {
   realtime?: RealtimeDeps;
   /** Enables Quick Assist routes when an AI gateway is available. */
   assist?: AssistDeps;
+  /** Enables text to speech when an AI gateway and an audio cache are available. */
+  tts?: TtsDeps;
   /** Development-only bearer-token verifier for assist and event ingestion. */
   verifyDevToken?: AuthOptions['verifyDevToken'];
   /** False disables logs. Object form is mainly a test seam for an in-memory stream. */
@@ -135,6 +138,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const study = createStudyModule(deps.repos.study);
   await app.register(study.reviewRoutes, { prefix: '/v1/review' });
   await app.register(study.progressRoutes, { prefix: '/v1/progress' });
+  if (deps.tts) await app.register(createTtsModule(deps.tts).routes, { prefix: '/v1/tts' });
   if (deps.assist) {
     await app.register(createAssistModule(deps.assist).routes, { prefix: '/v1/assist' });
   }

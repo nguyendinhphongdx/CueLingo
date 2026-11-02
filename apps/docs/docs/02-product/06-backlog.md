@@ -124,15 +124,15 @@ Quy ước trạng thái trong `packages/ui/src/lib/roadmap.ts`: khi một tính
 
 ### Đợt 2 · Dùng hằng ngày được
 
-| ID    | Task                                                                                                                                                                                                                | Chủ | Phụ thuộc    | Cỡ  |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | ------------ | --- |
-| P2-04 | **Nối thuật ngữ vào nhận dạng.** Khi bắt đầu phiên desktop lấy glossary của người dùng, gửi `vocab [...]` tới sidecar (lệnh Rust mới), làm mới khi đổi; thêm cụm nhiều từ vào bộ sửa; prompt dịch đã nhận glossary. | C   | P2-01        | M   |
-| P2-05 | **Giọng đọc (TTS):** task `tts.speak` trong `ai-gateway`, job `tts-cache` lưu file theo hash văn bản, endpoint `GET /v1/tts?text=` trả URL ký; lưu cục bộ khi dev, S3-tương-thích khi có.                           | C   | —            | L   |
-| P2-14 | **Onboarding đầu tiên (desktop):** 4 bước (chào, cấp quyền với trạng thái thật, thử caption mẫu, chọn mức hỗ trợ), chỉ hiện lần đầu, lưu bền.                                                                       | X   | P2-02        | M   |
-| P2-15 | **Cài đặt lưu bền:** `GET/PATCH /v1/me/settings` (mức hỗ trợ mặc định, ngôn ngữ giao diện, giữ audio hay không), desktop lưu cục bộ bằng store Tauri và đồng bộ, trang Cài đặt web.                                 | X   | P2-01        | M   |
-| P2-16 | **Debrief hoàn thiện:** bấm đoạn khó mở transcript tại đúng câu, lọc theo người nói, sao chép/đính kèm debrief, tải Markdown cả cuộc họp, trạng thái "đang tạo" có tiến trình.                                      | X   | M3           | M   |
-| P2-17 | **Bài nghe–gõ + nghe phát âm cụm từ** trong ôn tập (web và desktop) dùng `GET /v1/tts`.                                                                                                                             | X   | P2-05, P2-10 | M   |
-| P2-06 | **Nghe lại đoạn khó:** sidecar cắt clip ngắn quanh câu khi người dùng bật và đồng ý, tải lên kho file, debrief phát 0,75×/1×, tự xoá theo hạn lưu.                                                                  | C   | P2-12, U     | L   |
+| ID       | Task                                                                                                                                                                                                                | Chủ | Phụ thuộc    | Cỡ  |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | ------------ | --- |
+| P2-04    | **Nối thuật ngữ vào nhận dạng.** Khi bắt đầu phiên desktop lấy glossary của người dùng, gửi `vocab [...]` tới sidecar (lệnh Rust mới), làm mới khi đổi; thêm cụm nhiều từ vào bộ sửa; prompt dịch đã nhận glossary. | C   | P2-01        | M   |
+| P2-05 ✅ | **Giọng đọc (TTS):** task `tts.speak` trong `ai-gateway`, job `tts-cache` lưu file theo hash văn bản, endpoint `GET /v1/tts?text=` trả URL ký; lưu cục bộ khi dev, S3-tương-thích khi có.                           | C   | —            | L   |
+| P2-14    | **Onboarding đầu tiên (desktop):** 4 bước (chào, cấp quyền với trạng thái thật, thử caption mẫu, chọn mức hỗ trợ), chỉ hiện lần đầu, lưu bền.                                                                       | X   | P2-02        | M   |
+| P2-15    | **Cài đặt lưu bền:** `GET/PATCH /v1/me/settings` (mức hỗ trợ mặc định, ngôn ngữ giao diện, giữ audio hay không), desktop lưu cục bộ bằng store Tauri và đồng bộ, trang Cài đặt web.                                 | X   | P2-01        | M   |
+| P2-16    | **Debrief hoàn thiện:** bấm đoạn khó mở transcript tại đúng câu, lọc theo người nói, sao chép/đính kèm debrief, tải Markdown cả cuộc họp, trạng thái "đang tạo" có tiến trình.                                      | X   | M3           | M   |
+| P2-17    | **Bài nghe–gõ + nghe phát âm cụm từ** trong ôn tập (web và desktop) dùng `GET /v1/tts`.                                                                                                                             | X   | P2-05, P2-10 | M   |
+| P2-06    | **Nghe lại đoạn khó:** sidecar cắt clip ngắn quanh câu khi người dùng bật và đồng ý, tải lên kho file, debrief phát 0,75×/1×, tự xoá theo hạn lưu.                                                                  | C   | P2-12, U     | L   |
 
 ### Đợt 3 · Học thông minh và phát hành
 

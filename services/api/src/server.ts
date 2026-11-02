@@ -12,6 +12,9 @@ import { createPostgresGlossaryRepository } from './modules/glossary';
 import { createPostgresPrivacyRepository } from './modules/privacy';
 import { createPostgresSessionsRepository } from './modules/sessions';
 import { createPostgresSettingsRepository } from './modules/settings';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createFileTtsCache } from './modules/tts';
 import { createPostgresAccountRepository } from './modules/account';
 import { createDeviceService, createPostgresDeviceRepository } from './modules/device';
 import { createPostgresPhrasesRepository, createPostgresStudyRepository } from './modules/review';
@@ -91,6 +94,9 @@ const app = await buildApp({
   webOrigin: config.WEB_ORIGIN,
   realtime,
   assist: gateway ? { gateway } : undefined,
+  tts: gateway
+    ? { gateway, cache: createFileTtsCache(config.TTS_CACHE_DIR ?? join(tmpdir(), 'cuelingo-tts')) }
+    : undefined,
   verifyDevToken: config.NODE_ENV === 'production' ? undefined : verifyDevToken,
   logger: true,
   adminEmails: config.ADMIN_EMAILS,

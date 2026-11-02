@@ -19,6 +19,8 @@ const ConfigSchema = z
     RESEND_API_KEY: z.string().min(1).optional(),
     /** SMTP connection, e.g. `smtps://user:password@smtp.example.com:465`. */
     SMTP_URL: z.string().min(1).optional(),
+    /** Where generated speech is kept; defaults to a folder in the system temp directory. */
+    TTS_CACHE_DIR: z.string().min(1).optional(),
     GEMINI_API_KEY: z.string().min(1).optional(),
     REALTIME_DEV_TOKEN: z.string().min(16).optional(),
     REALTIME_DEV_USER_ID: z.uuid().optional(),

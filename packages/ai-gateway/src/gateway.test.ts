@@ -187,3 +187,44 @@ describe('ai-gateway debrief.generate', () => {
     expect(configuredTasks['debrief.generate'].model).toBe('custom-debrief-model');
   });
 });
+
+describe('speech', () => {
+  const wav = new Uint8Array([82, 73, 70, 70, 1, 0, 0, 0, 87, 65, 86, 69, 1, 2, 3]);
+
+  it('reads text aloud with the lite model and records the call', async () => {
+    const speak = vi.fn(async () => ({ audio: wav, mimeType: 'audio/wav' as const }));
+    const onCall = vi.fn();
+    const gateway = createAiGateway({ googleApiKey: 'k', speak, onCall });
+
+    const result = await gateway.speech('Can we push back the deadline?', {}, { userId: 'u1' });
+
+    expect(result).toMatchObject({ audio: wav, mimeType: 'audio/wav', fallback: false });
+    expect(speak).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'Can we push back the deadline?', voice: 'Kore' }),
+    );
+    await Promise.resolve();
+    expect(onCall).toHaveBeenCalledWith(
+      expect.objectContaining({ task: 'tts.speak', ok: true, userId: 'u1' }),
+    );
+  });
+
+  it('falls back to the second model when the first fails', async () => {
+    const speak = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('overloaded'))
+      .mockResolvedValueOnce({ audio: wav, mimeType: 'audio/wav' });
+    const gateway = createAiGateway({ googleApiKey: 'k', speak });
+
+    const result = await gateway.speech('hello');
+    expect(result.fallback).toBe(true);
+    expect(speak.mock.calls[0]![0].model).not.toBe(speak.mock.calls[1]![0].model);
+  });
+
+  it('fails with a gateway error when both models fail or return no audio', async () => {
+    const gateway = createAiGateway({
+      googleApiKey: 'k',
+      speak: async () => ({ audio: new Uint8Array(), mimeType: 'audio/wav' as const }),
+    });
+    await expect(gateway.speech('hello')).rejects.toMatchObject({ task: 'tts.speak' });
+  });
+});

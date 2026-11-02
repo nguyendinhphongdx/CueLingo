@@ -25,7 +25,7 @@ const isPublic = (url: string) =>
   /^\/v1\/sessions\/[^/]+\/stream(?:\?|$)/.test(url);
 
 const acceptsDevToken = (url: string) =>
-  /^\/v1\/(?:assist|events|sessions|phrases|review|progress|me)(?:\/|\?|$)/.test(url);
+  /^\/v1\/(?:assist|events|sessions|phrases|review|progress|me|tts)(?:\/|\?|$)/.test(url);
 
 /** These need a real web session: a device token must not be able to mint or list other devices. */
 const needsWebSession = (url: string) => /^\/v1\/device\/(?:code|tokens)(?:\/|\?|$)/.test(url);

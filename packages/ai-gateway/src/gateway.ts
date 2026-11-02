@@ -15,6 +15,7 @@ import {
 } from '@cuelingo/prompts';
 import type { ComposeRequest, LookupRequest, RecapRequest } from '@cuelingo/shared';
 import { generateText } from 'ai';
+import { createGeminiSpeak, DEFAULT_VOICE, type SpeakFn } from './speech';
 import { TASKS, type JsonTaskName, type TaskName } from './tasks';
 
 export interface AiCallRecord {
@@ -66,6 +67,8 @@ export interface AiGatewayOptions {
   onCall?: (record: AiCallRecord) => void;
   /** Test seam: replaces the real provider call. */
   generate?: GenerateFn;
+  /** Test seam: replaces the real text-to-speech call. */
+  speak?: SpeakFn;
 }
 
 export interface AiGateway {
@@ -74,12 +77,26 @@ export interface AiGateway {
     input: TranslateInput,
     context?: AiCallContext,
   ): Promise<LlmResult>;
+  /** Reads `text` aloud and returns a WAV. Callers cache the result: it takes seconds and costs money. */
+  speech(
+    text: string,
+    options?: { voice?: string },
+    context?: AiCallContext,
+  ): Promise<SpeechResult>;
   json<TTask extends JsonTaskName, TOutput>(
     task: TTask,
     input: JsonTaskInputMap[TTask],
     schema: JsonSchema<TOutput>,
     context?: AiCallContext,
   ): Promise<TOutput>;
+}
+
+export interface SpeechResult {
+  audio: Uint8Array;
+  mimeType: 'audio/wav';
+  model: string;
+  fallback: boolean;
+  latencyMs: number;
 }
 
 export class AiGatewayError extends Error {
@@ -152,6 +169,51 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
     }
   }
 
+  const speak: SpeakFn = options.speak ?? createGeminiSpeak(options.googleApiKey);
+
+  async function speechAttempt(
+    model: string,
+    fallback: boolean,
+    text: string,
+    voice: string,
+    context?: AiCallContext,
+  ): Promise<SpeechResult> {
+    const started = performance.now();
+    const record: AiCallRecord = {
+      task: 'tts.speak',
+      model,
+      promptVersion: 'tts@v1',
+      latencyMs: 0,
+      fallback,
+      ok: false,
+      ...context,
+    };
+    try {
+      const out = await speak({
+        model,
+        text,
+        voice,
+        signal: AbortSignal.timeout(TASKS['tts.speak'].timeoutMs),
+      });
+      if (out.audio.length === 0) throw new Error('empty audio');
+      record.ok = true;
+      record.inputTokens = out.inputTokens;
+      record.outputTokens = out.outputTokens;
+      return {
+        audio: out.audio,
+        mimeType: out.mimeType,
+        model,
+        fallback,
+        latencyMs: Math.round(performance.now() - started),
+      };
+    } finally {
+      record.latencyMs = Math.round(performance.now() - started);
+      void Promise.resolve()
+        .then(() => options.onCall?.(record))
+        .catch(() => undefined);
+    }
+  }
+
   async function runTextTask(
     task: TaskName,
     system: string,
@@ -191,6 +253,20 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
     async llm(task, input, context) {
       const { system, prompt } = buildTranslatePrompt(input);
       return runTextTask(task, system, prompt, TRANSLATE_PROMPT_VERSION, context);
+    },
+
+    async speech(text, speechOptions, context) {
+      const voice = speechOptions?.voice ?? DEFAULT_VOICE;
+      const config = TASKS['tts.speak'];
+      try {
+        return await speechAttempt(config.model, false, text, voice, context);
+      } catch {
+        try {
+          return await speechAttempt(config.fallbackModel, true, text, voice, context);
+        } catch (error) {
+          throw new AiGatewayError('tts.speak', error);
+        }
+      }
     },
 
     async json(task, input, schema, context) {
