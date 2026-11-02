@@ -1,15 +1,17 @@
-import { DEFAULT_USER_SETTINGS, type UserSettings } from '@cuelingo/shared';
+import { DEFAULT_USER_SETTINGS, type LanguageCode, type UserSettings } from '@cuelingo/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { client } from '../../lib/client';
 import { describeError } from '../../lib/errors';
 
-const SETTINGS_KEY = ['settings'] as const;
-
-export function usePreferences() {
+export function usePreferences(language: LanguageCode) {
   const queryClient = useQueryClient();
-  const query = useQuery({ queryKey: SETTINGS_KEY, queryFn: client.settings.get });
+  const SETTINGS_KEY = ['settings', language] as const;
+  const query = useQuery({
+    queryKey: SETTINGS_KEY,
+    queryFn: () => client.settings.get(language),
+  });
   const update = useMutation({
-    mutationFn: (settings: UserSettings) => client.settings.update(settings),
+    mutationFn: (settings: UserSettings) => client.settings.update(settings, language),
     onSuccess: (settings) => queryClient.setQueryData(SETTINGS_KEY, settings),
   });
 

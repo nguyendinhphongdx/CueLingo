@@ -16,7 +16,7 @@ function payload(event: LearningEvent): Record<string, string | number> {
     case 'phrase_saved':
       return { phrase: event.phrase };
     case 'assist_suggestion':
-      return { action: event.action, level: event.level };
+      return { action: event.action, level: event.level, language: event.language ?? 'en' };
     case 'translation_expanded':
     case 'recap_used':
       return {};

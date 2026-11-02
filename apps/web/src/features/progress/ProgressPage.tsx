@@ -163,7 +163,7 @@ export function ProgressPage() {
     );
   return (
     <>
-      <AssistSuggestion />
+      <AssistSuggestion language={language} />
       <ProgressView progress={progress} action={switcher} />
     </>
   );

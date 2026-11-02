@@ -33,16 +33,17 @@ export async function applyLoadedSettings(
 export function useSettingsSync(api: SettingsApi = settingsApi) {
   const status = useAuthStore((state) => state.status);
   const token = useAuthStore((state) => state.token);
+  const language = useSettings((state) => state.language);
 
   useEffect(() => {
     if (status === 'loading' || currentToken() === '') return;
     let disposed = false;
     void api
-      .get()
+      .get(language)
       .then((settings) => (disposed ? undefined : applyLoadedSettings(settings)))
       .catch(() => undefined);
     return () => {
       disposed = true;
     };
-  }, [api, status, token]);
+  }, [api, status, token, language]);
 }

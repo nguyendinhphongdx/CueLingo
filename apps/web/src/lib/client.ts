@@ -115,7 +115,8 @@ export const client = {
   tts: { speak },
   assist: {
     /** Whether to offer a different assist level; the server decides from recent meetings. */
-    suggestion: () => request('GET', '/v1/me/assist-suggestion', AssistSuggestionSchema),
+    suggestion: (language: LanguageCode) =>
+      request('GET', `/v1/me/assist-suggestion?language=${language}`, AssistSuggestionSchema),
   },
   events: {
     record: (event: LearningEvent) =>
@@ -182,11 +183,13 @@ export const client = {
       request('DELETE', '/v1/me/data', null, DeleteMyDataRequestSchema.parse(input)),
   },
   settings: {
-    get: () => request('GET', '/v1/me/settings', UserSettingsSchema),
-    update: (input: UpdateUserSettings) =>
+    get: (language: LanguageCode) =>
+      request('GET', `/v1/me/settings?language=${language}`, UserSettingsSchema),
+    /** The assist default is saved for `language`; overlay settings are the person's whatever the language. */
+    update: (input: UpdateUserSettings, language: LanguageCode) =>
       request(
         'PATCH',
-        '/v1/me/settings',
+        `/v1/me/settings?language=${language}`,
         UserSettingsSchema,
         UpdateUserSettingsSchema.parse(input),
       ),

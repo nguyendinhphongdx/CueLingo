@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_USER_SETTINGS } from '@cuelingo/shared';
 import { createDebouncedSettingsSaver, createSettingsApi } from './settings-api';
 
 const settings = {
@@ -29,7 +30,7 @@ describe('desktop settings api', () => {
     await api.get();
     expect(request).toHaveBeenNthCalledWith(
       2,
-      'http://localhost:4000/v1/me/settings',
+      'http://localhost:4000/v1/me/settings?language=en',
       expect.objectContaining({ headers: { Authorization: 'Bearer second-token' }, method: 'GET' }),
     );
   });
@@ -47,7 +48,7 @@ describe('desktop settings api', () => {
     await vi.advanceTimersByTimeAsync(1);
 
     expect(update).toHaveBeenCalledOnce();
-    expect(update).toHaveBeenCalledWith({ assistDefault: 1, overlay: { fontSize: 20 } });
+    expect(update).toHaveBeenCalledWith({ assistDefault: 1, overlay: { fontSize: 20 } }, 'en');
   });
 
   it('keeps a failed patch for the next local change without retrying immediately', async () => {
@@ -66,6 +67,22 @@ describe('desktop settings api', () => {
 
     saver.schedule({ saveAudio: true });
     await vi.advanceTimersByTimeAsync(800);
-    expect(update).toHaveBeenLastCalledWith({ overlay: { opacity: 70 }, saveAudio: true });
+    expect(update).toHaveBeenLastCalledWith({ overlay: { opacity: 70 }, saveAudio: true }, 'en');
+  });
+
+  it('saves a change under the language it was made in, even if the language changes while waiting', async () => {
+    vi.useFakeTimers();
+    const update = vi.fn(async () => DEFAULT_USER_SETTINGS);
+    let language: 'en' | 'ja' = 'en';
+    const saver = createDebouncedSettingsSaver({ get: vi.fn(), update }, 800, () => language);
+
+    saver.schedule({ assistDefault: 1 });
+    language = 'ja';
+    saver.schedule({ assistDefault: 0 });
+    await vi.advanceTimersByTimeAsync(800);
+
+    expect(update).toHaveBeenNthCalledWith(1, { assistDefault: 1 }, 'en');
+    expect(update).toHaveBeenNthCalledWith(2, { assistDefault: 0 }, 'ja');
+    vi.useRealTimers();
   });
 });

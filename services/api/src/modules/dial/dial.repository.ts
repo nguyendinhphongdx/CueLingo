@@ -1,4 +1,5 @@
 import type { AssistLevel, MeetingOutcome } from '@cuelingo/learner-model';
+import type { LanguageCode } from '@cuelingo/shared';
 import type { Sql } from '../../lib/db';
 
 export interface DialFacts {
@@ -9,18 +10,19 @@ export interface DialFacts {
   lastDecisionAt: string | null;
 }
 
-/** Reads what the assist suggestion is based on. Scoped by the authenticated user's id. */
+/** Reads what the assist suggestion is based on, for one language. Scoped by the authenticated user's id. */
 export interface DialRepository {
-  facts(userId: string): Promise<DialFacts>;
+  facts(userId: string, language: LanguageCode): Promise<DialFacts>;
 }
 
 const LEVELS: readonly number[] = [4, 3, 1, 0];
 
 export function createPostgresDialRepository(sql: Sql): DialRepository {
   return {
-    async facts(userId) {
+    async facts(userId, language) {
       const [profile] = await sql<{ assist_default: number }[]>`
-        SELECT assist_default FROM learner_profiles WHERE user_id = ${userId}`;
+        SELECT assist_default FROM learner_languages
+        WHERE user_id = ${userId} AND language = ${language}`;
       const meetings = await sql<
         { started_at: Date; comprehension_pct: number | null; lookups: string }[]
       >`
@@ -32,11 +34,12 @@ export function createPostgresDialRepository(sql: Sql): DialRepository {
           SELECT comprehension_pct FROM debriefs
           WHERE session_id = s.id ORDER BY version DESC LIMIT 1
         ) d ON true
-        WHERE s.user_id = ${userId} AND s.status <> 'deleted'
+        WHERE s.user_id = ${userId} AND s.status <> 'deleted' AND s.language = ${language}
         ORDER BY s.started_at DESC LIMIT 6`;
       const [decision] = await sql<{ at: Date }[]>`
         SELECT at FROM events
         WHERE user_id = ${userId} AND type = 'assist_suggestion'
+          AND COALESCE(payload->>'language', 'en') = ${language}
         ORDER BY at DESC LIMIT 1`;
 
       const level = profile?.assist_default ?? 4;
@@ -55,13 +58,19 @@ export function createPostgresDialRepository(sql: Sql): DialRepository {
 
 /** In-memory implementation for tests; `set` replaces what the user's facts are. */
 export function createInMemoryDialRepository(): DialRepository & {
-  set(userId: string, facts: DialFacts): void;
+  set(userId: string, facts: DialFacts, language?: LanguageCode): void;
 } {
   const store = new Map<string, DialFacts>();
   return {
-    set: (userId, facts) => void store.set(userId, facts),
-    async facts(userId) {
-      return store.get(userId) ?? { currentLevel: 4, meetings: [], lastDecisionAt: null };
+    set: (userId, facts, language = 'en') => void store.set(`${userId}:${language}`, facts),
+    async facts(userId, language) {
+      return (
+        store.get(`${userId}:${language}`) ?? {
+          currentLevel: 4,
+          meetings: [],
+          lastDecisionAt: null,
+        }
+      );
     },
   };
 }

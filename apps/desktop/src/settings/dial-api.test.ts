@@ -22,7 +22,7 @@ describe('dial api', () => {
 
     expect(suggestion).toMatchObject({ kind: 'lower', suggestedLevel: 3 });
     const [url, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe('http://api.test/v1/me/assist-suggestion');
+    expect(url).toBe('http://api.test/v1/me/assist-suggestion?language=en');
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer cld_token');
   });
 

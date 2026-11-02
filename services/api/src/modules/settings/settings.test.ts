@@ -42,7 +42,7 @@ describe('settings routes', () => {
 
   it('rejects invalid values and unknown keys without writing (AC2)', async () => {
     const { app, settings } = await setup();
-    const before = await settings.get(ALICE);
+    const before = await settings.get(ALICE, 'en');
     for (const payload of [
       { overlay: { fontSize: 99 } },
       { assistDefault: 2 },
@@ -57,14 +57,14 @@ describe('settings routes', () => {
         payload,
       });
       expect(response.statusCode, JSON.stringify(payload)).toBe(400);
-      expect(await settings.get(ALICE)).toEqual(before);
+      expect(await settings.get(ALICE, 'en')).toEqual(before);
     }
     await app.close();
   });
 
   it("never reads or changes another user's settings (AC3)", async () => {
     const { app, settings } = await setup();
-    const bobBefore = await settings.get(BOB);
+    const bobBefore = await settings.get(BOB, 'en');
     await app.inject({
       method: 'PATCH',
       url: '/v1/me/settings',
@@ -74,7 +74,7 @@ describe('settings routes', () => {
 
     const bob = await app.inject({ method: 'GET', url: '/v1/me/settings', headers: as(BOB) });
     expect(bob.json()).toEqual(bobBefore);
-    expect((await settings.get(ALICE))?.assistDefault).toBe(0);
+    expect((await settings.get(ALICE, 'en'))?.assistDefault).toBe(0);
     await app.close();
   });
 

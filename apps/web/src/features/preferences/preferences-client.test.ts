@@ -13,10 +13,10 @@ describe('preferences client', () => {
       );
     vi.stubGlobal('fetch', request);
 
-    expect(await client.settings.get()).toEqual(DEFAULT_USER_SETTINGS);
-    await client.settings.update({ ...DEFAULT_USER_SETTINGS, saveAudio: true });
+    expect(await client.settings.get('en')).toEqual(DEFAULT_USER_SETTINGS);
+    await client.settings.update({ ...DEFAULT_USER_SETTINGS, saveAudio: true }, 'ja');
     expect(request).toHaveBeenLastCalledWith(
-      expect.stringMatching(/\/v1\/me\/settings$/),
+      expect.stringMatching(/\/v1\/me\/settings\?language=ja$/),
       expect.objectContaining({
         method: 'PATCH',
         body: JSON.stringify({ ...DEFAULT_USER_SETTINGS, saveAudio: true }),

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LanguageCodeSchema } from '../languages';
 
 /** Append-only learning events sent by clients. The server stamps the user id, never the client. */
 const base = { sessionId: z.uuid().optional(), at: z.iso.datetime() };
@@ -23,6 +24,8 @@ export const LearningEventSchema = z.discriminatedUnion('type', [
       ...base,
       type: z.literal('assist_suggestion'),
       action: z.enum(['applied', 'dismissed']),
+      /** Language whose assist level was suggested; English when left out. */
+      language: LanguageCodeSchema.optional(),
       level: z.union([z.literal(0), z.literal(1), z.literal(3), z.literal(4)]),
     })
     .strict(),

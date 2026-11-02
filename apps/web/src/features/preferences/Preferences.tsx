@@ -1,10 +1,12 @@
 'use client';
 
 import { type UserSettings } from '@cuelingo/shared';
+import { LanguageSwitcher } from '@cuelingo/ui/components/language-switcher';
 import { Button } from '@cuelingo/ui/components/button';
 import { Section } from '@cuelingo/ui/components/section';
 import { Segmented } from '@cuelingo/ui/components/segmented';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useLanguage } from '../../lib/language';
 import { usePreferences } from './use-preferences';
 
 const assistOptions = [
@@ -22,6 +24,8 @@ interface PreferencesFormProps {
   error: string | null;
   onSave(settings: UserSettings): Promise<unknown>;
   onChange(): void;
+  /** Picks the language whose assist level is shown; hidden while only one language exists. */
+  languageSwitcher?: ReactNode;
 }
 
 function RangeField({
@@ -72,6 +76,7 @@ export function PreferencesForm({
   error,
   onSave,
   onChange,
+  languageSwitcher,
 }: PreferencesFormProps) {
   const [draft, setDraft] = useState(settings);
   useEffect(() => setDraft(settings), [settings]);
@@ -97,7 +102,10 @@ export function PreferencesForm({
       >
         {loading ? <p className="text-muted-foreground text-sm">Đang tải tuỳ chọn…</p> : null}
         <div className="space-y-2">
-          <p className="text-sm font-medium">Mức hỗ trợ mặc định</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-medium">Mức hỗ trợ mặc định</p>
+            {languageSwitcher}
+          </div>
           <Segmented
             label="Mức hỗ trợ mặc định"
             value={String(draft.assistDefault)}
@@ -181,7 +189,8 @@ export function PreferencesForm({
 }
 
 export function Preferences() {
-  const preferences = usePreferences();
+  const { language, setLanguage, options } = useLanguage();
+  const preferences = usePreferences(language);
   return (
     <PreferencesForm
       settings={preferences.settings}
@@ -191,6 +200,9 @@ export function Preferences() {
       error={preferences.error}
       onSave={preferences.save}
       onChange={preferences.resetStatus}
+      languageSwitcher={
+        <LanguageSwitcher options={options} value={language} onChange={setLanguage} />
+      }
     />
   );
 }

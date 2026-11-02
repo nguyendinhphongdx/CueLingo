@@ -13,9 +13,10 @@ import { saveAssistLevel } from './use-assist-settings';
 export function AssistSuggestionBanner() {
   const client = useQueryClient();
   const setLevel = useSettings((state) => state.setAssistLevel);
+  const language = useSettings((state) => state.language);
   const query = useQuery({
-    queryKey: ['assist-suggestion'],
-    queryFn: () => dialApi.suggestion(),
+    queryKey: ['assist-suggestion', language],
+    queryFn: () => dialApi.suggestion(language),
     staleTime: 5 * 60_000,
     retry: 1,
   });
@@ -33,11 +34,12 @@ export function AssistSuggestionBanner() {
       await assistApi.record({
         type: 'assist_suggestion',
         action,
+        language,
         level: action === 'applied' ? level : (suggestion.currentLevel as SelectableAssistLevel),
         at: new Date().toISOString(),
       });
     },
-    onSettled: () => client.invalidateQueries({ queryKey: ['assist-suggestion'] }),
+    onSettled: () => client.invalidateQueries({ queryKey: ['assist-suggestion', language] }),
   });
 
   const suggestion = query.data;

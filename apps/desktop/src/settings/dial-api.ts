@@ -1,8 +1,13 @@
-import { AssistSuggestionSchema, type AssistSuggestion } from '@cuelingo/shared';
+import {
+  AssistSuggestionSchema,
+  DEFAULT_LANGUAGE,
+  type AssistSuggestion,
+  type LanguageCode,
+} from '@cuelingo/shared';
 import { currentToken, resolveToken, type TokenSource } from '../auth';
 
 export interface DialApi {
-  suggestion(): Promise<AssistSuggestion>;
+  suggestion(language?: LanguageCode): Promise<AssistSuggestion>;
 }
 
 export function createDialApi({
@@ -16,8 +21,8 @@ export function createDialApi({
 }): DialApi {
   const baseUrl = apiUrl.replace(/^ws:/, 'http:').replace(/^wss:/, 'https:').replace(/\/$/, '');
   return {
-    async suggestion() {
-      const response = await request(`${baseUrl}/v1/me/assist-suggestion`, {
+    async suggestion(language = DEFAULT_LANGUAGE) {
+      const response = await request(`${baseUrl}/v1/me/assist-suggestion?language=${language}`, {
         headers: { Authorization: `Bearer ${resolveToken(token)}` },
       });
       if (!response.ok) throw new Error(`Suggestion request failed with status ${response.status}`);

@@ -1,6 +1,7 @@
 import {
   ErrorCode,
   UserSettingsSchema,
+  type LanguageCode,
   type UpdateUserSettings,
   type UserSettings,
 } from '@cuelingo/shared';
@@ -21,14 +22,19 @@ export function createSettingsService(repo: SettingsRepository) {
   const missing = () => new AppError(ErrorCode.NotFound, 'Learner profile not found');
 
   return {
-    async get(userId: string): Promise<UserSettings> {
-      return (await repo.get(userId)) ?? Promise.reject(missing());
+    async get(userId: string, language: LanguageCode): Promise<UserSettings> {
+      return (await repo.get(userId, language)) ?? Promise.reject(missing());
     },
-    async update(userId: string, patch: UpdateUserSettings): Promise<UserSettings> {
-      const current = await repo.get(userId);
+    async update(
+      userId: string,
+      patch: UpdateUserSettings,
+      language: LanguageCode,
+    ): Promise<UserSettings> {
+      const current = await repo.get(userId, language);
       if (!current) throw missing();
       return (
-        (await repo.save(userId, mergeUserSettings(current, patch))) ?? Promise.reject(missing())
+        (await repo.save(userId, mergeUserSettings(current, patch), language)) ??
+        Promise.reject(missing())
       );
     },
   };
