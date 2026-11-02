@@ -1,8 +1,10 @@
 import type { Phrase } from '@cuelingo/shared';
 import { Button } from '@cuelingo/ui/components/button';
 import { Input } from '@cuelingo/ui/components/input';
+import { SpeakButton } from '@cuelingo/ui/components/speak-button';
 import { Search } from 'lucide-react';
 import { useDeferredValue, useState } from 'react';
+import { studyApi } from './study-api';
 import { confirmPhraseRemoval, usePhrases } from './use-phrases';
 
 export function filterPhrases(phrases: Phrase[], search: string) {
@@ -57,6 +59,7 @@ export function PhraseList({
               </p>
             ) : null}
           </div>
+          <SpeakButton text={phrase.phrase} loadAudio={studyApi.speak} />
           <Button
             type="button"
             variant="ghost"

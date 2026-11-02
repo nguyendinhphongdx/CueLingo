@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@cuelingo/web", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "api",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@cuelingo/api", "dev"],
+      "port": 4000
+    },
+    {
+      "name": "docs",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@cuelingo/docs", "dev"],
+      "port": 3100
+    },
+    {
+      "name": "desktop-ui",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@cuelingo/desktop", "dev"],
+      "port": 1420
+    }
+  ]
+}

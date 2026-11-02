@@ -45,7 +45,7 @@ describe('ReviewSession', () => {
       onChoose: () => {},
       onRate,
     });
-    const ratingSection = element.props.children[1].props.children[2];
+    const ratingSection = element.props.children[1].props.children[3];
     const ratingButtons = ratingSection.props.children[1].props.children;
     ratingButtons[2].props.onClick();
     expect(onRate).toHaveBeenCalledOnce();
@@ -66,5 +66,33 @@ describe('ReviewSession', () => {
     const markup = renderToStaticMarkup(<ReviewEmptyState />);
     expect(markup).toContain('Hôm nay bạn đã ôn xong');
     expect(markup).toContain('href="/sessions"');
+  });
+
+  it('shows a listen-and-type card without revealing the phrase before an answer', () => {
+    const markup = renderToStaticMarkup(
+      <ReviewSession
+        card={{
+          itemId: '00000000-0000-4000-8000-000000000009',
+          exercise: 'dictation' as const,
+          phrase: 'circle back',
+          prompt: 'circle back',
+          choices: [],
+          answer: 'circle back',
+          meaningVi: 'quay lại thảo luận sau',
+          contextEn: null,
+        }}
+        position={1}
+        total={3}
+        selectedChoice={null}
+        submitting={false}
+        onChoose={() => {}}
+        onRate={() => {}}
+        loadAudio={async () => new Blob()}
+      />,
+    );
+    expect(markup).toContain('Nghe và gõ lại');
+    expect(markup).toContain('Bạn nghe được cụm từ nào?');
+    expect(markup).toContain('aria-label="Gõ cụm từ bạn nghe được"');
+    expect(markup).not.toContain('circle back');
   });
 });

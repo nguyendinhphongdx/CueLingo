@@ -22,6 +22,8 @@ import {
   type CopyableBlock,
   type TranscriptFilter,
 } from './content';
+import { SpeakButton } from '@cuelingo/ui/components/speak-button';
+import { client } from '../../lib/client';
 import { buildDebriefMarkdown } from './markdown';
 import { useDebrief, type ClipboardFeedback } from './use-debrief';
 
@@ -555,7 +557,10 @@ export function DebriefPageView({
               return (
                 <li key={key} className="flex items-start justify-between gap-4 py-3">
                   <span className="min-w-0 text-sm">
-                    <strong className="block">{suggestion.phrase}</strong>
+                    <strong className="flex items-center gap-1">
+                      {suggestion.phrase}
+                      <SpeakButton text={suggestion.phrase} loadAudio={client.tts.speak} />
+                    </strong>
                     <span className="text-muted-foreground block">{suggestion.meaningVi}</span>
                     {suggestion.exampleEn && (
                       <span className="mt-1 block">{suggestion.exampleEn}</span>

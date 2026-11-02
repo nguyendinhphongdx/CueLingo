@@ -131,20 +131,20 @@ Quy ước trạng thái trong `packages/ui/src/lib/roadmap.ts`: khi một tính
 | P2-14    | **Onboarding đầu tiên (desktop):** 4 bước (chào, cấp quyền với trạng thái thật, thử caption mẫu, chọn mức hỗ trợ), chỉ hiện lần đầu, lưu bền.                                                                       | X   | P2-02        | M   |
 | P2-15    | **Cài đặt lưu bền:** `GET/PATCH /v1/me/settings` (mức hỗ trợ mặc định, ngôn ngữ giao diện, giữ audio hay không), desktop lưu cục bộ bằng store Tauri và đồng bộ, trang Cài đặt web.                                 | X   | P2-01        | M   |
 | P2-16    | **Debrief hoàn thiện:** bấm đoạn khó mở transcript tại đúng câu, lọc theo người nói, sao chép/đính kèm debrief, tải Markdown cả cuộc họp, trạng thái "đang tạo" có tiến trình.                                      | X   | M3           | M   |
-| P2-17    | **Bài nghe–gõ + nghe phát âm cụm từ** trong ôn tập (web và desktop) dùng `GET /v1/tts`.                                                                                                                             | X   | P2-05, P2-10 | M   |
+| P2-17 ✅ | **Bài nghe–gõ + nghe phát âm cụm từ** trong ôn tập (web và desktop) dùng `GET /v1/tts`.                                                                                                                             | X   | P2-05, P2-10 | M   |
 | P2-06    | **Nghe lại đoạn khó:** sidecar cắt clip ngắn quanh câu khi người dùng bật và đồng ý, tải lên kho file, debrief phát 0,75×/1×, tự xoá theo hạn lưu.                                                                  | C   | P2-12, U     | L   |
 
 ### Đợt 3 · Học thông minh và phát hành
 
-| ID    | Task                                                                                                                                                                         | Chủ | Phụ thuộc | Cỡ  |
-| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | --------- | --- |
-| P2-07 | **Assist Dial tự gợi ý:** luật thuần trong `learner-model` (đề xuất giảm mức khi % hiểu ≥ 85 ba cuộc họp liền, tăng khi < 60; không tự đổi), `GET /v1/me/assist-suggestion`. | C   | M4        | M   |
-| P2-18 | **UI gợi ý Assist Dial:** thẻ trên Phiên họp (desktop) và Tiến độ (web) với "Áp dụng / Để sau", ghi event.                                                                   | X   | P2-07     | S   |
-| P2-08 | **Bài nghe đánh giá đầu vào:** 6 đoạn nghe có TTS, chấm điểm, ra mức nghe + Assist mặc định (`POST /v1/placement`).                                                          | C   | P2-05     | M   |
-| P2-19 | **UI bài đánh giá** (web + desktop), có thể làm lại.                                                                                                                         | X   | P2-08     | M   |
-| P2-20 | **Quan sát:** log có cấu trúc + request id, đo chi phí AI mỗi giờ họp (bảng `events`), trang nội bộ `/admin/metrics` số liệu H1–H5, Sentry tuỳ chọn qua biến môi trường.     | X   | —         | M   |
-| P2-21 | **Kiểm thử đầu-cuối:** Playwright cho web (đăng nhập magic link dev → cuộc họp → debrief → lưu cụm từ → ôn → tiến độ), chạy trong CI.                                        | X   | P2-13     | M   |
-| P2-09 | **Ký + notarize + tự cập nhật + kênh phát hành:** workflow GitHub Actions dựng `.dmg`, ký, notarize, Tauri updater, trang `/download` trỏ bản mới nhất.                      | C+U | P2-03, U  | L   |
+| ID       | Task                                                                                                                                                                         | Chủ | Phụ thuộc | Cỡ  |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | --------- | --- |
+| P2-07 ✅ | **Assist Dial tự gợi ý:** luật thuần trong `learner-model` (đề xuất giảm mức khi % hiểu ≥ 85 ba cuộc họp liền, tăng khi < 60; không tự đổi), `GET /v1/me/assist-suggestion`. | C   | M4        | M   |
+| P2-18    | **UI gợi ý Assist Dial:** thẻ trên Phiên họp (desktop) và Tiến độ (web) với "Áp dụng / Để sau", ghi event.                                                                   | X   | P2-07     | S   |
+| P2-08    | **Bài nghe đánh giá đầu vào:** 6 đoạn nghe có TTS, chấm điểm, ra mức nghe + Assist mặc định (`POST /v1/placement`).                                                          | C   | P2-05     | M   |
+| P2-19    | **UI bài đánh giá** (web + desktop), có thể làm lại.                                                                                                                         | X   | P2-08     | M   |
+| P2-20    | **Quan sát:** log có cấu trúc + request id, đo chi phí AI mỗi giờ họp (bảng `events`), trang nội bộ `/admin/metrics` số liệu H1–H5, Sentry tuỳ chọn qua biến môi trường.     | X   | —         | M   |
+| P2-21    | **Kiểm thử đầu-cuối:** Playwright cho web (đăng nhập magic link dev → cuộc họp → debrief → lưu cụm từ → ôn → tiến độ), chạy trong CI.                                        | X   | P2-13     | M   |
+| P2-09    | **Ký + notarize + tự cập nhật + kênh phát hành:** workflow GitHub Actions dựng `.dmg`, ký, notarize, Tauri updater, trang `/download` trỏ bản mới nhất.                      | C+U | P2-03, U  | L   |
 
 ### Đợt 4 · Closed beta
 

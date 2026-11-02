@@ -9,9 +9,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@cuelingo/ui/components/card';
+import { DictationCard } from '@cuelingo/ui/components/dictation-card';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
+import { SpeakButton } from '@cuelingo/ui/components/speak-button';
 import Link from 'next/link';
 import { useEffect } from 'react';
+import { client } from '../../lib/client';
 import { type ReviewResult, useReview } from './use-review';
 
 const RATINGS = [
@@ -29,6 +32,7 @@ export function ReviewSession({
   submitting,
   onChoose,
   onRate,
+  loadAudio = client.tts.speak,
 }: {
   card: ReviewCard;
   position: number;
@@ -37,6 +41,7 @@ export function ReviewSession({
   submitting: boolean;
   onChoose: (choice: string) => void;
   onRate: (rating: ReviewAnswerRequest['rating']) => void;
+  loadAudio?: (text: string) => Promise<Blob>;
 }) {
   const answered = selectedChoice !== null;
   const correct = selectedChoice === card.answer;
@@ -46,7 +51,11 @@ export function ReviewSession({
       <CardHeader>
         <div className="flex items-center justify-between gap-4">
           <CardDescription>
-            {card.exercise === 'recognize' ? 'Chọn nghĩa đúng' : 'Chọn cụm từ còn thiếu'}
+            {card.exercise === 'recognize'
+              ? 'Chọn nghĩa đúng'
+              : card.exercise === 'dictation'
+                ? 'Nghe và gõ lại'
+                : 'Chọn cụm từ còn thiếu'}
           </CardDescription>
           <span className="text-sm font-medium" aria-label={`Thẻ ${position} trên ${total}`}>
             {position}/{total}
@@ -65,9 +74,20 @@ export function ReviewSession({
             style={{ width: `${(position / total) * 100}%` }}
           />
         </div>
-        <CardTitle className="pt-5 text-2xl leading-relaxed">{card.prompt}</CardTitle>
+        {card.exercise === 'dictation' ? (
+          <CardTitle className="pt-5 text-xl leading-relaxed">Bạn nghe được cụm từ nào?</CardTitle>
+        ) : (
+          <CardTitle className="pt-5 text-2xl leading-relaxed">{card.prompt}</CardTitle>
+        )}
       </CardHeader>
       <CardContent className="space-y-5">
+        {card.exercise === 'dictation' ? (
+          <DictationCard
+            card={card}
+            loadAudio={loadAudio}
+            onAnswer={(result) => onChoose(result.correct ? card.answer : result.typed || '—')}
+          />
+        ) : null}
         <div className="grid gap-3 sm:grid-cols-2">
           {card.choices.map((choice, index) => {
             const isAnswer = answered && choice === card.answer;
@@ -102,7 +122,10 @@ export function ReviewSession({
             aria-live="polite"
             className="bg-muted space-y-2 rounded-lg border p-4 leading-relaxed"
           >
-            <p className="font-semibold">{correct ? 'Chính xác' : `Đáp án: ${card.answer}`}</p>
+            <p className="flex items-center gap-1 font-semibold">
+              {correct ? 'Chính xác' : `Đáp án: ${card.answer}`}
+              <SpeakButton text={card.phrase} loadAudio={loadAudio} />
+            </p>
             {card.meaningVi && (
               <p>
                 <span className="text-muted-foreground">Nghĩa:</span> {card.meaningVi}

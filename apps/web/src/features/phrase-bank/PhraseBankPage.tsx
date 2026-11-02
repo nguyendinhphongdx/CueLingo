@@ -5,7 +5,9 @@ import { Button } from '@cuelingo/ui/components/button';
 import { Card, CardContent } from '@cuelingo/ui/components/card';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { Section } from '@cuelingo/ui/components/section';
+import { SpeakButton } from '@cuelingo/ui/components/speak-button';
 import Link from 'next/link';
+import { client } from '../../lib/client';
 import { usePhrases } from './use-phrases';
 
 export function PhraseList({
@@ -41,15 +43,18 @@ export function PhraseList({
               {phrase.inReview ? 'Đang ôn' : 'Chưa ôn'}
             </span>
           </span>
-          <Button
-            variant="ghost"
-            className="min-h-11 shrink-0"
-            disabled={removingId === phrase.id}
-            onClick={() => onRemove(phrase.id)}
-            aria-label={`Xoá ${phrase.phrase}`}
-          >
-            {removingId === phrase.id ? 'Đang xoá…' : 'Xoá'}
-          </Button>
+          <span className="flex shrink-0 items-center gap-1">
+            <SpeakButton text={phrase.phrase} loadAudio={client.tts.speak} />
+            <Button
+              variant="ghost"
+              className="min-h-11"
+              disabled={removingId === phrase.id}
+              onClick={() => onRemove(phrase.id)}
+              aria-label={`Xoá ${phrase.phrase}`}
+            >
+              {removingId === phrase.id ? 'Đang xoá…' : 'Xoá'}
+            </Button>
+          </span>
         </li>
       ))}
     </ul>

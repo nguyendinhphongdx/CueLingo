@@ -101,4 +101,32 @@ describe('desktop review', () => {
     expect(empty).toContain('Hôm nay bạn đã ôn xong');
     expect(empty).toContain('tiếp tục dùng CueLingo trong cuộc họp');
   });
+
+  it('shows a listen-and-type card without revealing the phrase before an answer', () => {
+    const markup = renderToStaticMarkup(
+      <ReviewCardView
+        card={{
+          itemId: '00000000-0000-4000-8000-000000000009',
+          exercise: 'dictation' as const,
+          phrase: 'circle back',
+          prompt: 'circle back',
+          choices: [],
+          answer: 'circle back',
+          meaningVi: 'quay lại thảo luận sau',
+          contextEn: null,
+        }}
+        position={1}
+        total={3}
+        selectedChoice={null}
+        submitting={false}
+        onChoose={() => {}}
+        onRate={() => {}}
+        loadAudio={async () => new Blob()}
+      />,
+    );
+    expect(markup).toContain('Nghe và gõ lại');
+    expect(markup).toContain('Bạn nghe được cụm từ nào?');
+    expect(markup).toContain('aria-label="Gõ cụm từ bạn nghe được"');
+    expect(markup).not.toContain('circle back');
+  });
 });

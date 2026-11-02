@@ -5,6 +5,7 @@ import {
   ReviewAnswerResponseSchema,
   ReviewQueueSchema,
   type ReviewAnswerRequest,
+  TtsRequestSchema,
 } from '@cuelingo/shared';
 import { currentToken, resolveToken, type TokenSource } from '../auth';
 import type { z } from 'zod';
@@ -16,6 +17,8 @@ export interface StudyApi {
   answerReview(input: ReviewAnswerRequest): Promise<z.infer<typeof ReviewAnswerResponseSchema>>;
   getPhrases(): Promise<z.infer<typeof PhraseListSchema>>;
   removePhrase(id: string): Promise<void>;
+  /** Spoken audio for a short English text. */
+  speak(text: string): Promise<Blob>;
 }
 
 interface StudyApiOptions {
@@ -48,7 +51,17 @@ export function createStudyApi({
   }
 
   return {
-    getReviewQueue: () => get('/v1/review/queue', ReviewQueueSchema),
+    // `dictation=1`: this client can play and grade listen-and-type cards.
+    getReviewQueue: () => get('/v1/review/queue?dictation=1', ReviewQueueSchema),
+    async speak(text) {
+      const response = await request(`${baseUrl}/v1/tts`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(TtsRequestSchema.parse({ text })),
+      });
+      if (!response.ok) throw new Error(`Speech request failed with status ${response.status}`);
+      return response.blob();
+    },
     async answerReview(input) {
       const response = await request(`${baseUrl}/v1/review/answer`, {
         method: 'POST',

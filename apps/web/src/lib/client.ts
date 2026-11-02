@@ -16,6 +16,7 @@ import {
   SavePhraseRequestSchema,
   SessionDetailSchema,
   SessionListSchema,
+  TtsRequestSchema,
   DeleteMyDataRequestSchema,
   AdminMetricsSchema,
   DeviceCodeResponseSchema,
@@ -88,8 +89,26 @@ async function request<T>(
 }
 
 /** Web endpoints that are not yet part of core-sdk still stay behind this single client boundary. */
+/** Spoken audio for a short English text, as a blob the page can play. */
+async function speak(text: string): Promise<Blob> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}/v1/tts`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(TtsRequestSchema.parse({ text })),
+    });
+  } catch (error) {
+    throw new ApiError(0, 'NETWORK_ERROR', (error as Error).message);
+  }
+  if (!response.ok) throw new ApiError(response.status, 'TTS_FAILED', `HTTP ${response.status}`);
+  return response.blob();
+}
+
 export const client = {
   ...coreClient,
+  tts: { speak },
   me: {
     get: () => request('GET', '/v1/me', MeSchema),
     update: (input: UpdateMeRequest) =>
@@ -128,7 +147,8 @@ export const client = {
     remove: (id: string) => request('DELETE', `/v1/phrases/${encodeURIComponent(id)}`, null),
   },
   review: {
-    queue: () => request('GET', '/v1/review/queue', ReviewQueueSchema),
+    // `dictation=1`: this client can play and grade listen-and-type cards.
+    queue: () => request('GET', '/v1/review/queue?dictation=1', ReviewQueueSchema),
     answer: (input: ReviewAnswerRequest) =>
       request(
         'POST',
