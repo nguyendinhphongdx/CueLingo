@@ -15,6 +15,8 @@ export const TranscribeRequestSchema = z
     endMs: z.number().int().nonnegative(),
     sampleRate: z.literal(16000),
     pcm: z.base64().max(TRANSCRIBE_MAX_PCM_CHARS),
+    /** Text of the last recognised sentences of this meeting, oldest first: context only, never stored. */
+    previous: z.array(z.string().max(400)).max(3).optional(),
   })
   .strict()
   .refine((value) => value.endMs >= value.startMs, {

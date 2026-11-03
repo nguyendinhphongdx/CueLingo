@@ -16,3 +16,5 @@ export * from './stt/v1';
 export { sttFixtures } from './stt/fixtures/cases';
 export * from './debrief/v2';
 export { debriefViFixtures } from './debrief/fixtures/cases-vi';
+export * from './stt/v2';
+export { sttV2Fixtures } from './stt/fixtures/cases-v2';

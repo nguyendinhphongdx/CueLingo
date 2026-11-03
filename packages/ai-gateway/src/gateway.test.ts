@@ -237,6 +237,37 @@ describe('speech', () => {
 describe('transcribe', () => {
   const audio = new Uint8Array([82, 73, 70, 70, 9, 9, 9, 9, 87, 65, 86, 69, 1]);
 
+  it('passes the previous sentences to the prompt but never into the call record', async () => {
+    const transcribe = vi.fn(async (_args: TranscribeArgs) => ({ text: 'ok' }));
+    const onCall = vi.fn();
+    const gateway = createAiGateway({ googleApiKey: 'k', transcribe, onCall });
+
+    await gateway.transcribe({ audio, language: 'vi', previous: ['Anh Khoa phụ trách.'] });
+
+    const args = transcribe.mock.calls[0]![0];
+    expect(args.prompt).toContain('Anh Khoa phụ trách.');
+    expect(args.system).not.toContain('Khoa');
+    await vi.waitFor(() => expect(onCall).toHaveBeenCalledTimes(1));
+    expect(JSON.stringify(onCall.mock.calls[0]![0])).not.toContain('Khoa');
+  });
+
+  it('returns empty text when the model echoes the context on a very short clip only', async () => {
+    const wav = (seconds: number) => new Uint8Array(44 + Math.round(seconds * 32_000));
+    const gateway = createAiGateway({
+      googleApiKey: 'k',
+      transcribe: async () => ({ text: 'Vâng.' }),
+    });
+    const previous = ['Vâng.'];
+
+    const short = await gateway.transcribe({ audio: wav(0.5), language: 'vi', previous });
+    const long = await gateway.transcribe({ audio: wav(3), language: 'vi', previous });
+    const noContext = await gateway.transcribe({ audio: wav(0.5), language: 'vi' });
+
+    expect(short.text).toBe('');
+    expect(long.text).toBe('Vâng.');
+    expect(noContext.text).toBe('Vâng.');
+  });
+
   it('transcribes with inline audio, trims the text and records one call without content', async () => {
     const transcribe = vi.fn(async (_args: TranscribeArgs) => ({
       text: '  Chào mọi người  ',
@@ -261,7 +292,7 @@ describe('transcribe', () => {
     expect(record).toMatchObject({
       task: 'stt.transcribe',
       ok: true,
-      promptVersion: 'stt.transcribe@v1',
+      promptVersion: 'stt.transcribe@v2',
       userId: 'u1',
       sessionId: 's1',
     });

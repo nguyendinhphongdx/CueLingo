@@ -4,12 +4,13 @@ import {
   buildDebriefPromptFor,
   buildLookupPrompt,
   buildRecapPrompt,
-  buildSttPrompt,
+  buildSttPromptV2,
   buildTranslatePrompt,
   COMPOSE_PROMPT_VERSION,
   LOOKUP_PROMPT_VERSION,
   RECAP_PROMPT_VERSION,
-  STT_PROMPT_VERSION,
+  isContextEcho,
+  STT_V2_PROMPT_VERSION,
   TRANSLATE_PROMPT_VERSION,
   type TranslateInput,
   type DebriefPromptInput,
@@ -92,7 +93,7 @@ export interface AiGateway {
    * an empty `text` means no intelligible speech and is not an error.
    */
   transcribe(
-    input: { audio: Uint8Array; language: LanguageCode },
+    input: { audio: Uint8Array; language: LanguageCode; previous?: string[] },
     context?: AiCallContext,
   ): Promise<TranscribeResult>;
   json<TTask extends JsonTaskName, TOutput>(
@@ -241,20 +242,21 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
     fallback: boolean,
     audio: Uint8Array,
     language: LanguageCode,
+    previous: string[] | undefined,
     context?: AiCallContext,
   ): Promise<TranscribeResult> {
     const started = performance.now();
     const record: AiCallRecord = {
       task: 'stt.transcribe',
       model,
-      promptVersion: STT_PROMPT_VERSION,
+      promptVersion: STT_V2_PROMPT_VERSION,
       latencyMs: 0,
       fallback,
       ok: false,
       ...context,
     };
     try {
-      const { system, prompt } = buildSttPrompt({ language });
+      const { system, prompt } = buildSttPromptV2({ language, previous });
       const out = await transcribe({
         model,
         system,
@@ -265,8 +267,12 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
       record.ok = true;
       record.inputTokens = out.inputTokens;
       record.outputTokens = out.outputTokens;
+      // WAV: 44-byte header, then 16 kHz 16-bit mono PCM.
+      const seconds = Math.max(0, audio.length - 44) / 32_000;
+      const text = out.text.trim();
       return {
-        text: out.text.trim(),
+        // A model may echo the context on silence; on very short audio that is not speech.
+        text: isContextEcho(text, previous, seconds) ? '' : text,
         model,
         fallback,
         latencyMs: Math.round(performance.now() - started),
@@ -332,13 +338,20 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
       }
     },
 
-    async transcribe({ audio, language }, context) {
+    async transcribe({ audio, language, previous }, context) {
       const config = TASKS['stt.transcribe'];
       try {
-        return await transcribeAttempt(config.model, false, audio, language, context);
+        return await transcribeAttempt(config.model, false, audio, language, previous, context);
       } catch {
         try {
-          return await transcribeAttempt(config.fallbackModel, true, audio, language, context);
+          return await transcribeAttempt(
+            config.fallbackModel,
+            true,
+            audio,
+            language,
+            previous,
+            context,
+          );
         } catch {
           // The cause is dropped on purpose: nothing from the request may travel up with the error.
           throw new AiGatewayError('stt.transcribe', undefined);

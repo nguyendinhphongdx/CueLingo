@@ -71,6 +71,24 @@ describe('POST /v1/sessions/:id/transcribe', () => {
     expect(context).toEqual({ userId: 'alice', sessionId: viSession.id });
   });
 
+  it('forwards the previous sentences to the gateway and works without them', async () => {
+    const { gateway, viSession, post } = await setup();
+    const previous = ['Câu một.', 'Câu hai.'];
+    expect((await post('alice', viSession.id, { previous })).statusCode).toBe(200);
+    expect((await post('alice', viSession.id)).statusCode).toBe(200);
+    expect(gateway.transcribe.mock.calls[0]![0].previous).toEqual(previous);
+    expect(gateway.transcribe.mock.calls[1]![0].previous).toBeUndefined();
+  });
+
+  it('rejects more than 3 previous sentences or a 401-character one with 400', async () => {
+    const { gateway, viSession, post } = await setup();
+    const four = await post('alice', viSession.id, { previous: ['a', 'b', 'c', 'd'] });
+    const long = await post('alice', viSession.id, { previous: ['x'.repeat(401)] });
+    expect(four.statusCode).toBe(400);
+    expect(long.statusCode).toBe(400);
+    expect(gateway.transcribe).not.toHaveBeenCalled();
+  });
+
   it('requires a signed-in user', async () => {
     const { app, viSession } = await setup();
     const response = await app.inject({
@@ -205,7 +223,10 @@ describe('POST /v1/sessions/:id/transcribe', () => {
     const secretAudio = Buffer.from('SECRET-AUDIO-BYTES-'.repeat(50)).toString('base64');
     const okGateway = gatewayReturning('confidential spoken words');
     const ok = await setup({ gateway: okGateway, logger: { level: 'info', stream } });
-    const success = await ok.post('alice', ok.viSession.id, { pcm: secretAudio });
+    const success = await ok.post('alice', ok.viSession.id, {
+      pcm: secretAudio,
+      previous: ['secret earlier sentence'],
+    });
     expect(success.statusCode).toBe(200);
 
     const failing = await setup({
@@ -223,6 +244,7 @@ describe('POST /v1/sessions/:id/transcribe', () => {
     expect(logs).not.toContain(secretAudio);
     expect(logs).not.toContain(secretAudio.slice(0, 40));
     expect(logs).not.toContain('confidential spoken words');
+    expect(logs).not.toContain('secret earlier sentence');
     expect(failure.body).not.toContain('confidential');
   });
 });

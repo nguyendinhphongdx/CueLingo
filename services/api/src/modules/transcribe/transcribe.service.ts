@@ -77,7 +77,11 @@ export function createTranscribeService(
 
       try {
         const { text } = await gateway.transcribe(
-          { audio: wrapPcmAsWav(pcm, SAMPLE_RATE), language: session.language },
+          {
+            audio: wrapPcmAsWav(pcm, SAMPLE_RATE),
+            language: session.language,
+            previous: input.previous,
+          },
           { userId, sessionId },
         );
         return { segmentId: input.segmentId, text };

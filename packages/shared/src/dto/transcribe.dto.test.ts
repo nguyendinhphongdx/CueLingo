@@ -26,6 +26,19 @@ describe('TranscribeRequestSchema', () => {
     expect(TranscribeRequestSchema.safeParse({ ...valid, pcm: atCap }).success).toBe(true);
   });
 
+  it('accepts up to 3 previous sentences of at most 400 characters', () => {
+    expect(TranscribeRequestSchema.safeParse({ ...valid, previous: [] }).success).toBe(true);
+    const ok = { ...valid, previous: ['a', 'b'.repeat(400), 'c'] };
+    expect(TranscribeRequestSchema.safeParse(ok).success).toBe(true);
+  });
+
+  it('rejects more than 3 previous sentences or one over 400 characters', () => {
+    const four = { ...valid, previous: ['a', 'b', 'c', 'd'] };
+    expect(TranscribeRequestSchema.safeParse(four).success).toBe(false);
+    const long = { ...valid, previous: ['x'.repeat(401)] };
+    expect(TranscribeRequestSchema.safeParse(long).success).toBe(false);
+  });
+
   it('rejects a sample rate other than 16000', () => {
     expect(TranscribeRequestSchema.safeParse({ ...valid, sampleRate: 48000 }).success).toBe(false);
   });

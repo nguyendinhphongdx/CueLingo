@@ -28,6 +28,16 @@ describe('transcribe client', () => {
     expect(JSON.parse(fetch.mock.calls[0]?.[1].body)).toEqual(input);
   });
 
+  it('sends the previous sentences in the body when given', async () => {
+    const fetch = vi.fn().mockResolvedValue(json(200, { segmentId, text: 'ok' }));
+    const client = createClient({ baseUrl: 'http://api', getToken: () => 't0k', fetch });
+    const previous = ['Câu trước một.', 'Câu trước hai.'];
+
+    await client.transcribe('sess-1', { ...input, previous });
+
+    expect(JSON.parse(fetch.mock.calls[0]?.[1].body)).toEqual({ ...input, previous });
+  });
+
   it('surfaces the error code without echoing audio', async () => {
     const fetch = vi
       .fn()

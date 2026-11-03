@@ -33,6 +33,26 @@ describe('createGeminiTranscribe', () => {
     });
   });
 
+  it('carries context sentences only in the text part, never next to the audio or in the system text', async () => {
+    const request = vi.fn(async () =>
+      json({ candidates: [{ content: { parts: [{ text: 'x' }] } }] }),
+    );
+    await createGeminiTranscribe(
+      'k',
+      request as never,
+    )({
+      ...args(),
+      system: 'sys',
+      prompt: 'Transcribe.\n- Anh Khoa phụ trách.',
+    });
+    const [, init] = request.mock.calls[0] as unknown as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.contents[0].parts[0].text).toContain('Anh Khoa phụ trách.');
+    expect(JSON.stringify(body.systemInstruction)).not.toContain('Khoa');
+    expect(JSON.stringify(body.contents[0].parts[1])).not.toContain('Khoa');
+    expect(body.contents[0].parts).toHaveLength(2);
+  });
+
   it('returns an empty text when the model answers with nothing', async () => {
     const request = vi.fn(async () => json({ candidates: [{}] }));
     await expect(createGeminiTranscribe('k', request as never)(args())).resolves.toMatchObject({
