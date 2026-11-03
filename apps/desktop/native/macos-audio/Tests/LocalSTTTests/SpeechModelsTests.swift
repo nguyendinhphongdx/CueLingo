@@ -12,6 +12,27 @@ final class SpeechModelsTests: XCTestCase {
         XCTAssertFalse(SpeechModels.isSupported("xx"))
         XCTAssertNil(SpeechModels.version(for: "xx"))
     }
+
+    func testCloudLanguages() {
+        for language in ["vi", "ja", "ko", "zh"] { XCTAssertTrue(SpeechModels.isCloud(language), language) }
+        XCTAssertFalse(SpeechModels.isCloud("en"))
+    }
+
+    func testOnDeviceModelsUnchanged() {
+        XCTAssertTrue(SpeechModels.isSupported("en"))
+        XCTAssertTrue(SpeechModels.isSupported("ja"))
+        XCTAssertEqual(SpeechModels.version(for: "en"), .v2)
+        XCTAssertEqual(SpeechModels.version(for: "ja"), .tdtJa)
+        XCTAssertNil(SpeechModels.version(for: "ko"))
+        XCTAssertNil(SpeechModels.version(for: "zh"))
+    }
+
+    func testProbeCandidates() {
+        XCTAssertEqual(SpeechModels.probeCandidates(start: "en", requested: ["en", "ja", "ko", "xx"]), ["ja"])
+        for start in ["vi", "ja", "ko", "zh"] {
+            XCTAssertEqual(SpeechModels.probeCandidates(start: start, requested: ["en", "ja"]), [], start)
+        }
+    }
 }
 
 final class LatencyStatsTests: XCTestCase {

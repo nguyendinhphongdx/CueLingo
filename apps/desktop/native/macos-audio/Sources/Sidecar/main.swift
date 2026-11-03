@@ -309,8 +309,9 @@ func applyVocabulary(_ json: String) async {
 }
 if let initial = ProcessInfo.processInfo.environment["CUELINGO_VOCAB"] { await applyVocabulary(initial) }
 
-let detectCandidates = (ProcessInfo.processInfo.environment["CUELINGO_DETECT"] ?? "")
-    .split(separator: ",").map(String.init).filter { $0 != startLanguage && SpeechModels.isSupported($0) && !SpeechModels.isCloud(startLanguage) }
+let detectCandidates = SpeechModels.probeCandidates(
+    start: startLanguage,
+    requested: (ProcessInfo.processInfo.environment["CUELINGO_DETECT"] ?? "").split(separator: ",").map(String.init))
 let probe: LanguageProbe? = detectCandidates.isEmpty
     ? nil : LanguageProbe(candidates: detectCandidates, current: { await transcriber.language ?? "en" })
 let system = Pipeline(stream: "system", transcriber: transcriber, probe: probe)
