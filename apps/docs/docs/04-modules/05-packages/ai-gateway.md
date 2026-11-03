@@ -33,6 +33,10 @@ Lớp trừu tượng nhà cung cấp AI: STT, LLM, TTS; routing theo tác vụ;
 
 Nhận dạng giọng nói bằng Gemini, âm thanh WAV gửi inline ([ADR 0014](../../08-adr/0014-cloud-stt-for-vietnamese.md)). `gateway.transcribe({ audio, language }, ctx)` trả `{ text, model, fallback, latencyMs }`. Model đặt trong bảng định tuyến (`AI_STT_MODEL`, `AI_STT_FALLBACK_MODEL` ghi đè), hạn 15 giây, lỗi chính thì thử model dự phòng. Ghi `ai_call` không chứa âm thanh hay văn bản; lỗi chỉ mang mã HTTP. Giá âm thanh tính theo token (32 token/giây), cần đối chiếu với bảng giá của nhà cung cấp.
 
+## Task `assist.followup`
+
+Soạn bản nháp follow-up (model theo `AI_ASSIST_MODEL`, hạn 8 giây; không gọi lại cùng một model khi model dự phòng trùng model chính). Dùng `gateway.json` như các task `assist.*`; `ai_call` ghi phiên bản prompt và người dùng, không ghi nội dung debrief hay bản nháp.
+
 ## Câu hỏi mở
 
 - Chọn LLM cloud cho dịch sau khi so với TranslateGemma 4B / Qwen3-4B

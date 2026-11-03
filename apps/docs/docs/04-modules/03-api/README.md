@@ -12,6 +12,7 @@ Backend modular monolith: REST + realtime WebSocket, điều phối dịch, Lear
 | [Sessions](./sessions.md)               | `src/modules/sessions`   | Vòng đời cuộc họp: tạo, kết thúc, liệt kê, transcript.                                           |
 | [Realtime gateway](./realtime.md)       | `src/modules/realtime`   | WebSocket theo phiên: nhận transcript (hoặc audio), dịch từng câu final, đẩy bản dịch về client. |
 | [Transcribe](./transcribe.md)           | `src/modules/transcribe` | Nhận dạng giọng nói bằng đám mây cho ngôn ngữ chưa có model trên máy (tiếng Việt).               |
+| [Follow-up](./followup.md)              | `src/modules/followup`   | Soạn bản nháp tin follow-up (email, tin nhắn nhóm) từ debrief.                                   |
 | [Assist](./assist.md)                   | `src/modules/assist`     | Tra từ theo ngữ cảnh, recap, compose (Việt → Anh).                                               |
 | [Debrief](./debrief.md)                 | `src/modules/debrief`    | Đọc kết quả debrief do worker tạo, nhận phản hồi.                                                |
 | [Phrases & review](./phrases-review.md) | `src/modules/review`     | Phrase Bank và hàng đợi ôn tập FSRS.                                                             |

@@ -57,6 +57,10 @@ Máy trạng thái của một cuộc họp phía client: nhận segment từ ST
 - **Thẻ "Cuộc họp vừa xong":** sau khi dừng hiện thời lượng, số câu đã ghi (không tính câu "[không nhận dạng được]") và trạng thái debrief: "Đang tạo debrief…" rồi tóm tắt (3 dòng), quyết định và việc cần làm (tối đa 3 mục mỗi loại), lấy từ `GET /v1/sessions/:id/debrief` (hỏi lại mỗi 3 giây tối đa 2 phút). "Xem đầy đủ" mở debrief trên web.
 - **Ngữ cảnh nhận dạng:** mỗi câu tải lên kèm tối đa 3 câu đã nhận dạng trước đó của cùng luồng (`previous`).
 
+## Soạn follow-up sau họp
+
+Khi debrief trong thẻ "Cuộc họp vừa xong" đã sẵn sàng, nút "Soạn follow-up" mở `FollowupComposer` ngay dưới phần tóm tắt, gọi `debriefApi.followup` ([API](../03-api/followup.md), hạn 15 giây, lỗi chỉ mang mã HTTP, không chứa bản nháp). Sao chép dùng clipboard của webview; nếu không có thì chọn sẵn văn bản và hiện "Không sao chép được, nội dung đã được chọn sẵn."
+
 ## Câu hỏi mở
 
 - (chưa có)

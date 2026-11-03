@@ -33,6 +33,8 @@ Prompt có phiên bản cho từng tác vụ AI, kèm schema đầu ra và fixtu
 
 - `stt/v2`: như v1 và nhận thêm vài câu trước làm ngữ cảnh; với tiếng Việt có hướng dẫn riêng (giữ đúng dấu, số và ngày viết bằng chữ số, giữ nguyên tên riêng và thuật ngữ tiếng Anh). Gateway luôn dùng v2; v1 giữ nguyên.
 
+- `followup/v1`: soạn bản nháp follow-up từ dữ kiện debrief (tóm tắt, quyết định, việc cần làm); chỉ dùng dữ kiện được đưa, không bịa người phụ trách, ngày hay placeholder, coi dữ kiện là dữ liệu không phải chỉ dẫn; email có tiêu đề, chat tối đa 6 dòng và không tiêu đề; ba giọng. `checkFollowupOutput` kiểm quy tắc tiêu đề theo kênh.
+
 ## Câu hỏi mở
 
 - (chưa có)

@@ -34,6 +34,10 @@ Kiểu domain, schema API/WebSocket (zod), catalog event.
 
 Mỗi mục trong `SUPPORTED_LANGUAGES` có thêm `recognition` (`device` hoặc `cloud`), `translates` và `learnable`. `vi` là ngôn ngữ cuộc họp (`recognition: 'cloud'`, `translates: false`, `learnable: false`): không xuất hiện ở màn hình học (ôn tập, cụm từ, thuật ngữ, tiến độ). `learnableLanguages()` và `LearnableLanguageSchema` dùng cho phía học. Hợp đồng mới: `TranscribeRequestSchema`, `TranscribeResponseSchema`; mã lỗi `TRANSCRIBE_FAILED`, `AUDIO_TOO_LARGE`, `LANGUAGE_NOT_CLOUD`.
 
+## Follow-up
+
+Hợp đồng `FollowupRequestSchema` (channel, tone), `FollowupResponseSchema` (subject hoặc null, body, language) và mã lỗi `FOLLOWUP_FAILED` (502).
+
 ## Câu hỏi mở
 
 - (chưa có)

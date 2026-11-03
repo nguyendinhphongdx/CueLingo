@@ -37,6 +37,10 @@ Component React dùng chung cho desktop và web.
 
 - (chưa có)
 
+## FollowupComposer
+
+Thành phần soạn tin follow-up dùng chung cho web và desktop: chọn kênh và giọng (giọng mặc định theo kênh cho tới khi người dùng chọn), nút "Soạn", ô tiêu đề (chỉ email) và nội dung sửa được, "Sao chép" có xác nhận, lỗi giữ nguyên phần đã sửa. `FollowupComposerView` là phần hiển thị thuần để kiểm thử. Có kiểu riêng cho kênh, giọng và bản nháp (tương thích cấu trúc với `@cuelingo/shared`) vì `@cuelingo/ui` không phụ thuộc `shared`.
+
 ## Câu hỏi mở
 
 - Bảng màu thương hiệu cuối cùng sẽ thay neutral token ở giai đoạn nào?
