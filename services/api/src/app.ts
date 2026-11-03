@@ -17,6 +17,7 @@ import { createDialModule, type DialRepository } from './modules/dial';
 import { createPlacementModule, type PlacementRepository } from './modules/placement';
 import { createAccountModule, type AccountRepository } from './modules/account';
 import { createDeviceModule, type DeviceRepository } from './modules/device';
+import { createFollowupModule, type FollowupDeps } from './modules/followup';
 import { createGlossaryModule, type GlossaryRepository } from './modules/glossary';
 import { createPrivacyModule, type PrivacyRepository } from './modules/privacy';
 import { createRealtimeModule, type RealtimeDeps } from './modules/realtime';
@@ -79,6 +80,8 @@ export interface AppDeps {
   tts?: TtsDeps;
   /** Enables cloud speech recognition for meetings in cloud-recognised languages (ADR 0014). */
   transcribe?: TranscribeDeps;
+  /** Enables follow-up drafts from a debrief when an AI gateway is available. */
+  followup?: FollowupDeps;
   /** Development-only bearer-token verifier for assist and event ingestion. */
   verifyDevToken?: AuthOptions['verifyDevToken'];
   /** False disables logs. Object form is mainly a test seam for an in-memory stream. */
@@ -149,6 +152,11 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(study.progressRoutes, { prefix: '/v1/progress' });
   if (deps.transcribe) {
     await app.register(createTranscribeModule(deps.repos.sessions, deps.transcribe).routes);
+  }
+  if (deps.followup) {
+    await app.register(
+      createFollowupModule(deps.repos.sessions, deps.repos.debrief, deps.followup).routes,
+    );
   }
   if (deps.tts) await app.register(createTtsModule(deps.tts).routes, { prefix: '/v1/tts' });
   if (deps.assist) {
