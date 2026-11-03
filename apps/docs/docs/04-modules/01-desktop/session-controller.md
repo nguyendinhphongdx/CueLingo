@@ -41,6 +41,14 @@ Máy trạng thái của một cuộc họp phía client: nhận segment từ ST
 - WebSocket ra: `hello`, `segment.final`
 - WebSocket vào: `ready`, `translation`, `error`
 
+## Cuộc họp bằng ngôn ngữ nhận dạng đám mây
+
+- **Đồng ý trước:** bắt đầu phiên bằng ngôn ngữ `recognition: 'cloud'` mà chưa có đồng ý thì lỗi `cloud_consent_required` trước khi tạo phiên và trước khi mở thu âm. Hộp thoại đồng ý nằm ở `SessionPanel`; đồng ý lưu theo người dùng; có chỉ báo "Đang gửi âm thanh tới Google" suốt cuộc họp.
+- **Câu nói:** nghe sự kiện `audio-utterance` của cả hai luồng, tải lên `POST /v1/sessions/:id/transcribe` (hàng đợi 3, hạn 16 giây; thử lại một lần chỉ với lỗi mạng, hết hạn, 5xx và 429, không thử lại 400/404/413). Thành công thì hiện caption và gửi `segment.final` cho cả hai luồng; im lặng bị bỏ; lỗi hai lần thì hiện "[không nhận dạng được]" tại chỗ và không gửi lên server.
+- **Dừng:** `stop()` gửi lệnh dừng cho native rồi **xả hàng đợi**: nhận thêm câu trong 3 giây (sidecar xả câu cuối), các câu đã vào hàng đợi vẫn được tải lên, hạn tổng 15 giây (quá hạn thì huỷ và bỏ, không bắt đầu tải lên mới). Chỉ sau đó mới kết thúc phiên, đóng socket và ẩn overlay; chỉ báo "đang gửi âm thanh" ở lại tới lúc đó. Cuộc họp bằng ngôn ngữ nhận dạng trên máy giữ nguyên hành vi cũ.
+- **Ngôn ngữ cuộc họp:** snapshot có `meetingLanguage` (đặt lúc bắt đầu, xoá khi phiên kết thúc); chỉ báo và kiểm tra đồng ý khi đổi ngôn ngữ dùng nó, không dùng ô cài đặt.
+- **Overlay:** câu không có bản dịch hiện chữ gốc, không có dòng "Đang dịch…"; nhãn "đang im lặng" chờ 25 giây (thay vì 6 giây) vì caption đám mây cách nhau xa hơn. Overlay hiện khi bắt đầu và ẩn khi phiên kết thúc hẳn (`native.hideOverlay`); panel không còn nút hiện/ẩn overlay và không còn nút "Chạy thử caption".
+
 ## Câu hỏi mở
 
 - (chưa có)

@@ -36,6 +36,10 @@ Nhận dạng giọng nói tiếng Anh ngay trên máy bằng Parakeet-TDT 0.6B 
 - Chỉ xử lý **từ đơn từ 3 ký tự trở lên**; cụm nhiều từ bị bỏ qua (muốn hỗ trợ phải sửa `VocabularyCorrector`).
 - Luật acronym và khoảng cách sửa viết cho tiếng Anh. Desktop hiện chỉ gửi thuật ngữ cho cuộc họp tiếng Anh; ngôn ngữ khác nhận danh sách rỗng cho tới khi có eval riêng.
 
+## Ngôn ngữ nhận dạng bằng đám mây
+
+Với ngôn ngữ trong `SpeechModels.cloudLanguages` (hiện `vi`, khớp `recognition: 'cloud'` ở `@cuelingo/shared`) sidecar **không tải model**. Nó vẫn thu cả hai luồng (`system`, `mic`) và tách câu bằng VAD (câu tối đa 25 giây, bỏ câu có tiếng nói dưới 0,3 giây), nhưng mỗi câu xong được phát thành một dòng `{"type":"utterance","segmentId","stream","startMs","endMs","sampleRate":16000,"pcm":"<base64 PCM 16-bit LE>"}` thay vì văn bản; không có partial. Đổi qua lại giữa ngôn ngữ đám mây và ngôn ngữ trên máy bằng lệnh stdin `language <mã>` như thường.
+
 ## Câu hỏi mở
 
 - Chưa đo độ trễ streaming thật và RAM khi chạy cùng app họp

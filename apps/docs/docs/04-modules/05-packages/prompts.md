@@ -26,6 +26,11 @@ Prompt có phiên bản cho từng tác vụ AI, kèm schema đầu ra và fixtu
 
 - (chưa có)
 
+## Prompt mới
+
+- `stt/v1`: chép lại đúng lời nói bằng ngôn ngữ của cuộc họp, chỉ trả văn bản, rỗng khi không có tiếng nói, không dịch.
+- `debrief/v2`: debrief cho cuộc họp không cần dịch (tiếng Việt): tóm tắt, quyết định, việc cần làm bằng tiếng Việt; các khối học để trống. `debrief/v1` giữ nguyên.
+
 ## Câu hỏi mở
 
 - (chưa có)

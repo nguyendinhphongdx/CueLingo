@@ -31,6 +31,10 @@ SDK client dùng chung cho desktop và web: auth, REST, stream phiên, hàng đ�
 
 - (chưa có)
 
+## Transcribe
+
+`client.transcribe(sessionId, input)`: gửi âm thanh một câu cho `POST /v1/sessions/:id/transcribe` ([transcribe](../03-api/transcribe.md)), trả `{ segmentId, text }`.
+
 ## Câu hỏi mở
 
 - (chưa có)

@@ -7,7 +7,7 @@ WebSocket theo phiên: nhận transcript final từ STT local, dịch và đẩy
 ## Trách nhiệm
 
 - Xác thực kết nối bằng message `hello`
-- Nhận `segment.final` từ STT local; chỉ dịch stream `system`
+- Nhận `segment.final`; chỉ dịch stream `system`, và **không dịch** khi ngôn ngữ cuộc họp không cần dịch (`translates: false`, ví dụ tiếng Việt); câu vẫn được lưu
 - Dịch tuần tự mỗi câu final kèm tối đa 3 câu `system` trước và glossary của người dùng
 - Lưu câu final của cả `system` và `mic`, sau đó cập nhật bản dịch nếu session thuộc người dùng
 - Trả lỗi theo hợp đồng mà không làm hỏng các câu dịch tiếp theo
@@ -15,7 +15,7 @@ WebSocket theo phiên: nhận transcript final từ STT local, dịch và đẩy
 ## Phạm vi MVP
 
 - F2 — mục tiêu bản dịch p95 ≤ 2,5 giây
-- Ngoài phạm vi: audio/STT cloud, ghi event, xác thực production (M3-02),
+- Ngoài phạm vi: ghi event, xác thực production (M3-02),
   reconnect và bộ đệm 60 giây ở server.
 
 ## Interface
@@ -24,7 +24,7 @@ WebSocket theo phiên: nhận transcript final từ STT local, dịch và đẩy
 - Client → server: `hello`, `segment.final`, `event`
 - Server → client: `ready`, `translation`, `error`
 - Schema nguồn sự thật: `ClientMessageSchema`, `ServerMessageSchema` trong `@cuelingo/shared`
-- MVP chỉ nhận STT local; `hello.sttSource` là `"local"`. Audio/STT cloud chưa thuộc hợp đồng này.
+- `hello.sttSource` là `"local"`: văn bản luôn do client gửi lên. Với ngôn ngữ nhận dạng bằng đám mây, client lấy văn bản từ [transcribe](./transcribe.md) rồi gửi `segment.final` cho cả hai luồng.
 - `hello.token` được xác minh ở tầng WebSocket. M1 chỉ có token phát triển qua
   `REALTIME_DEV_TOKEN`; khi không cấu hình token thì mọi token bị từ chối.
 

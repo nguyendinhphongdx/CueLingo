@@ -15,3 +15,4 @@ Mỗi quyết định khó đảo ngược có một ADR: bối cảnh, quyết 
 | [0009](0009-migrations-dbmate.md)           | Migration: dbmate với file SQL thuần                                   | Accepted   |
 | [0010](0010-ai-gateway-on-ai-sdk.md)        | AI gateway xây trên Vercel AI SDK                                      | Accepted   |
 | [0011](0011-deployment-containers-sg.md)    | Triển khai: container + Postgres managed, region Singapore             | Accepted   |
+| [0014](0014-cloud-stt-for-vietnamese.md)    | Nhận dạng đám mây cho ngôn ngữ chưa có model trên máy (tiếng Việt)     | Accepted   |

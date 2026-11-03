@@ -19,6 +19,7 @@ Lớp Rust của app: cửa sổ, phím tắt toàn cục, cầu nối native �
 ## Interface
 
 - Tauri commands: `session_start`, `session_stop`, `session_set_language`, `session_set_vocabulary`, `permissions_status`, `set_assist_level`
+- Tauri commands khác: `hide_overlay`, `toggle_overlay`
 - `session_start` nhận `vocabulary` (danh sách thuật ngữ, xem dưới); `session_set_vocabulary(terms)` thay danh sách khi đang họp
 - Tauri events: `transcript`, `speech`, `hotkey`
 
@@ -33,6 +34,10 @@ Rust chỉ kiểm và chuyển tiếp, không có logic sản phẩm. `clean_voc
 ## Dữ liệu & sự kiện
 
 - (chưa có)
+
+## Sự kiện `audio-utterance`
+
+`route_line` chuyển dòng `utterance` của sidecar thành sự kiện Tauri `audio-utterance` (payload là JSON của dòng đó). Overlay đi theo cuộc họp: `session_start` hiện nó (và đặt nó hiện trên mọi Space), client gọi `hide_overlay` khi phiên đã kết thúc hẳn (sau khi gửi xong các câu cuối). ⌘⇧L và nút ẩn trên overlay vẫn bật/tắt tay. Gói âm thanh `audio-utterance` chỉ gửi tới cửa sổ `main`.
 
 ## Câu hỏi mở
 

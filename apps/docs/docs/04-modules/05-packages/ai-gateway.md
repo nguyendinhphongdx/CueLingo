@@ -29,6 +29,10 @@ Lớp trừu tượng nhà cung cấp AI: STT, LLM, TTS; routing theo tác vụ;
 - Hook `onCall` phát một record cho mỗi lần thử provider (token, model, fallback, kết quả, độ trễ).
 - API/worker ghi event nội bộ `ai_call` và cộng chi phí vào phiên liên quan.
 
+## Task `stt.transcribe`
+
+Nhận dạng giọng nói bằng Gemini, âm thanh WAV gửi inline ([ADR 0014](../../08-adr/0014-cloud-stt-for-vietnamese.md)). `gateway.transcribe({ audio, language }, ctx)` trả `{ text, model, fallback, latencyMs }`. Model đặt trong bảng định tuyến (`AI_STT_MODEL`, `AI_STT_FALLBACK_MODEL` ghi đè), hạn 15 giây, lỗi chính thì thử model dự phòng. Ghi `ai_call` không chứa âm thanh hay văn bản; lỗi chỉ mang mã HTTP. Giá âm thanh tính theo token (32 token/giây), cần đối chiếu với bảng giá của nhà cung cấp.
+
 ## Câu hỏi mở
 
 - Chọn LLM cloud cho dịch sau khi so với TranslateGemma 4B / Qwen3-4B
