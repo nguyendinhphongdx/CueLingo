@@ -44,6 +44,8 @@ export function defineJob<N extends JobName>(def: {
     name: def.name,
     schedule: def.schedule,
     // async: a malformed payload must surface as a rejected promise, never a synchronous throw.
-    run: async (deps, data) => def.handle(deps, JobPayloads[def.name].parse(data) as JobPayload<N>),
+    // A cron schedule sends no data (pg-boss hands the handler null); treat that as an empty payload.
+    run: async (deps, data) =>
+      def.handle(deps, JobPayloads[def.name].parse(data ?? {}) as JobPayload<N>),
   };
 }

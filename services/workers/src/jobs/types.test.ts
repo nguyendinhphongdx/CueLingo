@@ -31,4 +31,25 @@ describe('defineJob', () => {
     await expect(job.run(deps, { sessionId: 'not-a-uuid' })).rejects.toThrow();
     expect(called).toBe(false);
   });
+
+  it('runs a scheduled job whose cron sends no data (null), as pg-boss does', async () => {
+    let called = 0;
+    const job = defineJob({
+      name: JobName.SessionsCloseStale,
+      schedule: '*/10 * * * *',
+      handle: async () => {
+        called += 1;
+      },
+    });
+
+    await job.run(deps, null);
+    await job.run(deps, undefined);
+
+    expect(called).toBe(2);
+  });
+
+  it('still refuses null for a job that needs a payload', async () => {
+    const job = defineJob({ name: JobName.DebriefGenerate, handle: async () => undefined });
+    await expect(job.run(deps, null)).rejects.toThrow();
+  });
 });
