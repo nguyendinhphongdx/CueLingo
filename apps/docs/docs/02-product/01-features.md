@@ -42,5 +42,8 @@ Sáu nhóm tính năng xoay quanh một Learner Model. Cột "Đợt" theo [lộ
 |                      | Điều khoản, chính sách riêng tư, thông báo người dự họp                                   | —                              | 2       | web                                              |
 |                      | Ngôn ngữ họp: tiếng Anh                                                                   | ✅                             | 0       | desktop, api, packages/prompts                   |
 |                      | Ngôn ngữ họp: tiếng Nhật (có mã; chưa bật cho người dùng, chờ eval)                       | ◐                              | 0       | desktop, api, packages/prompts                   |
+|                      | Ngôn ngữ họp: tiếng Việt (nhận dạng đám mây, debrief tiếng Việt)                          | ◐ code xong, chờ chạy thật     | 0       | desktop, api/transcribe, packages/ai-gateway     |
+|                      | Sóng âm hai luồng, kiểm tra quyền Micro và báo lỗi thu âm                                 | ◐                              | 0       | desktop/session-controller                       |
+|                      | Thẻ "Cuộc họp vừa xong" (thời lượng, số câu, tóm tắt debrief)                             | ◐                              | 0       | desktop/session-controller                       |
 
 Chi tiết từng tính năng và tiêu chí chấp nhận: [Phạm vi MVP](./03-mvp-scope.md).
