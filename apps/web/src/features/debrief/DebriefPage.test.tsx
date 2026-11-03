@@ -3,7 +3,12 @@ import type { Debrief, SessionDetail } from '@cuelingo/shared';
 import type { ReactElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import { DebriefPageView, focusTranscriptSegment, SavePhraseButton } from './DebriefPage';
+import {
+  DebriefPageView,
+  focusTranscriptSegment,
+  SavePhraseButton,
+  visibleBlocks,
+} from './DebriefPage';
 import { buildBlockCopyText, countTranscriptSpeakers, filterTranscriptSegments } from './content';
 import { buildDebriefMarkdown } from './markdown';
 import {
@@ -126,6 +131,38 @@ describe('DebriefPageView', () => {
     expect(markup.match(/aria-label="Sao chép /g)).toHaveLength(4);
     expect(markup.match(/👍 Hữu ích/g)).toHaveLength(5);
     expect(markup).toContain('Xoá cuộc họp');
+  });
+
+  it('shows a Vietnamese meeting without learning blocks, score or translations', () => {
+    const viSession: SessionDetail = {
+      ...session,
+      language: 'vi',
+      segments: session.segments.map((segment) => ({ ...segment, textVi: '' })),
+    };
+    const markup = renderToStaticMarkup(
+      <DebriefPageView
+        {...defaultProps}
+        session={viSession}
+        debrief={{ ...debrief, comprehensionPct: null }}
+      />,
+    );
+    expect(markup).toContain('Tóm tắt');
+    expect(markup).toContain('Quyết định &amp; việc cần làm');
+    for (const heading of ['Đoạn khó', 'Cụm từ nên lưu', 'Câu bạn nói → câu nên nói']) {
+      expect(markup).not.toContain(heading);
+    }
+    expect(markup).not.toContain('Điểm hiểu');
+    expect(markup).not.toContain('Chưa có bản dịch');
+    expect(markup).not.toContain('song ngữ');
+    expect(markup).toContain('Transcript');
+    expect(markup).toContain('Let us circle back tomorrow.');
+    expect(markup.match(/👍 Hữu ích/g)).toHaveLength(2);
+    expect(markup.match(/aria-label="Sao chép /g)).toHaveLength(2);
+  });
+
+  it('skips hidden blocks when cycling with J/K', () => {
+    expect(visibleBlocks(false)).toEqual(['summary', 'actionItems']);
+    expect(visibleBlocks(true)).toHaveLength(5);
   });
 
   it('shows the saved state for a saved phrase', () => {
@@ -259,5 +296,18 @@ describe('buildDebriefMarkdown', () => {
     expect(markdown).toContain('EN: Let us circle back tomorrow.');
     expect(markdown).toContain('VI: Tôi sẽ gửi hôm nay.');
     expect(markdown.indexOf('00:00')).toBeLessThan(markdown.indexOf('01:05'));
+  });
+
+  it('omits learning sections and the translation line for a Vietnamese meeting', () => {
+    const viSession = { ...session, language: 'vi' as const };
+    const markdown = buildDebriefMarkdown(debrief, { session: viSession, includeTranscript: true });
+    expect(markdown).toContain('## Tóm tắt');
+    expect(markdown).toContain('Gửi bản nháp');
+    expect(markdown).not.toContain('Cụm từ nên lưu');
+    expect(markdown).not.toContain('Câu bạn nói');
+    expect(markdown).toContain('## Transcript\n');
+    expect(markdown).not.toContain('song ngữ');
+    expect(markdown).not.toContain('VI:');
+    expect(markdown).toContain('- Let us circle back tomorrow.');
   });
 });
