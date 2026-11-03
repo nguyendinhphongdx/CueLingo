@@ -7,6 +7,7 @@ import type {
 import type { RealtimeClient, RealtimeClientOptions } from '@cuelingo/core-sdk';
 import type {
   AudioModelEvent,
+  AudioStatusEvent,
   SegmentEvent,
   SessionStartInput,
   TranscriptEvent,
@@ -53,10 +54,12 @@ type Transcribe = (
 
 function setup(
   glossaryList?: GlossaryList,
-  options: { transcribe?: Transcribe; consent?: boolean } = {},
+  options: { transcribe?: Transcribe; consent?: boolean; now?: () => number } = {},
 ) {
   let onUtterance: ((event: UtteranceEvent) => void) | undefined;
   const unlistenUtterance = vi.fn();
+  const unlistenStatus = vi.fn();
+  let onStatus: ((event: AudioStatusEvent) => void) | undefined;
   let onSegment: ((event: SegmentEvent) => void) | undefined;
   let onAudioModel: ((event: AudioModelEvent) => void) | undefined;
   let realtimeOptions: RealtimeClientOptions | undefined;
@@ -89,6 +92,10 @@ function setup(
     onAudioModel: vi.fn(async (callback: (event: AudioModelEvent) => void) => {
       onAudioModel = callback;
       return vi.fn();
+    }),
+    onAudioStatus: vi.fn(async (callback: (event: AudioStatusEvent) => void) => {
+      onStatus = callback;
+      return unlistenStatus;
     }),
     setLanguage: vi.fn(async () => undefined),
     setVocabulary: vi.fn(async () => undefined),
@@ -144,7 +151,7 @@ function setup(
     },
     apiUrl: 'ws://api.test/',
     token: 'dev-token',
-    now: () => 1_000,
+    now: options.now ?? (() => 1_000),
   });
 
   return {
@@ -158,6 +165,8 @@ function setup(
     emitUtterance: (event: UtteranceEvent) => onUtterance?.(event),
     unlistenUtterance,
     emitSegment: (event: SegmentEvent) => onSegment?.(event),
+    emitStatus: (event: AudioStatusEvent) => onStatus?.(event),
+    unlistenStatus,
     emitAudioModel: (event: AudioModelEvent) => onAudioModel?.(event),
     getRealtimeOptions: () => realtimeOptions,
   };
@@ -407,6 +416,100 @@ describe('session controller', () => {
       true,
       false,
     ]);
+  });
+
+  describe('capture problems', () => {
+    const error = (message: string): AudioStatusEvent => ({
+      type: 'status',
+      state: 'error',
+      message,
+    });
+
+    it('listens before the sidecar starts and keeps an error that arrives right after', async () => {
+      const ctx = setup();
+      ctx.native.sessionStart.mockImplementationOnce(async () => {
+        ctx.emitStatus(error('system audio: tap failed'));
+        return { sessionId: 'local' };
+      });
+      await ctx.controller.start(3, 'en');
+
+      expect(ctx.native.onAudioStatus.mock.invocationCallOrder[0]).toBeLessThan(
+        ctx.native.sessionStart.mock.invocationCallOrder[0]!,
+      );
+      expect(ctx.controller.getSnapshot()).toMatchObject({
+        status: 'connecting',
+        systemFailed: true,
+        micFailed: false,
+      });
+    });
+
+    it('maps each prefix to its stream and ignores other errors', async () => {
+      const ctx = setup();
+      await ctx.controller.start(3, 'en');
+      ctx.emitStatus(error('model load failed for en'));
+      ctx.emitStatus({ type: 'status', state: 'ready', message: 'microphone: fine' });
+      expect(ctx.controller.getSnapshot()).toMatchObject({ micFailed: false, systemFailed: false });
+      ctx.emitStatus(error('microphone: denied'));
+      expect(ctx.controller.getSnapshot()).toMatchObject({ micFailed: true, systemFailed: false });
+      ctx.emitStatus(error('system audio: x'));
+      expect(ctx.controller.getSnapshot()).toMatchObject({ micFailed: true, systemFailed: true });
+    });
+
+    it('clears on stop, unlistens, and starts clean next time', async () => {
+      const ctx = setup();
+      await ctx.controller.start(3, 'en');
+      ctx.emitStatus(error('microphone: denied'));
+      await ctx.controller.stop();
+      expect(ctx.unlistenStatus).toHaveBeenCalled();
+      expect(ctx.controller.getSnapshot()).toMatchObject({ micFailed: false, systemFailed: false });
+      await ctx.controller.start(3, 'en');
+      expect(ctx.controller.getSnapshot()).toMatchObject({ micFailed: false });
+    });
+  });
+
+  describe('meeting time', () => {
+    function clock() {
+      const state = { t: 1_000_000 };
+      return { state, now: () => state.t };
+    }
+
+    it('starts when capture runs and survives a reconnect', async () => {
+      const c = clock();
+      const ctx = setup(undefined, { now: c.now });
+      await ctx.controller.start(3, 'en');
+      expect(ctx.controller.getSnapshot()).toMatchObject({ startedAt: 1_000_000, endedAt: null });
+      c.state.t += 10 * 60_000;
+      ctx.getRealtimeOptions()!.onState?.('reconnecting');
+      c.state.t += 20 * 60_000;
+      ctx.getRealtimeOptions()!.onState?.('open');
+      await ctx.controller.stop();
+      const { startedAt, endedAt } = ctx.controller.getSnapshot();
+      expect(startedAt).toBe(1_000_000);
+      expect((endedAt ?? 0) - (startedAt ?? 0)).toBe(30 * 60_000);
+    });
+
+    it('ends at the Stop press, not at the end of the cloud drain', async () => {
+      const c = clock();
+      const ctx = setup(undefined, { now: c.now });
+      await ctx.controller.start(3, 'vi');
+      c.state.t += 60_000;
+      const stopping = ctx.controller.stop();
+      c.state.t += 10_000;
+      await vi.advanceTimersByTimeAsync(3_000);
+      await stopping;
+      const { startedAt, endedAt } = ctx.controller.getSnapshot();
+      expect((endedAt ?? 0) - (startedAt ?? 0)).toBe(60_000);
+    });
+
+    it('resets on a new meeting', async () => {
+      const c = clock();
+      const ctx = setup(undefined, { now: c.now });
+      await ctx.controller.start(3, 'en');
+      await ctx.controller.stop();
+      c.state.t += 5_000;
+      await ctx.controller.start(3, 'en');
+      expect(ctx.controller.getSnapshot()).toMatchObject({ startedAt: c.state.t, endedAt: null });
+    });
   });
 
   describe('glossary vocabulary', () => {
@@ -818,6 +921,115 @@ describe('session controller', () => {
           words: [],
         }),
       ]);
+    });
+
+    describe('context and counting', () => {
+      const texts = ['một', 'hai', 'ba', 'bốn'];
+      const ids = () => crypto.randomUUID();
+
+      it('sends the last three recognised sentences of the same stream, oldest first', async () => {
+        let n = 0;
+        const transcribe = vi.fn<Transcribe>(async (_id, input) => ({
+          segmentId: input.segmentId,
+          text: texts[n++] ?? 'năm',
+        }));
+        const ctx = await running({ transcribe });
+        for (let i = 0; i < 5; i += 1) {
+          ctx.emitUtterance(utterance({ segmentId: ids() }));
+          await flush();
+        }
+        const previous = transcribe.mock.calls.map(([, input]) => input.previous);
+        expect(previous[0]).toBeUndefined();
+        expect(previous[1]).toEqual(['một']);
+        expect(previous[3]).toEqual(['một', 'hai', 'ba']);
+        expect(previous[4]).toEqual(['hai', 'ba', 'bốn']);
+      });
+
+      it('keeps streams apart, skips placeholders and empty text, and cuts at 400 chars', async () => {
+        const answers = ['', 'x'.repeat(500)];
+        let n = 0;
+        const transcribe = vi.fn<Transcribe>(async (_id, input) => ({
+          segmentId: input.segmentId,
+          text: answers[n++] ?? 'ok',
+        }));
+        const ctx = await running({ transcribe });
+        ctx.emitUtterance(utterance({ segmentId: ids() }));
+        await flush();
+        ctx.emitUtterance(utterance({ segmentId: ids() }));
+        await flush();
+        ctx.emitUtterance(utterance({ segmentId: ids(), stream: 'mic' }));
+        await flush();
+        ctx.emitUtterance(utterance({ segmentId: ids() }));
+        await flush();
+        const previous = transcribe.mock.calls.map(([, input]) => input.previous);
+        expect(previous[1]).toBeUndefined();
+        expect(previous[2]).toBeUndefined();
+        expect(previous[3]).toEqual(['x'.repeat(400)]);
+      });
+
+      it('orders the context by start time even when uploads finish out of order', async () => {
+        const releases: ((text: string) => void)[] = [];
+        const transcribe = vi.fn<Transcribe>(
+          (_id, input) =>
+            new Promise((resolve) => {
+              releases.push((text) => resolve({ segmentId: input.segmentId, text }));
+            }),
+        );
+        const ctx = await running({ transcribe });
+        ctx.emitUtterance(utterance({ segmentId: ids(), startMs: 1_000, endMs: 2_000 }));
+        ctx.emitUtterance(utterance({ segmentId: ids(), startMs: 3_000, endMs: 4_000 }));
+        await flush();
+        releases[1]!('sau');
+        await flush();
+        releases[0]!('trước');
+        await flush();
+        ctx.emitUtterance(utterance({ segmentId: ids(), startMs: 5_000, endMs: 6_000 }));
+        await flush();
+        expect(transcribe.mock.calls[2]![1].previous).toEqual(['trước', 'sau']);
+      });
+
+      it('does not use a failed sentence as context', async () => {
+        const transcribe = vi
+          .fn<Transcribe>()
+          .mockRejectedValueOnce(new TranscribeError('no', 400))
+          .mockImplementation(async (_id, input) => ({ segmentId: input.segmentId, text: 'ok' }));
+        const ctx = await running({ transcribe });
+        ctx.emitUtterance(utterance({ segmentId: ids() }));
+        await flush();
+        ctx.emitUtterance(utterance({ segmentId: ids() }));
+        await flush();
+        expect(transcribe.mock.calls[1]![1].previous).toBeUndefined();
+      });
+
+      it('forgets the context of the previous meeting', async () => {
+        const ctx = await running();
+        ctx.emitUtterance(utterance({ segmentId: ids() }));
+        await flush();
+        const stopping = ctx.controller.stop();
+        await vi.advanceTimersByTimeAsync(3_000);
+        await stopping;
+        await ctx.controller.start(3, 'vi');
+        ctx.emitUtterance(utterance({ segmentId: ids() }));
+        await flush();
+        expect(ctx.sessions.transcribe.mock.calls.at(-1)![1].previous).toBeUndefined();
+      });
+
+      it('counts published final sentences, not placeholders or partials', async () => {
+        const transcribe = vi
+          .fn<Transcribe>()
+          .mockRejectedValueOnce(new TranscribeError('no', 400))
+          .mockImplementation(async (_id, input) => ({ segmentId: input.segmentId, text: 'ok' }));
+        const ctx = await running({ transcribe });
+        ctx.emitUtterance(utterance({ segmentId: ids() }));
+        await flush();
+        ctx.emitUtterance(utterance({ segmentId: ids() }));
+        ctx.emitUtterance(utterance({ segmentId: ids(), stream: 'mic' }));
+        await flush();
+        const stopping = ctx.controller.stop();
+        await vi.advanceTimersByTimeAsync(3_000);
+        await stopping;
+        expect(ctx.controller.getSnapshot().completedSegmentCount).toBe(2);
+      });
     });
 
     it('retries once, then shows a placeholder locally and tells the server nothing', async () => {

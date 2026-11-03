@@ -80,6 +80,19 @@ describe('sessions api', () => {
       pcm: 'AAAA',
     } as const;
 
+    it('sends the previous sentences as context', async () => {
+      const request = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(Response.json({ segmentId: input.segmentId, text: 'ok' }));
+      const api = createSessionsApi({ apiUrl: 'ws://api.test/', token: 'secret', fetch: request });
+
+      await api.transcribe(session.id, { ...input, previous: ['một', 'hai'] });
+      expect(JSON.parse(request.mock.calls[0]![1]?.body as string)).toEqual({
+        ...input,
+        previous: ['một', 'hai'],
+      });
+    });
+
     it('posts the utterance with the bearer token and parses the text', async () => {
       const request = vi
         .fn<typeof fetch>()

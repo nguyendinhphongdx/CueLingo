@@ -3,14 +3,30 @@ import { Button } from '@cuelingo/ui/components/button';
 import { ConfirmDialog } from '@cuelingo/ui/components/confirm-dialog';
 import { LanguageSwitcher } from '@cuelingo/ui/components/language-switcher';
 import { CloudUpload, Play, Square } from 'lucide-react';
+import { LevelMeter } from '@cuelingo/ui/components/level-meter';
 import { useEffect, useState } from 'react';
 import { useMe } from '../auth';
 import { useLanguage, useSettings } from '../settings';
 import { grantCloudConsent, hasCloudConsent, setConsentUser } from './cloud-consent';
 import { describeNativeError, openDebrief } from './session-actions';
+import { PRIVACY_PANES, native } from '../lib/native';
 import type { SessionStatus } from './session-controller';
 import { SUPPORTED_LANGUAGES, type LanguageCode } from '@cuelingo/shared';
 import { describeModelProgress, useModelProgress } from './model-progress';
+import { PostMeetingCard } from './PostMeetingCard';
+import {
+  decideStart,
+  describeCaptureProblems,
+  elapsedMs,
+  formatDuration,
+  meterNote,
+  MIC_BLOCKED_BUTTON,
+  MIC_BLOCKED_TEXT,
+} from './capture-problems';
+import type { AudioLevelSnapshot } from './audio-level-store';
+import type { CaptureFailures } from './capture-problems';
+import { useAudioLevels } from './use-audio-levels';
+import { useDebriefBrief } from './use-debrief-brief';
 import { useSession } from './use-session';
 
 const statusText: Record<SessionStatus, string> = {
@@ -39,33 +55,116 @@ export function SessionStatus({ status }: { status: SessionStatus }) {
   );
 }
 
-export function DebriefButton({ sessionId }: { sessionId: string }) {
+export function DebriefButton({
+  sessionId,
+  label = 'Xem debrief',
+}: {
+  sessionId: string;
+  label?: string;
+}) {
   return (
     <Button variant="outline" onClick={() => void openDebrief(sessionId)}>
-      Xem debrief
+      {label}
     </Button>
   );
 }
 
-/** Elapsed time of the running session as mm:ss or h:mm:ss. */
-function useElapsed(active: boolean): string {
-  const [seconds, setSeconds] = useState(0);
+/** Meeting time from the controller's timestamps, so a reconnect or a drain does not distort it. */
+function useMeetingDuration(startedAt: number | null, endedAt: number | null): string {
+  const [, setTick] = useState(0);
+  const ticking = startedAt !== null && endedAt === null;
   useEffect(() => {
-    if (!active) {
-      setSeconds(0);
-      return;
-    }
-    const started = Date.now();
-    const timer = window.setInterval(
-      () => setSeconds(Math.floor((Date.now() - started) / 1000)),
-      1000,
-    );
+    if (!ticking) return;
+    const timer = window.setInterval(() => setTick((tick) => tick + 1), 1000);
     return () => window.clearInterval(timer);
-  }, [active]);
-  const pad = (value: number) => String(value).padStart(2, '0');
-  const hours = Math.floor(seconds / 3600);
-  const rest = `${pad(Math.floor((seconds % 3600) / 60))}:${pad(seconds % 60)}`;
-  return hours > 0 ? `${hours}:${rest}` : rest;
+  }, [ticking]);
+  return formatDuration(elapsedMs(startedAt, endedAt, Date.now()));
+}
+
+export const NO_SIGNAL_TEXT = 'Chưa có âm thanh';
+export const CAPTURE_FAILED_TEXT = 'Không mở được';
+
+/** The two meters. Silence only gets a soft note; a red label appears only for a capture the sidecar reported as failed. */
+export function AudioLevelRows({
+  levels,
+  failures,
+}: {
+  levels: AudioLevelSnapshot;
+  failures: CaptureFailures;
+}) {
+  const rows = [
+    { label: 'Micro', values: levels.mic, silent: levels.micSilent, failed: failures.micFailed },
+    {
+      label: 'Âm thanh hệ thống',
+      values: levels.system,
+      silent: levels.systemSilent,
+      failed: failures.systemFailed,
+    },
+  ];
+  return (
+    <div className="mt-4 grid max-w-md gap-2">
+      {rows.map((row) => {
+        const note = meterNote(row.failed, row.silent);
+        return (
+          <div key={row.label} className="flex items-center gap-3 text-sm">
+            <span className="w-36 shrink-0 text-white/80">{row.label}</span>
+            <LevelMeter levels={row.values} label={row.label} active={note === null} />
+            {note === 'failed' ? (
+              <span className="font-medium text-red-300">{CAPTURE_FAILED_TEXT}</span>
+            ) : null}
+            {note === 'silent' ? <span className="text-white/70">{NO_SIGNAL_TEXT}</span> : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Warning for a capture that could not start; the meeting is not stopped. */
+export function CaptureBanner({ failures }: { failures: CaptureFailures }) {
+  const banner = describeCaptureProblems(failures);
+  if (!banner) return null;
+  return (
+    <div
+      role="alert"
+      className="mt-4 flex flex-wrap items-center gap-2 rounded-lg bg-red-500/25 px-3 py-2 text-sm"
+    >
+      <span className="mr-auto">{banner.message}</span>
+      <Button
+        size="sm"
+        onClick={() => void native.openUrl(banner.pane)}
+        className="cursor-pointer bg-white text-slate-900 hover:bg-white/90"
+      >
+        {banner.buttonLabel}
+      </Button>
+    </div>
+  );
+}
+
+/** Shown instead of starting when macOS has the microphone blocked for CueLingo. */
+export function MicBlockedNotice() {
+  return (
+    <div
+      role="alert"
+      className="mt-4 flex flex-wrap items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400"
+    >
+      <span className="mr-auto">{MIC_BLOCKED_TEXT}</span>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => void native.openUrl(PRIVACY_PANES.microphone)}
+        className="cursor-pointer"
+      >
+        {MIC_BLOCKED_BUTTON}
+      </Button>
+    </div>
+  );
+}
+
+/** Both meters; mounted only while a meeting runs, which is when it listens. */
+export function AudioLevels({ failures }: { failures: CaptureFailures }) {
+  const levels = useAudioLevels(true);
+  return <AudioLevelRows levels={levels} failures={failures} />;
 }
 
 export const CLOUD_CONSENT_TEXT =
@@ -101,11 +200,28 @@ export function SessionPanel() {
   const running = session.status !== 'idle' && session.status !== 'error';
   const busy = session.status === 'connecting';
   const live = session.status === 'running';
-  const elapsed = useElapsed(live);
+  const duration = useMeetingDuration(session.startedAt, session.endedAt);
+  const metering = live || session.status === 'reconnecting';
+  const finishedId = running ? null : session.completedSessionId;
+  // A meeting with no sentences has no debrief to wait for.
+  const hasSentences = session.completedSegmentCount > 0;
+  const brief = useDebriefBrief(hasSentences ? finishedId : null);
   const error = describeNativeError(session.error);
   // Consent is asked for the picker's language; the badge follows the meeting that really runs.
   const cloud = SUPPORTED_LANGUAGES[language].recognition === 'cloud';
   const sendsAudio = running && isCloudMeeting(session.meetingLanguage);
+  const [micBlocked, setMicBlocked] = useState(false);
+  // The microphone is checked first, so a blocked one never leads to a saved consent.
+  const attempt = async () => {
+    setMicBlocked(false);
+    const decision = await decideStart({
+      needsConsent: cloud && !hasCloudConsent(userId),
+      readPermissions: native.permissionsStatus,
+    });
+    if (decision === 'mic-denied') setMicBlocked(true);
+    else if (decision === 'ask-consent') setAskConsent(true);
+    else begin();
+  };
   const begin = () => void session.start(assistLevel, language);
   const modelProgress = describeModelProgress(useModelProgress());
 
@@ -147,9 +263,9 @@ export function SessionPanel() {
             Overlay tự hiện khi bắt đầu và ẩn khi dừng. ⌘⇧L để ẩn/hiện tay.
           </p>
         </div>
-        {live ? (
+        {running && session.startedAt !== null ? (
           <p className="text-3xl font-light tabular-nums" aria-label="Thời gian đã chạy">
-            {elapsed}
+            {duration}
           </p>
         ) : null}
       </div>
@@ -175,7 +291,7 @@ export function SessionPanel() {
             <Button
               size="lg"
               disabled={busy}
-              onClick={() => (cloud && !hasCloudConsent(userId) ? setAskConsent(true) : begin())}
+              onClick={() => void attempt()}
               className="cursor-pointer"
             >
               <Play aria-hidden="true" className="size-4 fill-current" />
@@ -183,10 +299,18 @@ export function SessionPanel() {
             </Button>
           </PressButton>
         )}
-        {session.completedSessionId ? (
-          <DebriefButton sessionId={session.completedSessionId} />
-        ) : null}
       </div>
+      {metering ? <AudioLevels failures={session} /> : null}
+      {running ? <CaptureBanner failures={session} /> : null}
+      {micBlocked ? <MicBlockedNotice /> : null}
+      {finishedId ? (
+        <PostMeetingCard
+          duration={duration}
+          sentences={session.completedSegmentCount}
+          brief={brief}
+          onOpen={() => void openDebrief(finishedId)}
+        />
+      ) : null}
       {sendsAudio ? <CloudSendingBadge /> : null}
       <ConfirmDialog
         open={askConsent}

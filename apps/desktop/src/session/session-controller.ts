@@ -8,8 +8,10 @@ import {
   type LanguageCode,
   type ServerMessage,
 } from '@cuelingo/shared';
+import { captureProblemOf } from './capture-problems';
 import type {
   AudioModelEvent,
+  AudioStatusEvent,
   SegmentEvent,
   SessionStartInput,
   SessionStartResult,
@@ -25,6 +27,15 @@ export interface SessionSnapshot {
   status: SessionStatus;
   error: Error | null;
   completedSessionId: string | null;
+  /** Final sentences published during the meeting that just ended. */
+  completedSegmentCount: number;
+  /** When capture began (ms). Kept across reconnects; null before capture runs. */
+  startedAt: number | null;
+  /** When the person pressed Stop (ms), so a cloud drain does not count as meeting time. */
+  endedAt: number | null;
+  /** The sidecar reported that this capture could not start. Cleared on a new meeting and on stop. */
+  micFailed: boolean;
+  systemFailed: boolean;
   /** Another language the speakers seem to be using; offered to the person, never applied alone. */
   suggestedLanguage: LanguageCode | null;
   /** Language of the meeting that runs (set at start, cleared once it has fully ended). */
@@ -38,6 +49,7 @@ interface NativeSessionBridge {
   onSegment(callback: (event: SegmentEvent) => void): Promise<() => void>;
   onUtterance(callback: (event: UtteranceEvent) => void): Promise<() => void>;
   onAudioModel(callback: (event: AudioModelEvent) => void): Promise<() => void>;
+  onAudioStatus(callback: (event: AudioStatusEvent) => void): Promise<() => void>;
   setLanguage(language: string): Promise<void>;
   setVocabulary(terms: string[]): Promise<void>;
   publishTranscript(event: TranscriptEvent): Promise<void>;
@@ -115,6 +127,9 @@ const DRAIN_ACCEPT_MS = 3_000;
 const DRAIN_DEADLINE_MS = 15_000;
 /** Wait before retrying a rate-limited upload. */
 const RATE_LIMIT_RETRY_MS = 1_000;
+/** Recognised sentences of the same stream sent along as context, oldest first. */
+const PREVIOUS_COUNT = 3;
+const PREVIOUS_MAX_CHARS = 400;
 /** Shown in place of a sentence the cloud could not recognise (after one retry). */
 export const UNRECOGNISED_TEXT = '[không nhận dạng được]';
 
@@ -185,6 +200,11 @@ export function createSessionController({
     status: 'idle',
     error: null,
     completedSessionId: null,
+    completedSegmentCount: 0,
+    startedAt: null,
+    endedAt: null,
+    micFailed: false,
+    systemFailed: false,
     suggestedLanguage: null,
     meetingLanguage: null,
   };
@@ -194,6 +214,7 @@ export function createSessionController({
   let stopPromise: Promise<void> | null = null;
   let stopSegmentListener: (() => void) | null = null;
   let stopModelListener: (() => void) | null = null;
+  let stopStatusListener: (() => void) | null = null;
   let stopUtteranceListener: (() => void) | null = null;
   let utteranceRegistration = 0;
   let uploads = newUploads();
@@ -211,6 +232,13 @@ export function createSessionController({
   let startingGeneration: number | null = null;
   /** The glossary changed while the session was starting; refresh once capture runs. */
   let refreshPending = false;
+  /** Ids of final sentences published in this meeting. */
+  const finalIds = new Set<string>();
+  /** Recognised text of the latest sentences per stream, sent as context for the next upload. */
+  const recentTexts: Record<'system' | 'mic', { startMs: number; text: string }[]> = {
+    system: [],
+    mic: [],
+  };
   const transcriptById = new Map<string, TranscriptEvent>();
   const listeners = new Set<() => void>();
 
@@ -236,6 +264,7 @@ export function createSessionController({
   function publish(input: TranscriptEvent) {
     const event = { ...input, language: input.language ?? meetingLanguage };
     transcriptById.set(event.segmentId, event);
+    if (!event.partial && event.text !== UNRECOGNISED_TEXT) finalIds.add(event.segmentId);
     void native.publishTranscript(event).catch(fail);
   }
 
@@ -279,8 +308,10 @@ export function createSessionController({
     sessionId: string,
     utterance: UtteranceEvent,
     signal: AbortSignal,
+    previous: string[],
   ): Promise<string | null> {
     const request = {
+      ...(previous.length > 0 ? { previous } : {}),
       segmentId: utterance.segmentId,
       stream: utterance.stream,
       startMs: Math.round(utterance.startMs),
@@ -312,7 +343,10 @@ export function createSessionController({
     const current = uploads;
 
     current.queue.push(async () => {
-      const text = await recognise(sessionId, utterance, current.abort.signal);
+      const previous = recentTexts[utterance.stream]
+        .slice(-PREVIOUS_COUNT)
+        .map((entry) => entry.text);
+      const text = await recognise(sessionId, utterance, current.abort.signal, previous);
       if (generation !== runtimeGeneration || current.closed) return;
       // Each result goes out as soon as it is ready; a slow upload never holds a later one back.
       if (text === null) {
@@ -327,6 +361,13 @@ export function createSessionController({
         return;
       }
       if (text.trim() === '') return;
+      // Uploads finish in any order; the model needs the sentences in the order they were spoken.
+      recentTexts[utterance.stream] = [
+        ...recentTexts[utterance.stream],
+        { startMs: utterance.startMs, text: text.slice(0, PREVIOUS_MAX_CHARS) },
+      ]
+        .sort((a, b) => a.startMs - b.startMs)
+        .slice(-PREVIOUS_COUNT);
       publish({
         segmentId: utterance.segmentId,
         stream: utterance.stream,
@@ -386,6 +427,21 @@ export function createSessionController({
     else stopModelListener = unlisten;
   }
 
+  /** Capture failures come within milliseconds of the sidecar starting, so this listens before it does. */
+  function handleAudioStatus(event: AudioStatusEvent) {
+    if (event.state !== 'error') return;
+    const problem = captureProblemOf(event.message);
+    if (problem === 'mic' && !snapshot.micFailed) update({ micFailed: true });
+    if (problem === 'system' && !snapshot.systemFailed) update({ systemFailed: true });
+  }
+
+  async function listenForAudioStatus() {
+    const registration = listenerRegistration;
+    const unlisten = await native.onAudioStatus(handleAudioStatus);
+    if (registration !== listenerRegistration) unlisten();
+    else stopStatusListener = unlisten;
+  }
+
   /** The newest terms for the language; never rejects (a failed or signed-out glossary means no terms). */
   async function loadVocabulary(language: LanguageCode): Promise<string[]> {
     if (!glossary || !VOCABULARY_LANGUAGES.includes(language)) return [];
@@ -413,6 +469,8 @@ export function createSessionController({
     stopSegmentListener = null;
     stopModelListener?.();
     stopModelListener = null;
+    stopStatusListener?.();
+    stopStatusListener = null;
     utteranceRegistration += 1;
     stopUtteranceListener?.();
     stopUtteranceListener = null;
@@ -499,12 +557,20 @@ export function createSessionController({
         return;
       }
       meetingLanguage = language;
+      finalIds.clear();
+      recentTexts.system = [];
+      recentTexts.mic = [];
       const generation = runtimeGeneration;
       startingGeneration = generation;
       update({
         status: 'connecting',
         error: null,
         completedSessionId: null,
+        completedSegmentCount: 0,
+        startedAt: null,
+        endedAt: null,
+        micFailed: false,
+        systemFailed: false,
         suggestedLanguage: null,
         meetingLanguage: language,
       });
@@ -525,6 +591,7 @@ export function createSessionController({
         activeSessionId = session.id;
         await listenForSegments();
         await listenForAudioModel();
+        await listenForAudioStatus();
         if (isCloudLanguage(language)) await listenForUtterances();
         if (generation !== runtimeGeneration) return;
         const loaded = glossary ? await Promise.race([pendingVocabulary, timeout]) : undefined;
@@ -543,6 +610,7 @@ export function createSessionController({
         }
         captureRunning = true;
         startingGeneration = null;
+        update({ startedAt: now() });
         if (refreshPending) {
           refreshPending = false;
           void refreshNow();
@@ -573,7 +641,7 @@ export function createSessionController({
       } catch (error) {
         if (generation !== runtimeGeneration) return;
         clearRuntime();
-        update({ meetingLanguage: null });
+        update({ meetingLanguage: null, micFailed: false, systemFailed: false });
         hideOverlay();
         fail(error);
       } finally {
@@ -584,6 +652,8 @@ export function createSessionController({
       if (stopPromise) return stopPromise;
 
       const sessionId = activeSessionId;
+      // Meeting time ends here, not when the last upload of a cloud drain lands.
+      if (snapshot.startedAt !== null && snapshot.endedAt === null) update({ endedAt: now() });
       const drains = sessionId !== null && captureRunning && isCloudLanguage(meetingLanguage);
       const finish = (nativeError: unknown, apiResult: PromiseSettledResult<unknown>) => {
         const error =
@@ -596,7 +666,10 @@ export function createSessionController({
           status: nativeError !== undefined ? 'error' : 'idle',
           error: error instanceof Error || error === null ? error : new Error(String(error)),
           completedSessionId: sessionId ?? snapshot.completedSessionId,
+          completedSegmentCount: sessionId ? finalIds.size : snapshot.completedSegmentCount,
           meetingLanguage: null,
+          micFailed: false,
+          systemFailed: false,
         });
         hideOverlay();
       };

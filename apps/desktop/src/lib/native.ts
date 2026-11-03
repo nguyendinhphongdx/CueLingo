@@ -82,6 +82,23 @@ export const UtteranceEvent = z.object({
 });
 export type UtteranceEvent = z.infer<typeof UtteranceEvent>;
 
+/** Loudness of one stream, about ten times a second while a meeting runs (0..1). */
+export const LevelEvent = z.object({
+  type: z.literal('level'),
+  stream: z.enum(['system', 'mic']),
+  rms: z.number().min(0).max(1),
+  peak: z.number().min(0).max(1),
+});
+export type LevelEvent = z.infer<typeof LevelEvent>;
+
+/** The sidecar's own state; an `error` message starts with `system audio: ` or `microphone: ` when a capture failed to start. */
+export const AudioStatusEvent = z.object({
+  type: z.literal('status'),
+  state: z.enum(['loading', 'ready', 'error', 'stopped']),
+  message: z.string().optional(),
+});
+export type AudioStatusEvent = z.infer<typeof AudioStatusEvent>;
+
 /** The speech model loading (or a language switch finishing), and recognition time once a session ends. */
 export const AudioModelEvent = z.discriminatedUnion('type', [
   z.object({
@@ -181,6 +198,12 @@ export const native = {
   /** Utterance audio for languages recognised in the cloud (emitted by the Rust core from the Swift sidecar). */
   onUtterance: (cb: (e: UtteranceEvent) => void): Promise<UnlistenFn> =>
     listen('audio-utterance', (e) => cb(UtteranceEvent.parse(e.payload))),
+  /** Audio level of each stream while capturing (emitted by the Rust core from the Swift sidecar). */
+  onLevel: (cb: (e: LevelEvent) => void): Promise<UnlistenFn> =>
+    listen('audio-level', (e) => cb(LevelEvent.parse(e.payload))),
+  /** Sidecar state changes (emitted by the Rust core from the Swift sidecar). */
+  onAudioStatus: (cb: (e: AudioStatusEvent) => void): Promise<UnlistenFn> =>
+    listen('audio-status', (e) => cb(AudioStatusEvent.parse(e.payload))),
   /** Windows share state through global events: the main window publishes, the overlay listens. */
   publishTranscript: (e: TranscriptEvent) => emit('transcript', TranscriptEvent.parse(e)),
   /** Tells the other windows (the overlay has its own JS context) that the signed-in person changed. */

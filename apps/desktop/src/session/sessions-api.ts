@@ -50,7 +50,7 @@ interface SessionsApiOptions {
   fetch?: Fetch;
 }
 
-function restUrl(apiUrl: string) {
+export function restUrl(apiUrl: string) {
   return apiUrl.replace(/^ws:/, 'http:').replace(/^wss:/, 'https:').replace(/\/$/, '');
 }
 
