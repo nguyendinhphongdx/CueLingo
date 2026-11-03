@@ -36,6 +36,10 @@ Tài nguyên không thuộc người dùng hiện tại trả `404`.
 - Bảng `sessions`, `segments`; mọi truy vấn lọc theo `user_id`.
 - Realtime chỉ ghi `segments` khi `session_id` thuộc `user_id`; không lưu audio.
 
+## Tạo lại debrief
+
+`POST /v1/sessions/:id/debrief` (không body, `userId` từ auth) xếp lại job debrief cho phiên đã kết thúc có ít nhất một câu: `202 {"queued": true}` (chỉ nghĩa là đã xếp job, client vẫn phải hỏi lại kết quả); `404` phiên không tồn tại hoặc của người khác; `409` phiên còn `live` hoặc không có câu nào; `429` quá 3 yêu cầu/phút/người dùng. Dùng cùng khoá chống trùng với `POST /v1/sessions/:id/end` nên bấm lặp không tạo hai debrief song song. Client: `client.regenerateDebrief(sessionId)`.
+
 ## Câu hỏi mở
 
 - (chưa có)

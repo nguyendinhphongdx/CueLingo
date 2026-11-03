@@ -35,6 +35,13 @@ Khi debrief đã sẵn sàng, nút "Soạn follow-up" cạnh "Sao chép cả deb
 
 Trang dùng hai cờ của registry độc lập: `translates` quyết định có hiện dòng dịch và "Transcript song ngữ"; `learnable` quyết định có hiện các khối học (đoạn khó, cụm từ nên lưu, câu nên nói) và điểm hiểu. Họp tiếng Hàn và Trung hiện transcript song ngữ nhưng không có khối học; họp tiếng Việt không có cả hai; tiếng Anh và Nhật như cũ.
 
+## Các trạng thái khi chưa có debrief
+
+- Cuộc họp **đang chạy**: "Cuộc họp này chưa kết thúc. Debrief sẽ có sau khi cuộc họp dừng." (không quay, không đếm giây).
+- Cuộc họp **đã kết thúc nhưng không có câu nào**: "Cuộc họp này không có câu nào được ghi nên không có debrief." (worker bỏ qua phiên trống).
+- Đã kết thúc và có câu: "Đang tạo… N s" tối đa 90 giây; quá hạn thì "Debrief chưa tạo được." kèm nút **Tạo lại debrief** gọi `regenerateDebrief` rồi chờ lại. Lỗi 409 và 429 có thông báo riêng.
+- Danh sách cuộc họp (web và desktop) dùng cùng nhãn: "Chưa kết thúc", "Không có nội dung", "Đang tạo debrief", "Đã có debrief" (`sessionListLabel` trong `@cuelingo/ui`). Danh sách chưa có số câu nên phiên kết thúc trong dưới 10 giây được coi là trống.
+
 ## Câu hỏi mở
 
 - (chưa có)

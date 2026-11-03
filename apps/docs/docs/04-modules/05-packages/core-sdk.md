@@ -39,6 +39,8 @@ SDK client dùng chung cho desktop và web: auth, REST, stream phiên, hàng đ�
 
 `client.followup(sessionId, input)`: gọi `POST /v1/sessions/:id/followup`, trả `{ subject, body, language }` ([followup](../03-api/followup.md)).
 
+`client.regenerateDebrief(sessionId)`: xếp lại debrief ([sessions](../03-api/sessions.md)), trả `{ queued: true }`.
+
 ## Câu hỏi mở
 
 - (chưa có)
