@@ -3,6 +3,7 @@ import { useSyncExternalStore } from 'react';
 import { currentToken } from '../auth';
 import { insightsApi } from '../insights';
 import { native } from '../lib/native';
+import { hasCloudConsent } from './cloud-consent';
 import { refreshOnGlossaryChange } from './glossary-refresh';
 import { createSessionController } from './session-controller';
 import { sessionsApi } from './sessions-api';
@@ -10,6 +11,7 @@ import { sessionsApi } from './sessions-api';
 const controller = createSessionController({
   native,
   sessions: sessionsApi,
+  hasCloudConsent: () => hasCloudConsent(),
   glossary: { list: insightsApi.listGlossary },
   createRealtime: createRealtimeClient,
   apiUrl: import.meta.env.VITE_API_URL || 'ws://localhost:4000',

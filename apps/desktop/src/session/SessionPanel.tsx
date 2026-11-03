@@ -1,12 +1,15 @@
 import { Button as PressButton } from '@animate-ui/react/primitives/buttons/button';
 import { Button } from '@cuelingo/ui/components/button';
+import { ConfirmDialog } from '@cuelingo/ui/components/confirm-dialog';
 import { LanguageSwitcher } from '@cuelingo/ui/components/language-switcher';
-import { PictureInPicture2, Play, Square } from 'lucide-react';
+import { CloudUpload, Play, Square } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useMe } from '../auth';
 import { useLanguage, useSettings } from '../settings';
-import { describeNativeError, openDebrief, toggleOverlay } from './session-actions';
+import { grantCloudConsent, hasCloudConsent, setConsentUser } from './cloud-consent';
+import { describeNativeError, openDebrief } from './session-actions';
 import type { SessionStatus } from './session-controller';
-import { SUPPORTED_LANGUAGES } from '@cuelingo/shared';
+import { SUPPORTED_LANGUAGES, type LanguageCode } from '@cuelingo/shared';
 import { describeModelProgress, useModelProgress } from './model-progress';
 import { useSession } from './use-session';
 
@@ -65,7 +68,33 @@ function useElapsed(active: boolean): string {
   return hours > 0 ? `${hours}:${rest}` : rest;
 }
 
+export const CLOUD_CONSENT_TEXT =
+  'Âm thanh cuộc họp (cả micro và âm thanh hệ thống) sẽ được gửi tới Google để nhận dạng tiếng Việt. Hãy báo trước cho người tham dự. CueLingo không lưu âm thanh.';
+export const CLOUD_SENDING_TEXT = 'Đang gửi âm thanh tới Google để nhận dạng';
+
+/** Whether the running meeting recognises speech in the cloud (never read from stored settings). */
+export function isCloudMeeting(meetingLanguage: LanguageCode | null): boolean {
+  return meetingLanguage !== null && SUPPORTED_LANGUAGES[meetingLanguage].recognition === 'cloud';
+}
+
+/** Shown for the whole time a cloud-language meeting runs: audio is leaving this machine. */
+export function CloudSendingBadge() {
+  return (
+    <p
+      role="status"
+      className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium"
+    >
+      <CloudUpload aria-hidden="true" className="size-4" />
+      {CLOUD_SENDING_TEXT}
+    </p>
+  );
+}
+
 export function SessionPanel() {
+  const { me } = useMe();
+  const userId = me?.id ?? 'dev';
+  setConsentUser(userId);
+  const [askConsent, setAskConsent] = useState(false);
   const assistLevel = useSettings((state) => state.assistLevel);
   const { language, setLanguage, options } = useLanguage();
   const session = useSession();
@@ -74,6 +103,10 @@ export function SessionPanel() {
   const live = session.status === 'running';
   const elapsed = useElapsed(live);
   const error = describeNativeError(session.error);
+  // Consent is asked for the picker's language; the badge follows the meeting that really runs.
+  const cloud = SUPPORTED_LANGUAGES[language].recognition === 'cloud';
+  const sendsAudio = running && isCloudMeeting(session.meetingLanguage);
+  const begin = () => void session.start(assistLevel, language);
   const modelProgress = describeModelProgress(useModelProgress());
 
   return (
@@ -110,6 +143,9 @@ export function SessionPanel() {
               ? 'Caption và bản dịch đang hiện trên overlay nổi.'
               : 'Bấm bắt đầu rồi mở Zoom, Meet hoặc Teams như bình thường.'}
           </p>
+          <p className={`mt-1 text-xs ${running ? 'text-white/70' : 'text-muted-foreground'}`}>
+            Overlay tự hiện khi bắt đầu và ẩn khi dừng. ⌘⇧L để ẩn/hiện tay.
+          </p>
         </div>
         {live ? (
           <p className="text-3xl font-light tabular-nums" aria-label="Thời gian đã chạy">
@@ -139,7 +175,7 @@ export function SessionPanel() {
             <Button
               size="lg"
               disabled={busy}
-              onClick={() => void session.start(assistLevel, language)}
+              onClick={() => (cloud && !hasCloudConsent(userId) ? setAskConsent(true) : begin())}
               className="cursor-pointer"
             >
               <Play aria-hidden="true" className="size-4 fill-current" />
@@ -147,24 +183,25 @@ export function SessionPanel() {
             </Button>
           </PressButton>
         )}
-        <Button
-          variant={running ? 'ghost' : 'outline'}
-          size="lg"
-          onClick={() => void toggleOverlay()}
-          className={`cursor-pointer ${running ? 'text-white hover:bg-white/15 hover:text-white' : ''}`}
-        >
-          <PictureInPicture2 aria-hidden="true" className="size-4" />
-          Hiện/ẩn overlay
-        </Button>
-        {import.meta.env.DEV ? (
-          <Button variant="ghost" size="lg" onClick={session.runDemo} className="cursor-pointer">
-            Chạy thử caption
-          </Button>
-        ) : null}
         {session.completedSessionId ? (
           <DebriefButton sessionId={session.completedSessionId} />
         ) : null}
       </div>
+      {sendsAudio ? <CloudSendingBadge /> : null}
+      <ConfirmDialog
+        open={askConsent}
+        title="Gửi âm thanh để nhận dạng"
+        confirmLabel="Đồng ý và bắt đầu"
+        cancelLabel="Huỷ"
+        onCancel={() => setAskConsent(false)}
+        onConfirm={() => {
+          setAskConsent(false);
+          grantCloudConsent(userId);
+          begin();
+        }}
+      >
+        {CLOUD_CONSENT_TEXT}
+      </ConfirmDialog>
       {modelProgress && busy ? (
         <p className="mt-4 text-sm text-white/80" aria-live="polite">
           {modelProgress}

@@ -1,12 +1,11 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DebriefButton, SessionStatus } from './SessionPanel';
+import { DebriefButton, isCloudMeeting, SessionStatus } from './SessionPanel';
 
 const nativeMocks = vi.hoisted(() => ({
   sessionStart: vi.fn(),
   sessionStop: vi.fn(),
-  toggleOverlay: vi.fn(),
   openUrl: vi.fn(),
 }));
 
@@ -23,12 +22,6 @@ describe('SessionPanel', () => {
 
     expect(nativeMocks.sessionStart).toHaveBeenCalledWith({ assistLevel: 3 });
     expect(nativeMocks.sessionStop).toHaveBeenCalledOnce();
-  });
-
-  it('toggles the overlay through native', async () => {
-    const { toggleOverlay } = await import('./session-actions');
-    await toggleOverlay();
-    expect(nativeMocks.toggleOverlay).toHaveBeenCalledOnce();
   });
 
   it('renders the debrief button and opens the session in the configured web app', async () => {
@@ -61,5 +54,32 @@ describe('SessionPanel', () => {
     expect(markup.join(' ')).toContain('Đang chạy');
     expect(markup.join(' ')).toContain('Đang kết nối lại…');
     expect(markup.join(' ')).toContain('Có lỗi');
+  });
+});
+
+describe('cloud language UI', () => {
+  it('shows the consent text and the sending badge in Vietnamese', async () => {
+    const { CLOUD_CONSENT_TEXT, CloudSendingBadge } = await import('./SessionPanel');
+    expect(CLOUD_CONSENT_TEXT).toContain('gửi tới Google');
+    expect(CLOUD_CONSENT_TEXT).toContain('CueLingo không lưu âm thanh');
+    expect(renderToStaticMarkup(createElement(CloudSendingBadge))).toContain(
+      'Đang gửi âm thanh tới Google để nhận dạng',
+    );
+  });
+
+  it('shows the sending badge from the meeting language, not from the stored setting', () => {
+    expect(isCloudMeeting('vi')).toBe(true);
+    expect(isCloudMeeting('en')).toBe(false);
+    expect(isCloudMeeting(null)).toBe(false);
+  });
+
+  it('has no overlay button and no demo button, only the hint', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const source = await readFile(new URL('./SessionPanel.tsx', import.meta.url), 'utf8');
+    expect(source).toContain('Overlay tự hiện khi bắt đầu và ẩn khi dừng. ⌘⇧L để ẩn/hiện tay.');
+    expect(source).not.toContain('IconButton');
+    expect(source).not.toContain('toggleOverlay');
+    expect(source).not.toContain('Hiện/ẩn overlay');
+    expect(source).not.toContain('Chạy thử caption');
   });
 });

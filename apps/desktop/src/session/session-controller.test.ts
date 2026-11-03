@@ -1,13 +1,20 @@
-import type { GlossaryTerm, LanguageCode } from '@cuelingo/shared';
+import type {
+  GlossaryTerm,
+  LanguageCode,
+  TranscribeRequest,
+  TranscribeResponse,
+} from '@cuelingo/shared';
 import type { RealtimeClient, RealtimeClientOptions } from '@cuelingo/core-sdk';
 import type {
   AudioModelEvent,
   SegmentEvent,
   SessionStartInput,
   TranscriptEvent,
+  UtteranceEvent,
 } from '../lib/native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSessionController } from './session-controller';
+import { TranscribeError } from './sessions-api';
 
 const sessionId = '6df65d24-949f-4456-b5d2-4394c9d7ae16';
 const segmentId = 'eb3fc1d4-c8b7-4a22-a842-873be0f9a9de';
@@ -38,7 +45,18 @@ function term(text: string, createdAt = '2026-11-01T00:00:00.000Z'): GlossaryTer
 
 type GlossaryList = (language: LanguageCode) => Promise<GlossaryTerm[]>;
 
-function setup(glossaryList?: GlossaryList) {
+type Transcribe = (
+  sessionId: string,
+  input: TranscribeRequest,
+  signal?: AbortSignal,
+) => Promise<TranscribeResponse>;
+
+function setup(
+  glossaryList?: GlossaryList,
+  options: { transcribe?: Transcribe; consent?: boolean } = {},
+) {
+  let onUtterance: ((event: UtteranceEvent) => void) | undefined;
+  const unlistenUtterance = vi.fn();
   let onSegment: ((event: SegmentEvent) => void) | undefined;
   let onAudioModel: ((event: AudioModelEvent) => void) | undefined;
   let realtimeOptions: RealtimeClientOptions | undefined;
@@ -59,9 +77,14 @@ function setup(glossaryList?: GlossaryList) {
       return { sessionId: 'local-native-session' };
     }),
     sessionStop: vi.fn().mockResolvedValue(undefined),
+    hideOverlay: vi.fn().mockResolvedValue(undefined),
     onSegment: vi.fn(async (callback: (event: SegmentEvent) => void) => {
       onSegment = callback;
       return vi.fn();
+    }),
+    onUtterance: vi.fn(async (callback: (event: UtteranceEvent) => void) => {
+      onUtterance = callback;
+      return unlistenUtterance;
     }),
     onAudioModel: vi.fn(async (callback: (event: AudioModelEvent) => void) => {
       onAudioModel = callback;
@@ -86,6 +109,10 @@ function setup(glossaryList?: GlossaryList) {
         language: 'en' as const,
       };
     }),
+    transcribe: vi.fn<Transcribe>(
+      options.transcribe ??
+        (async (_id, input) => ({ segmentId: input.segmentId, text: 'xin chào' })),
+    ),
     setLanguage: vi.fn(async (_id: string, language: 'en' | 'ja') => ({
       id: sessionId,
       title: null,
@@ -108,6 +135,7 @@ function setup(glossaryList?: GlossaryList) {
   const controller = createSessionController({
     native,
     sessions,
+    hasCloudConsent: () => options.consent ?? true,
     glossary: glossaryList ? { list: glossaryList } : undefined,
     createRealtime: (options) => {
       calls.push('realtime.create');
@@ -127,6 +155,8 @@ function setup(glossaryList?: GlossaryList) {
     calls,
     sent,
     published,
+    emitUtterance: (event: UtteranceEvent) => onUtterance?.(event),
+    unlistenUtterance,
     emitSegment: (event: SegmentEvent) => onSegment?.(event),
     emitAudioModel: (event: AudioModelEvent) => onAudioModel?.(event),
     getRealtimeOptions: () => realtimeOptions,
@@ -288,6 +318,44 @@ describe('session controller', () => {
       status: 'error',
       error: new Error('API unavailable'),
     });
+  });
+
+  it('hides the overlay once, after the session ended, and not again on a second stop', async () => {
+    const context = setup();
+    await context.controller.start(3);
+    const order: string[] = [];
+    context.sessions.end.mockImplementationOnce(async () => {
+      order.push('end');
+      return {} as never;
+    });
+    context.native.hideOverlay.mockImplementation(async () => {
+      order.push('hide');
+    });
+
+    await Promise.all([context.controller.stop(), context.controller.stop()]);
+
+    expect(context.native.hideOverlay).toHaveBeenCalledOnce();
+    expect(order).toEqual(['end', 'hide']);
+  });
+
+  it('hides the overlay after the drain of a cloud meeting, not before', async () => {
+    const context = setup();
+    await context.controller.start(3, 'vi');
+    const stopping = context.controller.stop();
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(context.native.hideOverlay).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1_000);
+    await stopping;
+    expect(context.native.hideOverlay).toHaveBeenCalledOnce();
+  });
+
+  it('hides the overlay when the start fails, and swallows a failing hide', async () => {
+    const context = setup();
+    context.native.sessionStart.mockRejectedValueOnce(new Error('no permission'));
+    context.native.hideOverlay.mockRejectedValueOnce(new Error('gone'));
+    await context.controller.start(3);
+    expect(context.native.hideOverlay).toHaveBeenCalledOnce();
+    expect(context.controller.getSnapshot().status).toBe('error');
   });
 
   it('ends the API session once when stop is pressed twice', async () => {
@@ -685,6 +753,492 @@ describe('session controller', () => {
         expect(context.native.setVocabulary).toHaveBeenCalledTimes(2);
         expect(context.controller.getSnapshot().status).not.toBe('error');
       });
+    });
+  });
+
+  describe('cloud-recognised language (vi)', () => {
+    const utterance = (overrides: Partial<UtteranceEvent> = {}): UtteranceEvent => ({
+      type: 'utterance',
+      segmentId,
+      stream: 'system',
+      startMs: 100,
+      endMs: 900,
+      sampleRate: 16000,
+      pcm: 'AAAA',
+      ...overrides,
+    });
+    const id2 = '3344ed67-4d83-4778-bcd2-41af6165755f';
+    const flush = () => vi.advanceTimersByTimeAsync(0);
+
+    async function running(options: Parameters<typeof setup>[1] = {}) {
+      const ctx = setup(undefined, options);
+      await ctx.controller.start(3, 'vi');
+      return ctx;
+    }
+
+    it('uploads both streams, publishes the text untranslated and sends segment.final for both', async () => {
+      const ctx = await running();
+      ctx.emitUtterance(utterance());
+      ctx.emitUtterance(utterance({ segmentId: id2, stream: 'mic' }));
+      await flush();
+
+      expect(ctx.sessions.transcribe).toHaveBeenCalledTimes(2);
+      expect(ctx.sessions.transcribe).toHaveBeenCalledWith(
+        sessionId,
+        expect.objectContaining({ segmentId, stream: 'system', startMs: 100, endMs: 900 }),
+        expect.any(AbortSignal),
+      );
+      expect(ctx.published).toEqual([
+        expect.objectContaining({
+          segmentId,
+          stream: 'system',
+          text: 'xin chào',
+          translation: null,
+          partial: false,
+        }),
+        expect.objectContaining({
+          segmentId: id2,
+          stream: 'mic',
+          text: 'xin chào',
+          translation: null,
+          partial: false,
+        }),
+      ]);
+      expect(ctx.sent).toEqual([
+        expect.objectContaining({
+          type: 'segment.final',
+          stream: 'system',
+          text: 'xin chào',
+          words: [],
+        }),
+        expect.objectContaining({
+          type: 'segment.final',
+          stream: 'mic',
+          text: 'xin chào',
+          words: [],
+        }),
+      ]);
+    });
+
+    it('retries once, then shows a placeholder locally and tells the server nothing', async () => {
+      const transcribe = vi.fn<Transcribe>().mockRejectedValue(new Error('boom'));
+      const ctx = await running({ transcribe });
+      ctx.emitUtterance(utterance());
+      await flush();
+
+      expect(transcribe).toHaveBeenCalledTimes(2);
+      expect(ctx.published).toEqual([
+        expect.objectContaining({
+          text: '[không nhận dạng được]',
+          translation: null,
+          partial: false,
+        }),
+      ]);
+      expect(ctx.sent).toEqual([]);
+    });
+
+    it('succeeds on the retry without a placeholder', async () => {
+      const transcribe = vi
+        .fn<Transcribe>()
+        .mockRejectedValueOnce(new Error('boom'))
+        .mockResolvedValueOnce({ segmentId, text: 'được rồi' });
+      const ctx = await running({ transcribe });
+      ctx.emitUtterance(utterance());
+      await flush();
+
+      expect(ctx.published.map((event) => event.text)).toEqual(['được rồi']);
+      expect(ctx.sent).toHaveLength(1);
+    });
+
+    it('ignores silence', async () => {
+      const ctx = await running({
+        transcribe: async (_id, input) => ({ segmentId: input.segmentId, text: '  ' }),
+      });
+      ctx.emitUtterance(utterance());
+      await flush();
+
+      expect(ctx.published).toEqual([]);
+      expect(ctx.sent).toEqual([]);
+    });
+
+    it('uploads at most three at a time', async () => {
+      const releases: (() => void)[] = [];
+      const transcribe = vi.fn<Transcribe>(
+        (_id, input) =>
+          new Promise((resolve) =>
+            releases.push(() => resolve({ segmentId: input.segmentId, text: 'a' })),
+          ),
+      );
+      const ctx = await running({ transcribe });
+      for (let i = 0; i < 5; i += 1) {
+        ctx.emitUtterance(
+          utterance({ segmentId: crypto.randomUUID(), startMs: i * 1000, endMs: i * 1000 + 500 }),
+        );
+      }
+      await flush();
+      expect(transcribe).toHaveBeenCalledTimes(3);
+      releases[0]!();
+      await flush();
+      expect(transcribe).toHaveBeenCalledTimes(4);
+    });
+
+    it('shows a fast result at once without waiting for a slower earlier one', async () => {
+      const resolvers: ((text: string) => void)[] = [];
+      const transcribe = vi.fn<Transcribe>(
+        (_id, input) =>
+          new Promise((resolve) =>
+            resolvers.push((text) => resolve({ segmentId: input.segmentId, text })),
+          ),
+      );
+      const ctx = await running({ transcribe });
+      ctx.emitUtterance(utterance({ segmentId, startMs: 0, endMs: 500 }));
+      ctx.emitUtterance(utterance({ segmentId: id2, startMs: 600, endMs: 900 }));
+      await flush();
+      resolvers[1]!('hai');
+      await flush();
+      expect(ctx.published.map((event) => event.text)).toEqual(['hai']);
+      expect(ctx.sent).toEqual([expect.objectContaining({ segmentId: id2, startMs: 600 })]);
+      resolvers[0]!('một');
+      await flush();
+      expect(ctx.published.map((event) => event.text)).toEqual(['hai', 'một']);
+      expect(ctx.sent).toHaveLength(2);
+    });
+
+    it('refuses to start without consent and sends no audio', async () => {
+      const ctx = setup(undefined, { consent: false });
+      await ctx.controller.start(3, 'vi');
+
+      expect(ctx.controller.getSnapshot().status).toBe('error');
+      expect(ctx.controller.getSnapshot().error?.message).toBe('cloud_consent_required');
+      expect(ctx.sessions.create).not.toHaveBeenCalled();
+      expect(ctx.native.sessionStart).not.toHaveBeenCalled();
+      expect(ctx.native.onUtterance).not.toHaveBeenCalled();
+    });
+
+    describe('stop drains the last sentences', () => {
+      const holdAll = () => {
+        const releases: ((text?: string) => void)[] = [];
+        const signals: (AbortSignal | undefined)[] = [];
+        const transcribe = vi.fn<Transcribe>(
+          (_id, input, signal) =>
+            new Promise((resolve) => {
+              signals.push(signal);
+              releases.push((text = 'muộn') => resolve({ segmentId: input.segmentId, text }));
+            }),
+        );
+        return { transcribe, releases, signals };
+      };
+      const ids = () => crypto.randomUUID();
+
+      it('keeps the status running with the badge language until the drain is done', async () => {
+        const held = holdAll();
+        const ctx = await running({ transcribe: held.transcribe });
+        ctx.emitUtterance(utterance());
+        await flush();
+        const stopping = ctx.controller.stop();
+        await flush();
+
+        expect(ctx.native.sessionStop).toHaveBeenCalledOnce();
+        expect(ctx.sessions.end).not.toHaveBeenCalled();
+        expect(ctx.controller.getSnapshot()).toMatchObject({
+          meetingLanguage: 'vi',
+          completedSessionId: null,
+        });
+        expect(ctx.controller.getSnapshot().status).not.toBe('idle');
+
+        held.releases[0]!('câu cuối');
+        await vi.advanceTimersByTimeAsync(3_000);
+        await stopping;
+
+        expect(ctx.published.map((event) => event.text)).toEqual(['câu cuối']);
+        expect(ctx.sent).toEqual([expect.objectContaining({ text: 'câu cuối' })]);
+        expect(ctx.sessions.end).toHaveBeenCalledWith(sessionId);
+        expect(ctx.realtime.close).toHaveBeenCalled();
+        expect(ctx.unlistenUtterance).toHaveBeenCalledOnce();
+        expect(ctx.controller.getSnapshot()).toMatchObject({
+          status: 'idle',
+          completedSessionId: sessionId,
+          meetingLanguage: null,
+        });
+      });
+
+      it('sends the stop command before anything else and uploads a flush utterance within 3 s', async () => {
+        const ctx = await running();
+        const stopping = ctx.controller.stop();
+        await vi.advanceTimersByTimeAsync(2_900);
+        ctx.emitUtterance(utterance());
+        await vi.advanceTimersByTimeAsync(200);
+        await stopping;
+
+        expect(ctx.sessions.transcribe).toHaveBeenCalledTimes(1);
+        expect(ctx.sent).toHaveLength(1);
+      });
+
+      it('takes no utterance later than 3 s after stop', async () => {
+        const ctx = await running();
+        const stopping = ctx.controller.stop();
+        await vi.advanceTimersByTimeAsync(3_001);
+        ctx.emitUtterance(utterance());
+        await flush();
+        await stopping;
+
+        expect(ctx.sessions.transcribe).not.toHaveBeenCalled();
+      });
+
+      it('uploads what was queued before stop, including the fourth when a slot frees', async () => {
+        const held = holdAll();
+        const ctx = await running({ transcribe: held.transcribe });
+        for (let i = 0; i < 4; i += 1) ctx.emitUtterance(utterance({ segmentId: ids() }));
+        await flush();
+        expect(held.transcribe).toHaveBeenCalledTimes(3);
+        const stopping = ctx.controller.stop();
+        await flush();
+        held.releases[0]!();
+        await flush();
+        expect(held.transcribe).toHaveBeenCalledTimes(4);
+        held.releases.slice(1).forEach((release) => release());
+        await vi.advanceTimersByTimeAsync(3_000);
+        await stopping;
+
+        expect(ctx.published).toHaveLength(4);
+        expect(ctx.sent).toHaveLength(4);
+      });
+
+      it('ends after 15 s, aborts what is pending and starts nothing more', async () => {
+        const held = holdAll();
+        const ctx = await running({ transcribe: held.transcribe });
+        for (let i = 0; i < 4; i += 1) ctx.emitUtterance(utterance({ segmentId: ids() }));
+        await flush();
+        const stopping = ctx.controller.stop();
+        await vi.advanceTimersByTimeAsync(14_999);
+        expect(ctx.sessions.end).not.toHaveBeenCalled();
+        expect(held.signals.every((signal) => signal?.aborted === false)).toBe(true);
+        await vi.advanceTimersByTimeAsync(1);
+        await stopping;
+
+        expect(held.signals.every((signal) => signal?.aborted === true)).toBe(true);
+        expect(ctx.sessions.end).toHaveBeenCalledOnce();
+        // A slot frees after the deadline: the fourth must not start.
+        held.releases.forEach((release) => release('quá muộn'));
+        await flush();
+        expect(held.transcribe).toHaveBeenCalledTimes(3);
+        expect(ctx.published).toEqual([]);
+        expect(ctx.sent).toEqual([]);
+      });
+
+      it('does not retry after the deadline', async () => {
+        let attempts = 0;
+        const transcribe = vi.fn<Transcribe>(async (_id, _input, signal) => {
+          attempts += 1;
+          await new Promise<void>((resolve) =>
+            signal?.addEventListener('abort', () => resolve(), { once: true }),
+          );
+          throw new Error('network');
+        });
+        const ctx = await running({ transcribe });
+        ctx.emitUtterance(utterance());
+        await flush();
+        const stopping = ctx.controller.stop();
+        await vi.advanceTimersByTimeAsync(15_000);
+        await stopping;
+        await flush();
+
+        expect(attempts).toBe(1);
+        expect(ctx.published).toEqual([]);
+      });
+
+      it('does not start a second drain when stop is pressed again', async () => {
+        const held = holdAll();
+        const ctx = await running({ transcribe: held.transcribe });
+        ctx.emitUtterance(utterance());
+        await flush();
+        const first = ctx.controller.stop();
+        const second = ctx.controller.stop();
+        held.releases[0]!();
+        await vi.advanceTimersByTimeAsync(3_000);
+        await Promise.all([first, second]);
+
+        expect(ctx.native.sessionStop).toHaveBeenCalledOnce();
+        expect(ctx.sessions.end).toHaveBeenCalledOnce();
+      });
+
+      it('does not switch language while draining', async () => {
+        const ctx = await running();
+        ctx.emitAudioModel({ type: 'language-suggestion', language: 'en', confidence: 0.9 });
+        const stopping = ctx.controller.stop();
+        await ctx.controller.acceptSuggestedLanguage();
+        await vi.advanceTimersByTimeAsync(3_000);
+        await stopping;
+
+        expect(ctx.sessions.setLanguage).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('retries', () => {
+      const failWith = (status?: number) =>
+        vi
+          .fn<Transcribe>()
+          .mockRejectedValue(new TranscribeError('Transcribe request failed', status));
+
+      it.each([500, 502, 503])('retries once on HTTP %i', async (status) => {
+        const transcribe = failWith(status);
+        const ctx = await running({ transcribe });
+        ctx.emitUtterance(utterance());
+        await flush();
+        expect(transcribe).toHaveBeenCalledTimes(2);
+      });
+
+      it('retries once on a network error or timeout (no status)', async () => {
+        const transcribe = failWith(undefined);
+        const ctx = await running({ transcribe });
+        ctx.emitUtterance(utterance());
+        await flush();
+        expect(transcribe).toHaveBeenCalledTimes(2);
+      });
+
+      it('waits about a second before retrying a 429', async () => {
+        const transcribe = failWith(429);
+        const ctx = await running({ transcribe });
+        ctx.emitUtterance(utterance());
+        await vi.advanceTimersByTimeAsync(900);
+        expect(transcribe).toHaveBeenCalledTimes(1);
+        await vi.advanceTimersByTimeAsync(100);
+        expect(transcribe).toHaveBeenCalledTimes(2);
+        expect(ctx.published.map((event) => event.text)).toEqual(['[không nhận dạng được]']);
+      });
+
+      it.each([400, 404, 413, 422])('never retries HTTP %i', async (status) => {
+        const transcribe = failWith(status);
+        const ctx = await running({ transcribe });
+        ctx.emitUtterance(utterance());
+        await vi.advanceTimersByTimeAsync(5_000);
+        expect(transcribe).toHaveBeenCalledTimes(1);
+        expect(ctx.published.map((event) => event.text)).toEqual(['[không nhận dạng được]']);
+      });
+    });
+
+    describe('the meeting language', () => {
+      it('is in the snapshot from start until the meeting has fully ended', async () => {
+        const ctx = await running();
+        expect(ctx.controller.getSnapshot().meetingLanguage).toBe('vi');
+        const stopping = ctx.controller.stop();
+        await vi.advanceTimersByTimeAsync(3_000);
+        await stopping;
+        expect(ctx.controller.getSnapshot().meetingLanguage).toBeNull();
+      });
+
+      it('follows an accepted language switch', async () => {
+        const ctx = await running();
+        ctx.emitAudioModel({ type: 'language-suggestion', language: 'en', confidence: 0.9 });
+        await ctx.controller.acceptSuggestedLanguage();
+        expect(ctx.controller.getSnapshot().meetingLanguage).toBe('en');
+      });
+
+      it('is cleared when the start fails', async () => {
+        const ctx = setup();
+        ctx.sessions.create.mockRejectedValueOnce(new Error('down'));
+        await ctx.controller.start(3, 'en');
+        expect(ctx.controller.getSnapshot().meetingLanguage).toBeNull();
+      });
+    });
+
+    describe('accepting a suggested language', () => {
+      it('shows the consent error when switching into a cloud language without consent', async () => {
+        const ctx = setup(undefined, { consent: false });
+        await ctx.controller.start(3, 'en');
+        ctx.emitAudioModel({ type: 'language-suggestion', language: 'vi', confidence: 0.9 });
+        await ctx.controller.acceptSuggestedLanguage();
+
+        expect(ctx.controller.getSnapshot().status).toBe('error');
+        expect(ctx.controller.getSnapshot().error?.message).toBe('cloud_consent_required');
+        expect(ctx.sessions.setLanguage).not.toHaveBeenCalled();
+        expect(ctx.native.onUtterance).not.toHaveBeenCalled();
+      });
+
+      async function pending() {
+        const ctx = setup();
+        await ctx.controller.start(3, 'en');
+        ctx.emitAudioModel({ type: 'language-suggestion', language: 'vi', confidence: 0.9 });
+        let release: () => void = () => {};
+        ctx.sessions.setLanguage.mockImplementationOnce(
+          (_id: string, language: string) =>
+            new Promise((resolve) => {
+              release = () =>
+                resolve({
+                  id: sessionId,
+                  title: null,
+                  startedAt: '2026-11-03T00:00:00.000Z',
+                  endedAt: null,
+                  status: 'live' as const,
+                  assistLevel: 3,
+                  language: language as 'en',
+                });
+            }),
+        );
+        return { ctx, release: () => release() };
+      }
+
+      it('does nothing more when Stop came while setLanguage was pending', async () => {
+        const { ctx, release } = await pending();
+        const accepting = ctx.controller.acceptSuggestedLanguage();
+        await ctx.controller.stop();
+        release();
+        await accepting;
+
+        expect(ctx.native.onUtterance).not.toHaveBeenCalled();
+        expect(ctx.native.setLanguage).not.toHaveBeenCalled();
+        expect(ctx.controller.getSnapshot().status).toBe('idle');
+        expect(ctx.controller.getSnapshot().error).toBeNull();
+      });
+
+      it('does nothing more when another meeting started meanwhile', async () => {
+        const { ctx, release } = await pending();
+        const accepting = ctx.controller.acceptSuggestedLanguage();
+        await ctx.controller.stop();
+        await ctx.controller.start(3, 'en');
+        release();
+        await accepting;
+
+        expect(ctx.native.onUtterance).not.toHaveBeenCalled();
+        expect(ctx.native.setLanguage).not.toHaveBeenCalled();
+        expect(ctx.controller.getSnapshot().error).toBeNull();
+      });
+
+      it('stays silent when setLanguage fails after Stop', async () => {
+        const { ctx } = await pending();
+        let reject: (error: Error) => void = () => {};
+        ctx.sessions.setLanguage.mockReset();
+        ctx.sessions.setLanguage.mockImplementationOnce(
+          () => new Promise((_resolve, rej) => (reject = rej)),
+        );
+        const accepting = ctx.controller.acceptSuggestedLanguage();
+        await ctx.controller.stop();
+        reject(new Error('late failure'));
+        await accepting;
+
+        expect(ctx.controller.getSnapshot().status).toBe('idle');
+        expect(ctx.controller.getSnapshot().error).toBeNull();
+      });
+    });
+
+    it('does not upload utterances of a device language and never listens for them', async () => {
+      const ctx = setup();
+      await ctx.controller.start(3, 'en');
+      ctx.emitUtterance(utterance());
+      await flush();
+
+      expect(ctx.native.onUtterance).not.toHaveBeenCalled();
+      expect(ctx.sessions.transcribe).not.toHaveBeenCalled();
+    });
+
+    it('does not upload after the meeting switched to a device language', async () => {
+      const ctx = await running();
+      ctx.emitAudioModel({ type: 'language-suggestion', language: 'en', confidence: 0.9 });
+      await ctx.controller.acceptSuggestedLanguage();
+      ctx.emitUtterance(utterance());
+      await flush();
+
+      expect(ctx.sessions.transcribe).not.toHaveBeenCalled();
     });
   });
 });

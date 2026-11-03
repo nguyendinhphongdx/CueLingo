@@ -3,7 +3,7 @@ import { Button } from '@cuelingo/ui/components/button';
 import { Card, CardContent } from '@cuelingo/ui/components/card';
 import { Section } from '@cuelingo/ui/components/section';
 import { useProgress } from './use-progress';
-import { useLanguage } from '../settings';
+import { useLearnLanguage } from '../settings';
 
 const chartColor = 'var(--primary)';
 
@@ -189,7 +189,7 @@ function ChartEmptyState({ children }: { children: React.ReactNode }) {
 }
 
 export function ProgressPage() {
-  const { progress, loading, error, retry } = useProgress(useLanguage().language);
+  const { progress, loading, error, retry } = useProgress(useLearnLanguage().language);
   if (loading) return <p className="text-muted-foreground text-sm">Đang tải tiến độ…</p>;
   if (error)
     return (

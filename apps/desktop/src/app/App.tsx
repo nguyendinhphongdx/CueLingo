@@ -14,7 +14,12 @@ import { PrivacyPanel } from '../privacy';
 import { RecentSessions, SessionPanel } from '../session';
 import { PlacementSection } from '../study';
 import { CalendarHintCard, CalendarSettings } from '../calendar';
-import { AssistSettings, AssistSuggestionBanner, useLanguage, useSettingsSync } from '../settings';
+import {
+  AssistSettings,
+  AssistSuggestionBanner,
+  useLearnLanguage,
+  useSettingsSync,
+} from '../settings';
 import { useSyncAssistLevel } from '../settings/use-assist-settings';
 import { AboutCard, ShortcutList } from './AboutCard';
 import { Button } from '@cuelingo/ui/components/button';
@@ -100,7 +105,7 @@ function CurrentView({
   onReviewOnboarding(): void;
 }) {
   const feature = features.find((item) => item.id === view)!;
-  const { language, setLanguage, options } = useLanguage();
+  const { language, setLanguage, options } = useLearnLanguage();
   const Page = views[view];
   if (Page) {
     return (

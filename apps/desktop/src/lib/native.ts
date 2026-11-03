@@ -70,6 +70,18 @@ export const SegmentEvent = z.object({
 });
 export type SegmentEvent = z.infer<typeof SegmentEvent>;
 
+/** One finished utterance of a cloud-recognised meeting: 16-bit LE mono PCM, base64 (ADR 0014). Never log it. */
+export const UtteranceEvent = z.object({
+  type: z.literal('utterance'),
+  segmentId: z.uuid(),
+  stream: z.enum(['system', 'mic']),
+  startMs: z.number().nonnegative(),
+  endMs: z.number().nonnegative(),
+  sampleRate: z.literal(16000),
+  pcm: z.base64(),
+});
+export type UtteranceEvent = z.infer<typeof UtteranceEvent>;
+
 /** The speech model loading (or a language switch finishing), and recognition time once a session ends. */
 export const AudioModelEvent = z.discriminatedUnion('type', [
   z.object({
@@ -159,12 +171,16 @@ export const native = {
   permissionsStatus: () => invoke('permissions_status').then((v) => PermissionsStatus.parse(v)),
   setAssistLevel: (level: number) =>
     invoke('set_assist_level', { level: AssistLevel.parse(level) }).then(() => undefined),
+  hideOverlay: () => invoke('hide_overlay').then(() => undefined),
   toggleOverlay: () => invoke('toggle_overlay').then((v) => z.boolean().parse(v)),
   onTranscript: (cb: (e: TranscriptEvent) => void): Promise<UnlistenFn> =>
     listen('transcript', (e) => cb(TranscriptEvent.parse(e.payload))),
   /** Native STT output (emitted by the Rust core from the Swift sidecar). */
   onSegment: (cb: (e: SegmentEvent) => void): Promise<UnlistenFn> =>
     listen('segment', (e) => cb(SegmentEvent.parse(e.payload))),
+  /** Utterance audio for languages recognised in the cloud (emitted by the Rust core from the Swift sidecar). */
+  onUtterance: (cb: (e: UtteranceEvent) => void): Promise<UnlistenFn> =>
+    listen('audio-utterance', (e) => cb(UtteranceEvent.parse(e.payload))),
   /** Windows share state through global events: the main window publishes, the overlay listens. */
   publishTranscript: (e: TranscriptEvent) => emit('transcript', TranscriptEvent.parse(e)),
   /** Tells the other windows (the overlay has its own JS context) that the signed-in person changed. */

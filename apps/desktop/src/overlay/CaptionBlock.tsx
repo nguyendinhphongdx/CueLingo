@@ -1,3 +1,4 @@
+import { isLanguageCode, SUPPORTED_LANGUAGES } from '@cuelingo/shared';
 import type { TranscriptEvent } from '../lib/native';
 import { splitParts } from '@cuelingo/ui/lib/text-units';
 
@@ -48,7 +49,10 @@ function OriginalText({
 /** One sentence of the meeting: the spoken language on top, the Vietnamese rendering under it. */
 export function CaptionBlock({ segment, level, faded, showSpeaker, onLookup }: CaptionBlockProps) {
   const mine = segment.stream === 'mic';
-  const showEnglish = level !== 1;
+  // A language that is not translated (Vietnamese) has only its own text: always show it, never wait for a translation.
+  const code = segment.language ?? 'en';
+  const translates = isLanguageCode(code) ? SUPPORTED_LANGUAGES[code].translates : true;
+  const showEnglish = level !== 1 || !translates;
   const translation = segment.translation;
 
   return (
@@ -88,7 +92,7 @@ export function CaptionBlock({ segment, level, faded, showSpeaker, onLookup }: C
         >
           {translation}
         </p>
-      ) : segment.partial || mine ? null : (
+      ) : segment.partial || mine || !translates ? null : (
         <p
           data-role="translation"
           className="text-muted-foreground mt-0.5 animate-pulse text-[0.9em]"

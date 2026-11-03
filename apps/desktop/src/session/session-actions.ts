@@ -4,7 +4,6 @@ import type { SelectableAssistLevel } from '../settings';
 export const startSession = (assistLevel: SelectableAssistLevel) =>
   native.sessionStart({ assistLevel });
 export const stopSession = () => native.sessionStop();
-export const toggleOverlay = () => native.toggleOverlay();
 export const openDebrief = (sessionId: string) => {
   const webUrl = (import.meta.env.VITE_WEB_URL || 'http://localhost:3000').replace(/\/$/, '');
   return native.openUrl(`${webUrl}/sessions/${sessionId}`);
@@ -23,6 +22,8 @@ export function describeNativeError(error: unknown) {
       return 'Một phiên đang chạy. Hãy dừng phiên đó trước khi bắt đầu phiên mới.';
     case 'invalid_assist_level':
       return 'Mức hỗ trợ không hợp lệ. Hãy chọn lại mức hỗ trợ.';
+    case 'cloud_consent_required':
+      return 'Cần bạn đồng ý gửi âm thanh tới Google trước khi họp bằng ngôn ngữ này.';
     default:
       return error == null ? null : 'CueLingo gặp lỗi. Vui lòng thử lại.';
   }

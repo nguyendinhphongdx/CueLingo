@@ -3,6 +3,7 @@ import {
   DEFAULT_LANGUAGE,
   isLanguageCode,
   languageOptions,
+  SUPPORTED_LANGUAGES,
   type GlossaryTerm,
   type LanguageCode,
   type ServerMessage,
@@ -13,9 +14,10 @@ import type {
   SessionStartInput,
   SessionStartResult,
   TranscriptEvent,
+  UtteranceEvent,
 } from '../lib/native';
 import type { SelectableAssistLevel } from '../settings';
-import type { SessionsApi } from './sessions-api';
+import type { SessionsApi, TranscribeError } from './sessions-api';
 
 export type SessionStatus = 'idle' | 'connecting' | 'running' | 'reconnecting' | 'error';
 
@@ -25,12 +27,16 @@ export interface SessionSnapshot {
   completedSessionId: string | null;
   /** Another language the speakers seem to be using; offered to the person, never applied alone. */
   suggestedLanguage: LanguageCode | null;
+  /** Language of the meeting that runs (set at start, cleared once it has fully ended). */
+  meetingLanguage: LanguageCode | null;
 }
 
 interface NativeSessionBridge {
   sessionStart(input: SessionStartInput): Promise<SessionStartResult>;
   sessionStop(): Promise<void>;
+  hideOverlay(): Promise<void>;
   onSegment(callback: (event: SegmentEvent) => void): Promise<() => void>;
+  onUtterance(callback: (event: UtteranceEvent) => void): Promise<() => void>;
   onAudioModel(callback: (event: AudioModelEvent) => void): Promise<() => void>;
   setLanguage(language: string): Promise<void>;
   setVocabulary(terms: string[]): Promise<void>;
@@ -39,9 +45,11 @@ interface NativeSessionBridge {
 
 interface SessionControllerOptions {
   native: NativeSessionBridge;
-  sessions: Pick<SessionsApi, 'create' | 'end' | 'setLanguage'>;
+  sessions: Pick<SessionsApi, 'create' | 'end' | 'setLanguage' | 'transcribe'>;
   /** The person's glossary; its terms go to the speech model so it spells them right. */
   glossary?: { list(language: LanguageCode): Promise<GlossaryTerm[]> };
+  /** Whether the person agreed to send meeting audio to the cloud (ADR 0014); without it a cloud-language meeting does not start. */
+  hasCloudConsent?: () => boolean;
   createRealtime(options: RealtimeClientOptions): RealtimeClient;
   now?: () => number;
   apiUrl?: string;
@@ -99,6 +107,52 @@ function isSendableTerm(term: string): boolean {
   return true;
 }
 
+/** Uploads running at once; each is one utterance of a few seconds. */
+const UPLOAD_CONCURRENCY = 3;
+/** After Stop the sidecar flushes its last utterance; later ones are not taken. */
+const DRAIN_ACCEPT_MS = 3_000;
+/** Uploads still pending this long after Stop are aborted and dropped. */
+const DRAIN_DEADLINE_MS = 15_000;
+/** Wait before retrying a rate-limited upload. */
+const RATE_LIMIT_RETRY_MS = 1_000;
+/** Shown in place of a sentence the cloud could not recognise (after one retry). */
+export const UNRECOGNISED_TEXT = '[không nhận dạng được]';
+
+/** Uploads of one running meeting; replaced (and so abandoned) when the meeting ends. */
+interface CloudUploads {
+  active: number;
+  queue: (() => Promise<void>)[];
+  /** Nothing starts once closed (deadline passed or meeting abandoned). */
+  closed: boolean;
+  abort: AbortController;
+  onIdle: (() => void) | null;
+}
+
+function newUploads(): CloudUploads {
+  return { active: 0, queue: [], closed: false, abort: new AbortController(), onIdle: null };
+}
+
+/** Only what can heal is retried: no HTTP status (network, timeout), 5xx and 429. */
+function isRetryable(error: unknown): boolean {
+  const status = (error as Partial<TranscribeError> | null)?.status;
+  return status === undefined || status >= 500 || status === 429;
+}
+
+function pause(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(done, ms);
+    function done() {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', done);
+      resolve();
+    }
+    signal.addEventListener('abort', done, { once: true });
+  });
+}
+
+const isCloudLanguage = (language: LanguageCode) =>
+  SUPPORTED_LANGUAGES[language].recognition === 'cloud';
+
 function realtimeStatus(state: RealtimeState): SessionStatus | null {
   switch (state) {
     case 'connecting':
@@ -121,6 +175,7 @@ export function createSessionController({
   native,
   sessions,
   glossary,
+  hasCloudConsent = () => false,
   createRealtime,
   now = Date.now,
   apiUrl = 'ws://localhost:4000',
@@ -131,6 +186,7 @@ export function createSessionController({
     error: null,
     completedSessionId: null,
     suggestedLanguage: null,
+    meetingLanguage: null,
   };
   let realtime: RealtimeClient | null = null;
   let activeSessionId: string | null = null;
@@ -138,6 +194,12 @@ export function createSessionController({
   let stopPromise: Promise<void> | null = null;
   let stopSegmentListener: (() => void) | null = null;
   let stopModelListener: (() => void) | null = null;
+  let stopUtteranceListener: (() => void) | null = null;
+  let utteranceRegistration = 0;
+  let uploads = newUploads();
+  /** True from Stop until the 3 s flush window of a cloud meeting is over. */
+  let acceptingAfterStop = false;
+  let stopping = false;
   let listenerRegistration = 0;
   let runtimeGeneration = 0;
   let demoTimers: ReturnType<typeof setTimeout>[] = [];
@@ -155,6 +217,13 @@ export function createSessionController({
   function update(next: Partial<SessionSnapshot>) {
     snapshot = { ...snapshot, ...next };
     listeners.forEach((listener) => listener());
+  }
+
+  /** The overlay follows the meeting: it goes away when the meeting is over. Never throws. */
+  function hideOverlay() {
+    void Promise.resolve()
+      .then(() => native.hideOverlay())
+      .catch(() => undefined);
   }
 
   function fail(error: unknown) {
@@ -190,6 +259,100 @@ export function createSessionController({
         words: segment.words,
       });
     }
+  }
+
+  /** Runs at most UPLOAD_CONCURRENCY tasks of the current meeting at once. */
+  function pump(current: CloudUploads) {
+    while (!current.closed && current.active < UPLOAD_CONCURRENCY && current.queue.length > 0) {
+      const task = current.queue.shift()!;
+      current.active += 1;
+      void task().finally(() => {
+        current.active -= 1;
+        pump(current);
+        if (current.active === 0 && current.queue.length === 0) current.onIdle?.();
+      });
+    }
+  }
+
+  /** Uploads one utterance; the error is never inspected or logged (it could echo the request). */
+  async function recognise(
+    sessionId: string,
+    utterance: UtteranceEvent,
+    signal: AbortSignal,
+  ): Promise<string | null> {
+    const request = {
+      segmentId: utterance.segmentId,
+      stream: utterance.stream,
+      startMs: Math.round(utterance.startMs),
+      endMs: Math.round(utterance.endMs),
+      sampleRate: utterance.sampleRate,
+      pcm: utterance.pcm,
+    };
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        return (await sessions.transcribe(sessionId, request, signal)).text;
+      } catch (error) {
+        // Retry once, and only for what can heal; give up on this sentence otherwise.
+        if (attempt === 1 || signal.aborted || !isRetryable(error)) return null;
+        if ((error as Partial<TranscribeError>).status === 429) {
+          await pause(RATE_LIMIT_RETRY_MS, signal);
+          if (signal.aborted) return null;
+        }
+      }
+    }
+    return null;
+  }
+
+  function handleUtterance(utterance: UtteranceEvent) {
+    const sessionId = activeSessionId;
+    // Audio never leaves without consent, and never for a language the device recognises itself.
+    if (!sessionId || !isCloudLanguage(meetingLanguage) || !hasCloudConsent()) return;
+    if (stopping && !acceptingAfterStop) return;
+    const generation = runtimeGeneration;
+    const current = uploads;
+
+    current.queue.push(async () => {
+      const text = await recognise(sessionId, utterance, current.abort.signal);
+      if (generation !== runtimeGeneration || current.closed) return;
+      // Each result goes out as soon as it is ready; a slow upload never holds a later one back.
+      if (text === null) {
+        // Local only: the server never hears about a sentence it did not recognise.
+        publish({
+          segmentId: utterance.segmentId,
+          stream: utterance.stream,
+          text: UNRECOGNISED_TEXT,
+          translation: null,
+          partial: false,
+        });
+        return;
+      }
+      if (text.trim() === '') return;
+      publish({
+        segmentId: utterance.segmentId,
+        stream: utterance.stream,
+        text,
+        translation: null,
+        partial: false,
+      });
+      realtime?.send({
+        type: 'segment.final',
+        segmentId: utterance.segmentId,
+        stream: utterance.stream,
+        startMs: Math.round(utterance.startMs),
+        endMs: Math.round(utterance.endMs),
+        text,
+        words: [],
+      });
+    });
+    pump(current);
+  }
+
+  async function listenForUtterances() {
+    if (stopUtteranceListener) return;
+    const registration = ++utteranceRegistration;
+    const unlisten = await native.onUtterance(handleUtterance);
+    if (registration !== utteranceRegistration || stopUtteranceListener) unlisten();
+    else stopUtteranceListener = unlisten;
   }
 
   function handleMessage(message: ServerMessage) {
@@ -250,11 +413,51 @@ export function createSessionController({
     stopSegmentListener = null;
     stopModelListener?.();
     stopModelListener = null;
+    utteranceRegistration += 1;
+    stopUtteranceListener?.();
+    stopUtteranceListener = null;
+    uploads.closed = true;
+    uploads.queue = [];
+    uploads.abort.abort();
+    uploads = newUploads();
     realtime?.close();
     realtime = null;
     demoTimers.forEach(clearTimeout);
     demoTimers = [];
     transcriptById.clear();
+  }
+
+  /**
+   * After Stop: takes new utterances for DRAIN_ACCEPT_MS, then waits for every queued and in-flight
+   * upload, but never past DRAIN_DEADLINE_MS; what is still pending then is aborted and dropped.
+   */
+  async function drainUploads() {
+    const current = uploads;
+    acceptingAfterStop = true;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const wait = (ms: number) =>
+      new Promise<void>((resolve) => timers.push(setTimeout(resolve, ms)));
+    const idle = () =>
+      new Promise<void>((resolve) => {
+        if (current.active === 0 && current.queue.length === 0) resolve();
+        else current.onIdle = resolve;
+      });
+    const finished = wait(DRAIN_ACCEPT_MS).then(() => {
+      acceptingAfterStop = false;
+      return idle().then(() => 'idle' as const);
+    });
+    const outcome = await Promise.race([
+      finished,
+      wait(DRAIN_DEADLINE_MS).then(() => 'deadline' as const),
+    ]);
+    timers.forEach(clearTimeout);
+    acceptingAfterStop = false;
+    current.onIdle = null;
+    if (outcome === 'deadline') {
+      current.closed = true;
+      current.queue = [];
+      current.abort.abort();
+    }
   }
 
   /** Loads the list and sends it unless something newer (a later load, a stop, a language change) won. */
@@ -291,6 +494,10 @@ export function createSessionController({
     async start(assistLevel, language = DEFAULT_LANGUAGE) {
       if (snapshot.status !== 'idle' && snapshot.status !== 'error') return;
       clearRuntime();
+      if (isCloudLanguage(language) && !hasCloudConsent()) {
+        fail(new Error('cloud_consent_required'));
+        return;
+      }
       meetingLanguage = language;
       const generation = runtimeGeneration;
       startingGeneration = generation;
@@ -299,6 +506,7 @@ export function createSessionController({
         error: null,
         completedSessionId: null,
         suggestedLanguage: null,
+        meetingLanguage: language,
       });
 
       const startRequest = ++vocabularyRequest;
@@ -317,6 +525,7 @@ export function createSessionController({
         activeSessionId = session.id;
         await listenForSegments();
         await listenForAudioModel();
+        if (isCloudLanguage(language)) await listenForUtterances();
         if (generation !== runtimeGeneration) return;
         const loaded = glossary ? await Promise.race([pendingVocabulary, timeout]) : undefined;
         if (generation !== runtimeGeneration) return;
@@ -364,6 +573,8 @@ export function createSessionController({
       } catch (error) {
         if (generation !== runtimeGeneration) return;
         clearRuntime();
+        update({ meetingLanguage: null });
+        hideOverlay();
         fail(error);
       } finally {
         clearTimeout(deadline);
@@ -373,6 +584,47 @@ export function createSessionController({
       if (stopPromise) return stopPromise;
 
       const sessionId = activeSessionId;
+      const drains = sessionId !== null && captureRunning && isCloudLanguage(meetingLanguage);
+      const finish = (nativeError: unknown, apiResult: PromiseSettledResult<unknown>) => {
+        const error =
+          nativeError !== undefined
+            ? nativeError
+            : apiResult.status === 'rejected'
+              ? apiResult.reason
+              : null;
+        update({
+          status: nativeError !== undefined ? 'error' : 'idle',
+          error: error instanceof Error || error === null ? error : new Error(String(error)),
+          completedSessionId: sessionId ?? snapshot.completedSessionId,
+          meetingLanguage: null,
+        });
+        hideOverlay();
+      };
+
+      if (drains) {
+        // The status stays as it is until the last sentence is sent (the panel keeps its badge).
+        stopping = true;
+        stopPromise = (async () => {
+          const draining = drainUploads();
+          const nativeResult = await Promise.allSettled([native.sessionStop()]);
+          await draining;
+          const apiResult = (await Promise.allSettled([sessions.end(sessionId)]))[0];
+          activeSessionId = null;
+          stopping = false;
+          clearRuntime();
+          finish(
+            nativeResult[0].status === 'rejected'
+              ? (nativeResult[0].reason ?? new Error('stop'))
+              : undefined,
+            apiResult,
+          );
+        })().finally(() => {
+          stopping = false;
+          stopPromise = null;
+        });
+        return stopPromise;
+      }
+
       activeSessionId = null;
       clearRuntime();
       stopPromise = (async () => {
@@ -380,17 +632,12 @@ export function createSessionController({
           native.sessionStop(),
           sessionId ? sessions.end(sessionId) : Promise.resolve(),
         ]);
-        const error =
+        finish(
           nativeResult.status === 'rejected'
-            ? nativeResult.reason
-            : apiResult.status === 'rejected'
-              ? apiResult.reason
-              : null;
-        update({
-          status: nativeResult.status === 'rejected' ? 'error' : 'idle',
-          error: error instanceof Error || error === null ? error : new Error(String(error)),
-          completedSessionId: sessionId ?? snapshot.completedSessionId,
-        });
+            ? (nativeResult.reason ?? new Error('stop'))
+            : undefined,
+          apiResult,
+        );
       })().finally(() => {
         stopPromise = null;
       });
@@ -400,19 +647,33 @@ export function createSessionController({
       const target = snapshot.suggestedLanguage;
       const sessionId = activeSessionId;
       update({ suggestedLanguage: null });
-      if (!target || !sessionId) return;
+      if (!target || !sessionId || stopping) return;
+      // Switching into a cloud language needs the same consent as starting in one.
+      if (isCloudLanguage(target) && !hasCloudConsent()) {
+        fail(new Error('cloud_consent_required'));
+        return;
+      }
+      const generation = runtimeGeneration;
+      // A Stop or a new meeting while a step was pending makes this switch stale: it does nothing more.
+      const stale = () =>
+        generation !== runtimeGeneration || activeSessionId !== sessionId || stopping;
       try {
         // The server first (the realtime side re-reads it), then the open socket, then the speech model.
         await sessions.setLanguage(sessionId, target);
+        if (stale()) return;
         realtime?.send({ type: 'language.set' });
+        if (isCloudLanguage(target)) await listenForUtterances();
+        if (stale()) return;
         await native.setLanguage(target);
+        if (stale()) return;
         meetingLanguage = target;
+        update({ meetingLanguage: target });
         // The new language's list replaces the old one right away, without the debounce.
         if (vocabularyTimer) clearTimeout(vocabularyTimer);
         vocabularyTimer = null;
         void refreshNow();
       } catch (error) {
-        fail(error);
+        if (!stale()) fail(error);
       }
     },
     dismissSuggestedLanguage() {

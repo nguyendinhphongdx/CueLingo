@@ -11,6 +11,7 @@ import {
 import { currentToken } from '../auth/auth-store';
 import { resolveToken, type TokenSource } from '../auth/token';
 import { useSettings } from './settings-store';
+import { toLearnLanguage } from './use-language';
 
 type Fetch = typeof fetch;
 
@@ -128,5 +129,7 @@ export const settingsApi = createSettingsApi({
   token: currentToken,
 });
 
-const saver = createDebouncedSettingsSaver(settingsApi, 800, () => useSettings.getState().language);
+const saver = createDebouncedSettingsSaver(settingsApi, 800, () =>
+  toLearnLanguage(useSettings.getState().language),
+);
 export const queueSettingsPatch = (patch: UpdateUserSettings) => saver.schedule(patch);

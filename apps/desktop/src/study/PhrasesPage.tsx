@@ -6,7 +6,7 @@ import { Search } from 'lucide-react';
 import { useDeferredValue, useState } from 'react';
 import { studyApi } from './study-api';
 import { confirmPhraseRemoval, usePhrases } from './use-phrases';
-import { useLanguage } from '../settings';
+import { useLearnLanguage } from '../settings';
 
 export function filterPhrases(phrases: Phrase[], search: string) {
   const normalizedSearch = search.trim().toLocaleLowerCase('vi');
@@ -78,7 +78,7 @@ export function PhraseList({
 }
 
 export function PhrasesPage() {
-  const phrases = usePhrases(useLanguage().language);
+  const phrases = usePhrases(useLearnLanguage().language);
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
   const filteredPhrases = filterPhrases(phrases.phrases, deferredSearch);

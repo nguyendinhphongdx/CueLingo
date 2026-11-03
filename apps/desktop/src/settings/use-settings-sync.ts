@@ -5,6 +5,7 @@ import { native } from '../lib/native';
 import { storeOverlaySettings } from '../overlay/overlay-prefs';
 import { settingsApi, type SettingsApi } from './settings-api';
 import { useSettings } from './settings-store';
+import { useLearnLanguage } from './use-language';
 
 interface ApplySettingsDeps {
   setAssistLevel(level: UserSettings['assistDefault']): void;
@@ -33,7 +34,7 @@ export async function applyLoadedSettings(
 export function useSettingsSync(api: SettingsApi = settingsApi) {
   const status = useAuthStore((state) => state.status);
   const token = useAuthStore((state) => state.token);
-  const language = useSettings((state) => state.language);
+  const { language } = useLearnLanguage();
 
   useEffect(() => {
     if (status === 'loading' || currentToken() === '') return;

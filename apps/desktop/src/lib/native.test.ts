@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { describe, expect, it, vi } from 'vitest';
-import { native, SessionStartInput, Vocabulary } from './native';
+import { native, SessionStartInput, UtteranceEvent, Vocabulary } from './native';
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn(async () => undefined) }));
 
@@ -36,5 +36,23 @@ describe('native.setVocabulary', () => {
   it('sends a valid list to the core', async () => {
     await native.setVocabulary(['SLA']);
     expect(invoke).toHaveBeenCalledWith('session_set_vocabulary', { terms: ['SLA'] });
+  });
+});
+
+describe('UtteranceEvent', () => {
+  const valid = {
+    type: 'utterance',
+    segmentId: '3344ed67-4d83-4778-bcd2-41af6165755f',
+    stream: 'mic',
+    startMs: 0,
+    endMs: 500,
+    sampleRate: 16000,
+    pcm: 'AAAA',
+  };
+
+  it('accepts the sidecar payload and rejects other sample rates or bad audio', () => {
+    expect(UtteranceEvent.safeParse(valid).success).toBe(true);
+    expect(UtteranceEvent.safeParse({ ...valid, sampleRate: 48000 }).success).toBe(false);
+    expect(UtteranceEvent.safeParse({ ...valid, pcm: '***' }).success).toBe(false);
   });
 });

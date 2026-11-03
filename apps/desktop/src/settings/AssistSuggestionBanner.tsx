@@ -5,6 +5,7 @@ import { dialApi } from './dial-api';
 import { queueSettingsPatch } from './settings-api';
 import { useSettings, type SelectableAssistLevel } from './settings-store';
 import { saveAssistLevel } from './use-assist-settings';
+import { useLearnLanguage } from './use-language';
 
 /**
  * Offers to change the assist level when the last meetings say it may be time. Either answer is
@@ -13,7 +14,7 @@ import { saveAssistLevel } from './use-assist-settings';
 export function AssistSuggestionBanner() {
   const client = useQueryClient();
   const setLevel = useSettings((state) => state.setAssistLevel);
-  const language = useSettings((state) => state.language);
+  const { language } = useLearnLanguage();
   const query = useQuery({
     queryKey: ['assist-suggestion', language],
     queryFn: () => dialApi.suggestion(language),
