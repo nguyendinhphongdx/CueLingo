@@ -5,6 +5,7 @@ import type {
   UpdateGlossaryTerm,
 } from '@cuelingo/shared';
 import { useCallback, useEffect, useState } from 'react';
+import { notifyGlossaryChanged } from '../lib/glossary-changes';
 import { describeInsightsError, insightsApi, type InsightsApi } from './insights-api';
 
 export function useGlossary(language: LanguageCode, api: InsightsApi = insightsApi) {
@@ -34,6 +35,7 @@ export function useGlossary(language: LanguageCode, api: InsightsApi = insightsA
     setError(null);
     try {
       await action();
+      notifyGlossaryChanged();
       await load();
       return true;
     } catch (cause) {

@@ -3,6 +3,7 @@ import {
   DEFAULT_LANGUAGE,
   isLanguageCode,
   languageOptions,
+  type GlossaryTerm,
   type LanguageCode,
   type ServerMessage,
 } from '@cuelingo/shared';
@@ -32,12 +33,15 @@ interface NativeSessionBridge {
   onSegment(callback: (event: SegmentEvent) => void): Promise<() => void>;
   onAudioModel(callback: (event: AudioModelEvent) => void): Promise<() => void>;
   setLanguage(language: string): Promise<void>;
+  setVocabulary(terms: string[]): Promise<void>;
   publishTranscript(event: TranscriptEvent): Promise<void>;
 }
 
 interface SessionControllerOptions {
   native: NativeSessionBridge;
   sessions: Pick<SessionsApi, 'create' | 'end' | 'setLanguage'>;
+  /** The person's glossary; its terms go to the speech model so it spells them right. */
+  glossary?: { list(language: LanguageCode): Promise<GlossaryTerm[]> };
   createRealtime(options: RealtimeClientOptions): RealtimeClient;
   now?: () => number;
   apiUrl?: string;
@@ -52,6 +56,8 @@ export interface SessionController {
   /** Switch the running meeting to the language the native side heard. */
   acceptSuggestedLanguage(): Promise<void>;
   dismissSuggestedLanguage(): void;
+  /** Send the current glossary to the speech model of the running meeting (no-op when none runs). */
+  refreshVocabulary(): void;
   runDemo(): void;
   dispose(): void;
 }
@@ -72,6 +78,26 @@ const DEMO_TEXT = [
   'Next, we should discuss…',
   'Next, we should discuss the launch timeline.',
 ] as const;
+
+/** The speech corrector's rules are written for English; other languages get no terms until they are evaluated. */
+const VOCABULARY_LANGUAGES: readonly LanguageCode[] = ['en'];
+const VOCABULARY_LIMIT = 200;
+/** A slow glossary must not delay the first caption. */
+const VOCABULARY_WAIT_MS = 1_500;
+/** Edits that come in a burst are sent once. */
+const VOCABULARY_DEBOUNCE_MS = 500;
+/** Same limit as the native side, which drops longer terms. */
+const VOCABULARY_TERM_MAX = 120;
+
+/** Control characters (below 32, or 127) would be dropped by the native side; drop them here so one odd entry never breaks a meeting. */
+function isSendableTerm(term: string): boolean {
+  if (term.length === 0 || term.length > VOCABULARY_TERM_MAX) return false;
+  for (let i = 0; i < term.length; i += 1) {
+    const code = term.charCodeAt(i);
+    if (code < 32 || code === 127) return false;
+  }
+  return true;
+}
 
 function realtimeStatus(state: RealtimeState): SessionStatus | null {
   switch (state) {
@@ -94,6 +120,7 @@ function realtimeUrl(apiUrl: string, sessionId: string) {
 export function createSessionController({
   native,
   sessions,
+  glossary,
   createRealtime,
   now = Date.now,
   apiUrl = 'ws://localhost:4000',
@@ -114,6 +141,14 @@ export function createSessionController({
   let listenerRegistration = 0;
   let runtimeGeneration = 0;
   let demoTimers: ReturnType<typeof setTimeout>[] = [];
+  let captureRunning = false;
+  let vocabularyTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Grows with every load; a load whose number is no longer the latest must not reach the speech model. */
+  let vocabularyRequest = 0;
+  /** Generation of a session that is starting (capture not running yet), else null. */
+  let startingGeneration: number | null = null;
+  /** The glossary changed while the session was starting; refresh once capture runs. */
+  let refreshPending = false;
   const transcriptById = new Map<string, TranscriptEvent>();
   const listeners = new Set<() => void>();
 
@@ -188,8 +223,28 @@ export function createSessionController({
     else stopModelListener = unlisten;
   }
 
+  /** The newest terms for the language; never rejects (a failed or signed-out glossary means no terms). */
+  async function loadVocabulary(language: LanguageCode): Promise<string[]> {
+    if (!glossary || !VOCABULARY_LANGUAGES.includes(language)) return [];
+    try {
+      const items = await glossary.list(language);
+      return items
+        .filter((item) => isSendableTerm(item.term))
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, VOCABULARY_LIMIT)
+        .map((item) => item.term);
+    } catch {
+      return [];
+    }
+  }
+
   function clearRuntime() {
     runtimeGeneration += 1;
+    captureRunning = false;
+    startingGeneration = null;
+    refreshPending = false;
+    if (vocabularyTimer) clearTimeout(vocabularyTimer);
+    vocabularyTimer = null;
     listenerRegistration += 1;
     stopSegmentListener?.();
     stopSegmentListener = null;
@@ -202,7 +257,32 @@ export function createSessionController({
     transcriptById.clear();
   }
 
-  return {
+  /** Loads the list and sends it unless something newer (a later load, a stop, a language change) won. */
+  async function refreshNow() {
+    if (!glossary || !captureRunning) return;
+    const generation = runtimeGeneration;
+    const language = meetingLanguage;
+    const request = ++vocabularyRequest;
+    const terms = await loadVocabulary(language);
+    if (
+      generation !== runtimeGeneration ||
+      !captureRunning ||
+      language !== meetingLanguage ||
+      request !== vocabularyRequest
+    )
+      return;
+    await sendVocabulary(terms);
+  }
+
+  async function sendVocabulary(terms: string[]) {
+    try {
+      await native.setVocabulary(terms);
+    } catch {
+      // The meeting goes on with the old terms.
+    }
+  }
+
+  const controller: SessionController = {
     getSnapshot: () => snapshot,
     subscribe(listener) {
       listeners.add(listener);
@@ -213,11 +293,19 @@ export function createSessionController({
       clearRuntime();
       meetingLanguage = language;
       const generation = runtimeGeneration;
+      startingGeneration = generation;
       update({
         status: 'connecting',
         error: null,
         completedSessionId: null,
         suggestedLanguage: null,
+      });
+
+      const startRequest = ++vocabularyRequest;
+      const pendingVocabulary = loadVocabulary(language);
+      let deadline: ReturnType<typeof setTimeout> | undefined;
+      const timeout = new Promise<null>((resolve) => {
+        deadline = setTimeout(() => resolve(null), VOCABULARY_WAIT_MS);
       });
 
       try {
@@ -230,16 +318,35 @@ export function createSessionController({
         await listenForSegments();
         await listenForAudioModel();
         if (generation !== runtimeGeneration) return;
+        const loaded = glossary ? await Promise.race([pendingVocabulary, timeout]) : undefined;
+        if (generation !== runtimeGeneration) return;
         await native.sessionStart({
           assistLevel,
           language,
           detect: languageOptions()
             .map((option) => option.value)
             .filter((code) => code !== language),
+          ...(loaded === undefined ? {} : { vocabulary: loaded ?? [] }),
         });
         if (generation !== runtimeGeneration) {
           await native.sessionStop();
           return;
+        }
+        captureRunning = true;
+        startingGeneration = null;
+        if (refreshPending) {
+          refreshPending = false;
+          void refreshNow();
+        } else if (loaded === null) {
+          // Too slow for the first caption: apply the terms as soon as they arrive.
+          void pendingVocabulary.then((terms) => {
+            const stillSame =
+              generation === runtimeGeneration &&
+              captureRunning &&
+              meetingLanguage === language &&
+              startRequest === vocabularyRequest;
+            if (stillSame && terms.length > 0) void sendVocabulary(terms);
+          });
         }
         realtime = createRealtime({
           url: realtimeUrl(apiUrl, session.id),
@@ -258,6 +365,8 @@ export function createSessionController({
         if (generation !== runtimeGeneration) return;
         clearRuntime();
         fail(error);
+      } finally {
+        clearTimeout(deadline);
       }
     },
     async stop() {
@@ -298,12 +407,28 @@ export function createSessionController({
         realtime?.send({ type: 'language.set' });
         await native.setLanguage(target);
         meetingLanguage = target;
+        // The new language's list replaces the old one right away, without the debounce.
+        if (vocabularyTimer) clearTimeout(vocabularyTimer);
+        vocabularyTimer = null;
+        void refreshNow();
       } catch (error) {
         fail(error);
       }
     },
     dismissSuggestedLanguage() {
       update({ suggestedLanguage: null });
+    },
+    refreshVocabulary() {
+      if (!glossary) return;
+      if (!captureRunning) {
+        if (startingGeneration === runtimeGeneration) refreshPending = true;
+        return;
+      }
+      if (vocabularyTimer) clearTimeout(vocabularyTimer);
+      vocabularyTimer = setTimeout(() => {
+        vocabularyTimer = null;
+        void refreshNow();
+      }, VOCABULARY_DEBOUNCE_MS);
     },
     runDemo() {
       demoTimers.forEach(clearTimeout);
@@ -327,4 +452,5 @@ export function createSessionController({
       listeners.clear();
     },
   };
+  return controller;
 }

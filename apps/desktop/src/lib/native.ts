@@ -8,6 +8,9 @@ import { z } from 'zod';
 
 export const AssistLevel = z.number().int().min(0).max(5);
 
+/** Glossary terms handed to the speech model's corrector: at most 200, each as long as a glossary term. */
+export const Vocabulary = z.array(z.string().min(1).max(120)).max(200);
+
 export const SessionStartInput = z.object({
   assistLevel: AssistLevel,
   /** Meeting language (`en`, `ja`…); the native side loads the matching recognition model. */
@@ -20,6 +23,8 @@ export const SessionStartInput = z.object({
     .array(z.string().regex(/^[a-z]{2,3}$/))
     .max(8)
     .optional(),
+  /** The person's glossary terms, so the speech model spells them right from the first sentence. */
+  vocabulary: Vocabulary.optional(),
 });
 export type SessionStartInput = z.infer<typeof SessionStartInput>;
 
@@ -128,6 +133,11 @@ export const native = {
         .regex(/^[a-z]{2,3}$/)
         .parse(language),
     }).then(() => undefined),
+  /** Replaces the running meeting's glossary terms (the whole list, not a patch). */
+  setVocabulary: async (terms: string[]) => {
+    // async: invalid input becomes a rejected promise, never a synchronous throw.
+    await invoke('session_set_vocabulary', { terms: Vocabulary.parse(terms) });
+  },
   onAudioModel: (cb: (e: AudioModelEvent) => void): Promise<UnlistenFn> =>
     listen('audio-model', (e) => cb(AudioModelEvent.parse(e.payload))),
   /** `request` shows macOS's own permission prompt the first time; `events` lists the next meetings. */
