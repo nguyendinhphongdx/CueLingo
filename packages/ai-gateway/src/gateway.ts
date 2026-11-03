@@ -2,11 +2,13 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import {
   buildComposePrompt,
   buildDebriefPromptFor,
+  buildFollowupPrompt,
   buildLookupPrompt,
   buildRecapPrompt,
   buildSttPromptV2,
   buildTranslatePrompt,
   COMPOSE_PROMPT_VERSION,
+  FOLLOWUP_PROMPT_VERSION,
   LOOKUP_PROMPT_VERSION,
   RECAP_PROMPT_VERSION,
   isContextEcho,
@@ -14,6 +16,7 @@ import {
   TRANSLATE_PROMPT_VERSION,
   type TranslateInput,
   type DebriefPromptInput,
+  type FollowupPromptInput,
 } from '@cuelingo/prompts';
 import type { ComposeRequest, LanguageCode, LookupRequest, RecapRequest } from '@cuelingo/shared';
 import { generateText } from 'ai';
@@ -54,6 +57,7 @@ export interface JsonTaskInputMap {
   'assist.lookup': LookupRequest;
   'assist.recap': RecapRequest;
   'assist.compose': ComposeRequest;
+  'assist.followup': FollowupPromptInput;
   'debrief.generate': DebriefPromptInput;
 }
 
@@ -295,7 +299,11 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
     const config = TASKS[task];
     try {
       return await attempt(task, config.model, false, system, prompt, version, context);
-    } catch {
+    } catch (primaryError) {
+      // Only for the follow-up draft: asking the same model again would just double the worst case.
+      if (task === 'assist.followup' && config.model === config.fallbackModel) {
+        throw new AiGatewayError(task, primaryError);
+      }
       try {
         return await attempt(task, config.fallbackModel, true, system, prompt, version, context);
       } catch (error) {
@@ -312,6 +320,11 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
         return { ...buildRecapPrompt(input as RecapRequest), version: RECAP_PROMPT_VERSION };
       case 'assist.compose':
         return { ...buildComposePrompt(input as ComposeRequest), version: COMPOSE_PROMPT_VERSION };
+      case 'assist.followup':
+        return {
+          ...buildFollowupPrompt(input as FollowupPromptInput),
+          version: FOLLOWUP_PROMPT_VERSION,
+        };
       case 'debrief.generate':
         // v2 for meetings held in Vietnamese, v1 otherwise (chosen by the language in the input).
         return buildDebriefPromptFor(input as DebriefPromptInput);

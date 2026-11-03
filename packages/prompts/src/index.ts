@@ -18,3 +18,5 @@ export * from './debrief/v2';
 export { debriefViFixtures } from './debrief/fixtures/cases-vi';
 export * from './stt/v2';
 export { sttV2Fixtures } from './stt/fixtures/cases-v2';
+export * from './followup/v1';
+export { followupFixtures } from './followup/fixtures/cases';

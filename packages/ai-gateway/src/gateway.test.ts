@@ -3,6 +3,7 @@ import {
   DebriefContentSchema,
   LookupResponseSchema,
 } from '@cuelingo/shared';
+import { FollowupOutputSchema } from '@cuelingo/prompts';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AiGatewayError, createAiGateway, type AiCallRecord, type GenerateFn } from './gateway';
 import type { TranscribeArgs } from './stt';
@@ -142,6 +143,64 @@ describe('ai-gateway structured assist tasks', () => {
       make(generate).json('assist.lookup', { term: 'table' }, LookupResponseSchema),
     ).rejects.toBeInstanceOf(AiGatewayError);
     expect(generate).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('ai-gateway assist.followup', () => {
+  it('uses the assist model with an 8 second timeout', () => {
+    expect(TASKS['assist.followup']).toMatchObject({
+      model: 'gemini-3.5-flash-lite',
+      timeoutMs: 8_000,
+    });
+  });
+
+  it('does not call the same model twice when model and fallback are identical', async () => {
+    const generate = vi.fn<GenerateFn>(async () => {
+      throw new Error('down');
+    });
+    const input = {
+      debrief: { summary: { headlineVi: 'x', bulletsVi: [] }, actionItems: [] },
+      language: 'en' as const,
+      channel: 'chat' as const,
+      tone: 'brief' as const,
+    };
+    await expect(
+      make(generate).json('assist.followup', input, FollowupOutputSchema),
+    ).rejects.toBeInstanceOf(AiGatewayError);
+    expect(generate).toHaveBeenCalledTimes(1);
+  });
+
+  it('records the prompt version and never the content', async () => {
+    const calls: AiCallRecord[] = [];
+    const secret = 'Khách hàng Zeta Corp ký hợp đồng';
+    const gw = make(
+      async () => ({
+        text: JSON.stringify({ subject: null, body: 'Draft mentioning Zeta Corp' }),
+        inputTokens: 5,
+        outputTokens: 7,
+      }),
+      calls,
+    );
+    const output = await gw.json(
+      'assist.followup',
+      {
+        debrief: { summary: { headlineVi: secret, bulletsVi: [] }, actionItems: [] },
+        language: 'en',
+        channel: 'chat',
+        tone: 'brief',
+      },
+      FollowupOutputSchema,
+      { userId: 'u1' },
+    );
+    expect(output.body).toContain('Zeta');
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toMatchObject({
+      task: 'assist.followup',
+      promptVersion: 'assist.followup@v1',
+      ok: true,
+      userId: 'u1',
+    });
+    expect(JSON.stringify(calls[0])).not.toContain('Zeta');
   });
 });
 
