@@ -26,6 +26,10 @@ Nhận dạng giọng nói bằng đám mây cho ngôn ngữ chưa có model tr�
 
 - Không có bảng mới; chỉ ghi `ai_call` (độ dài âm thanh, độ trễ, chi phí)
 
+## Ngữ cảnh `previous`
+
+Body có thể kèm `previous`: tối đa 3 câu đã nhận dạng trước đó của cùng luồng (mỗi câu tối đa 400 ký tự, cũ trước mới sau). Model chỉ dùng để chọn đúng tên riêng, thuật ngữ và chính tả, không được lặp lại; nội dung này không bao giờ được ghi log hay đưa vào `ai_call`.
+
 ## Câu hỏi mở
 
 - Giới hạn tần suất đang ở trong bộ nhớ, không chia sẻ giữa nhiều tiến trình API

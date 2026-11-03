@@ -49,6 +49,14 @@ Máy trạng thái của một cuộc họp phía client: nhận segment từ ST
 - **Ngôn ngữ cuộc họp:** snapshot có `meetingLanguage` (đặt lúc bắt đầu, xoá khi phiên kết thúc); chỉ báo và kiểm tra đồng ý khi đổi ngôn ngữ dùng nó, không dùng ô cài đặt.
 - **Overlay:** câu không có bản dịch hiện chữ gốc, không có dòng "Đang dịch…"; nhãn "đang im lặng" chờ 25 giây (thay vì 6 giây) vì caption đám mây cách nhau xa hơn. Overlay hiện khi bắt đầu và ẩn khi phiên kết thúc hẳn (`native.hideOverlay`); panel không còn nút hiện/ẩn overlay và không còn nút "Chạy thử caption".
 
+## Panel phiên họp: kiểm tra, sóng âm, thẻ sau họp
+
+- **Kiểm tra trước khi bắt đầu:** sau hộp thoại đồng ý (nếu có), panel đọc quyền Micro. `denied` thì không bắt đầu, hiện cảnh báo kèm nút "Mở cài đặt Micro"; `undetermined` hoặc không đọc được thì bắt đầu bình thường.
+- **Lỗi thu âm:** sự kiện `audio-status` có lỗi `microphone:` hoặc `system audio:` hiện banner (không tự dừng phiên) kèm nút mở đúng khung cài đặt quyền, và thanh sóng của luồng đó hiện đỏ "Không mở được". Im lặng thuần tuý chỉ hiện nhạt "Chưa có âm thanh", không bao giờ coi là lỗi.
+- **Sóng âm:** hai thanh "Micro" và "Âm thanh hệ thống" (`LevelMeter` trong `@cuelingo/ui`) lấy từ `audio-level`, 20 khung hình/giây, chỉ nghe sự kiện trong lúc phiên chạy.
+- **Thẻ "Cuộc họp vừa xong":** sau khi dừng hiện thời lượng, số câu đã ghi (không tính câu "[không nhận dạng được]") và trạng thái debrief: "Đang tạo debrief…" rồi tóm tắt (3 dòng), quyết định và việc cần làm (tối đa 3 mục mỗi loại), lấy từ `GET /v1/sessions/:id/debrief` (hỏi lại mỗi 3 giây tối đa 2 phút). "Xem đầy đủ" mở debrief trên web.
+- **Ngữ cảnh nhận dạng:** mỗi câu tải lên kèm tối đa 3 câu đã nhận dạng trước đó của cùng luồng (`previous`).
+
 ## Câu hỏi mở
 
 - (chưa có)

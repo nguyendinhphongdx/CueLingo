@@ -40,6 +40,11 @@ Nhận dạng giọng nói tiếng Anh ngay trên máy bằng Parakeet-TDT 0.6B 
 
 Với ngôn ngữ trong `SpeechModels.cloudLanguages` (hiện `vi`, khớp `recognition: 'cloud'` ở `@cuelingo/shared`) sidecar **không tải model**. Nó vẫn thu cả hai luồng (`system`, `mic`) và tách câu bằng VAD (câu tối đa 25 giây, bỏ câu có tiếng nói dưới 0,3 giây), nhưng mỗi câu xong được phát thành một dòng `{"type":"utterance","segmentId","stream","startMs","endMs","sampleRate":16000,"pcm":"<base64 PCM 16-bit LE>"}` thay vì văn bản; không có partial. Đổi qua lại giữa ngôn ngữ đám mây và ngôn ngữ trên máy bằng lệnh stdin `language <mã>` như thường.
 
+## Mức âm thanh và khoảng nghỉ
+
+- Mọi ngôn ngữ và chế độ: mỗi luồng (`system`, `mic`) phát dòng `{"type":"level","stream","rms","peak"}` tối đa 10 lần/giây, tính từ phần âm thanh nghe được kể từ lần báo trước (không mất đỉnh của một tiếng ngắn). Luồng không mở được thì không phát gì.
+- Ngôn ngữ nhận dạng đám mây dùng khoảng nghỉ tối thiểu 700 ms để kết thúc một câu (mặc định trên máy là 600 ms), để hơi thở giữa câu không cắt câu làm đôi.
+
 ## Câu hỏi mở
 
 - Chưa đo độ trễ streaming thật và RAM khi chạy cùng app họp

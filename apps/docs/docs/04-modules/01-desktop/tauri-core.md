@@ -37,7 +37,12 @@ Rust chỉ kiểm và chuyển tiếp, không có logic sản phẩm. `clean_voc
 
 ## Sự kiện `audio-utterance`
 
-`route_line` chuyển dòng `utterance` của sidecar thành sự kiện Tauri `audio-utterance` (payload là JSON của dòng đó). Overlay đi theo cuộc họp: `session_start` hiện nó (và đặt nó hiện trên mọi Space), client gọi `hide_overlay` khi phiên đã kết thúc hẳn (sau khi gửi xong các câu cuối). ⌘⇧L và nút ẩn trên overlay vẫn bật/tắt tay. Gói âm thanh `audio-utterance` chỉ gửi tới cửa sổ `main`.
+`route_line` chuyển dòng `utterance` của sidecar thành sự kiện Tauri `audio-utterance` (payload là JSON của dòng đó). Overlay đi theo cuộc họp: `session_start` hiện nó (và đặt nó hiện trên mọi Space), client gọi `hide_overlay` khi phiên đã kết thúc hẳn (sau khi gửi xong các câu cuối). ⌘⇧L và nút ẩn trên overlay vẫn bật/tắt tay. Gói âm thanh `audio-utterance` và mức âm thanh `audio-level` (xem dưới) chỉ gửi tới cửa sổ `main`; `audio-status` gửi tới mọi cửa sổ.
+
+## Sự kiện `audio-level` và `audio-status`
+
+- `audio-level`: `{type:'level', stream:'system'|'mic', rms, peak}` (0..1), tối đa 10 lần/giây mỗi luồng, để hiện sóng âm trong panel phiên họp.
+- `audio-status`: `{type:'status', state:'loading'|'ready'|'error'|'stopped', message}`. Lỗi mở luồng bắt đầu bằng `microphone:` hoặc `system audio:`; app dùng chúng để báo lỗi thu âm cụ thể.
 
 ## Câu hỏi mở
 
