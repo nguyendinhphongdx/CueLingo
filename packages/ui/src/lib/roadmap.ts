@@ -29,7 +29,7 @@ export const features: Feature[] = [
     status: { desktop: 'ready', web: 'soon' },
     summary: 'Bật caption song ngữ cho cuộc họp đang diễn ra.',
     bullets: [
-      'Caption tiếng Anh kèm bản dịch tiếng Việt ngay trên màn hình',
+      'Caption kèm bản dịch tiếng Việt ngay trên màn hình',
       'Tra từ, tóm tắt và soạn câu trả lời trong lúc họp',
     ],
     webPath: '/live',

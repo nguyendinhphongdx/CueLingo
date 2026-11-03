@@ -43,8 +43,10 @@ export function AboutCard() {
       </CardHeader>
       <CardContent className="text-muted-foreground space-y-2 text-sm">
         <p>
-          Caption tiếng Anh kèm bản dịch tiếng Việt cho mọi cuộc họp trên máy bạn. Âm thanh được
-          nhận dạng ngay trên máy, chỉ văn bản được gửi đi dịch.
+          Caption kèm bản dịch tiếng Việt cho cuộc họp tiếng Anh, Nhật, Hàn và Trung; cuộc họp tiếng
+          Việt có transcript. Tiếng Anh được nhận dạng ngay trên máy, chỉ văn bản được gửi đi dịch.
+          Các ngôn ngữ còn lại nhận dạng bằng đám mây (âm thanh gửi tới Google) và chỉ khi bạn đồng
+          ý.
         </p>
         <p>© 2026 CMC AI</p>
       </CardContent>

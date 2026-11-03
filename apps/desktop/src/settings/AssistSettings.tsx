@@ -3,8 +3,8 @@ import { Segmented } from '@cuelingo/ui/components/segmented';
 import { useAssistSettings } from './use-assist-settings';
 
 const options = [
-  { level: 4, label: 'Đầy đủ', hint: 'Caption tiếng Anh kèm bản dịch tiếng Việt' },
-  { level: 3, label: 'Gợi ý', hint: 'Tiếng Anh là chính, dịch nhấn mạnh ý khó' },
+  { level: 4, label: 'Đầy đủ', hint: 'Caption gốc kèm bản dịch tiếng Việt' },
+  { level: 3, label: 'Gợi ý', hint: 'Chữ gốc là chính, dịch nhấn mạnh ý khó' },
   { level: 1, label: 'Tối thiểu', hint: 'Chỉ bản dịch tiếng Việt' },
   { level: 0, label: 'Ẩn', hint: 'Không hiện caption, vẫn ghi lại để debrief' },
 ] as const;

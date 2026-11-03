@@ -15,7 +15,7 @@ const steps = ['Chào bạn', 'Quyền truy cập', 'Caption mẫu', 'Mức hỗ
 export const nextOnboardingStep = (step: number) => Math.min(steps.length - 1, step + 1);
 
 const assistOptions = [
-  { level: 4, label: 'Đầy đủ', hint: 'Caption tiếng Anh kèm bản dịch tiếng Việt.' },
+  { level: 4, label: 'Đầy đủ', hint: 'Caption gốc kèm bản dịch tiếng Việt.' },
   { level: 3, label: 'Gợi ý', hint: 'Tiếng Anh là chính, bản dịch nhấn mạnh ý khó.' },
   { level: 1, label: 'Tối thiểu', hint: 'Chỉ hiện bản dịch tiếng Việt.' },
   { level: 0, label: 'Ẩn', hint: 'Ẩn caption nhưng vẫn ghi lại để debrief.' },
