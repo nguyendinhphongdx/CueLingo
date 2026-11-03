@@ -215,15 +215,33 @@ export function SessionPanel() {
   const sendsAudio = running && isCloudMeeting(session.meetingLanguage);
   const [micBlocked, setMicBlocked] = useState(false);
   // The microphone is checked first, so a blocked one never leads to a saved consent.
+  // Set on the click itself: the permission check, the native stop and the cloud drain each take
+  // a second or more, and the button must answer at once.
+  const [pending, setPending] = useState<'starting' | 'stopping' | null>(null);
   const attempt = async () => {
+    if (pending) return;
     setMicBlocked(false);
-    const decision = await decideStart({
-      needsConsent: cloud && !hasCloudConsent(userId),
-      readPermissions: native.permissionsStatus,
-    });
-    if (decision === 'mic-denied') setMicBlocked(true);
-    else if (decision === 'ask-consent') setAskConsent(true);
-    else begin();
+    setPending('starting');
+    try {
+      const decision = await decideStart({
+        needsConsent: cloud && !hasCloudConsent(userId),
+        readPermissions: native.permissionsStatus,
+      });
+      if (decision === 'mic-denied') setMicBlocked(true);
+      else if (decision === 'ask-consent') setAskConsent(true);
+      else begin();
+    } finally {
+      setPending(null);
+    }
+  };
+  const halt = async () => {
+    if (pending) return;
+    setPending('stopping');
+    try {
+      await session.stop();
+    } finally {
+      setPending(null);
+    }
   };
   const begin = () => void session.start(assistLevel, language);
   const modelProgress = describeModelProgress(useModelProgress());
@@ -281,24 +299,24 @@ export function SessionPanel() {
           <PressButton asChild hoverScale={1} tapScale={0.97}>
             <Button
               size="lg"
-              disabled={busy}
-              onClick={() => void session.stop()}
+              disabled={busy || pending === 'stopping'}
+              onClick={() => void halt()}
               className="cursor-pointer bg-white text-slate-900 hover:bg-white/90"
             >
               <Square aria-hidden="true" className="size-4 fill-current" />
-              Dừng
+              {pending === 'stopping' ? 'Đang dừng…' : 'Dừng'}
             </Button>
           </PressButton>
         ) : (
           <PressButton asChild hoverScale={1} tapScale={0.97}>
             <Button
               size="lg"
-              disabled={busy}
+              disabled={busy || pending === 'starting'}
               onClick={() => void attempt()}
               className="cursor-pointer"
             >
               <Play aria-hidden="true" className="size-4 fill-current" />
-              Bắt đầu
+              {pending === 'starting' ? 'Đang kiểm tra…' : 'Bắt đầu'}
             </Button>
           </PressButton>
         )}

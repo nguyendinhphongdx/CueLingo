@@ -633,17 +633,33 @@ export function createSessionController({
       };
 
       try {
-        const session = await sessions.create({ assistLevel, language });
+        // The listeners do not need the session id, so they register while the server creates it.
+        const listening = Promise.all([
+          listenForSegments(),
+          listenForAudioModel(),
+          listenForAudioStatus(),
+          isCloudLanguage(language) ? listenForUtterances() : undefined,
+        ]);
+        const creating = sessions.create({ assistLevel, language });
+        let session: Awaited<typeof creating>;
+        try {
+          [session] = await Promise.all([creating, listening]);
+        } catch (error) {
+          // A listener failed while the server may still be creating the session: end it, never leave it.
+          await listening.catch(() => undefined);
+          const orphan = await creating.catch(() => null);
+          if (orphan) {
+            createdSessionId = orphan.id;
+            activeSessionId = orphan.id;
+          }
+          throw error;
+        }
         createdSessionId = session.id;
         if (generation !== runtimeGeneration) {
           await sessions.end(session.id).catch(() => undefined);
           return;
         }
         activeSessionId = session.id;
-        await listenForSegments();
-        await listenForAudioModel();
-        await listenForAudioStatus();
-        if (isCloudLanguage(language)) await listenForUtterances();
         if (generation !== runtimeGeneration) return endCreatedSession();
         const loaded = glossary ? await Promise.race([pendingVocabulary, timeout]) : undefined;
         if (generation !== runtimeGeneration) return endCreatedSession();
