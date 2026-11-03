@@ -41,6 +41,8 @@ pub fn route_line(line: &str) -> Option<(&'static str, Value)> {
         "status" => Some(("audio-status", value)),
         // Cloud languages: one finished utterance as base64 PCM, sent to the API by the TS layer.
         "utterance" => Some(("audio-utterance", value)),
+        // Mic and system loudness, about 20 lines a second; only the main window draws it.
+        "level" => Some(("audio-level", value)),
         "model" | "stats" | "language-suggestion" => Some(("audio-model", value)),
         _ => None,
     }
@@ -102,8 +104,8 @@ impl AudioBridge {
         std::thread::spawn(move || {
             for line in BufReader::new(stdout).lines().map_while(Result::ok) {
                 if let Some((event, payload)) = route_line(&line) {
-                    // A recognised sentence's audio is about 1 MB; only the main window handles it.
-                    let _ = if event == "audio-utterance" {
+                    // Utterance audio is about 1 MB and levels arrive ~20 times a second: main window only.
+                    let _ = if event == "audio-utterance" || event == "audio-level" {
                         app.emit_to("main", event, payload)
                     } else {
                         app.emit(event, payload)
@@ -189,6 +191,15 @@ mod tests {
         let (event, payload) = route_line(line).unwrap();
         assert_eq!(event, "audio-utterance");
         assert_eq!(payload["stream"], "mic");
+    }
+
+    #[test]
+    fn routes_levels_to_audio_level() {
+        let line = r#"{"type":"level","stream":"system","rms":0.2,"peak":0.5}"#;
+        let (event, payload) = route_line(line).unwrap();
+        assert_eq!(event, "audio-level");
+        assert_eq!(payload["stream"], "system");
+        assert_eq!(payload["peak"], 0.5);
     }
 
     #[test]

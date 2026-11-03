@@ -11,6 +11,7 @@ import LocalSTT
 //                {"type":"stats","language","count","p50Ms","p95Ms"}  (recognition time, once at the end)
 //                {"type":"utterance","segmentId","stream","startMs","endMs","sampleRate":16000,"pcm"}  (cloud languages:
 //                 one finished utterance as base64 16-bit LE mono PCM; no model runs on this machine)
+//                {"type":"level","stream":"system|mic","rms":0...1,"peak":0...1}  (at most 10 per second per stream)
 // stdin: a line "stop" ends the session; "vocab ["SLA",...]" replaces the glossary terms;
 //        "language ja" switches the recognition model (captions continue on the old one until it is ready).
 // env CUELINGO_DETECT: comma-separated candidate languages to listen for in the first seconds (their models must
@@ -113,6 +114,8 @@ final class Pipeline: @unchecked Sendable {
     private var epoch = Date()
 
     private let probe: LanguageProbe?
+    private var meter = LevelMeter()
+    private let clock = DispatchTime.now()
 
     init(stream: String, transcriber: Transcriber, probe: LanguageProbe? = nil) {
         self.stream = stream
@@ -123,13 +126,19 @@ final class Pipeline: @unchecked Sendable {
     func feed(_ samples: [Int16]) {
         let cloud = mode.cloud
         lock.lock()
+        let nowMs = Int((DispatchTime.now().uptimeNanoseconds - clock.uptimeNanoseconds) / 1_000_000)
+        let level = meter.add(samples, nowMs: nowMs)
         if cloud {
-            segmenter.setLimits(maxUtteranceMs: UtterancePCM.maxUtteranceMs, minSpeechMs: UtterancePCM.minSpeechMs)
+            segmenter.setLimits(maxUtteranceMs: UtterancePCM.maxUtteranceMs, minSpeechMs: UtterancePCM.minSpeechMs,
+                                minSilenceMs: UtterancePCM.minSilenceMs)
         } else {
             segmenter.setLimits(maxUtteranceMs: 15_000, minSpeechMs: 250)
         }
         let events = segmenter.push(samples)
         lock.unlock()
+        if let level {
+            emit(["type": "level", "stream": stream, "rms": Double(level.rms), "peak": Double(level.peak)])
+        }
         for event in events { handle(event) }
     }
 

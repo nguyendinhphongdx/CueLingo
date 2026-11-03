@@ -33,4 +33,45 @@ final class UtteranceSegmenterTests: XCTestCase {
         let events = s.push(tone(ms: 3500))
         XCTAssertTrue(events.contains { if case .final = $0 { return true } else { return false } })
     }
+
+    private func finals(_ events: [UtteranceSegmenter.Event]) -> Int {
+        events.filter { if case .final = $0 { return true } else { return false } }.count
+    }
+
+    /// Speech, a pause, speech, then a long silence; returns how many sentences came out.
+    private func sentences(pauseMs: Int, cloud: Bool) -> Int {
+        let s = UtteranceSegmenter()  // default minSilenceMs is 600
+        if cloud {
+            s.setLimits(
+                maxUtteranceMs: UtterancePCM.maxUtteranceMs, minSpeechMs: UtterancePCM.minSpeechMs,
+                minSilenceMs: UtterancePCM.minSilenceMs)
+        }
+        let events = s.push(tone(ms: 1000)) + s.push(silence(ms: pauseMs)) + s.push(tone(ms: 1000))
+            + s.push(silence(ms: 1500))
+        return finals(events)
+    }
+
+    // The default is 600 ms, so a 400 ms breath splits in neither mode; 650 ms is the pause that tells them apart.
+    func testShortBreathDoesNotSplitInEitherMode() {
+        XCTAssertEqual(sentences(pauseMs: 400, cloud: false), 1)
+        XCTAssertEqual(sentences(pauseMs: 400, cloud: true), 1)
+    }
+
+    func testPauseBetweenDefaultAndCloudSilenceSplitsOnlyWithDefault() {
+        XCTAssertEqual(sentences(pauseMs: 650, cloud: false), 2)
+        XCTAssertEqual(sentences(pauseMs: 650, cloud: true), 1)
+    }
+
+    func testLongPauseSplitsInBothModes() {
+        XCTAssertEqual(sentences(pauseMs: 900, cloud: false), 2)
+        XCTAssertEqual(sentences(pauseMs: 900, cloud: true), 2)
+    }
+
+    func testSetLimitsWithoutSilenceRestoresTheDefault() {
+        let s = UtteranceSegmenter()
+        s.setLimits(maxUtteranceMs: 25_000, minSpeechMs: 300, minSilenceMs: 700)
+        s.setLimits(maxUtteranceMs: 15_000, minSpeechMs: 250)
+        let events = s.push(tone(ms: 1000)) + s.push(silence(ms: 650)) + s.push(tone(ms: 1000))
+        XCTAssertEqual(finals(events), 1)  // the first sentence ended at 600 ms
+    }
 }

@@ -8,6 +8,9 @@ public enum UtterancePCM {
     /// Shorter speech than this is dropped (0.3 s).
     public static let minSpeechMs = 300
 
+    /// Silence that ends a sentence for cloud recognition: a short breath inside a sentence does not cut it.
+    public static let minSilenceMs = 700
+
     /// 16-bit little-endian mono PCM as base64. Samples are clamped to -1...1.
     public static func base64(_ samples: [Float]) -> String {
         var data = Data(capacity: samples.count * 2)
