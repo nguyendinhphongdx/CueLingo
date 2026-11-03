@@ -1,12 +1,12 @@
 # 0015 · Email đăng nhập (magic link) gửi qua Resend
 
-**Trạng thái:** Proposed · 2026-11-03 (code đã nối từ trước; chờ chủ sản phẩm duyệt để hợp thức hoá)
+**Trạng thái:** Accepted · 2026-11-03 (chủ sản phẩm duyệt; code đã nối từ trước, ADR hợp thức hoá). Việc xác minh tên miền gửi vẫn nằm ở P2-23
 
 ## Bối cảnh
 
 Đăng nhập bằng magic link ([ADR 0008](./0008-auth-better-auth.md)) cần gửi email. `services/api/src/modules/auth/auth.mailer.ts` hỗ trợ ba chế độ qua `MAIL_PROVIDER`: `console` (dev), `resend` và `smtp`. Chế độ `resend` đã có trong code và có test, nhưng việc đưa địa chỉ email người dùng và đường dẫn đăng nhập cho một nhà cung cấp mới chưa có ADR (luật 8 của `AGENTS.md`).
 
-## Quyết định đề xuất
+## Quyết định
 
 - Môi trường thật dùng Resend (`MAIL_PROVIDER=resend`) với tên miền gửi đã xác minh (`MAIL_FROM`); SMTP của nhà cung cấp khác vẫn là phương án thay thế qua cấu hình, không cần đổi code.
 - Dữ liệu gửi cho Resend chỉ gồm: địa chỉ email của người đăng nhập, tiêu đề và nội dung thư (đường dẫn đăng nhập dùng một lần, hết hạn sau 5 phút). Không gửi transcript, âm thanh hay dữ liệu học.

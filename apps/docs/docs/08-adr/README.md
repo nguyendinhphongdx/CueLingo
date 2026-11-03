@@ -18,4 +18,4 @@ Mỗi quyết định khó đảo ngược có một ADR: bối cảnh, quyết 
 | [0012](0012-realtime-transport.md)          | Đường realtime: WebSocket trực tiếp ở M1, Centrifugo cho pub/sub về sau  | Accepted   |
 | [0013](0013-multi-language.md)              | Đa ngôn ngữ: ngôn ngữ theo từng cuộc họp, dữ liệu học theo từng ngôn ngữ | Proposed   |
 | [0014](0014-cloud-stt-for-vietnamese.md)    | Nhận dạng đám mây cho ngôn ngữ chưa có model trên máy (tiếng Việt)       | Accepted   |
-| [0015](0015-email-provider-resend.md)       | Email đăng nhập (magic link) gửi qua Resend                              | Proposed   |
+| [0015](0015-email-provider-resend.md)       | Email đăng nhập (magic link) gửi qua Resend                              | Accepted   |
