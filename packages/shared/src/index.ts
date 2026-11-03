@@ -14,6 +14,7 @@ export * from './dto/phrase.dto';
 export * from './dto/privacy.dto';
 export * from './dto/review.dto';
 export * from './dto/session.dto';
+export * from './dto/transcribe.dto';
 export * from './dto/tts.dto';
 export * from './dto/settings.dto';
 export * from './errors/error-code';

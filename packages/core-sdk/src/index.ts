@@ -4,10 +4,11 @@
  */
 import { glossaryApi } from './glossary';
 import { createHttp, type ClientOptions } from './http';
+import { transcribeApi } from './transcribe';
 
 export function createClient(options: ClientOptions) {
   const http = createHttp(options);
-  return { glossary: glossaryApi(http) };
+  return { glossary: glossaryApi(http), ...transcribeApi(http) };
 }
 
 export type CueLingoClient = ReturnType<typeof createClient>;

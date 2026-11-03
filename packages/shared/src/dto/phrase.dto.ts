@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EnabledLanguageSchema } from '../languages';
+import { LearnableLanguageSchema } from '../languages';
 
 /** Phrase Bank: phrases the user saved (from a debrief or a lookup) so they can be reviewed later. */
 export const SavePhraseRequestSchema = z
@@ -9,7 +9,7 @@ export const SavePhraseRequestSchema = z
     sessionId: z.uuid().optional(),
     segmentId: z.uuid().optional(),
     /** Used when the phrase is not tied to a meeting; a meeting's own language wins. */
-    language: EnabledLanguageSchema.optional(),
+    language: LearnableLanguageSchema.optional(),
   })
   .strict();
 export type SavePhraseRequest = z.infer<typeof SavePhraseRequestSchema>;

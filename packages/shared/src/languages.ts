@@ -21,6 +21,12 @@ export const SUPPORTED_LANGUAGES = {
     wordBreaks: 'spaces',
     /** Whether a reading (such as furigana) accompanies words. */
     hasReading: false,
+    /** Where speech is recognised: on the device (sidecar model) or in the cloud (audio leaves the machine, ADR 0014). */
+    recognition: 'device' as 'device' | 'cloud',
+    /** Whether the meeting is translated to Vietnamese. */
+    translates: true as boolean,
+    /** Whether the language feeds the learner model, review, phrases and progress. */
+    learnable: true as boolean,
     /** Switched on for people. A language stays off until it passes its evaluation. */
     enabled: true,
   },
@@ -36,7 +42,27 @@ export const SUPPORTED_LANGUAGES = {
     recognizer: 'parakeet-tdt-ja',
     wordBreaks: 'dictionary',
     hasReading: true,
+    recognition: 'device',
+    translates: true,
+    learnable: true,
     enabled: false,
+  },
+  vi: {
+    code: 'vi',
+    name: 'Tiếng Việt',
+    nativeName: 'Tiếng Việt',
+    promptName: 'Vietnamese',
+    calendarHints: {
+      keywords: ['tiếng việt', 'vietnamese', '(vn)', '[vn]'],
+      domains: ['.vn'],
+    },
+    recognizer: 'gemini-audio',
+    wordBreaks: 'spaces',
+    hasReading: false,
+    recognition: 'cloud',
+    translates: false,
+    learnable: false,
+    enabled: true,
   },
 } as const;
 
@@ -52,7 +78,7 @@ export const LanguageCodeSchema = z.enum(
 export const isLanguageCode = (value: unknown): value is LanguageCode =>
   typeof value === 'string' && value in SUPPORTED_LANGUAGES;
 
-/** Languages a person may pick today. */
+/** Languages a meeting may use today. */
 export const enabledLanguages = (): LanguageInfo[] =>
   Object.values(SUPPORTED_LANGUAGES).filter((language) => language.enabled);
 
@@ -62,15 +88,31 @@ export const EnabledLanguageSchema = LanguageCodeSchema.refine(
   { message: 'This language is not available yet' },
 );
 
+/** Languages a person may study today: switched on and feeding the learner model. */
+export const learnableLanguages = (): LanguageInfo[] =>
+  enabledLanguages().filter((language) => language.learnable);
+
+/** A language to study: switched on and learnable. Meeting-only languages (Vietnamese) fail. */
+export const LearnableLanguageSchema = EnabledLanguageSchema.refine(
+  (code) => SUPPORTED_LANGUAGES[code].learnable,
+  { message: 'This language cannot be studied' },
+);
+
 /** `?language=` on every read of per-language learning data. Missing means the default language. */
 export const LanguageQuerySchema = z.object({
-  language: LanguageCodeSchema.default(DEFAULT_LANGUAGE),
+  language: LanguageCodeSchema.refine((code) => SUPPORTED_LANGUAGES[code].learnable, {
+    message: 'This language cannot be studied',
+  }).default(DEFAULT_LANGUAGE),
 });
 export type LanguageQuery = z.output<typeof LanguageQuerySchema>;
 
-/** The languages a person may pick, as `{ value, label }` for a language switcher. */
+/** The languages a meeting may use, as `{ value, label }` for the meeting language picker. */
 export const languageOptions = (): Array<{ value: LanguageCode; label: string }> =>
   enabledLanguages().map((language) => ({ value: language.code, label: language.name }));
+
+/** The languages a person may study, as `{ value, label }` for learner screens. */
+export const learnableLanguageOptions = (): Array<{ value: LanguageCode; label: string }> =>
+  learnableLanguages().map((language) => ({ value: language.code, label: language.name }));
 
 /** What a calendar event tells about the meeting. Titles and domains stay on the device. */
 export interface CalendarEventHint {

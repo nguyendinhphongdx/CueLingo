@@ -9,6 +9,9 @@ const STATUS: Record<ErrorCode, number> = {
   [ErrorCode.Conflict]: 409,
   [ErrorCode.AssistFailed]: 502,
   [ErrorCode.TtsFailed]: 502,
+  [ErrorCode.TranscribeFailed]: 502,
+  [ErrorCode.AudioTooLarge]: 413,
+  [ErrorCode.LanguageNotCloud]: 400,
   [ErrorCode.RateLimited]: 429,
   [ErrorCode.Internal]: 500,
   // WebSocket-only codes still need an HTTP status because they share the enum.
