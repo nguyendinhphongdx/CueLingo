@@ -39,6 +39,8 @@ pub fn route_line(line: &str) -> Option<(&'static str, Value)> {
     match value.get("type")?.as_str()? {
         "segment" => Some(("segment", value)),
         "status" => Some(("audio-status", value)),
+        // Cloud languages: one finished utterance as base64 PCM, sent to the API by the TS layer.
+        "utterance" => Some(("audio-utterance", value)),
         "model" | "stats" | "language-suggestion" => Some(("audio-model", value)),
         _ => None,
     }
@@ -100,7 +102,12 @@ impl AudioBridge {
         std::thread::spawn(move || {
             for line in BufReader::new(stdout).lines().map_while(Result::ok) {
                 if let Some((event, payload)) = route_line(&line) {
-                    let _ = app.emit(event, payload);
+                    // A recognised sentence's audio is about 1 MB; only the main window handles it.
+                    let _ = if event == "audio-utterance" {
+                        app.emit_to("main", event, payload)
+                    } else {
+                        app.emit(event, payload)
+                    };
                 }
             }
         });
@@ -174,6 +181,14 @@ mod tests {
         assert_eq!(route_line(seg).unwrap().0, "segment");
         let st = r#"{"type":"status","state":"ready"}"#;
         assert_eq!(route_line(st).unwrap().0, "audio-status");
+    }
+
+    #[test]
+    fn routes_utterances_to_audio_utterance() {
+        let line = r#"{"type":"utterance","segmentId":"x","stream":"mic","startMs":0,"endMs":900,"sampleRate":16000,"pcm":"AAA="}"#;
+        let (event, payload) = route_line(line).unwrap();
+        assert_eq!(event, "audio-utterance");
+        assert_eq!(payload["stream"], "mic");
     }
 
     #[test]

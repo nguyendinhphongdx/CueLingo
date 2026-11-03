@@ -9,6 +9,8 @@ import LocalSTT
 //                {"type":"model","language","state":"downloading|ready|error","progress":0...1,"message"}
 //                {"type":"language-suggestion","language","confidence"}  (the meeting sounds like another language)
 //                {"type":"stats","language","count","p50Ms","p95Ms"}  (recognition time, once at the end)
+//                {"type":"utterance","segmentId","stream","startMs","endMs","sampleRate":16000,"pcm"}  (cloud languages:
+//                 one finished utterance as base64 16-bit LE mono PCM; no model runs on this machine)
 // stdin: a line "stop" ends the session; "vocab ["SLA",...]" replaces the glossary terms;
 //        "language ja" switches the recognition model (captions continue on the old one until it is ready).
 // env CUELINGO_DETECT: comma-separated candidate languages to listen for in the first seconds (their models must
@@ -91,6 +93,17 @@ actor LanguageProbe {
     }
 }
 
+/// Whether the meeting language is recognised in the cloud: then pipelines emit utterances instead of text.
+final class RecognitionMode: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = false
+    var cloud: Bool {
+        get { lock.lock(); defer { lock.unlock() }; return value }
+        set { lock.lock(); value = newValue; lock.unlock() }
+    }
+}
+let mode = RecognitionMode()
+
 final class Pipeline: @unchecked Sendable {
     let stream: String
     let segmenter = UtteranceSegmenter()
@@ -108,7 +121,13 @@ final class Pipeline: @unchecked Sendable {
     }
 
     func feed(_ samples: [Int16]) {
+        let cloud = mode.cloud
         lock.lock()
+        if cloud {
+            segmenter.setLimits(maxUtteranceMs: UtterancePCM.maxUtteranceMs, minSpeechMs: UtterancePCM.minSpeechMs)
+        } else {
+            segmenter.setLimits(maxUtteranceMs: 15_000, minSpeechMs: 250)
+        }
         let events = segmenter.push(samples)
         lock.unlock()
         for event in events { handle(event) }
@@ -132,6 +151,16 @@ final class Pipeline: @unchecked Sendable {
         switch event {
         case .partial(let u): (utterance, partial) = (u, true)
         case .final(let u): (utterance, partial) = (u, false)
+        }
+        if mode.cloud {
+            // Cloud language: only finished utterances leave, as audio; partials are not sent.
+            guard !partial else { return }
+            emit([
+                "type": "utterance", "segmentId": utterance.id.uuidString.lowercased(), "stream": stream,
+                "startMs": utterance.startMs, "endMs": utterance.endMs, "sampleRate": 16_000,
+                "pcm": UtterancePCM.base64(utterance.samples),
+            ])
+            return
         }
         if partial {
             lock.lock()
@@ -224,9 +253,14 @@ let transcriber = Transcriber()
 
 /// Loads the model for a language, reporting download progress. Returns false when it could not.
 func loadModel(_ language: String) async -> Bool {
-    guard SpeechModels.isSupported(language) else {
+    guard SpeechModels.isSupported(language) || SpeechModels.isCloud(language) else {
         emit(["type": "model", "language": language, "state": "error", "message": "unsupported language"])
         return false
+    }
+    if SpeechModels.isCloud(language) {
+        mode.cloud = true  // nothing to download or load; utterances go out as audio at once
+        emit(["type": "model", "language": language, "state": "ready"])
+        return true
     }
     let reported = ProgressGate()
     do {
@@ -235,6 +269,7 @@ func loadModel(_ language: String) async -> Bool {
                 emit(["type": "model", "language": language, "state": "downloading", "progress": fraction])
             }
         }
+        mode.cloud = false
         emit(["type": "model", "language": language, "state": "ready"])
         return true
     } catch {
@@ -266,7 +301,7 @@ func applyVocabulary(_ json: String) async {
 if let initial = ProcessInfo.processInfo.environment["CUELINGO_VOCAB"] { await applyVocabulary(initial) }
 
 let detectCandidates = (ProcessInfo.processInfo.environment["CUELINGO_DETECT"] ?? "")
-    .split(separator: ",").map(String.init).filter { $0 != startLanguage && SpeechModels.isSupported($0) }
+    .split(separator: ",").map(String.init).filter { $0 != startLanguage && SpeechModels.isSupported($0) && !SpeechModels.isCloud(startLanguage) }
 let probe: LanguageProbe? = detectCandidates.isEmpty
     ? nil : LanguageProbe(candidates: detectCandidates, current: { await transcriber.language ?? "en" })
 let system = Pipeline(stream: "system", transcriber: transcriber, probe: probe)

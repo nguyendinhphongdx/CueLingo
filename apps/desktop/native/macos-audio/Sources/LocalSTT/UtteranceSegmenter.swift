@@ -18,8 +18,8 @@ public final class UtteranceSegmenter {
     private let sampleRate = 16_000
     private let threshold: Float
     private let minSilenceSamples: Int
-    private let maxUtteranceSamples: Int
-    private let minSpeechSamples: Int
+    private var maxUtteranceSamples: Int
+    private var minSpeechSamples: Int
     private let partialEverySamples: Int
     private let preRollSamples: Int
 
@@ -43,6 +43,12 @@ public final class UtteranceSegmenter {
         minSpeechSamples = minSpeechMs * 16
         partialEverySamples = partialEveryMs * 16
         preRollSamples = preRollMs * 16
+    }
+
+    /// Changes the longest utterance and the shortest speech worth keeping; applies from the next frame on.
+    public func setLimits(maxUtteranceMs: Int, minSpeechMs: Int) {
+        maxUtteranceSamples = maxUtteranceMs * 16
+        minSpeechSamples = minSpeechMs * 16
     }
 
     /// Feed samples in any chunk size; returns events produced by this chunk.

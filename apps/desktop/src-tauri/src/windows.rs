@@ -8,9 +8,25 @@ pub fn prepare_overlay(app: &AppHandle) -> tauri::Result<()> {
     if let Some(overlay) = app.get_webview_window(OVERLAY) {
         overlay.set_content_protected(true)?;
         overlay.set_ignore_cursor_events(false)?;
+        // Follow the person across Spaces, so a meeting in its own Space or full-screen window keeps its captions.
+        overlay.set_visible_on_all_workspaces(true)?;
         overlay.center()?;
     }
     Ok(())
+}
+
+/// Shows the overlay when a meeting starts; it stays where it is when already visible.
+pub fn show_overlay(app: &AppHandle) {
+    if let Some(overlay) = app.get_webview_window(OVERLAY) {
+        let _ = overlay.show();
+    }
+}
+
+/// Hides the overlay once a meeting is over; nothing happens when it is already hidden.
+pub fn hide_overlay(app: &AppHandle) {
+    if let Some(overlay) = app.get_webview_window(OVERLAY) {
+        let _ = overlay.hide();
+    }
 }
 
 /// Returns whether the overlay is visible after the toggle.

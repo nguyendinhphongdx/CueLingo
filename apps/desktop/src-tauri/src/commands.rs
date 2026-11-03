@@ -96,6 +96,8 @@ pub fn session_start(
     }
     let vocabulary = clean_vocabulary(opts.vocabulary.unwrap_or_default())?;
     state.audio.start(&app, language, &detect, &vocabulary)?;
+    // The captions live in the overlay, so a new meeting brings it up instead of waiting for the shortcut.
+    windows::show_overlay(&app);
     *current = Some(id.clone());
     Ok(SessionStartResult { session_id: id })
 }
@@ -215,6 +217,12 @@ pub fn set_assist_level(state: State<AppState>, level: u8) -> Result<(), String>
     }
     *state.assist_level.lock().map_err(|e| e.to_string())? = level;
     Ok(())
+}
+
+/// The overlay follows the meeting: it appears when a session starts and the client hides it when the session is over.
+#[tauri::command]
+pub fn hide_overlay(app: AppHandle) {
+    windows::hide_overlay(&app);
 }
 
 #[tauri::command]
