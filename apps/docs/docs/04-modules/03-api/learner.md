@@ -28,4 +28,4 @@ Nguồn sự thật về người học: profile, lexicon, kỹ năng; áp dụn
 
 ## Câu hỏi mở
 
-- Giai đoạn 2: thêm Graphiti cho temporal graph
+- Đợt 4: thêm Graphiti cho temporal graph

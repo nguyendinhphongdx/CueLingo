@@ -16,7 +16,7 @@ Thu audio hệ thống (người khác) và mic (người dùng) thành hai lu�
 ## Phạm vi MVP
 
 - US-01, US-03 (F1, F2)
-- Không làm virtual mic (giai đoạn 2, dùng libASPL)
+- Không làm virtual mic (Đợt 4 cùng voice mode, dùng libASPL)
 
 ## Interface
 

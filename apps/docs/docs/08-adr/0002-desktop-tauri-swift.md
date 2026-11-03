@@ -10,7 +10,7 @@ App desktop cần: thu audio hệ thống trên macOS (Core Audio Process Tap / 
 
 - Tauri 2 (Rust) làm shell; UI bằng React/TypeScript, dùng chung `@cuelingo/ui`.
 - Module Swift (`apps/desktop/native/macos-audio`) cho audio capture và local STT (FluidAudio), gọi từ Rust qua FFI hoặc Tauri plugin.
-- Windows (giai đoạn 2): thay module Swift bằng WASAPI loopback (cpal) + STT phù hợp.
+- Windows (Đợt 4, khi đủ điều kiện mở): thay module Swift bằng WASAPI loopback (cpal) + STT phù hợp.
 
 ## Phương án đã cân nhắc
 

@@ -9,11 +9,11 @@ Learner Model là "bản sao ngôn ngữ" của mỗi người dùng: họ hiể
 | Profile                          | Ngôn ngữ mẹ đẻ/đích, nghề, mục tiêu, lịch                                | Có                           |
 | Skill state                      | Ước lượng CEFR + độ tin cậy cho nghe, nói, đọc, viết, phát âm            | Chỉ nghe (`listening_level`) |
 | Lexicon                          | Từ/cụm, mỗi mục có trạng thái FSRS **receptive** và **productive** riêng | Có                           |
-| Listening profile                | WPM chịu được, accent khó, lỗi nối âm                                    | Giai đoạn 2                  |
-| Speaking / pronunciation profile | Fluency, lỗi âm vị                                                       | Giai đoạn 2                  |
-| Error patterns                   | Lỗi ngữ pháp, từ vựng lặp lại                                            | Giai đoạn 2                  |
+| Listening profile                | WPM chịu được, accent khó, lỗi nối âm                                    | Đợt 3                        |
+| Speaking / pronunciation profile | Fluency, lỗi âm vị                                                       | Đợt 3                        |
+| Error patterns                   | Lỗi ngữ pháp, từ vựng lặp lại                                            | Đợt 3                        |
 | Social graph                     | Người hay giao tiếp: accent, vai trò, chủ đề                             | Speakers cơ bản              |
-| Context memory                   | Dự án, cuộc họp sắp tới                                                  | Giai đoạn 3                  |
+| Context memory                   | Dự án, cuộc họp sắp tới                                                  | Đợt 1                        |
 
 ## Lexicon và giai đoạn
 

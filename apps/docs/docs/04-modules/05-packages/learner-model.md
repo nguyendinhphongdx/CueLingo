@@ -33,4 +33,4 @@ Logic thuần (không I/O) của Learner Model: FSRS hai tầng, giai đoạn t�
 
 ## Câu hỏi mở
 
-- Thêm BKT cho kỹ năng nghe/phát âm ở giai đoạn 2
+- Thêm BKT cho kỹ năng nghe/phát âm ở Đợt 3
