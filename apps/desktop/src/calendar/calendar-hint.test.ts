@@ -13,8 +13,8 @@ const event = (patch: Partial<Parameters<typeof pickHint>[0][number]> = {}) => (
 });
 
 describe('pickHint', () => {
-  it('suggests nothing while no language besides English is switched on', () => {
-    expect(pickHint([event()], NOW, 'en', new Set())).toBeNull();
+  it('suggests nothing for an ordinary English meeting', () => {
+    expect(pickHint([event({ title: 'Weekly sync' })], NOW, 'en', new Set())).toBeNull();
   });
 
   describe('with Japanese switched on', () => {

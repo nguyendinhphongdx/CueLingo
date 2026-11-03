@@ -21,6 +21,38 @@ describe('splitParts', () => {
   });
 });
 
+const hasSegmenterData = (language: string) =>
+  typeof Intl !== 'undefined' &&
+  'Segmenter' in Intl &&
+  Intl.Segmenter.supportedLocalesOf([language]).length > 0;
+
+describe.skipIf(!hasSegmenterData('zh'))(
+  'splitParts for Chinese (needs Intl.Segmenter zh data)',
+  () => {
+    it('splits a sentence into dictionary words; punctuation is not a word', () => {
+      const parts = splitParts('请在下周一之前把报价单发给我们。', 'zh');
+      const words = parts.filter((part) => part.isWord).map((part) => part.text);
+      expect(words.length).toBeGreaterThan(3);
+      expect(words.every((word) => word.length < 8)).toBe(true);
+      expect(words.join('')).toBe('请在下周一之前把报价单发给我们');
+      expect(parts.at(-1)).toEqual({ text: '。', isWord: false });
+    });
+  },
+);
+
+describe.skipIf(!hasSegmenterData('ko'))(
+  'splitParts for Korean (needs Intl.Segmenter ko data)',
+  () => {
+    it('splits on spaces and keeps particles attached', () => {
+      const parts = splitParts('다음 주 회의에 참석합니다.', 'ko');
+      const words = parts.filter((part) => part.isWord).map((part) => part.text);
+      expect(words).toEqual(['다음', '주', '회의에', '참석합니다']);
+      expect(parts.at(-1)).toEqual({ text: '.', isWord: false });
+      expect(usesSpaces('ko')).toBe(true);
+    });
+  },
+);
+
 describe('answerUnits', () => {
   it('uses words for spaced languages and characters for the others', () => {
     expect(answerUnits('push  back', 'en')).toEqual(['push', 'back']);

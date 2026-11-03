@@ -169,7 +169,9 @@ export function AudioLevels({ failures }: { failures: CaptureFailures }) {
 }
 
 export const CLOUD_CONSENT_TEXT =
-  'Âm thanh cuộc họp (cả micro và âm thanh hệ thống) sẽ được gửi tới Google để nhận dạng tiếng Việt. Hãy báo trước cho người tham dự. CueLingo không lưu âm thanh.';
+  'Âm thanh cuộc họp (cả micro và âm thanh hệ thống) sẽ được gửi tới Google để nhận dạng giọng nói. Hãy báo trước cho người tham dự. CueLingo không lưu âm thanh.';
+export const CLOUD_SWITCH_NOTE =
+  'Ngôn ngữ này nhận dạng bằng đám mây: âm thanh sẽ được gửi tới Google.';
 export const CLOUD_SENDING_TEXT = 'Đang gửi âm thanh tới Google để nhận dạng';
 
 /** Whether the running meeting recognises speech in the cloud (never read from stored settings). */
@@ -341,6 +343,9 @@ export function SessionPanel() {
           <span className="mr-auto">
             Nghe như {SUPPORTED_LANGUAGES[session.suggestedLanguage].name.toLowerCase()}. Đổi sang
             ngôn ngữ này?
+            {SUPPORTED_LANGUAGES[session.suggestedLanguage].recognition === 'cloud' ? (
+              <span className="mt-0.5 block text-xs text-white/70">{CLOUD_SWITCH_NOTE}</span>
+            ) : null}
           </span>
           <Button
             size="sm"

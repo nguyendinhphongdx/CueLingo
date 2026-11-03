@@ -1,4 +1,7 @@
 import { native } from '../lib/native';
+import { nativeErrorCode } from './session-errors';
+
+export { nativeErrorCode };
 import type { SelectableAssistLevel } from '../settings';
 
 export const startSession = (assistLevel: SelectableAssistLevel) =>
@@ -9,19 +12,14 @@ export const openDebrief = (sessionId: string) => {
   return native.openUrl(`${webUrl}/sessions/${sessionId}`);
 };
 
-function nativeErrorCode(error: unknown) {
-  if (typeof error === 'string') return error;
-  if (error instanceof Error) return error.message;
-  if (error && typeof error === 'object' && 'code' in error) return String(error.code);
-  return '';
-}
-
 export function describeNativeError(error: unknown) {
   switch (nativeErrorCode(error)) {
     case 'session_already_running':
       return 'Một phiên đang chạy. Hãy dừng phiên đó trước khi bắt đầu phiên mới.';
     case 'invalid_assist_level':
       return 'Mức hỗ trợ không hợp lệ. Hãy chọn lại mức hỗ trợ.';
+    case 'cloud_consent_required_switch':
+      return 'Cần bạn đồng ý gửi âm thanh tới Google trước khi đổi sang ngôn ngữ này. Dừng họp, chọn ngôn ngữ đó và bấm Bắt đầu để xác nhận.';
     case 'cloud_consent_required':
       return 'Cần bạn đồng ý gửi âm thanh tới Google trước khi họp bằng ngôn ngữ này.';
     default:

@@ -9,6 +9,7 @@ import {
   type ServerMessage,
 } from '@cuelingo/shared';
 import { captureProblemOf } from './capture-problems';
+import { nativeErrorCode } from './session-errors';
 import type {
   AudioModelEvent,
   AudioStatusEvent,
@@ -543,6 +544,42 @@ export function createSessionController({
     }
   }
 
+  /**
+   * Closes whatever an earlier meeting left behind (runtime, native capture, server session).
+   * The state is taken synchronously; the network calls are best effort and never throw.
+   */
+  function releaseLeftovers(): Promise<unknown> | null {
+    const oldId = activeSessionId;
+    const capturing = captureRunning;
+    clearRuntime();
+    activeSessionId = null;
+    captureRunning = false;
+    if (!capturing && !oldId) return null;
+    return Promise.all([
+      capturing ? stopNativeQuietly() : undefined,
+      oldId ? Promise.resolve(sessions.end(oldId)).catch(() => undefined) : undefined,
+    ]);
+  }
+
+  const stopNativeQuietly = () =>
+    Promise.resolve()
+      .then(() => native.sessionStop())
+      .catch(() => undefined);
+
+  /**
+   * Starts the native session. If Rust still holds a running one (this controller knows it has
+   * none), it is stopped and the start is tried once more; any other failure goes to the caller.
+   */
+  async function startNative(input: SessionStartInput) {
+    try {
+      return await native.sessionStart(input);
+    } catch (error) {
+      if (nativeErrorCode(error) !== 'session_already_running') throw error;
+      await stopNativeQuietly();
+      return native.sessionStart(input);
+    }
+  }
+
   const controller: SessionController = {
     getSnapshot: () => snapshot,
     subscribe(listener) {
@@ -551,8 +588,10 @@ export function createSessionController({
     },
     async start(assistLevel, language = DEFAULT_LANGUAGE) {
       if (snapshot.status !== 'idle' && snapshot.status !== 'error') return;
-      clearRuntime();
+      // A meeting that ended in 'error' may still hold a native capture and a server session.
+      const leftovers = releaseLeftovers();
       if (isCloudLanguage(language) && !hasCloudConsent()) {
+        await leftovers;
         fail(new Error('cloud_consent_required'));
         return;
       }
@@ -574,6 +613,7 @@ export function createSessionController({
         suggestedLanguage: null,
         meetingLanguage: language,
       });
+      if (leftovers) await leftovers;
 
       const startRequest = ++vocabularyRequest;
       const pendingVocabulary = loadVocabulary(language);
@@ -582,8 +622,19 @@ export function createSessionController({
         deadline = setTimeout(() => resolve(null), VOCABULARY_WAIT_MS);
       });
 
+      let createdSessionId: string | null = null;
+      let nativeStarted = false;
+      /** Ends the server session of this start unless Stop (or another owner) already took it. */
+      const endCreatedSession = async () => {
+        if (createdSessionId === null || activeSessionId !== createdSessionId) return;
+        const id = createdSessionId;
+        activeSessionId = null;
+        await sessions.end(id).catch(() => undefined);
+      };
+
       try {
         const session = await sessions.create({ assistLevel, language });
+        createdSessionId = session.id;
         if (generation !== runtimeGeneration) {
           await sessions.end(session.id).catch(() => undefined);
           return;
@@ -593,10 +644,10 @@ export function createSessionController({
         await listenForAudioModel();
         await listenForAudioStatus();
         if (isCloudLanguage(language)) await listenForUtterances();
-        if (generation !== runtimeGeneration) return;
+        if (generation !== runtimeGeneration) return endCreatedSession();
         const loaded = glossary ? await Promise.race([pendingVocabulary, timeout]) : undefined;
-        if (generation !== runtimeGeneration) return;
-        await native.sessionStart({
+        if (generation !== runtimeGeneration) return endCreatedSession();
+        await startNative({
           assistLevel,
           language,
           detect: languageOptions()
@@ -604,8 +655,10 @@ export function createSessionController({
             .filter((code) => code !== language),
           ...(loaded === undefined ? {} : { vocabulary: loaded ?? [] }),
         });
+        nativeStarted = true;
         if (generation !== runtimeGeneration) {
           await native.sessionStop();
+          await endCreatedSession();
           return;
         }
         captureRunning = true;
@@ -641,6 +694,11 @@ export function createSessionController({
       } catch (error) {
         if (generation !== runtimeGeneration) return;
         clearRuntime();
+        // Nothing may stay behind: Rust would keep a running session and refuse every later start.
+        if (nativeStarted) await stopNativeQuietly();
+        await endCreatedSession();
+        activeSessionId = null;
+        captureRunning = false;
         update({ meetingLanguage: null, micFailed: false, systemFailed: false });
         hideOverlay();
         fail(error);
@@ -721,9 +779,10 @@ export function createSessionController({
       const sessionId = activeSessionId;
       update({ suggestedLanguage: null });
       if (!target || !sessionId || stopping) return;
-      // Switching into a cloud language needs the same consent as starting in one.
+      // Switching into a cloud language needs the same consent as starting in one. The meeting
+      // goes on in its own language; only a notice is shown (the status must not change).
       if (isCloudLanguage(target) && !hasCloudConsent()) {
-        fail(new Error('cloud_consent_required'));
+        update({ error: new Error('cloud_consent_required_switch') });
         return;
       }
       const generation = runtimeGeneration;

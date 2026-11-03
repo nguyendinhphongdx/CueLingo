@@ -1,4 +1,5 @@
-export const cloudConsentKey = (userId: string) => `cuelingo.cloud-stt-consent.${userId}`;
+export const cloudConsentKey = (userId: string) => `cuelingo.cloud-stt-consent.v2.${userId}`;
+// v2: the text is language-neutral now; an agreement to the earlier Vietnamese-only text does not carry over.;
 
 type ConsentStorage = Pick<Storage, 'getItem' | 'setItem'>;
 

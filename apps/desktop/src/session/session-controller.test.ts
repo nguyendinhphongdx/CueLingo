@@ -14,8 +14,14 @@ import type {
   UtteranceEvent,
 } from '../lib/native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SUPPORTED_LANGUAGES } from '@cuelingo/shared';
 import { createSessionController } from './session-controller';
 import { TranscribeError } from './sessions-api';
+
+/** Every language the registry recognises in the cloud. */
+const cloudCodes = (Object.keys(SUPPORTED_LANGUAGES) as LanguageCode[]).filter(
+  (code) => SUPPORTED_LANGUAGES[code].recognition === 'cloud',
+);
 
 const sessionId = '6df65d24-949f-4456-b5d2-4394c9d7ae16';
 const segmentId = 'eb3fc1d4-c8b7-4a22-a842-873be0f9a9de';
@@ -416,6 +422,154 @@ describe('session controller', () => {
       true,
       false,
     ]);
+  });
+
+  describe('a start that fails part-way', () => {
+    it('stops the native session and ends the server one, so the next start works', async () => {
+      const ctx = setup();
+      const real = ctx.realtime;
+      // The factory is fixed in setup; make connect throw once instead.
+      (real.connect as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+        throw new Error('connect failed');
+      });
+      await ctx.controller.start(3, 'en');
+
+      expect(ctx.native.sessionStop).toHaveBeenCalledOnce();
+      expect(ctx.sessions.end).toHaveBeenCalledOnce();
+      expect(ctx.sessions.end).toHaveBeenCalledWith(sessionId);
+      expect(ctx.controller.getSnapshot()).toMatchObject({
+        status: 'error',
+        meetingLanguage: null,
+      });
+
+      await ctx.controller.start(3, 'en');
+      expect(ctx.native.sessionStart).toHaveBeenCalledTimes(2);
+      expect(ctx.controller.getSnapshot().error).toBeNull();
+    });
+
+    it('does not stop native when it never started, but still ends the server session', async () => {
+      const ctx = setup();
+      ctx.native.onAudioStatus.mockRejectedValueOnce(new Error('listen failed'));
+      await ctx.controller.start(3, 'en');
+      expect(ctx.native.sessionStop).not.toHaveBeenCalled();
+      expect(ctx.sessions.end).toHaveBeenCalledWith(sessionId);
+      expect(ctx.controller.getSnapshot().status).toBe('error');
+    });
+
+    it('survives a native stop that fails during cleanup', async () => {
+      const ctx = setup();
+      (ctx.realtime.connect as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+        throw new Error('boom');
+      });
+      ctx.native.sessionStop.mockRejectedValueOnce(new Error('already gone'));
+      ctx.sessions.end.mockRejectedValueOnce(new Error('api down'));
+      await ctx.controller.start(3, 'en');
+      expect(ctx.controller.getSnapshot().status).toBe('error');
+    });
+  });
+
+  describe('a meeting that ended in error while capturing', () => {
+    it('is closed before the next one starts', async () => {
+      const ctx = setup();
+      await ctx.controller.start(3, 'en');
+      ctx.getRealtimeOptions()!.onError?.(new Error('socket broke'));
+      expect(ctx.controller.getSnapshot().status).toBe('error');
+      expect(ctx.sessions.end).not.toHaveBeenCalled();
+
+      await ctx.controller.start(3, 'en');
+
+      expect(ctx.sessions.end).toHaveBeenCalledOnce();
+      expect(ctx.sessions.end).toHaveBeenCalledWith(sessionId);
+      expect(ctx.native.sessionStop).toHaveBeenCalledOnce();
+      expect(ctx.realtime.close).toHaveBeenCalled();
+      expect(ctx.sessions.create).toHaveBeenCalledTimes(2);
+      expect(ctx.native.sessionStart).toHaveBeenCalledTimes(2);
+      expect(ctx.controller.getSnapshot().error).toBeNull();
+    });
+
+    it('leaves nothing to close after a clean stop', async () => {
+      const ctx = setup();
+      await ctx.controller.start(3, 'en');
+      await ctx.controller.stop();
+      ctx.sessions.end.mockClear();
+      ctx.native.sessionStop.mockClear();
+      await ctx.controller.start(3, 'en');
+      expect(ctx.sessions.end).not.toHaveBeenCalled();
+      expect(ctx.native.sessionStop).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Rust still holds a running session', () => {
+    it('stops it and retries once, then the meeting runs', async () => {
+      const ctx = setup();
+      ctx.native.sessionStart.mockRejectedValueOnce('session_already_running');
+      await ctx.controller.start(3, 'en');
+
+      expect(ctx.native.sessionStop).toHaveBeenCalledOnce();
+      expect(ctx.native.sessionStart).toHaveBeenCalledTimes(2);
+      expect(ctx.native.sessionStop.mock.invocationCallOrder[0]).toBeLessThan(
+        ctx.native.sessionStart.mock.invocationCallOrder[1]!,
+      );
+      expect(ctx.controller.getSnapshot().error).toBeNull();
+      expect(ctx.controller.getSnapshot().startedAt).not.toBeNull();
+    });
+
+    it('also recognises an Error carrying the code', async () => {
+      const ctx = setup();
+      ctx.native.sessionStart.mockRejectedValueOnce(new Error('session_already_running'));
+      await ctx.controller.start(3, 'en');
+      expect(ctx.native.sessionStart).toHaveBeenCalledTimes(2);
+      expect(ctx.controller.getSnapshot().status).not.toBe('error');
+    });
+
+    it('gives up after the second failure, with cleanup and no loop', async () => {
+      const ctx = setup();
+      ctx.native.sessionStart.mockRejectedValue('session_already_running');
+      await ctx.controller.start(3, 'en');
+
+      expect(ctx.native.sessionStart).toHaveBeenCalledTimes(2);
+      expect(ctx.sessions.end).toHaveBeenCalledWith(sessionId);
+      expect(ctx.controller.getSnapshot()).toMatchObject({
+        status: 'error',
+        meetingLanguage: null,
+      });
+    });
+
+    it('leaves no native session running when Stop comes during the retry', async () => {
+      const ctx = setup();
+      let finish: () => void = () => undefined;
+      ctx.native.sessionStart
+        .mockRejectedValueOnce('session_already_running')
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              finish = () => resolve({ sessionId: 'local-native-session' });
+            }),
+        );
+      const starting = ctx.controller.start(3, 'en');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(ctx.native.sessionStart).toHaveBeenCalledTimes(2);
+
+      await ctx.controller.stop();
+      finish();
+      await starting;
+
+      // One stop from the retry itself, one from Stop, one more because the late start landed.
+      const last = ctx.native.sessionStop.mock.invocationCallOrder.at(-1)!;
+      expect(last).toBeGreaterThan(ctx.native.sessionStart.mock.invocationCallOrder[1]!);
+      expect(ctx.controller.getSnapshot().status).toBe('idle');
+    });
+
+    it('does not retry other errors', async () => {
+      const ctx = setup();
+      ctx.native.sessionStart.mockRejectedValueOnce(new Error('permission denied'));
+      await ctx.controller.start(3, 'en');
+
+      expect(ctx.native.sessionStart).toHaveBeenCalledOnce();
+      expect(ctx.native.sessionStop).not.toHaveBeenCalled();
+      expect(ctx.sessions.end).toHaveBeenCalledWith(sessionId);
+      expect(ctx.controller.getSnapshot().status).toBe('error');
+    });
   });
 
   describe('capture problems', () => {
@@ -859,7 +1013,7 @@ describe('session controller', () => {
     });
   });
 
-  describe('cloud-recognised language (vi)', () => {
+  describe.each(cloudCodes)('cloud-recognised language (%s)', (lang) => {
     const utterance = (overrides: Partial<UtteranceEvent> = {}): UtteranceEvent => ({
       type: 'utterance',
       segmentId,
@@ -875,7 +1029,7 @@ describe('session controller', () => {
 
     async function running(options: Parameters<typeof setup>[1] = {}) {
       const ctx = setup(undefined, options);
-      await ctx.controller.start(3, 'vi');
+      await ctx.controller.start(3, lang);
       return ctx;
     }
 
@@ -1008,7 +1162,7 @@ describe('session controller', () => {
         const stopping = ctx.controller.stop();
         await vi.advanceTimersByTimeAsync(3_000);
         await stopping;
-        await ctx.controller.start(3, 'vi');
+        await ctx.controller.start(3, lang);
         ctx.emitUtterance(utterance({ segmentId: ids() }));
         await flush();
         expect(ctx.sessions.transcribe.mock.calls.at(-1)![1].previous).toBeUndefined();
@@ -1118,7 +1272,7 @@ describe('session controller', () => {
 
     it('refuses to start without consent and sends no audio', async () => {
       const ctx = setup(undefined, { consent: false });
-      await ctx.controller.start(3, 'vi');
+      await ctx.controller.start(3, lang);
 
       expect(ctx.controller.getSnapshot().status).toBe('error');
       expect(ctx.controller.getSnapshot().error?.message).toBe('cloud_consent_required');
@@ -1153,7 +1307,7 @@ describe('session controller', () => {
         expect(ctx.native.sessionStop).toHaveBeenCalledOnce();
         expect(ctx.sessions.end).not.toHaveBeenCalled();
         expect(ctx.controller.getSnapshot()).toMatchObject({
-          meetingLanguage: 'vi',
+          meetingLanguage: lang,
           completedSessionId: null,
         });
         expect(ctx.controller.getSnapshot().status).not.toBe('idle');
@@ -1332,7 +1486,7 @@ describe('session controller', () => {
     describe('the meeting language', () => {
       it('is in the snapshot from start until the meeting has fully ended', async () => {
         const ctx = await running();
-        expect(ctx.controller.getSnapshot().meetingLanguage).toBe('vi');
+        expect(ctx.controller.getSnapshot().meetingLanguage).toBe(lang);
         const stopping = ctx.controller.stop();
         await vi.advanceTimersByTimeAsync(3_000);
         await stopping;
@@ -1355,22 +1509,37 @@ describe('session controller', () => {
     });
 
     describe('accepting a suggested language', () => {
-      it('shows the consent error when switching into a cloud language without consent', async () => {
+      it('keeps the meeting running with a notice when switching into a cloud language without consent', async () => {
         const ctx = setup(undefined, { consent: false });
         await ctx.controller.start(3, 'en');
-        ctx.emitAudioModel({ type: 'language-suggestion', language: 'vi', confidence: 0.9 });
+        ctx.getRealtimeOptions()!.onState?.('open');
+        ctx.emitAudioModel({ type: 'language-suggestion', language: lang, confidence: 0.9 });
         await ctx.controller.acceptSuggestedLanguage();
 
-        expect(ctx.controller.getSnapshot().status).toBe('error');
-        expect(ctx.controller.getSnapshot().error?.message).toBe('cloud_consent_required');
+        const snapshot = ctx.controller.getSnapshot();
+        expect(snapshot.status).toBe('running');
+        expect(snapshot.meetingLanguage).toBe('en');
+        expect(snapshot.suggestedLanguage).toBeNull();
+        expect(snapshot.error?.message).toBe('cloud_consent_required_switch');
         expect(ctx.sessions.setLanguage).not.toHaveBeenCalled();
+        expect(ctx.native.setLanguage).not.toHaveBeenCalled();
         expect(ctx.native.onUtterance).not.toHaveBeenCalled();
+      });
+
+      it('one consent covers a switch from one cloud language to another', async () => {
+        const other = cloudCodes.find((code) => code !== lang)!;
+        const ctx = await running();
+        ctx.emitAudioModel({ type: 'language-suggestion', language: other, confidence: 0.9 });
+        await ctx.controller.acceptSuggestedLanguage();
+
+        expect(ctx.native.setLanguage).toHaveBeenCalledWith(other);
+        expect(ctx.controller.getSnapshot()).toMatchObject({ meetingLanguage: other, error: null });
       });
 
       async function pending() {
         const ctx = setup();
         await ctx.controller.start(3, 'en');
-        ctx.emitAudioModel({ type: 'language-suggestion', language: 'vi', confidence: 0.9 });
+        ctx.emitAudioModel({ type: 'language-suggestion', language: lang, confidence: 0.9 });
         let release: () => void = () => {};
         ctx.sessions.setLanguage.mockImplementationOnce(
           (_id: string, language: string) =>

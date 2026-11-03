@@ -1,6 +1,7 @@
 import { Button } from '@cuelingo/ui/components/button';
 import { LanguageSwitcher } from '@cuelingo/ui/components/language-switcher';
 import { PlacementTest } from '@cuelingo/ui/components/placement-test';
+import { placementChoice } from '@cuelingo/ui/lib/placement-languages';
 import { Section } from '@cuelingo/ui/components/section';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -9,7 +10,10 @@ import { studyApi } from './study-api';
 
 /** The listening placement test, in Settings: a few minutes, can be redone any time. */
 export function PlacementSection() {
-  const { language, setLanguage, options } = useLearnLanguage();
+  const learn = useLearnLanguage();
+  // Only languages with placement content are offered; the learner language may have none yet.
+  const { language, options } = placementChoice(learn.options, learn.language);
+  const setLanguage = learn.setLanguage;
   const queryClient = useQueryClient();
   const [started, setStarted] = useState(false);
   const test = useQuery({

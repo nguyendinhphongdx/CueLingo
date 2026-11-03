@@ -20,6 +20,13 @@ describe('cloud consent', () => {
     expect(hasCloudConsent('b2', memory())).toBe(false);
   });
 
+  it('does not honour a consent saved under the earlier, Vietnamese-only text', () => {
+    const storage = memory();
+    storage.data.set('cuelingo.cloud-stt-consent.d4', 'true');
+    expect(hasCloudConsent('d4', storage)).toBe(false);
+    expect(cloudConsentKey('d4')).toContain('.v2.');
+  });
+
   it('survives unavailable storage', () => {
     const broken = {
       getItem: () => {
