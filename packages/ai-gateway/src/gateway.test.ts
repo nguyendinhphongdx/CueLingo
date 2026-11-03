@@ -5,6 +5,7 @@ import {
 } from '@cuelingo/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AiGatewayError, createAiGateway, type AiCallRecord, type GenerateFn } from './gateway';
+import type { TranscribeArgs } from './stt';
 import { TASKS } from './tasks';
 
 const make = (generate: GenerateFn, calls: AiCallRecord[] = []) =>
@@ -88,6 +89,10 @@ describe('ai-gateway structured assist tasks', () => {
     for (const task of ['assist.lookup', 'assist.recap', 'assist.compose'] as const) {
       expect(TASKS[task]).toMatchObject({ model: 'gemini-3.5-flash-lite', timeoutMs: 8_000 });
     }
+  });
+
+  it('gives each speech model 7 seconds so the fallback can still answer in time', () => {
+    expect(TASKS['stt.transcribe'].timeoutMs).toBe(7_000);
   });
 
   it('honors AI_ASSIST_MODEL for every assist task', async () => {
@@ -226,5 +231,113 @@ describe('speech', () => {
       speak: async () => ({ audio: new Uint8Array(), mimeType: 'audio/wav' as const }),
     });
     await expect(gateway.speech('hello')).rejects.toMatchObject({ task: 'tts.speak' });
+  });
+});
+
+describe('transcribe', () => {
+  const audio = new Uint8Array([82, 73, 70, 70, 9, 9, 9, 9, 87, 65, 86, 69, 1]);
+
+  it('transcribes with inline audio, trims the text and records one call without content', async () => {
+    const transcribe = vi.fn(async (_args: TranscribeArgs) => ({
+      text: '  Chào mọi người  ',
+      inputTokens: 100,
+      outputTokens: 5,
+    }));
+    const onCall = vi.fn();
+    const gateway = createAiGateway({ googleApiKey: 'k', transcribe, onCall });
+
+    const result = await gateway.transcribe(
+      { audio, language: 'vi' },
+      { userId: 'u1', sessionId: 's1' },
+    );
+
+    expect(result).toMatchObject({ text: 'Chào mọi người', fallback: false });
+    expect(transcribe).toHaveBeenCalledWith(
+      expect.objectContaining({ audio, model: TASKS['stt.transcribe'].model }),
+    );
+    expect(transcribe.mock.calls[0]![0].system).toContain('Vietnamese');
+    await vi.waitFor(() => expect(onCall).toHaveBeenCalledTimes(1));
+    const record = onCall.mock.calls[0]![0] as Record<string, unknown>;
+    expect(record).toMatchObject({
+      task: 'stt.transcribe',
+      ok: true,
+      promptVersion: 'stt.transcribe@v1',
+      userId: 'u1',
+      sessionId: 's1',
+    });
+    const serialized = JSON.stringify(record);
+    expect(serialized).not.toContain('Chào');
+    expect(Object.keys(record)).not.toContain('audio');
+    expect(Object.keys(record)).not.toContain('text');
+  });
+
+  it('returns an empty text for silence instead of failing', async () => {
+    const gateway = createAiGateway({ googleApiKey: 'k', transcribe: async () => ({ text: ' ' }) });
+    await expect(gateway.transcribe({ audio, language: 'vi' })).resolves.toMatchObject({
+      text: '',
+    });
+  });
+
+  it('falls back to the second model when the first fails', async () => {
+    const transcribe = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('overloaded'))
+      .mockResolvedValueOnce({ text: 'xin chào' });
+    const result = await createAiGateway({ googleApiKey: 'k', transcribe }).transcribe({
+      audio,
+      language: 'vi',
+    });
+    expect(result.fallback).toBe(true);
+    expect(transcribe.mock.calls[0]![0].model).not.toBe(transcribe.mock.calls[1]![0].model);
+  });
+
+  it('throws a gateway error with no cause when both models fail', async () => {
+    const onCall = vi.fn();
+    const gateway = createAiGateway({
+      googleApiKey: 'k',
+      onCall,
+      transcribe: async () => Promise.reject(new Error('secret words')),
+    });
+    const error = await gateway.transcribe({ audio, language: 'vi' }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(AiGatewayError);
+    expect(error).toMatchObject({
+      task: 'stt.transcribe',
+      message: 'AI task stt.transcribe failed',
+    });
+    expect((error as Error).cause).toBeUndefined();
+    await vi.waitFor(() => expect(onCall).toHaveBeenCalledTimes(2));
+    expect(onCall.mock.calls.map((c) => (c[0] as { ok: boolean }).ok)).toEqual([false, false]);
+  });
+});
+
+describe('debrief prompt choice', () => {
+  const segments = [{ id: '11111111-1111-4111-8111-111111111111', source: 'system' as const }];
+  const content = {
+    summary: { headlineVi: 'x', bulletsVi: [] },
+    actionItems: [],
+    hardSegmentIds: [],
+    phraseSuggestions: [],
+    rephrase: [],
+    comprehensionPct: null,
+  };
+
+  it('uses debrief v2 for a Vietnamese meeting and v1 for English', async () => {
+    const calls: AiCallRecord[] = [];
+    const gateway = make(async () => ({ text: JSON.stringify(content) }), calls);
+    await gateway.json(
+      'debrief.generate',
+      { language: 'vi', segments: segments.map((s) => ({ ...s, textEn: 'Xin chào' })) },
+      DebriefContentSchema,
+    );
+    await gateway.json(
+      'debrief.generate',
+      { segments: segments.map((s) => ({ ...s, textEn: 'Hello' })) },
+      DebriefContentSchema,
+    );
+    await vi.waitFor(() => expect(calls).toHaveLength(2));
+    expect(calls.map((c) => c.promptVersion)).toEqual([
+      'debrief.generate@v2',
+      'debrief.generate@v1',
+    ]);
   });
 });

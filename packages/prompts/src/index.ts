@@ -12,3 +12,7 @@ export * from './compose/v1';
 export { composeFixtures } from './compose/fixtures/cases';
 export * from './debrief/v1';
 export { debriefFixtures } from './debrief/fixtures/cases';
+export * from './stt/v1';
+export { sttFixtures } from './stt/fixtures/cases';
+export * from './debrief/v2';
+export { debriefViFixtures } from './debrief/fixtures/cases-vi';

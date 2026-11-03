@@ -21,4 +21,14 @@ describe('estimateCostUsd', () => {
   it('returns null for an unknown model', () => {
     expect(estimateCostUsd(record('unknown-model'))).toBeNull();
   });
+
+  it('prices stt.transcribe input at the audio rate', () => {
+    const stt: AiCallRecord = {
+      ...record('gemini-3.5-flash-lite'),
+      task: 'stt.transcribe',
+      inputTokens: 1_000_000,
+      outputTokens: 0,
+    };
+    expect(estimateCostUsd(stt)).toBe(0.5);
+  });
 });

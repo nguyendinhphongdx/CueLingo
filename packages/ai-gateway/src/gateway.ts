@@ -1,21 +1,23 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import {
   buildComposePrompt,
-  buildDebriefPrompt,
+  buildDebriefPromptFor,
   buildLookupPrompt,
   buildRecapPrompt,
+  buildSttPrompt,
   buildTranslatePrompt,
   COMPOSE_PROMPT_VERSION,
-  DEBRIEF_PROMPT_VERSION,
   LOOKUP_PROMPT_VERSION,
   RECAP_PROMPT_VERSION,
+  STT_PROMPT_VERSION,
   TRANSLATE_PROMPT_VERSION,
   type TranslateInput,
   type DebriefPromptInput,
 } from '@cuelingo/prompts';
-import type { ComposeRequest, LookupRequest, RecapRequest } from '@cuelingo/shared';
+import type { ComposeRequest, LanguageCode, LookupRequest, RecapRequest } from '@cuelingo/shared';
 import { generateText } from 'ai';
 import { createGeminiSpeak, DEFAULT_VOICE, type SpeakFn } from './speech';
+import { createGeminiTranscribe, type TranscribeFn } from './stt';
 import { TASKS, type JsonTaskName, type TaskName } from './tasks';
 
 export interface AiCallRecord {
@@ -69,6 +71,8 @@ export interface AiGatewayOptions {
   generate?: GenerateFn;
   /** Test seam: replaces the real text-to-speech call. */
   speak?: SpeakFn;
+  /** Test seam: replaces the real speech-to-text call. */
+  transcribe?: TranscribeFn;
 }
 
 export interface AiGateway {
@@ -83,6 +87,14 @@ export interface AiGateway {
     options?: { voice?: string },
     context?: AiCallContext,
   ): Promise<SpeechResult>;
+  /**
+   * Transcribes one short utterance (a complete WAV). Never records or logs the audio or the text;
+   * an empty `text` means no intelligible speech and is not an error.
+   */
+  transcribe(
+    input: { audio: Uint8Array; language: LanguageCode },
+    context?: AiCallContext,
+  ): Promise<TranscribeResult>;
   json<TTask extends JsonTaskName, TOutput>(
     task: TTask,
     input: JsonTaskInputMap[TTask],
@@ -94,6 +106,13 @@ export interface AiGateway {
 export interface SpeechResult {
   audio: Uint8Array;
   mimeType: 'audio/wav';
+  model: string;
+  fallback: boolean;
+  latencyMs: number;
+}
+
+export interface TranscribeResult {
+  text: string;
   model: string;
   fallback: boolean;
   latencyMs: number;
@@ -214,6 +233,52 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
     }
   }
 
+  const transcribe: TranscribeFn =
+    options.transcribe ?? createGeminiTranscribe(options.googleApiKey);
+
+  async function transcribeAttempt(
+    model: string,
+    fallback: boolean,
+    audio: Uint8Array,
+    language: LanguageCode,
+    context?: AiCallContext,
+  ): Promise<TranscribeResult> {
+    const started = performance.now();
+    const record: AiCallRecord = {
+      task: 'stt.transcribe',
+      model,
+      promptVersion: STT_PROMPT_VERSION,
+      latencyMs: 0,
+      fallback,
+      ok: false,
+      ...context,
+    };
+    try {
+      const { system, prompt } = buildSttPrompt({ language });
+      const out = await transcribe({
+        model,
+        system,
+        prompt,
+        audio,
+        signal: AbortSignal.timeout(TASKS['stt.transcribe'].timeoutMs),
+      });
+      record.ok = true;
+      record.inputTokens = out.inputTokens;
+      record.outputTokens = out.outputTokens;
+      return {
+        text: out.text.trim(),
+        model,
+        fallback,
+        latencyMs: Math.round(performance.now() - started),
+      };
+    } finally {
+      record.latencyMs = Math.round(performance.now() - started);
+      void Promise.resolve()
+        .then(() => options.onCall?.(record))
+        .catch(() => undefined);
+    }
+  }
+
   async function runTextTask(
     task: TaskName,
     system: string,
@@ -242,10 +307,8 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
       case 'assist.compose':
         return { ...buildComposePrompt(input as ComposeRequest), version: COMPOSE_PROMPT_VERSION };
       case 'debrief.generate':
-        return {
-          ...buildDebriefPrompt(input as DebriefPromptInput),
-          version: DEBRIEF_PROMPT_VERSION,
-        };
+        // v2 for meetings held in Vietnamese, v1 otherwise (chosen by the language in the input).
+        return buildDebriefPromptFor(input as DebriefPromptInput);
     }
   }
 
@@ -265,6 +328,20 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
           return await speechAttempt(config.fallbackModel, true, text, voice, context);
         } catch (error) {
           throw new AiGatewayError('tts.speak', error);
+        }
+      }
+    },
+
+    async transcribe({ audio, language }, context) {
+      const config = TASKS['stt.transcribe'];
+      try {
+        return await transcribeAttempt(config.model, false, audio, language, context);
+      } catch {
+        try {
+          return await transcribeAttempt(config.fallbackModel, true, audio, language, context);
+        } catch {
+          // The cause is dropped on purpose: nothing from the request may travel up with the error.
+          throw new AiGatewayError('stt.transcribe', undefined);
         }
       }
     },
