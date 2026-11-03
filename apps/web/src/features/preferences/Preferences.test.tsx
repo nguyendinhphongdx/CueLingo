@@ -18,16 +18,15 @@ const render = (overrides: Partial<Parameters<typeof PreferencesForm>[0]> = {}) 
   );
 
 describe('PreferencesForm', () => {
-  it('shows all account preferences with audio saving off by default (AC6)', () => {
+  it('shows all account preferences and hides the audio toggle until P2-06', () => {
     const markup = render();
     expect(markup).toContain('Mức hỗ trợ mặc định');
     expect(markup).toContain('Cỡ chữ overlay');
     expect(markup).toContain('Độ đậm nền overlay');
     expect(markup).toContain('Giao diện overlay');
-    expect(markup).toContain('Lưu âm thanh để nghe lại đoạn khó');
-    expect(markup).toContain('tối đa 30 ngày');
-    expect(markup).toContain('type="checkbox"');
-    expect(markup).not.toContain('checked=""');
+    expect(markup).not.toContain('Lưu âm thanh');
+    expect(markup).not.toContain('tối đa 30 ngày');
+    expect(markup).not.toContain('type="checkbox"');
   });
 
   it('shows saving, success and failure states (AC6)', () => {

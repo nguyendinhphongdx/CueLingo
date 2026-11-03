@@ -121,10 +121,6 @@ export const featureGroups: Array<{ id: FeatureGroup; title: string }> = [
 /** Smaller items on the roadmap that have no page of their own yet. */
 export const upcoming: Array<{ title: string; description: string }> = [
   {
-    title: 'Tài khoản',
-    description: 'Đăng nhập trong app để đồng bộ cuộc họp và cụm từ giữa máy và web.',
-  },
-  {
     title: 'Nhãn người nói',
     description: 'Phân biệt "Tôi" và từng người trong cuộc họp ngay trên caption.',
   },
@@ -132,10 +128,4 @@ export const upcoming: Array<{ title: string; description: string }> = [
     title: 'Nghe lại đoạn khó',
     description: 'Phát lại đoạn bạn khó nghe ở tốc độ 0,75× và ẩn hiện chữ.',
   },
-  { title: 'Mức hỗ trợ tự điều chỉnh', description: 'Gợi ý giảm hỗ trợ khi bạn đã nghe tốt hơn.' },
-  {
-    title: 'Bài nghe đánh giá đầu vào',
-    description: '5 phút để chọn mức hỗ trợ phù hợp ngay từ đầu.',
-  },
-  { title: 'Xoá dữ liệu', description: 'Xoá cuộc họp và cụm từ của bạn bất cứ lúc nào.' },
 ];

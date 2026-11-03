@@ -152,22 +152,7 @@ export function PreferencesForm({
           />
         </div>
 
-        <label className="flex min-h-11 cursor-pointer items-start gap-3 border-t pt-5">
-          <input
-            type="checkbox"
-            checked={draft.saveAudio}
-            disabled={loading || saving}
-            onChange={(event) => change({ ...draft, saveAudio: event.target.checked })}
-            className="accent-primary mt-0.5 size-5 shrink-0 cursor-pointer"
-          />
-          <span>
-            <span className="block text-sm font-medium">Lưu âm thanh để nghe lại đoạn khó</span>
-            <span className="text-muted-foreground mt-1 block text-sm">
-              Âm thanh được lưu trong tài khoản của bạn đến khi bạn xoá hoặc tối đa 30 ngày.
-            </span>
-          </span>
-        </label>
-
+        {/* Keep-audio toggle hidden until backlog P2-06 (replay hard segments) stores audio. */}
         <div className="flex min-h-11 flex-wrap items-center gap-3 border-t pt-5">
           <Button type="submit" className="min-h-11" disabled={loading || saving}>
             {saving ? 'Đang lưu…' : 'Lưu tuỳ chọn'}

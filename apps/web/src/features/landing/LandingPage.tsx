@@ -14,7 +14,7 @@ const capabilities = [
   {
     title: 'Theo kịp điều đang được nói',
     description:
-      'Caption tiếng Anh và bản dịch tiếng Việt xuất hiện cùng lúc để bạn vẫn nghe được giọng thật, mà không bỏ lỡ ý chính.',
+      'Caption tiếng Anh, Nhật, Hàn, Trung kèm bản dịch tiếng Việt xuất hiện cùng lúc để bạn vẫn nghe được giọng thật, mà không bỏ lỡ ý chính.',
   },
   {
     title: 'Hỏi ngay trong cuộc họp',
@@ -50,10 +50,11 @@ export function LandingPage() {
 
       <section className={styles.hero} aria-labelledby="landing-title">
         <div className={styles.heroCopy}>
-          <h1 id="landing-title">Nghe hiểu cuộc họp tiếng Anh</h1>
+          <h1 id="landing-title">Nghe hiểu cuộc họp đa ngôn ngữ</h1>
           <p>
-            Nghe hiểu cuộc họp tiếng Anh ngay khi nó diễn ra. CueLingo dành cho người đi làm đọc tốt
-            nhưng khó theo kịp khi đồng nghiệp nói.
+            Caption kèm bản dịch tiếng Việt cho cuộc họp tiếng Anh, Nhật, Hàn, Trung; tiếng Việt có
+            bản ghi lời. CueLingo dành cho người đi làm đọc tốt nhưng khó theo kịp khi đồng nghiệp
+            nói.
           </p>
           <div className={styles.heroActions}>
             <Link
@@ -87,10 +88,11 @@ export function LandingPage() {
 
       <section className={styles.privacy} aria-labelledby="privacy-title">
         <div>
-          <h2 id="privacy-title">Giọng nói ở lại trên máy</h2>
+          <h2 id="privacy-title">Tiếng Anh ở lại trên máy</h2>
           <p>
-            Nhận dạng giọng nói chạy ngay trên máy Mac. Chỉ văn bản được gửi đi để dịch, và bạn có
-            thể xoá dữ liệu bất cứ lúc nào.
+            Với tiếng Anh, nhận dạng giọng nói chạy ngay trên máy Mac và chỉ văn bản được gửi đi để
+            dịch. Tiếng Nhật, Hàn, Trung và Việt được nhận dạng trên đám mây, chỉ khi bạn đồng ý.
+            Bạn có thể xoá dữ liệu bất cứ lúc nào.
           </p>
         </div>
         <div className={styles.privacyFlow} aria-label="Cách CueLingo xử lý dữ liệu cuộc họp">

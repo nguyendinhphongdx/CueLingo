@@ -19,7 +19,9 @@ describe('LandingPage', () => {
     const markup = renderToStaticMarkup(<LandingPage />);
 
     expect(markup).toContain('<h1');
-    expect(markup).toContain('Nghe hiểu cuộc họp tiếng Anh ngay khi nó diễn ra');
+    expect(markup).toContain(
+      'Caption kèm bản dịch tiếng Việt cho cuộc họp tiếng Anh, Nhật, Hàn, Trung',
+    );
     expect(markup).toContain('href="/download"');
     expect(markup).toContain('Tải cho macOS');
     expect(markup).toContain('href="/login"');
