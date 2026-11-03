@@ -1,6 +1,6 @@
 import { ApiError } from '@cuelingo/core-sdk';
 import { describe, expect, it } from 'vitest';
-import { describeError, describeFollowupError } from './errors';
+import { describeError, describeFollowupError, describeRegenerateError } from './errors';
 
 describe('describeError', () => {
   it('returns null when there is no error', () => {
@@ -39,5 +39,19 @@ describe('describeFollowupError', () => {
       'Không kết nối được tới máy chủ',
     );
     expect(describeFollowupError(new Error('boom'))).toBe('Đã có lỗi, vui lòng thử lại');
+  });
+});
+
+describe('describeRegenerateError', () => {
+  it('maps 409 and 429, and falls back for anything else', () => {
+    expect(describeRegenerateError(new ApiError(409, 'CONFLICT', 'x'))).toBe(
+      'Cuộc họp chưa kết thúc hoặc không có nội dung.',
+    );
+    expect(describeRegenerateError(new ApiError(429, 'RATE_LIMITED', 'x'))).toBe(
+      'Bạn bấm hơi nhanh, đợi một lát rồi thử lại.',
+    );
+    expect(describeRegenerateError(new Error('x'))).toBe(
+      'Chưa tạo lại được debrief. Hãy thử lại sau.',
+    );
   });
 });

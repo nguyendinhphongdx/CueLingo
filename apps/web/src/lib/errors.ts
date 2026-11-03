@@ -31,3 +31,12 @@ export function describeFollowupError(error: unknown): string {
   }
   return describeError(error) ?? FALLBACK;
 }
+
+/** Message for a failed "regenerate the debrief" request: not ended or empty (409), too fast (429), else generic. */
+export function describeRegenerateError(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 409) return 'Cuộc họp chưa kết thúc hoặc không có nội dung.';
+    if (error.status === 429) return 'Bạn bấm hơi nhanh, đợi một lát rồi thử lại.';
+  }
+  return 'Chưa tạo lại được debrief. Hãy thử lại sau.';
+}

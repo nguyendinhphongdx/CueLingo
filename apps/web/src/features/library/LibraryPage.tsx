@@ -4,15 +4,9 @@ import type { Session } from '@cuelingo/shared';
 import { Card, CardContent } from '@cuelingo/ui/components/card';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { Section } from '@cuelingo/ui/components/section';
+import { sessionListLabel } from '@cuelingo/ui/lib/session-state';
 import Link from 'next/link';
 import { useSessions } from './use-sessions';
-
-const STATUS_LABELS: Record<Session['status'], string> = {
-  live: 'Đang diễn ra',
-  ended: 'Đang xử lý debrief…',
-  debriefed: 'Đã có debrief',
-  deleted: 'Đã xoá',
-};
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('vi-VN', {
@@ -67,7 +61,7 @@ export function SessionList({ sessions }: { sessions: Session[] }) {
             </span>
             <span className="shrink-0 text-right text-sm">
               <span className="block">{formatDuration(session)}</span>
-              <span className="text-muted-foreground block">{STATUS_LABELS[session.status]}</span>
+              <span className="text-muted-foreground block">{sessionListLabel(session)}</span>
             </span>
           </Link>
         </li>

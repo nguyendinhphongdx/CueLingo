@@ -2,13 +2,14 @@ import { Button } from '@cuelingo/ui/components/button';
 import { KeepMounted } from '@cuelingo/ui/components/keep-mounted';
 import { FollowupComposer, type FollowupDraft } from '@cuelingo/ui/components/followup-composer';
 import type { FollowupRequest } from '@cuelingo/shared';
+import { EMPTY_MEETING_TEXT } from '@cuelingo/ui/lib/session-state';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { describeFollowupError } from './debrief-api';
 import type { BriefState } from './use-debrief-brief';
 import { summariseDebrief, type BriefList } from './debrief-brief';
 
-export const BRIEF_EMPTY_TEXT = 'Cuộc họp không có câu nào được ghi, nên chưa có debrief.';
+export const BRIEF_EMPTY_TEXT = EMPTY_MEETING_TEXT;
 export const BRIEF_DENIED_TEXT = 'Không xem được debrief, hãy đăng nhập lại.';
 export const BRIEF_TIMEOUT_TEXT = 'Debrief chưa sẵn sàng, xem sau ở Cuộc họp gần đây.';
 

@@ -1,17 +1,11 @@
 import { Button } from '@cuelingo/ui/components/button';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Session } from '@cuelingo/shared';
+import { sessionListLabel } from '@cuelingo/ui/lib/session-state';
 import { ChevronRight, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { openDebrief } from './session-actions';
 import { sessionsApi } from './sessions-api';
-
-const statusLabel: Record<Session['status'], string> = {
-  live: 'Đang họp',
-  ended: 'Đang tạo debrief',
-  debriefed: 'Đã có debrief',
-  deleted: 'Đã xoá',
-};
 
 const formatter = new Intl.DateTimeFormat('vi-VN', {
   weekday: 'short',
@@ -92,7 +86,7 @@ export function RecentSessions({
                       .join(' · ') || 'Đang diễn ra'}
                   </span>
                 </span>
-                <span className="text-muted-foreground text-xs">{statusLabel[session.status]}</span>
+                <span className="text-muted-foreground text-xs">{sessionListLabel(session)}</span>
                 <ChevronRight aria-hidden="true" className="text-muted-foreground size-4" />
               </button>
               <Button

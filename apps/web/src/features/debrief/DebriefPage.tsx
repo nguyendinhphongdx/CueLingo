@@ -16,6 +16,11 @@ import { Kbd } from '@cuelingo/ui/components/kbd';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { Section } from '@cuelingo/ui/components/section';
 import { Segmented } from '@cuelingo/ui/components/segmented';
+import {
+  debriefOutlook,
+  EMPTY_MEETING_TEXT,
+  LIVE_MEETING_TEXT,
+} from '@cuelingo/ui/lib/session-state';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -217,7 +222,9 @@ export interface DebriefPageViewProps {
   onSavePhrase: (input: SavePhraseRequest) => void;
   onCopy: (key: string, text: string) => void;
   onExport: (includeTranscript: boolean) => void;
-  onRetry: () => void;
+  /** Asks the server to build the debrief again (after the wait timed out). */
+  onRegenerate: () => void;
+  regenerating?: boolean;
   deleting: boolean;
   onDelete: () => void;
   /** Drafts a follow-up message for this meeting; the section is hidden without it. */
@@ -265,7 +272,8 @@ export function DebriefPageView({
   onSavePhrase,
   onCopy,
   onExport,
-  onRetry,
+  onRegenerate,
+  regenerating = false,
   deleting,
   onDelete,
   onComposeFollowup,
@@ -341,31 +349,48 @@ export function DebriefPageView({
     );
 
   if (!debrief) {
+    const outlook = session ? debriefOutlook(session) : 'pending';
     return (
       <>
         <PageHeader title="Chi tiết cuộc họp" />
         <Card>
           <CardHeader>
             <CardTitle>
-              {processing
-                ? processingTimedOut
-                  ? 'Lâu hơn bình thường, bạn có thể quay lại sau'
-                  : `Đang tạo… ${processingSeconds} s`
-                : 'Chưa thể mở debrief'}
+              {outlook === 'live'
+                ? 'Chưa có debrief'
+                : outlook === 'empty'
+                  ? 'Không có debrief'
+                  : processing
+                    ? processingTimedOut
+                      ? 'Debrief chưa tạo được.'
+                      : `Đang tạo… ${processingSeconds} s`
+                    : 'Chưa thể mở debrief'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {processing && !processingTimedOut && (
+            {outlook === 'live' && (
+              <p className="text-muted-foreground text-sm">{LIVE_MEETING_TEXT}</p>
+            )}
+            {outlook === 'empty' && (
+              <p className="text-muted-foreground text-sm">{EMPTY_MEETING_TEXT}</p>
+            )}
+            {outlook === 'pending' && processing && !processingTimedOut && (
               <p className="text-muted-foreground text-sm">
                 CueLingo đang tổng hợp cuộc họp và sẽ tự kiểm tra lại.
               </p>
             )}
-            {processingTimedOut && (
-              <Button variant="outline" className="min-h-11" onClick={onRetry}>
-                Thử lại
+            {outlook === 'pending' && processingTimedOut && (
+              <Button
+                variant="outline"
+                className="min-h-11"
+                disabled={regenerating}
+                onClick={onRegenerate}
+              >
+                {regenerating ? 'Đang gửi…' : 'Tạo lại debrief'}
               </Button>
             )}
-            {error && (
+            {/* A live or empty meeting has no debrief by design: the 404 is expected, not an error to show. */}
+            {error && outlook === 'pending' && (
               <p role="alert" className="text-destructive text-sm">
                 {error}
               </p>
@@ -738,7 +763,8 @@ export function DebriefPage({ sessionId }: { sessionId: string }) {
       onSavePhrase={(input) => void state.savePhrase(input)}
       onCopy={(key, text) => void state.copyText(key, text)}
       onExport={state.exportMarkdown}
-      onRetry={state.retryDebrief}
+      onRegenerate={state.regenerateDebrief}
+      regenerating={state.regenerating}
       deleting={state.deleting}
       onDelete={state.deleteSession}
       onComposeFollowup={(input) => client.followup(sessionId, input)}

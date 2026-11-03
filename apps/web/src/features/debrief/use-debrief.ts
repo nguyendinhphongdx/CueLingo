@@ -3,7 +3,8 @@ import type { DebriefFeedbackRequest, SavePhraseRequest } from '@cuelingo/shared
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { client } from '../../lib/client';
-import { describeError } from '../../lib/errors';
+import { debriefOutlook } from '@cuelingo/ui/lib/session-state';
+import { describeError, describeRegenerateError } from '../../lib/errors';
 import { buildDebriefMarkdown } from './markdown';
 
 const POLL_INTERVAL_MS = 5_000;
@@ -59,11 +60,14 @@ export function useDebrief(sessionId: string, onDeleted?: () => void) {
     queryKey: ['sessions', sessionId],
     queryFn: () => client.sessions.get(sessionId),
   });
+  // Read inside the polling callback: a live or empty meeting will never get a debrief.
+  const canWaitRef = useRef(true);
   const debrief = useQuery({
     queryKey: ['sessions', sessionId, 'debrief'],
     queryFn: () => client.sessions.getDebrief(sessionId),
     retry: false,
     refetchInterval: (query) =>
+      canWaitRef.current &&
       shouldPollDebrief(query.state.error, Date.now() - pollingStartedAt.current)
         ? POLL_INTERVAL_MS
         : false,
@@ -78,12 +82,23 @@ export function useDebrief(sessionId: string, onDeleted?: () => void) {
       setSavedPhraseKeys((current) => new Set(current).add(phraseKey(input)));
     },
   });
+  const regenerate = useMutation({
+    mutationFn: () => client.regenerateDebrief(sessionId),
+    onSuccess: () => {
+      // A new wait: reset the timer and poll again.
+      pollingStartedAt.current = Date.now();
+      setNow(pollingStartedAt.current);
+      void debrief.refetch();
+    },
+  });
   const remove = useMutation({
     mutationFn: () => client.sessions.remove(sessionId),
     onSuccess: () => onDeleted?.(),
   });
 
-  const debriefNotFound = isDebriefNotFound(debrief.error);
+  const outlook = session.data ? debriefOutlook(session.data) : 'pending';
+  canWaitRef.current = outlook === 'pending';
+  const debriefNotFound = isDebriefNotFound(debrief.error) && outlook === 'pending';
   const processingStatus = getProcessingStatus(pollingStartedAt.current, now);
   const processingElapsedMs = debriefNotFound ? processingStatus.elapsedMs : 0;
 
@@ -118,12 +133,10 @@ export function useDebrief(sessionId: string, onDeleted?: () => void) {
     processing: debriefNotFound,
     processingSeconds: debriefNotFound ? processingStatus.seconds : 0,
     processingTimedOut: debriefNotFound && processingStatus.timedOut,
-    retryDebrief: () => {
-      pollingStartedAt.current = Date.now();
-      setNow(pollingStartedAt.current);
-      void debrief.refetch();
-    },
+    regenerating: regenerate.isPending,
+    regenerateDebrief: () => regenerate.mutate(),
     error:
+      (regenerate.error ? describeRegenerateError(regenerate.error) : null) ??
       describeError(session.error) ??
       (debriefNotFound ? null : describeError(debrief.error)) ??
       describeError(feedback.error) ??

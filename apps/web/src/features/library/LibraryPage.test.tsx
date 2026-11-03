@@ -25,8 +25,20 @@ describe('SessionList', () => {
     const markup = renderToStaticMarkup(<SessionList sessions={[session()]} />);
     expect(markup).toContain('Weekly sync');
     expect(markup).toContain('30 phút');
-    expect(markup).toContain('Đang xử lý debrief…');
+    expect(markup).toContain('Đang tạo debrief');
     expect(markup).toContain('/sessions/74cd2b16-1bd2-4c46-9ed4-b1f1bc376f31');
+  });
+
+  it('does not promise a debrief to a live or empty meeting', () => {
+    const live = renderToStaticMarkup(
+      <SessionList sessions={[session({ status: 'live', endedAt: null })]} />,
+    );
+    expect(live).toContain('Chưa kết thúc');
+    expect(live).not.toContain('Đang tạo debrief');
+    const empty = renderToStaticMarkup(
+      <SessionList sessions={[session({ endedAt: '2026-11-01T08:00:02.000Z' })]} />,
+    );
+    expect(empty).toContain('Không có nội dung');
   });
 
   it('orders the newest session first', () => {

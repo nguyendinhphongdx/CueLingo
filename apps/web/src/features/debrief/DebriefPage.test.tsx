@@ -81,7 +81,7 @@ const defaultProps = {
   onSavePhrase: vi.fn(),
   onCopy: vi.fn(),
   onExport: vi.fn(),
-  onRetry: vi.fn(),
+  onRegenerate: vi.fn(),
   deleting: false,
   onDelete: vi.fn(),
 };
@@ -136,8 +136,52 @@ describe('DebriefPageView', () => {
         processingTimedOut
       />,
     );
-    expect(markup).toContain('Lâu hơn bình thường, bạn có thể quay lại sau');
-    expect(markup).toContain('>Thử lại<');
+    expect(markup).toContain('Debrief chưa tạo được.');
+    expect(markup).toContain('>Tạo lại debrief<');
+    expect(markup).not.toContain('Đang tạo…');
+  });
+
+  it('shows the regenerate failure next to the button', () => {
+    const markup = renderToStaticMarkup(
+      <DebriefPageView
+        {...defaultProps}
+        debrief={undefined}
+        processing
+        processingTimedOut
+        error="Bạn bấm hơi nhanh, đợi một lát rồi thử lại."
+      />,
+    );
+    expect(markup).toContain('Bạn bấm hơi nhanh');
+  });
+
+  it('says a live meeting has no debrief yet, with no spinner and no timer', () => {
+    const markup = renderToStaticMarkup(
+      <DebriefPageView
+        {...defaultProps}
+        session={{ ...session, status: 'live', endedAt: null }}
+        debrief={undefined}
+        processing
+      />,
+    );
+    expect(markup).toContain('Cuộc họp này chưa kết thúc. Debrief sẽ có sau khi cuộc họp dừng.');
+    expect(markup).not.toContain('Đang tạo…');
+    expect(markup).not.toContain('Tạo lại debrief');
+  });
+
+  it('says an ended meeting without sentences has no debrief, keeping back and delete', () => {
+    const markup = renderToStaticMarkup(
+      <DebriefPageView
+        {...defaultProps}
+        session={{ ...session, status: 'ended', segments: [] }}
+        debrief={undefined}
+        processing
+      />,
+    );
+    expect(markup).toContain('Cuộc họp này không có câu nào được ghi nên không có debrief.');
+    expect(markup).toContain('Quay lại danh sách cuộc họp');
+    expect(markup).toContain('Xoá cuộc họp');
+    expect(markup).not.toContain('Đang tạo…');
+    expect(markup).not.toContain('Tạo lại debrief');
   });
 
   it('shows all five blocks, comprehension, save action and bilingual transcript', () => {
