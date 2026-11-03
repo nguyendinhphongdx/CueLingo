@@ -16,7 +16,7 @@ export interface PollHandlers {
 }
 
 export function pollDebrief(
-  api: DebriefApi,
+  api: Pick<DebriefApi, 'get'>,
   sessionId: string,
   { onReady, onTimeout, onDenied }: PollHandlers,
 ): () => void {

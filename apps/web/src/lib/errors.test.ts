@@ -1,6 +1,6 @@
 import { ApiError } from '@cuelingo/core-sdk';
 import { describe, expect, it } from 'vitest';
-import { describeError } from './errors';
+import { describeError, describeFollowupError } from './errors';
 
 describe('describeError', () => {
   it('returns null when there is no error', () => {
@@ -18,5 +18,26 @@ describe('describeError', () => {
 
   it('falls back to a generic message for anything else', () => {
     expect(describeError(new Error('boom'))).toBe('Đã có lỗi, vui lòng thử lại');
+  });
+});
+
+describe('describeFollowupError', () => {
+  it('tells rate limiting, a failed draft and a missing debrief apart', () => {
+    expect(describeFollowupError(new ApiError(429, 'RATE_LIMITED', 'x'))).toBe(
+      'Bạn soạn hơi nhanh, đợi một lát rồi thử lại.',
+    );
+    expect(describeFollowupError(new ApiError(502, 'FOLLOWUP_FAILED', 'x'))).toBe(
+      'Chưa soạn được. Thử lại hoặc chọn giọng khác.',
+    );
+    expect(describeFollowupError(new ApiError(404, 'NOT_FOUND', 'x'))).toBe(
+      'Debrief chưa sẵn sàng.',
+    );
+  });
+
+  it('falls back to the general messages', () => {
+    expect(describeFollowupError(new ApiError(0, 'NETWORK_ERROR', 'x'))).toBe(
+      'Không kết nối được tới máy chủ',
+    );
+    expect(describeFollowupError(new Error('boom'))).toBe('Đã có lỗi, vui lòng thử lại');
   });
 });

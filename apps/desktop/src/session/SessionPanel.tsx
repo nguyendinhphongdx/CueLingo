@@ -13,6 +13,7 @@ import { PRIVACY_PANES, native } from '../lib/native';
 import type { SessionStatus } from './session-controller';
 import { SUPPORTED_LANGUAGES, type LanguageCode } from '@cuelingo/shared';
 import { describeModelProgress, useModelProgress } from './model-progress';
+import { debriefApi } from './debrief-api';
 import { PostMeetingCard } from './PostMeetingCard';
 import {
   decideStart,
@@ -309,6 +310,7 @@ export function SessionPanel() {
           sentences={session.completedSegmentCount}
           brief={brief}
           onOpen={() => void openDebrief(finishedId)}
+          onComposeFollowup={(input) => debriefApi.followup(finishedId, input)}
         />
       ) : null}
       {sendsAudio ? <CloudSendingBadge /> : null}

@@ -78,4 +78,37 @@ describe('PostMeetingCard', () => {
   it('asks the person to sign in again when the debrief is forbidden', () => {
     expect(render({ status: 'denied' })).toContain(BRIEF_DENIED_TEXT);
   });
+
+  describe('follow-up', () => {
+    const view = (
+      brief: Parameters<typeof PostMeetingCard>[0]['brief'],
+      extra: Partial<Parameters<typeof PostMeetingCard>[0]> = {},
+    ) =>
+      renderToStaticMarkup(
+        <PostMeetingCard
+          duration="12:34"
+          sentences={42}
+          brief={brief}
+          onOpen={() => undefined}
+          onComposeFollowup={() => Promise.reject(new Error('x'))}
+          {...extra}
+        />,
+      );
+
+    it('offers a collapsed button only once the debrief is ready', () => {
+      const ready = view({ status: 'ready', debrief });
+      expect(ready).toContain('Soạn follow-up');
+      expect(ready).toContain('aria-expanded="false"');
+      expect(ready).not.toContain('Kiểm tra lại trước khi gửi.');
+      expect(view({ status: 'pending' })).not.toContain('Soạn follow-up');
+      expect(view({ status: 'timeout' })).not.toContain('Soạn follow-up');
+    });
+
+    it('expands the shared composer under the summary', () => {
+      const markup = view({ status: 'ready', debrief }, { followupOpen: true });
+      expect(markup).toContain('Chốt kế hoạch');
+      expect(markup).toContain('Tin nhắn nhóm');
+      expect(markup).toContain('>Soạn<');
+    });
+  });
 });

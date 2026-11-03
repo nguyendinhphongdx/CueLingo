@@ -86,6 +86,37 @@ const defaultProps = {
   onDelete: vi.fn(),
 };
 
+describe('DebriefPageView follow-up', () => {
+  const compose = vi.fn();
+
+  it('offers a collapsed follow-up button when the debrief is ready', () => {
+    const markup = renderToStaticMarkup(
+      <DebriefPageView {...defaultProps} onComposeFollowup={compose} />,
+    );
+    expect(markup).toContain('Soạn follow-up');
+    expect(markup).toContain('aria-expanded="false"');
+    expect(markup).not.toContain('Kiểm tra lại trước khi gửi.');
+  });
+
+  it.each(['en', 'ja', 'vi'] as const)('offers it for a %s meeting', (language) => {
+    const markup = renderToStaticMarkup(
+      <DebriefPageView
+        {...defaultProps}
+        session={{ ...session, language }}
+        onComposeFollowup={compose}
+      />,
+    );
+    expect(markup).toContain('Soạn follow-up');
+  });
+
+  it('is absent without a ready debrief', () => {
+    const markup = renderToStaticMarkup(
+      <DebriefPageView {...defaultProps} debrief={undefined} onComposeFollowup={compose} />,
+    );
+    expect(markup).not.toContain('Soạn follow-up');
+  });
+});
+
 describe('DebriefPageView', () => {
   it('shows the processing state while a missing debrief is being polled', () => {
     const markup = renderToStaticMarkup(

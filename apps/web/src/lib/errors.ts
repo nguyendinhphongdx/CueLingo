@@ -20,3 +20,14 @@ export function describeError(error: unknown): string | null {
   if (error instanceof ApiError) return MESSAGES[error.code] ?? FALLBACK;
   return FALLBACK;
 }
+
+/** Message for a failed follow-up draft: the codes this feature can hit first, then the general ones. */
+export function describeFollowupError(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.code === ErrorCode.RateLimited) return 'Bạn soạn hơi nhanh, đợi một lát rồi thử lại.';
+    if (error.code === ErrorCode.FollowupFailed)
+      return 'Chưa soạn được. Thử lại hoặc chọn giọng khác.';
+    if (error.status === 404) return 'Debrief chưa sẵn sàng.';
+  }
+  return describeError(error) ?? FALLBACK;
+}

@@ -4,11 +4,14 @@ import { isLanguageCode, SUPPORTED_LANGUAGES, type LanguageCode } from '@cueling
 import type {
   Debrief,
   DebriefFeedbackRequest,
+  FollowupRequest,
   SavePhraseRequest,
   SessionDetail,
 } from '@cuelingo/shared';
 import { Button } from '@cuelingo/ui/components/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@cuelingo/ui/components/card';
+import { KeepMounted } from '@cuelingo/ui/components/keep-mounted';
+import { FollowupComposer, type FollowupDraft } from '@cuelingo/ui/components/followup-composer';
 import { Kbd } from '@cuelingo/ui/components/kbd';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { Section } from '@cuelingo/ui/components/section';
@@ -25,6 +28,7 @@ import {
 } from './content';
 import { SpeakButton } from '@cuelingo/ui/components/speak-button';
 import { client } from '../../lib/client';
+import { describeFollowupError } from '../../lib/errors';
 import { buildDebriefMarkdown } from './markdown';
 import { useDebrief, type ClipboardFeedback } from './use-debrief';
 
@@ -211,6 +215,8 @@ export interface DebriefPageViewProps {
   onRetry: () => void;
   deleting: boolean;
   onDelete: () => void;
+  /** Drafts a follow-up message for this meeting; the section is hidden without it. */
+  onComposeFollowup?: (input: FollowupRequest) => Promise<FollowupDraft>;
 }
 
 export function SavePhraseButton({
@@ -257,8 +263,10 @@ export function DebriefPageView({
   onRetry,
   deleting,
   onDelete,
+  onComposeFollowup,
 }: DebriefPageViewProps) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [followupOpen, setFollowupOpen] = useState(false);
   const [includeTranscript, setIncludeTranscript] = useState(false);
   const [transcriptFilter, setTranscriptFilter] = useState<TranscriptFilter>('all');
   const [selectedBlockIndex, setSelectedBlockIndex] = useState(0);
@@ -457,6 +465,16 @@ export function DebriefPageView({
               >
                 Sao chép cả debrief
               </Button>
+              {onComposeFollowup && (
+                <Button
+                  variant="outline"
+                  className="min-h-11"
+                  aria-expanded={followupOpen}
+                  onClick={() => setFollowupOpen((open) => !open)}
+                >
+                  Soạn follow-up
+                </Button>
+              )}
               <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm">
                 <input
                   type="checkbox"
@@ -512,6 +530,21 @@ export function DebriefPageView({
         <p role="alert" className="text-destructive text-sm">
           {error}
         </p>
+      )}
+
+      {onComposeFollowup && (
+        <KeepMounted open={followupOpen}>
+          <Section title="Soạn follow-up">
+            <Card>
+              <CardContent className="pt-6">
+                <FollowupComposer
+                  onCompose={onComposeFollowup}
+                  describeError={describeFollowupError}
+                />
+              </CardContent>
+            </Card>
+          </Section>
+        </KeepMounted>
       )}
 
       <DebriefBlock title="Tóm tắt" {...blockProps('summary')}>
@@ -702,6 +735,7 @@ export function DebriefPage({ sessionId }: { sessionId: string }) {
       onRetry={state.retryDebrief}
       deleting={state.deleting}
       onDelete={state.deleteSession}
+      onComposeFollowup={(input) => client.followup(sessionId, input)}
     />
   );
 }
