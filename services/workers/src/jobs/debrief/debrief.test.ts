@@ -107,37 +107,53 @@ describe('debrief.generate', () => {
     expect(state.saved).toEqual([]);
   });
 
-  it('writes a Vietnamese meeting debrief with v2 and empty learning blocks', async () => {
-    const fixture = debriefViFixtures[0]!.input;
-    const session: DebriefSession = {
-      id: SESSION_ID,
-      language: 'vi',
-      segments: fixture.segments,
-    };
-    // The model ignores the instructions: the handler still empties the learning blocks.
-    const state = setup(session, {
-      ...generated,
-      hardSegmentIds: [fixture.segments[0]!.id],
-      comprehensionPct: 90,
-    });
+  it.each(['vi', 'ko', 'zh'] as const)(
+    'writes a %s meeting debrief with v3 and empty learning blocks',
+    async (language) => {
+      const fixture = debriefViFixtures[0]!.input;
+      const session: DebriefSession = {
+        id: SESSION_ID,
+        language,
+        segments: fixture.segments,
+      };
+      // The model ignores the instructions: the handler still empties the learning blocks.
+      const state = setup(session, {
+        ...generated,
+        hardSegmentIds: [fixture.segments[0]!.id],
+        comprehensionPct: 90,
+      });
 
-    await expect(generateDebrief(state.deps, { sessionId: SESSION_ID })).resolves.toEqual({
-      version: 1,
-    });
+      await expect(generateDebrief(state.deps, { sessionId: SESSION_ID })).resolves.toEqual({
+        version: 1,
+      });
 
-    expect(state.json).toHaveBeenCalledWith(
-      'debrief.generate',
-      { segments: fixture.segments, language: 'vi' },
-      expect.anything(),
-      { sessionId: SESSION_ID },
-    );
+      expect(state.json).toHaveBeenCalledWith(
+        'debrief.generate',
+        { segments: fixture.segments, language },
+        expect.anything(),
+        { sessionId: SESSION_ID },
+      );
+      const saved = state.saved[0]!;
+      expect(saved.promptVersion).toBe('debrief.generate@v3');
+      expect(saved.content.summary.headlineVi).toBe('Kế hoạch phát hành');
+      expect(saved.content.actionItems).toHaveLength(1);
+      expect(saved.content.hardSegmentIds).toEqual([]);
+      expect(saved.content.phraseSuggestions).toEqual([]);
+      expect(saved.content.rephrase).toEqual([]);
+      expect(saved.content.comprehensionPct).toBeNull();
+    },
+  );
+
+  it('keeps the learning blocks and v1 for a Japanese meeting', async () => {
+    const session: DebriefSession = { ...transcript(), language: 'ja' };
+    const state = setup(session);
+
+    await generateDebrief(state.deps, { sessionId: SESSION_ID });
+
     const saved = state.saved[0]!;
-    expect(saved.promptVersion).toBe('debrief.generate@v2');
-    expect(saved.content.summary.headlineVi).toBe('Kế hoạch phát hành');
-    expect(saved.content.actionItems).toHaveLength(1);
-    expect(saved.content.hardSegmentIds).toEqual([]);
-    expect(saved.content.phraseSuggestions).toEqual([]);
-    expect(saved.content.rephrase).toEqual([]);
-    expect(saved.content.comprehensionPct).toBeNull();
+    expect(saved.promptVersion).toBe('debrief.generate@v1');
+    expect(saved.content.hardSegmentIds).toEqual([SEGMENT_IDS[0]]);
+    expect(saved.content.phraseSuggestions).toHaveLength(1);
+    expect(saved.content.comprehensionPct).toBe(80);
   });
 });

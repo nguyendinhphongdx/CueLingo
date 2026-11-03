@@ -11,8 +11,7 @@ describe('CreateGlossaryTermSchema', () => {
     });
   });
 
-  it('rejects a language that is not switched on yet', () => {
-    expect(CreateGlossaryTermSchema.safeParse({ term: 'x', language: 'ja' }).success).toBe(false);
+  it('rejects a language that is not known', () => {
     expect(CreateGlossaryTermSchema.safeParse({ term: 'x', language: 'xx' }).success).toBe(false);
   });
 

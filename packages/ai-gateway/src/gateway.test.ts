@@ -351,7 +351,7 @@ describe('transcribe', () => {
     expect(record).toMatchObject({
       task: 'stt.transcribe',
       ok: true,
-      promptVersion: 'stt.transcribe@v2',
+      promptVersion: 'stt.transcribe@v3',
       userId: 'u1',
       sessionId: 's1',
     });
@@ -411,22 +411,27 @@ describe('debrief prompt choice', () => {
     comprehensionPct: null,
   };
 
-  it('uses debrief v2 for a Vietnamese meeting and v1 for English', async () => {
+  it('uses debrief v3 for Vietnamese and Korean, v1 for English and Japanese', async () => {
     const calls: AiCallRecord[] = [];
     const gateway = make(async () => ({ text: JSON.stringify(content) }), calls);
-    await gateway.json(
-      'debrief.generate',
-      { language: 'vi', segments: segments.map((s) => ({ ...s, textEn: 'Xin chào' })) },
-      DebriefContentSchema,
-    );
-    await gateway.json(
-      'debrief.generate',
-      { segments: segments.map((s) => ({ ...s, textEn: 'Hello' })) },
-      DebriefContentSchema,
-    );
-    await vi.waitFor(() => expect(calls).toHaveLength(2));
+    const run = (language: 'vi' | 'ko' | 'en' | 'ja' | undefined, text: string) =>
+      gateway.json(
+        'debrief.generate',
+        {
+          ...(language ? { language } : {}),
+          segments: segments.map((s) => ({ ...s, textEn: text })),
+        },
+        DebriefContentSchema,
+      );
+    await run('vi', 'Xin chào');
+    await run('ko', '안녕하세요');
+    await run(undefined, 'Hello');
+    await run('ja', 'こんにちは');
+    await vi.waitFor(() => expect(calls).toHaveLength(4));
     expect(calls.map((c) => c.promptVersion)).toEqual([
-      'debrief.generate@v2',
+      'debrief.generate@v3',
+      'debrief.generate@v3',
+      'debrief.generate@v1',
       'debrief.generate@v1',
     ]);
   });

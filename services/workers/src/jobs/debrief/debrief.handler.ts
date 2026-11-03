@@ -31,8 +31,8 @@ export async function generateDebrief(
     { sessionId: session.id },
   );
   const validSegmentIds = new Set(session.segments.map(({ id }) => id));
-  // A meeting in a language that is not translated (Vietnamese) has no learning blocks, whatever the model said.
-  const learns = SUPPORTED_LANGUAGES[session.language].translates;
+  // A meeting in a language nobody studies here (Vietnamese, Korean, Chinese) has no learning blocks, whatever the model said.
+  const learns = SUPPORTED_LANGUAGES[session.language].learnable;
   const content: DebriefContent = {
     ...generated,
     hardSegmentIds: learns ? generated.hardSegmentIds.filter((id) => validSegmentIds.has(id)) : [],

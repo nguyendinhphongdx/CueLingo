@@ -42,16 +42,21 @@ const BLOCK_ORDER: BlockName[] = [
   'rephrase',
 ];
 
-/** Blocks about learning the language; a meeting in a language with no translation has none. */
+/** Blocks about learning the language; a meeting in a language nobody studies here has none. */
 const LEARNING_BLOCKS: readonly BlockName[] = ['hardSegments', 'phraseSuggestions', 'rephrase'];
 
-/** Whether the meeting's language is translated for the person (and so has learning blocks and a score). */
+/** Whether each sentence of the meeting is translated (the bilingual transcript line). */
 export function sessionTranslates(language: string | undefined): boolean {
   return isLanguageCode(language) ? SUPPORTED_LANGUAGES[language as LanguageCode].translates : true;
 }
 
-export function visibleBlocks(translates: boolean): BlockName[] {
-  return translates ? BLOCK_ORDER : BLOCK_ORDER.filter((b) => !LEARNING_BLOCKS.includes(b));
+/** Whether the meeting's language is studied here (so it has learning blocks and a score). */
+export function sessionLearns(language: string | undefined): boolean {
+  return isLanguageCode(language) ? SUPPORTED_LANGUAGES[language as LanguageCode].learnable : true;
+}
+
+export function visibleBlocks(learns: boolean): BlockName[] {
+  return learns ? BLOCK_ORDER : BLOCK_ORDER.filter((b) => !LEARNING_BLOCKS.includes(b));
 }
 
 export function isTypingTarget(target: EventTarget | null): boolean {
@@ -275,7 +280,8 @@ export function DebriefPageView({
   const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const translates = sessionTranslates(session?.language);
-  const blocks = useMemo(() => visibleBlocks(translates), [translates]);
+  const learns = sessionLearns(session?.language);
+  const blocks = useMemo(() => visibleBlocks(learns), [learns]);
 
   const copyTexts = useMemo(() => {
     if (!debrief) return new Map<BlockName, string>();
@@ -445,7 +451,7 @@ export function DebriefPageView({
         <PageHeader
           title={session?.title || debrief.summary.headlineVi}
           description={
-            translates
+            learns
               ? `Điểm hiểu: ${
                   debrief.comprehensionPct === null
                     ? 'Chưa đủ dữ liệu'
@@ -572,7 +578,7 @@ export function DebriefPageView({
         )}
       </DebriefBlock>
 
-      {translates && (
+      {learns && (
         <DebriefBlock title="Đoạn khó" {...blockProps('hardSegments')}>
           {hardSegments.length ? (
             <ul className="space-y-2">
@@ -597,7 +603,7 @@ export function DebriefPageView({
         </DebriefBlock>
       )}
 
-      {translates && (
+      {learns && (
         <DebriefBlock title="Cụm từ nên lưu" {...blockProps('phraseSuggestions')}>
           {debrief.phraseSuggestions.length ? (
             <ul className="divide-y">
@@ -637,7 +643,7 @@ export function DebriefPageView({
         </DebriefBlock>
       )}
 
-      {translates && (
+      {learns && (
         <DebriefBlock title="Câu bạn nói → câu nên nói" {...blockProps('rephrase')}>
           {debrief.rephrase.length ? (
             <ul className="space-y-4 text-sm">

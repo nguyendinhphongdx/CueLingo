@@ -15,6 +15,8 @@ const MAX_TRACKED_USERS = 5_000;
 const GENERIC_SUBJECT: Record<LanguageCode, string> = {
   en: 'Follow-up: meeting summary',
   ja: '会議のフォローアップ',
+  ko: '회의 후속 조치',
+  zh: '会议跟进',
   vi: 'Tóm tắt cuộc họp',
 };
 

@@ -179,26 +179,35 @@ describe('realtime module', () => {
     );
   });
 
-  it("translates and looks up the glossary in the meeting's own language", async () => {
-    deps.store = {
-      saveSegment: vi.fn(async () => true),
-      saveTranslation: vi.fn(async () => undefined),
-      findById: vi.fn(async () => ({ language: 'ja' }) as never),
-    };
-    await connect();
-    await authenticate();
+  it.each([
+    ['ja', '検討します'],
+    ['ko', '검토해 보겠습니다'],
+    ['zh', '我们会研究一下'],
+  ] as const)(
+    "translates and looks up the glossary in the meeting's own language (%s)",
+    async (language, text) => {
+      const saveSegment = vi.fn(async () => true);
+      deps.store = {
+        saveSegment,
+        saveTranslation: vi.fn(async () => undefined),
+        findById: vi.fn(async () => ({ language }) as never),
+      };
+      await connect();
+      await authenticate();
 
-    const response = nextMessage(socket);
-    socket.send(JSON.stringify(segment('検討します', 0)));
-    await response;
+      const response = nextMessage(socket);
+      socket.send(JSON.stringify(segment(text, 0)));
+      await response;
 
-    expect(llm).toHaveBeenLastCalledWith(
-      'translate.realtime',
-      expect.objectContaining({ language: 'ja' }),
-      expect.anything(),
-    );
-    expect(deps.glossary).toHaveBeenCalledWith(USER_ID, 'ja');
-  });
+      expect(saveSegment).toHaveBeenCalledWith(expect.objectContaining({ language }));
+      expect(llm).toHaveBeenLastCalledWith(
+        'translate.realtime',
+        expect.objectContaining({ language }),
+        expect.anything(),
+      );
+      expect(deps.glossary).toHaveBeenCalledWith(USER_ID, language);
+    },
+  );
 
   it('stores a Vietnamese system segment but never translates it', async () => {
     const saveSegment = vi.fn(async () => true);

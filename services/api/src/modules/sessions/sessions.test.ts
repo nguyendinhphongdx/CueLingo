@@ -129,7 +129,7 @@ describe('sessions module', () => {
       method: 'POST',
       url: '/v1/sessions',
       headers: as(ALICE),
-      payload: { assistLevel: 3, language: 'ja' },
+      payload: { assistLevel: 3, language: 'xx' },
     });
     expect(bad.statusCode).toBe(400);
   });
@@ -141,7 +141,7 @@ describe('sessions module', () => {
       app.inject({ method: 'PATCH', url, headers: as(user), payload: { language } });
 
     expect((await patch(ALICE, 'en')).statusCode).toBe(200);
-    expect((await patch(ALICE, 'ja')).statusCode).toBe(400);
+    expect((await patch(ALICE, 'xx')).statusCode).toBe(400);
     expect((await patch(BOB, 'en')).statusCode).toBe(404);
   });
 });

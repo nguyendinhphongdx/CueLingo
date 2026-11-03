@@ -5,14 +5,14 @@ import {
   buildFollowupPrompt,
   buildLookupPrompt,
   buildRecapPrompt,
-  buildSttPromptV2,
+  buildSttPromptV3,
   buildTranslatePrompt,
   COMPOSE_PROMPT_VERSION,
   FOLLOWUP_PROMPT_VERSION,
   LOOKUP_PROMPT_VERSION,
   RECAP_PROMPT_VERSION,
   isContextEcho,
-  STT_V2_PROMPT_VERSION,
+  STT_V3_PROMPT_VERSION,
   TRANSLATE_PROMPT_VERSION,
   type TranslateInput,
   type DebriefPromptInput,
@@ -253,14 +253,14 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
     const record: AiCallRecord = {
       task: 'stt.transcribe',
       model,
-      promptVersion: STT_V2_PROMPT_VERSION,
+      promptVersion: STT_V3_PROMPT_VERSION,
       latencyMs: 0,
       fallback,
       ok: false,
       ...context,
     };
     try {
-      const { system, prompt } = buildSttPromptV2({ language, previous });
+      const { system, prompt } = buildSttPromptV3({ language, previous });
       const out = await transcribe({
         model,
         system,
@@ -326,7 +326,7 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
           version: FOLLOWUP_PROMPT_VERSION,
         };
       case 'debrief.generate':
-        // v2 for meetings held in Vietnamese, v1 otherwise (chosen by the language in the input).
+        // v3 for meetings in a language nobody studies here, v1 otherwise (chosen by the language in the input).
         return buildDebriefPromptFor(input as DebriefPromptInput);
     }
   }

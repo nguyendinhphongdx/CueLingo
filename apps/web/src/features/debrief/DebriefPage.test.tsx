@@ -191,6 +191,35 @@ describe('DebriefPageView', () => {
     expect(markup.match(/aria-label="Sao chép /g)).toHaveLength(2);
   });
 
+  it('shows a Korean meeting with the bilingual transcript but no learning blocks or score', () => {
+    const koSession: SessionDetail = { ...session, language: 'ko' };
+    const markup = renderToStaticMarkup(
+      <DebriefPageView
+        {...defaultProps}
+        session={koSession}
+        debrief={{ ...debrief, comprehensionPct: null }}
+      />,
+    );
+    expect(markup).toContain('Transcript song ngữ');
+    expect(markup).toContain('Tôi sẽ gửi hôm nay.');
+    for (const heading of ['Đoạn khó', 'Cụm từ nên lưu', 'Câu bạn nói → câu nên nói']) {
+      expect(markup).not.toContain(heading);
+    }
+    expect(markup).not.toContain('Điểm hiểu');
+    expect(markup.match(/aria-label="Sao chép /g)).toHaveLength(2);
+  });
+
+  it('keeps learning blocks and the score for en and ja meetings', () => {
+    for (const language of ['en', 'ja'] as const) {
+      const markup = renderToStaticMarkup(
+        <DebriefPageView {...defaultProps} session={{ ...session, language }} />,
+      );
+      expect(markup).toContain('Điểm hiểu');
+      expect(markup).toContain('Cụm từ nên lưu');
+      expect(markup).toContain('Transcript song ngữ');
+    }
+  });
+
   it('skips hidden blocks when cycling with J/K', () => {
     expect(visibleBlocks(false)).toEqual(['summary', 'actionItems']);
     expect(visibleBlocks(true)).toHaveLength(5);
@@ -327,6 +356,16 @@ describe('buildDebriefMarkdown', () => {
     expect(markdown).toContain('EN: Let us circle back tomorrow.');
     expect(markdown).toContain('VI: Tôi sẽ gửi hôm nay.');
     expect(markdown.indexOf('00:00')).toBeLessThan(markdown.indexOf('01:05'));
+  });
+
+  it('keeps the translation line but omits learning sections for a Korean meeting', () => {
+    const koSession = { ...session, language: 'ko' as const };
+    const markdown = buildDebriefMarkdown(debrief, { session: koSession, includeTranscript: true });
+    expect(markdown).toContain('## Tóm tắt');
+    expect(markdown).not.toContain('Cụm từ nên lưu');
+    expect(markdown).not.toContain('Câu bạn nói');
+    expect(markdown).toContain('## Transcript song ngữ');
+    expect(markdown).toContain('VI: Tôi sẽ gửi hôm nay.');
   });
 
   it('omits learning sections and the translation line for a Vietnamese meeting', () => {

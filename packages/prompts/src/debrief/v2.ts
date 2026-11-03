@@ -1,4 +1,3 @@
-import { SUPPORTED_LANGUAGES, type LanguageCode } from '@cuelingo/shared';
 import { buildDebriefPrompt, type DebriefPromptInput } from './v1';
 
 /**
@@ -25,20 +24,4 @@ const SYSTEM = [
 export function buildDebriefPromptV2(input: DebriefPromptInput) {
   const { prompt } = buildDebriefPrompt(input);
   return { system: SYSTEM, prompt };
-}
-
-/** v2 for a meeting whose language is not translated (Vietnamese), v1 otherwise. */
-export const debriefPromptVersionFor = (language?: LanguageCode): string =>
-  language && !SUPPORTED_LANGUAGES[language].translates
-    ? DEBRIEF_V2_PROMPT_VERSION
-    : 'debrief.generate@v1';
-
-export function buildDebriefPromptFor(input: DebriefPromptInput) {
-  const version = debriefPromptVersionFor(input.language);
-  return {
-    ...(version === DEBRIEF_V2_PROMPT_VERSION
-      ? buildDebriefPromptV2(input)
-      : buildDebriefPrompt(input)),
-    version,
-  };
 }

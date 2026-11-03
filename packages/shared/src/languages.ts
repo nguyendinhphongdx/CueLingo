@@ -29,6 +29,8 @@ export const SUPPORTED_LANGUAGES = {
     learnable: true as boolean,
     /** Switched on for people. A language stays off until it passes its evaluation. */
     enabled: true,
+    /** English guidance for the cloud transcription prompt (stt.transcribe@v3); empty when none is needed. */
+    sttHint: '',
   },
   ja: {
     code: 'ja',
@@ -36,16 +38,79 @@ export const SUPPORTED_LANGUAGES = {
     nativeName: '日本語',
     promptName: 'Japanese',
     calendarHints: {
-      keywords: ['日本', '日本語', 'japan', 'japanese', 'tokyo', 'osaka', 'nhật', '(jp)', '[jp]'],
+      keywords: [
+        '日本',
+        '日本語',
+        'japan',
+        'japanese',
+        'tokyo',
+        'osaka',
+        'tiếng nhật',
+        '(jp)',
+        '[jp]',
+      ],
       domains: ['.jp'],
     },
-    recognizer: 'parakeet-tdt-ja',
+    // Recognised in the cloud for now. The on-device Japanese model stays in the sidecar for a
+    // later evaluation (ADR 0016).
+    recognizer: 'gemini-audio',
     wordBreaks: 'dictionary',
     hasReading: true,
-    recognition: 'device',
+    recognition: 'cloud',
     translates: true,
     learnable: true,
-    enabled: false,
+    enabled: true,
+    sttHint:
+      'Write Japanese in its normal script (kanji, hiragana, katakana) with natural punctuation; do not romanise; keep Latin-script product names and acronyms as spoken.',
+  },
+  ko: {
+    code: 'ko',
+    name: 'Tiếng Hàn',
+    nativeName: '한국어',
+    promptName: 'Korean',
+    calendarHints: {
+      keywords: ['한국', '한국어', 'korea', 'korean', 'seoul', 'tiếng hàn', '(kr)', '[kr]'],
+      domains: ['.kr'],
+    },
+    recognizer: 'gemini-audio',
+    wordBreaks: 'spaces',
+    hasReading: false,
+    recognition: 'cloud',
+    translates: true,
+    learnable: false,
+    enabled: true,
+    sttHint:
+      'Write Korean in Hangul with natural spacing and punctuation; do not romanise; keep Latin-script product names and acronyms as spoken.',
+  },
+  zh: {
+    code: 'zh',
+    name: 'Tiếng Trung',
+    nativeName: '中文',
+    promptName: 'Chinese',
+    calendarHints: {
+      keywords: [
+        '中国',
+        '中文',
+        '汉语',
+        'china',
+        'chinese',
+        'beijing',
+        'shanghai',
+        'tiếng trung',
+        '(cn)',
+        '[cn]',
+      ],
+      domains: ['.cn'],
+    },
+    recognizer: 'gemini-audio',
+    wordBreaks: 'dictionary',
+    hasReading: false,
+    recognition: 'cloud',
+    translates: true,
+    learnable: false,
+    enabled: true,
+    sttHint:
+      'Write Mandarin Chinese in Simplified Chinese characters (简体中文) with Chinese punctuation, never Traditional characters and never pinyin; keep Latin-script product names and acronyms as spoken.',
   },
   vi: {
     code: 'vi',
@@ -63,6 +128,8 @@ export const SUPPORTED_LANGUAGES = {
     translates: false,
     learnable: false,
     enabled: true,
+    sttHint:
+      'Vietnamese rules:\n- Keep every diacritic (dấu) exact: tone marks and vowel marks must match what is said. Do not drop or guess them.\n- Write numbers, dates, times and amounts as plain digits where that is natural (for example "15 tháng 3", "2 giờ chiều", "30%"); keep small counts in words when they read better.\n- Keep proper names and English technical or product terms as they are spoken; do not translate them into Vietnamese and do not respell them.',
   },
 } as const;
 
@@ -106,13 +173,19 @@ export const LanguageQuerySchema = z.object({
 });
 export type LanguageQuery = z.output<typeof LanguageQuerySchema>;
 
+/** `Tiếng Nhật · 日本語`; just the name when the native name is the same. */
+const labelOf = (language: LanguageInfo): string =>
+  language.nativeName === language.name
+    ? language.name
+    : `${language.name} · ${language.nativeName}`;
+
 /** The languages a meeting may use, as `{ value, label }` for the meeting language picker. */
 export const languageOptions = (): Array<{ value: LanguageCode; label: string }> =>
-  enabledLanguages().map((language) => ({ value: language.code, label: language.name }));
+  enabledLanguages().map((language) => ({ value: language.code, label: labelOf(language) }));
 
 /** The languages a person may study, as `{ value, label }` for learner screens. */
 export const learnableLanguageOptions = (): Array<{ value: LanguageCode; label: string }> =>
-  learnableLanguages().map((language) => ({ value: language.code, label: language.name }));
+  learnableLanguages().map((language) => ({ value: language.code, label: labelOf(language) }));
 
 /** What a calendar event tells about the meeting. Titles and domains stay on the device. */
 export interface CalendarEventHint {
@@ -120,6 +193,12 @@ export interface CalendarEventHint {
   location?: string;
   /** Domains of the attendees' email addresses, such as `example.co.jp`. */
   attendeeDomains?: string[];
+}
+
+/** Plain Latin words match whole words only ("china" is not inside "machinal"); other keywords match as text. */
+function mentions(text: string, keyword: string): boolean {
+  if (!/^[a-z]+$/.test(keyword)) return text.includes(keyword);
+  return new RegExp(`(?<![a-z])${keyword}(?![a-z])`).test(text);
 }
 
 /**
@@ -135,7 +214,7 @@ export function guessLanguageFromEvent(
   const matches = candidates
     .filter((language) => language.code !== DEFAULT_LANGUAGE)
     .filter(({ calendarHints }) => {
-      const byWord = calendarHints.keywords.some((word) => text.includes(word.toLowerCase()));
+      const byWord = calendarHints.keywords.some((word) => mentions(text, word.toLowerCase()));
       const byDomain = calendarHints.domains.some((suffix) =>
         domains.some((domain) => domain.endsWith(suffix)),
       );

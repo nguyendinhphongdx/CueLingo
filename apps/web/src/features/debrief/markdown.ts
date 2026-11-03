@@ -25,7 +25,9 @@ export function buildDebriefMarkdown(
   { session, includeTranscript = false }: DebriefMarkdownOptions = {},
 ): string {
   const language = session?.language;
-  const translates = isLanguageCode(language) ? SUPPORTED_LANGUAGES[language].translates : true;
+  const known = isLanguageCode(language) ? SUPPORTED_LANGUAGES[language] : undefined;
+  const translates = known?.translates ?? true;
+  const learns = known?.learnable ?? true;
   const lines = [
     `# ${debrief.summary.headlineVi}`,
     '',
@@ -44,7 +46,7 @@ export function buildDebriefMarkdown(
     '',
   ];
 
-  if (translates) {
+  if (learns) {
     lines.push(
       '## Cụm từ nên lưu',
       '',
