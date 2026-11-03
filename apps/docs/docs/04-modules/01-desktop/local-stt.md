@@ -45,6 +45,8 @@ Với ngôn ngữ trong `SpeechModels.cloudLanguages` (hiện `vi`, khớp `reco
 - Mọi ngôn ngữ và chế độ: mỗi luồng (`system`, `mic`) phát dòng `{"type":"level","stream","rms","peak"}` tối đa 10 lần/giây, tính từ phần âm thanh nghe được kể từ lần báo trước (không mất đỉnh của một tiếng ngắn). Luồng không mở được thì không phát gì.
 - Ngôn ngữ nhận dạng đám mây dùng khoảng nghỉ tối thiểu 700 ms để kết thúc một câu (mặc định trên máy là 600 ms), để hơi thở giữa câu không cắt câu làm đôi.
 
+Danh sách ngôn ngữ đám mây của sidecar (`SpeechModels.cloudLanguages`) là `vi`, `ja`, `ko`, `zh`, khớp `recognition: 'cloud'` ở registry; ngôn ngữ đám mây luôn thắng. Model tiếng Nhật trên máy vẫn nằm trong sidecar để đánh giá sau. Dò ngôn ngữ ở đầu cuộc họp chỉ dùng model trên máy đã tải sẵn; nếu gợi ý `ja` được chấp nhận thì đi đường đám mây (cần đồng ý).
+
 ## Câu hỏi mở
 
 - Chưa đo độ trễ streaming thật và RAM khi chạy cùng app họp

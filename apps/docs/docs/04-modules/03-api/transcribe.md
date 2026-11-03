@@ -1,8 +1,8 @@
 # Transcribe
 
-> Phần: [API service](./README.md) · Code: `services/api/src/modules/transcribe/` · Quyết định: [ADR 0014](../../08-adr/0014-cloud-stt-for-vietnamese.md)
+> Phần: [API service](./README.md) · Code: `services/api/src/modules/transcribe/` · Quyết định: [ADR 0014](../../08-adr/0014-cloud-stt-for-vietnamese.md), [ADR 0016](../../08-adr/0016-cloud-stt-for-japanese-korean-chinese.md)
 
-Nhận dạng giọng nói bằng đám mây cho ngôn ngữ chưa có model trên máy (hiện là tiếng Việt). Client gửi âm thanh **một câu**, API trả văn bản.
+Nhận dạng giọng nói bằng đám mây cho ngôn ngữ chưa có model trên máy (tiếng Việt, Nhật, Hàn, Trung). Client gửi âm thanh **một câu**, API trả văn bản.
 
 ## Trách nhiệm
 

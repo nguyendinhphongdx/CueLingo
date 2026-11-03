@@ -32,13 +32,13 @@ flowchart LR
 
 ## Điều kiện mở các hướng ở Đợt 4
 
-| Hướng                                                        | Điều kiện mở                                                                                     |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| Windows                                                      | Cổng Đợt 2 qua và có tín hiệu từ danh sách chờ/phản hồi; hoặc macOS-only là nút thắt tăng trưởng |
-| Mobile, extension đọc/viết, roleplay, tutor                  | Cổng Đợt 3 qua                                                                                   |
-| Ngôn ngữ thứ ba                                              | Chất lượng và chi phí tiếng Nhật đạt eval ([ADR 0013](../08-adr/0013-multi-language.md))         |
-| Voice mode                                                   | Chỉ số độc lập chứng minh người dùng giảm phụ thuộc                                              |
-| B2B (Team, glossary công ty, dashboard L&D, SSO, on-premise) | Có ≥ 3 công ty chủ động hỏi bản team, hoặc chuyển đổi cá nhân chạm trần                          |
+| Hướng                                                        | Điều kiện mở                                                                                                                                                                                                   |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Windows                                                      | Cổng Đợt 2 qua và có tín hiệu từ danh sách chờ/phản hồi; hoặc macOS-only là nút thắt tăng trưởng                                                                                                               |
+| Mobile, extension đọc/viết, roleplay, tutor                  | Cổng Đợt 3 qua                                                                                                                                                                                                 |
+| Ngôn ngữ thứ ba                                              | Tiếng Nhật, Hàn, Trung đã có qua đám mây ([ADR 0016](../08-adr/0016-cloud-stt-for-japanese-korean-chinese.md)); thêm ngôn ngữ nữa khi có nhu cầu và bộ đánh giá ([ADR 0013](../08-adr/0013-multi-language.md)) |
+| Voice mode                                                   | Chỉ số độc lập chứng minh người dùng giảm phụ thuộc                                                                                                                                                            |
+| B2B (Team, glossary công ty, dashboard L&D, SSO, on-premise) | Có ≥ 3 công ty chủ động hỏi bản team, hoặc chuyển đổi cá nhân chạm trần                                                                                                                                        |
 
 ## Lịch sử: kế hoạch 12 tuần của MVP
 

@@ -61,6 +61,8 @@ Máy trạng thái của một cuộc họp phía client: nhận segment từ ST
 
 Khi debrief trong thẻ "Cuộc họp vừa xong" đã sẵn sàng, nút "Soạn follow-up" mở `FollowupComposer` ngay dưới phần tóm tắt, gọi `debriefApi.followup` ([API](../03-api/followup.md), hạn 15 giây, lỗi chỉ mang mã HTTP, không chứa bản nháp). Sao chép dùng clipboard của webview; nếu không có thì chọn sẵn văn bản và hiện "Không sao chép được, nội dung đã được chọn sẵn."
 
+- **Bắt đầu thất bại giữa chừng:** nếu một bước sau `native.sessionStart` lỗi, controller dừng phiên native và kết thúc phiên trên server trước khi báo lỗi, để lần Bắt đầu sau không gặp `session_already_running`. Nếu vẫn gặp mã này (phiên native còn sót), controller tự dừng rồi thử lại đúng một lần.
+
 ## Câu hỏi mở
 
 - (chưa có)

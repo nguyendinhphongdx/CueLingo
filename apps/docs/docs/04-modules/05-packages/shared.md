@@ -30,13 +30,13 @@ Kiểu domain, schema API/WebSocket (zod), catalog event.
 
 - (chưa có)
 
-## Ngôn ngữ nhận dạng đám mây
-
-Mỗi mục trong `SUPPORTED_LANGUAGES` có thêm `recognition` (`device` hoặc `cloud`), `translates` và `learnable`. `vi` là ngôn ngữ cuộc họp (`recognition: 'cloud'`, `translates: false`, `learnable: false`): không xuất hiện ở màn hình học (ôn tập, cụm từ, thuật ngữ, tiến độ). `learnableLanguages()` và `LearnableLanguageSchema` dùng cho phía học. Hợp đồng mới: `TranscribeRequestSchema`, `TranscribeResponseSchema`; mã lỗi `TRANSCRIBE_FAILED`, `AUDIO_TOO_LARGE`, `LANGUAGE_NOT_CLOUD`.
-
 ## Follow-up
 
 Hợp đồng `FollowupRequestSchema` (channel, tone), `FollowupResponseSchema` (subject hoặc null, body, language) và mã lỗi `FOLLOWUP_FAILED` (502).
+
+## Ngôn ngữ họp: Anh, Nhật, Hàn, Trung, Việt
+
+`SUPPORTED_LANGUAGES` có năm mục. `ja`, `ko`, `zh`, `vi` đều `recognition: 'cloud'` ([ADR 0014](../../08-adr/0014-cloud-stt-for-vietnamese.md), [ADR 0016](../../08-adr/0016-cloud-stt-for-japanese-korean-chinese.md)); chỉ `en` nhận dạng trên máy. `translates` (có dịch từng câu sang tiếng Việt) và `learnable` (có khối học và ôn tập) là hai cờ độc lập: `ko` và `zh` dịch nhưng không học, `vi` không dịch và không học, `ja` dịch và học. Mỗi mục có `sttHint` (chỉ dẫn viết đúng chữ cho prompt nhận dạng, ví dụ tiếng Trung giản thể) và nhãn tuỳ chọn dạng "Tiếng Nhật · 日本語".
 
 ## Câu hỏi mở
 

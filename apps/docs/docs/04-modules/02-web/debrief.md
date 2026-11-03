@@ -31,6 +31,10 @@ Hiển thị debrief sau họp và đưa cụm từ vào ôn tập.
 
 Khi debrief đã sẵn sàng, nút "Soạn follow-up" cạnh "Sao chép cả debrief" mở thành phần soạn tin dùng chung (`FollowupComposer` trong `@cuelingo/ui`): chọn kênh (Email, Tin nhắn nhóm) và giọng (Ngắn gọn, Lịch sự, Thân mật), bấm "Soạn", sửa bản nháp rồi "Sao chép". Gọi `client.followup` ([API](../03-api/followup.md)); hiện cho cuộc họp mọi ngôn ngữ. Lỗi hiện thông báo chung và nút "Thử lại", không mất phần đã sửa. Luôn có dòng "Kiểm tra lại trước khi gửi."
 
+## Ngôn ngữ cuộc họp và các khối
+
+Trang dùng hai cờ của registry độc lập: `translates` quyết định có hiện dòng dịch và "Transcript song ngữ"; `learnable` quyết định có hiện các khối học (đoạn khó, cụm từ nên lưu, câu nên nói) và điểm hiểu. Họp tiếng Hàn và Trung hiện transcript song ngữ nhưng không có khối học; họp tiếng Việt không có cả hai; tiếng Anh và Nhật như cũ.
+
 ## Câu hỏi mở
 
 - (chưa có)
