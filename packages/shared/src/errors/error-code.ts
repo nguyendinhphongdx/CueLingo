@@ -10,6 +10,7 @@ export const ErrorCode = {
   AssistFailed: 'ASSIST_FAILED',
   TtsFailed: 'TTS_FAILED',
   TranscribeFailed: 'TRANSCRIBE_FAILED',
+  FollowupFailed: 'FOLLOWUP_FAILED',
   AudioTooLarge: 'AUDIO_TOO_LARGE',
   LanguageNotCloud: 'LANGUAGE_NOT_CLOUD',
   RateLimited: 'RATE_LIMITED',

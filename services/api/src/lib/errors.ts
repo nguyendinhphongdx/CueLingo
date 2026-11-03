@@ -10,6 +10,7 @@ const STATUS: Record<ErrorCode, number> = {
   [ErrorCode.AssistFailed]: 502,
   [ErrorCode.TtsFailed]: 502,
   [ErrorCode.TranscribeFailed]: 502,
+  [ErrorCode.FollowupFailed]: 502,
   [ErrorCode.AudioTooLarge]: 413,
   [ErrorCode.LanguageNotCloud]: 400,
   [ErrorCode.RateLimited]: 429,
