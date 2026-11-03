@@ -28,6 +28,7 @@ import {
 } from './modules/review';
 import { createSessionsModule, type SessionsRepository } from './modules/sessions';
 import { createAdminModule, type AdminRepository } from './modules/admin';
+import { createTranscribeModule, type TranscribeDeps } from './modules/transcribe';
 import { createSettingsModule, type SettingsRepository } from './modules/settings';
 
 /** Origins of the desktop webview (bundled app, Windows bundle, `tauri dev`). It signs in with a bearer token, not cookies. */
@@ -76,6 +77,8 @@ export interface AppDeps {
   assist?: AssistDeps;
   /** Enables text to speech when an AI gateway and an audio cache are available. */
   tts?: TtsDeps;
+  /** Enables cloud speech recognition for meetings in cloud-recognised languages (ADR 0014). */
+  transcribe?: TranscribeDeps;
   /** Development-only bearer-token verifier for assist and event ingestion. */
   verifyDevToken?: AuthOptions['verifyDevToken'];
   /** False disables logs. Object form is mainly a test seam for an in-memory stream. */
@@ -144,6 +147,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const study = createStudyModule(deps.repos.study);
   await app.register(study.reviewRoutes, { prefix: '/v1/review' });
   await app.register(study.progressRoutes, { prefix: '/v1/progress' });
+  if (deps.transcribe) {
+    await app.register(createTranscribeModule(deps.repos.sessions, deps.transcribe).routes);
+  }
   if (deps.tts) await app.register(createTtsModule(deps.tts).routes, { prefix: '/v1/tts' });
   if (deps.assist) {
     await app.register(createAssistModule(deps.assist).routes, { prefix: '/v1/assist' });

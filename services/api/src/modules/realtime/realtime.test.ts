@@ -200,6 +200,35 @@ describe('realtime module', () => {
     expect(deps.glossary).toHaveBeenCalledWith(USER_ID, 'ja');
   });
 
+  it('stores a Vietnamese system segment but never translates it', async () => {
+    const saveSegment = vi.fn(async () => true);
+    const saveTranslation = vi.fn(async () => undefined);
+    deps.store = {
+      saveSegment,
+      saveTranslation,
+      findById: vi.fn(async () => ({ language: 'vi' }) as never),
+    };
+    await connect();
+    await authenticate();
+    const received: ServerMessage[] = [];
+    socket.on('message', (data) =>
+      received.push(ServerMessageSchema.parse(JSON.parse(data.toString()))),
+    );
+
+    socket.send(JSON.stringify(segment('Chúng ta sẽ phát hành vào thứ Sáu.', 0)));
+    socket.send(JSON.stringify(segment('Em sẽ chuẩn bị ghi chú.', 1, 'mic')));
+    await vi.waitFor(() => expect(saveSegment).toHaveBeenCalledTimes(2));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(saveSegment).toHaveBeenCalledWith(
+      expect.objectContaining({ source: 'system', language: 'vi' }),
+    );
+    expect(llm).not.toHaveBeenCalled();
+    expect(deps.glossary).not.toHaveBeenCalled();
+    expect(saveTranslation).not.toHaveBeenCalled();
+    expect(received).toEqual([]);
+  });
+
   it('follows a language change made over REST when told to re-read the session', async () => {
     let language: 'en' | 'ja' = 'en';
     deps.store = {

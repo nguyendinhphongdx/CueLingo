@@ -99,6 +99,7 @@ const app = await buildApp({
   webOrigin: config.WEB_ORIGIN,
   realtime,
   assist: gateway ? { gateway } : undefined,
+  transcribe: gateway ? { gateway } : undefined,
   tts: gateway
     ? { gateway, cache: createFileTtsCache(config.TTS_CACHE_DIR ?? join(tmpdir(), 'cuelingo-tts')) }
     : undefined,

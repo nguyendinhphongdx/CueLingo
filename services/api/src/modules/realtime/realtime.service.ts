@@ -1,6 +1,7 @@
 import {
   DEFAULT_LANGUAGE,
   ErrorCode,
+  SUPPORTED_LANGUAGES,
   type GlossaryTerm,
   type LanguageCode,
   type SegmentFinalMessage,
@@ -90,6 +91,8 @@ export function createRealtimeConnection(
         storedSegments.set(message.segmentId, stored);
       }
       if (message.stream === 'mic') return true;
+      // A meeting in a language that is not translated (Vietnamese) is stored but never sent to the LLM.
+      if (!SUPPORTED_LANGUAGES[meetingLanguage].translates) return true;
 
       const context = previousSystem.slice(-3);
       previousSystem.push(message.text);

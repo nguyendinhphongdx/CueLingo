@@ -1,6 +1,7 @@
 import type { AiGateway } from '@cuelingo/ai-gateway';
 import type { DebriefContent } from '@cuelingo/shared';
 import { describe, expect, it, vi } from 'vitest';
+import { debriefViFixtures } from '@cuelingo/prompts';
 import { generateDebrief, type DebriefRepository, type DebriefSession } from './index';
 
 const SESSION_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -104,5 +105,39 @@ describe('debrief.generate', () => {
       generateDebrief({ ...state.deps, ai: undefined }, { sessionId: SESSION_ID }),
     ).rejects.toThrow('GEMINI_API_KEY');
     expect(state.saved).toEqual([]);
+  });
+
+  it('writes a Vietnamese meeting debrief with v2 and empty learning blocks', async () => {
+    const fixture = debriefViFixtures[0]!.input;
+    const session: DebriefSession = {
+      id: SESSION_ID,
+      language: 'vi',
+      segments: fixture.segments,
+    };
+    // The model ignores the instructions: the handler still empties the learning blocks.
+    const state = setup(session, {
+      ...generated,
+      hardSegmentIds: [fixture.segments[0]!.id],
+      comprehensionPct: 90,
+    });
+
+    await expect(generateDebrief(state.deps, { sessionId: SESSION_ID })).resolves.toEqual({
+      version: 1,
+    });
+
+    expect(state.json).toHaveBeenCalledWith(
+      'debrief.generate',
+      { segments: fixture.segments, language: 'vi' },
+      expect.anything(),
+      { sessionId: SESSION_ID },
+    );
+    const saved = state.saved[0]!;
+    expect(saved.promptVersion).toBe('debrief.generate@v2');
+    expect(saved.content.summary.headlineVi).toBe('Kế hoạch phát hành');
+    expect(saved.content.actionItems).toHaveLength(1);
+    expect(saved.content.hardSegmentIds).toEqual([]);
+    expect(saved.content.phraseSuggestions).toEqual([]);
+    expect(saved.content.rephrase).toEqual([]);
+    expect(saved.content.comprehensionPct).toBeNull();
   });
 });

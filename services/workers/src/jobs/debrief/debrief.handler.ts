@@ -1,6 +1,6 @@
 import type { AiGateway } from '@cuelingo/ai-gateway';
-import { DEBRIEF_PROMPT_VERSION } from '@cuelingo/prompts';
-import { DebriefContentSchema, type DebriefContent } from '@cuelingo/shared';
+import { debriefPromptVersionFor } from '@cuelingo/prompts';
+import { DebriefContentSchema, SUPPORTED_LANGUAGES, type DebriefContent } from '@cuelingo/shared';
 import type { DebriefRepository } from './debrief.repository';
 
 export interface DebriefHandlerDeps {
@@ -31,11 +31,19 @@ export async function generateDebrief(
     { sessionId: session.id },
   );
   const validSegmentIds = new Set(session.segments.map(({ id }) => id));
+  // A meeting in a language that is not translated (Vietnamese) has no learning blocks, whatever the model said.
+  const learns = SUPPORTED_LANGUAGES[session.language].translates;
   const content: DebriefContent = {
     ...generated,
-    hardSegmentIds: generated.hardSegmentIds.filter((id) => validSegmentIds.has(id)),
-    comprehensionPct: session.segments.length < 5 ? null : generated.comprehensionPct,
+    hardSegmentIds: learns ? generated.hardSegmentIds.filter((id) => validSegmentIds.has(id)) : [],
+    phraseSuggestions: learns ? generated.phraseSuggestions : [],
+    rephrase: learns ? generated.rephrase : [],
+    comprehensionPct: learns && session.segments.length >= 5 ? generated.comprehensionPct : null,
   };
-  const version = await deps.debrief.save(session.id, content, DEBRIEF_PROMPT_VERSION);
+  const version = await deps.debrief.save(
+    session.id,
+    content,
+    debriefPromptVersionFor(session.language),
+  );
   return { version };
 }
