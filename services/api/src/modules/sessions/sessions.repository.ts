@@ -30,6 +30,11 @@ export interface SessionsRepository {
   list(userId: string): Promise<Session[]>;
   findById(userId: string, id: string): Promise<Session | null>;
   findDetail(userId: string, id: string): Promise<SessionDetail | null>;
+  /** Status and stored segment count, for deciding whether a debrief can be queued. */
+  findDebriefState(
+    userId: string,
+    id: string,
+  ): Promise<{ status: Session['status']; segmentCount: number } | null>;
   create(userId: string, input: CreateSessionRequest): Promise<Session>;
   end(userId: string, id: string): Promise<EndSessionResult | null>;
   softDelete(userId: string, id: string): Promise<boolean>;
@@ -101,6 +106,13 @@ export function createPostgresSessionsRepository(sql: Sql): SessionsRepository {
         WHERE sessions.user_id = ${userId} AND sessions.id = ${id}
         ORDER BY start_ms`;
       return { ...toSession(row), segments: segments.map(toSegment) };
+    },
+    async findDebriefState(userId, id) {
+      const [row] = await sql<{ status: Session['status']; segmentCount: number }[]>`
+        SELECT s.status, (SELECT count(*) FROM segments g WHERE g.session_id = s.id)::int AS "segmentCount"
+        FROM sessions s
+        WHERE s.user_id = ${userId} AND s.id = ${id} AND s.status <> 'deleted'`;
+      return row ?? null;
     },
     async create(userId, input) {
       const [row] = await sql<SessionRow[]>`

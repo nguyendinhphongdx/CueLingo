@@ -1,9 +1,13 @@
-import { JobName, JobPayloads, type JobPayload } from '@cuelingo/shared';
+import { JobName, JobPayloads, type JobEnqueueOptions, type JobPayload } from '@cuelingo/shared';
 import { PgBoss } from 'pg-boss';
 
 /** What the API can do with background jobs: enqueue them. Workers consume (services/workers). */
 export interface JobQueue {
-  enqueue<N extends JobName>(name: N, payload: JobPayload<N>): Promise<void>;
+  enqueue<N extends JobName>(
+    name: N,
+    payload: JobPayload<N>,
+    options?: JobEnqueueOptions,
+  ): Promise<void>;
 }
 
 export interface PgBossQueue extends JobQueue {
@@ -18,8 +22,8 @@ export async function createPgBossQueue(databaseUrl: string): Promise<PgBossQueu
   for (const name of Object.values(JobName)) await boss.createQueue(name);
 
   return {
-    async enqueue(name, payload) {
-      await boss.send(name, JobPayloads[name].parse(payload));
+    async enqueue(name, payload, options) {
+      await boss.send(name, JobPayloads[name].parse(payload), { ...options });
     },
     stop: () => boss.stop(),
   };
@@ -29,10 +33,17 @@ export async function createPgBossQueue(databaseUrl: string): Promise<PgBossQueu
 export function createInMemoryQueue(): JobQueue & {
   jobs: Array<{ name: JobName; payload: unknown }>;
 } {
+  const keys = new Set<string>();
   const jobs: Array<{ name: JobName; payload: unknown }> = [];
   return {
     jobs,
-    async enqueue(name, payload) {
+    async enqueue(name, payload, options) {
+      // Like pg-boss singletonKey: a repeat of a still-throttled key is dropped.
+      if (options?.singletonKey) {
+        const key = `${name}:${options.singletonKey}`;
+        if (keys.has(key)) return;
+        keys.add(key);
+      }
       jobs.push({ name, payload: JobPayloads[name].parse(payload) });
     },
   };

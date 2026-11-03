@@ -1,6 +1,8 @@
+import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildTestApp, TEST_USER_HEADER } from '../../testing';
+import { createInMemorySessionsRepository, type SessionsRepository } from './index';
 
 const ALICE = 'alice';
 const BOB = 'bob';
@@ -143,5 +145,93 @@ describe('sessions module', () => {
     expect((await patch(ALICE, 'en')).statusCode).toBe(200);
     expect((await patch(ALICE, 'xx')).statusCode).toBe(400);
     expect((await patch(BOB, 'en')).statusCode).toBe(404);
+  });
+
+  describe('POST /:id/debrief', () => {
+    let repo: SessionsRepository;
+    let dapp: Awaited<ReturnType<typeof buildTestApp>>;
+
+    beforeEach(async () => {
+      repo = createInMemorySessionsRepository();
+      dapp = await buildTestApp({ repos: { sessions: repo } });
+    });
+    afterEach(() => dapp.close());
+
+    const make = async (user: string, { segment = true, end = true } = {}) => {
+      const session = await repo.create(user, { assistLevel: 3, language: 'en' });
+      if (segment) {
+        await repo.saveSegment({
+          sessionId: session.id,
+          userId: user,
+          segmentId: randomUUID(),
+          source: 'system',
+          startMs: 0,
+          endMs: 1000,
+          textEn: 'hello',
+        });
+      }
+      if (end) await repo.end(user, session.id);
+      return session.id;
+    };
+    const regenerate = (user: string, id: string) =>
+      dapp.inject({ method: 'POST', url: `/v1/sessions/${id}/debrief`, headers: as(user) });
+
+    it('queues the debrief for an ended session with a transcript and answers 202', async () => {
+      const id = await make(ALICE);
+
+      const res = await regenerate(ALICE, id);
+
+      expect(res.statusCode).toBe(202);
+      expect(res.json()).toEqual({ queued: true });
+      expect(dapp.queue.jobs).toEqual([{ name: 'debrief.generate', payload: { sessionId: id } }]);
+    });
+
+    it('does not queue a second job for repeated clicks', async () => {
+      const id = await make(ALICE);
+
+      expect((await regenerate(ALICE, id)).statusCode).toBe(202);
+      expect((await regenerate(ALICE, id)).statusCode).toBe(202);
+      expect(dapp.queue.jobs).toHaveLength(1);
+    });
+
+    it('refuses a live session and a session without segments with 409', async () => {
+      const live = await make(ALICE, { end: false });
+      const empty = await make(ALICE, { segment: false });
+
+      for (const id of [live, empty]) {
+        const res = await regenerate(ALICE, id);
+        expect(res.statusCode).toBe(409);
+        expect(res.json().error.code).toBe('CONFLICT');
+      }
+      expect(dapp.queue.jobs).toEqual([]);
+    });
+
+    it("answers 404 for another user's or an unknown session, same as end", async () => {
+      const id = await make(ALICE);
+
+      const other = await regenerate(BOB, id);
+      const unknown = await regenerate(BOB, randomUUID());
+
+      expect(other.statusCode).toBe(404);
+      expect(unknown.statusCode).toBe(404);
+      expect(other.json().error.message).toBe(unknown.json().error.message);
+      expect(dapp.queue.jobs).toEqual([]);
+    });
+
+    it('requires authentication', async () => {
+      const id = await make(ALICE);
+      const res = await dapp.inject({ method: 'POST', url: `/v1/sessions/${id}/debrief` });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('limits each user to three requests per minute', async () => {
+      const ids = [await make(ALICE), await make(ALICE), await make(ALICE), await make(ALICE)];
+      const codes = [];
+      for (const id of ids) codes.push((await regenerate(ALICE, id)).statusCode);
+      expect(codes).toEqual([202, 202, 202, 429]);
+
+      const bobId = await make(BOB);
+      expect((await regenerate(BOB, bobId)).statusCode).toBe(202);
+    });
   });
 });

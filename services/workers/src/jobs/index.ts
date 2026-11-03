@@ -1,6 +1,7 @@
 import { debriefGenerate } from './debrief';
 import { retentionSweep } from './retention';
+import { sessionsCloseStale } from './stale-sessions';
 import type { RegisteredJob } from './types';
 
 /** Every job this worker handles. Add new jobs here (and to JobName in @cuelingo/shared). */
-export const jobs: RegisteredJob[] = [retentionSweep, debriefGenerate];
+export const jobs: RegisteredJob[] = [retentionSweep, debriefGenerate, sessionsCloseStale];

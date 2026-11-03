@@ -1,9 +1,11 @@
 import { createAiGateway } from '@cuelingo/ai-gateway';
+import { JobPayloads } from '@cuelingo/shared';
 import { PgBoss } from 'pg-boss';
 import { loadConfig } from './config';
 import { jobs } from './jobs';
 import { createPostgresDebriefRepository } from './jobs/debrief';
 import { createPostgresRetentionRepository } from './jobs/retention';
+import { createPostgresStaleSessionsRepository } from './jobs/stale-sessions';
 import type { JobDeps } from './jobs/types';
 import { createSql } from './lib/db';
 import { createUnconfiguredStorage } from './lib/storage';
@@ -11,6 +13,10 @@ import { createAiCallHook } from './lib/ai-calls';
 
 const config = loadConfig();
 const sql = createSql(config.DATABASE_URL);
+
+const boss = new PgBoss(config.DATABASE_URL);
+boss.on('error', (err) => console.error('pg-boss', err));
+await boss.start();
 
 const deps: JobDeps = {
   debrief: createPostgresDebriefRepository(sql),
@@ -28,13 +34,15 @@ const deps: JobDeps = {
     : undefined,
   log: { warn: (message, context) => console.warn(message, context) },
   retention: createPostgresRetentionRepository(sql),
+  staleSessions: createPostgresStaleSessionsRepository(sql),
+  queue: {
+    async enqueue(name, payload, options) {
+      await boss.send(name, JobPayloads[name].parse(payload), { ...options });
+    },
+  },
   storage: createUnconfiguredStorage(),
   now: () => new Date(),
 };
-
-const boss = new PgBoss(config.DATABASE_URL);
-boss.on('error', (err) => console.error('pg-boss', err));
-await boss.start();
 
 for (const job of jobs) {
   // pg-boss 12: a queue must exist before work/schedule.

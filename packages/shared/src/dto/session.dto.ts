@@ -53,3 +53,7 @@ export type SessionDetail = z.infer<typeof SessionDetailSchema>;
 
 export const SessionListSchema = z.object({ sessions: z.array(SessionSchema) }).strict();
 export type SessionList = z.infer<typeof SessionListSchema>;
+
+/** `POST /v1/sessions/:id/debrief` (202): the debrief job is queued (or already waiting). */
+export const DebriefQueuedSchema = z.object({ queued: z.literal(true) }).strict();
+export type DebriefQueued = z.infer<typeof DebriefQueuedSchema>;

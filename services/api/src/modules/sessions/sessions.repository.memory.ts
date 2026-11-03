@@ -35,6 +35,16 @@ export function createInMemorySessionsRepository(): SessionsRepository {
           .map(({ sessionId: _sessionId, ...segment }) => segment),
       };
     },
+    async findDebriefState(userId, id) {
+      const row = sessions.find(
+        (item) => item.userId === userId && item.id === id && item.status !== 'deleted',
+      );
+      if (!row) return null;
+      return {
+        status: row.status,
+        segmentCount: segments.filter((segment) => segment.sessionId === id).length,
+      };
+    },
     async create(userId, input) {
       const row: Session & { userId: string } = {
         id: randomUUID(),

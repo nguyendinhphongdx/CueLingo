@@ -1,11 +1,28 @@
-import { JobPayloads, type JobName, type JobPayload } from '@cuelingo/shared';
+import {
+  JobPayloads,
+  type JobEnqueueOptions,
+  type JobName,
+  type JobPayload,
+} from '@cuelingo/shared';
 import type { ObjectStorage } from '../lib/storage';
 import type { DebriefHandlerDeps } from './debrief/debrief.handler';
+import type { StaleSessionsRepository } from './stale-sessions/stale-sessions.repository';
 import type { RetentionRepository } from './retention/retention.repository';
+
+/** What a job may do with background jobs: enqueue them (same shape as the API's queue). */
+export interface JobQueue {
+  enqueue<N extends JobName>(
+    name: N,
+    payload: JobPayload<N>,
+    options?: JobEnqueueOptions,
+  ): Promise<void>;
+}
 
 /** Everything a handler may touch. Handlers are plain functions of (deps, payload), so tests pass fakes. */
 export interface JobDeps extends DebriefHandlerDeps {
   retention: RetentionRepository;
+  staleSessions: StaleSessionsRepository;
+  queue: JobQueue;
   storage: ObjectStorage;
   now: () => Date;
 }
