@@ -191,6 +191,36 @@ describe('assist.followup v1', () => {
     });
   });
 
+  it('rejects blanks to fill in, in every supported language', () => {
+    for (const bad of [
+      'Dear [Your Name],',
+      'Kính gửi [Tên người nhận],',
+      '안녕하세요 [이름]님',
+      '[名前]様',
+      '尊敬的[姓名]',
+      'Due [...]',
+      'Due [___]',
+    ]) {
+      expect(checkFollowupOutput('chat', { subject: null, body: bad })).toEqual({
+        ok: false,
+        reason: 'placeholder',
+      });
+    }
+  });
+
+  it('accepts a section heading in brackets (a Korean draft was refused for "[실행 항목]")', () => {
+    const body = [
+      '안녕하세요,',
+      '',
+      '[실행 항목]',
+      '- 결제 오류 수정: 남',
+      '',
+      '[Action items]',
+      '- Send the quote',
+    ].join('\n');
+    expect(checkFollowupOutput('email', { subject: '회의 요약', body })).toEqual({ ok: true });
+  });
+
   it('limits a chat body to 10 non-empty lines and 1200 characters', () => {
     const lines = (n: number) => Array.from({ length: n }, (_, i) => `line ${i}`).join('\n\n');
     expect(checkFollowupOutput('chat', { subject: null, body: lines(10) })).toEqual({ ok: true });

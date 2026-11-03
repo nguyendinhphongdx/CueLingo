@@ -93,7 +93,23 @@ export function buildFollowupPrompt(input: FollowupPromptInput) {
 export type FollowupCheckFailure =
   'chat-has-subject' | 'email-without-subject' | 'placeholder' | 'too-long';
 
-const PLACEHOLDERS = [/\[[^\]\n]{1,40}\]/, /\{\{.*?\}\}/];
+/**
+ * Fill-in-the-blank markers a draft must not contain. A section heading in brackets ("[Action items]") is
+ * fine and common in Korean and Chinese drafts, so brackets only count when what is inside reads like a
+ * blank to fill (a name, a date, a company, "your ...") or is empty ("[...]", "[___]").
+ */
+const BLANK_WORDS = [
+  'your|name|date|time|company|owner|recipient|sender|insert|tbd|placeholder',
+  'tên|ngày|giờ|công ty|người nhận|người gửi',
+  '이름|날짜|시간|회사|수신자|발신자',
+  '名前|日付|時間|会社|宛先|送信者',
+  '姓名|名字|日期|时间|公司|收件人|发件人',
+].join('|');
+const PLACEHOLDERS = [
+  new RegExp(`\\[\\s*(?:${BLANK_WORDS})[^\\]\\n]{0,38}\\]`, 'iu'),
+  /\[\s*(?:\.{2,}|…|_{2,})\s*\]/u,
+  /\{\{.*?\}\}/u,
+];
 const CHAT_MAX_LINES = 10;
 const CHAT_MAX_CHARS = 1200;
 const EMAIL_MAX_CHARS = 3000;
