@@ -2,7 +2,8 @@ import { Writable } from 'node:stream';
 import type { AiGateway } from '@cuelingo/ai-gateway';
 import { randomUUID } from 'node:crypto';
 import type { FastifyServerOptions } from 'fastify';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SUPPORTED_LANGUAGES } from '@cuelingo/shared';
 import { buildTestApp, TEST_USER_HEADER } from '../../testing';
 import { createInMemorySessionsRepository } from '../sessions';
 
@@ -249,6 +250,12 @@ describe('POST /v1/sessions/:id/transcribe', () => {
   });
 
   describe('speaker labels', () => {
+    // The registry ships with labelling off; these tests exercise the mechanism with it on.
+    const flags = ['vi', 'ja', 'ko', 'zh'].map(
+      (code) => SUPPORTED_LANGUAGES[code as 'vi'] as { labelsSpeakers: boolean },
+    );
+    beforeEach(() => flags.forEach((f) => (f.labelsSpeakers = true)));
+    afterEach(() => flags.forEach((f) => (f.labelsSpeakers = false)));
     const known = [{ label: 'speaker_1', hint: 'low voice', lastText: 'We ship Friday.' }];
     const guessing = (speaker?: { label: string; hint?: string }) => ({
       transcribe: vi.fn<Transcribe>((async () => ({

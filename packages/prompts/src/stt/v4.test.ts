@@ -33,12 +33,11 @@ describe('stt.transcribe v4', () => {
     );
   });
 
-  it('defines the answer: known label, new only when sure, unknown otherwise or on overlap', () => {
+  it('defines the answer: a matching label, new when the voice differs from all, unknown on overlap', () => {
     const { system } = buildSttPromptV4({ language: 'vi', knownSpeakers: known });
-    expect(system).toContain('"new" only when you are sure');
-    expect(system).toContain('"unknown" in every other case');
+    expect(system).toContain('"new" when this voice differs from EVERY listed description');
     expect(system).toContain('more than one voice speaks or overlaps');
-    expect(system).toContain('Never guess a label');
+    expect(system).toContain('Never invent a label');
     expect(system).toContain('at most 60 characters');
     expect(system).toContain('Never guess a name, identity, age or ethnicity');
   });

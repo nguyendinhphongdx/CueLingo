@@ -22,8 +22,8 @@ const EXPECTED_TABLES = [
   'learner_languages',
 ];
 
-/** Created by the latest migration (device sign-in); the first one owns everything else. */
-const LATEST_TABLES = ['learner_languages'];
+/** Created by the latest migration (speaker labels only add constraints and indexes, no table). */
+const LATEST_TABLES: string[] = [];
 
 describe('migrations (AC2)', () => {
   let db: TestDatabase;
@@ -49,12 +49,24 @@ describe('migrations (AC2)', () => {
     expect((await tables()).sort()).toEqual([...EXPECTED_TABLES].sort());
   });
 
+  const speakerIndexes = async () =>
+    (
+      await sql<{ indexname: string }[]>`
+        SELECT indexname FROM pg_indexes
+        WHERE schemaname = 'public' AND indexname IN ('speakers_session_label_idx', 'segments_speaker_idx')`
+    )
+      .map((r) => r.indexname)
+      .sort();
+
   it('rolls the last migration back and applies it again', async () => {
+    expect(await speakerIndexes()).toEqual(['segments_speaker_idx', 'speakers_session_label_idx']);
     dbmate(db.url, 'rollback');
     expect((await tables()).sort()).toEqual(
       EXPECTED_TABLES.filter((table) => !LATEST_TABLES.includes(table)).sort(),
     );
+    expect(await speakerIndexes()).toEqual([]);
     dbmate(db.url, 'up');
     expect(await tables()).toHaveLength(EXPECTED_TABLES.length);
+    expect(await speakerIndexes()).toEqual(['segments_speaker_idx', 'speakers_session_label_idx']);
   });
 });

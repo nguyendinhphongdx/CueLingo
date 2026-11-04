@@ -1097,6 +1097,14 @@ describe('session controller', () => {
     });
 
     describe('speaker labels', () => {
+      // The registry ships with labelling off; these tests exercise the mechanism with it on.
+      const info = SUPPORTED_LANGUAGES[lang] as { labelsSpeakers: boolean };
+      beforeEach(() => {
+        info.labelsSpeakers = true;
+      });
+      afterEach(() => {
+        info.labelsSpeakers = false;
+      });
       const verdicts = (list: NonNullable<TranscribeResponse['speaker']>[]) => {
         let n = 0;
         return vi.fn<Transcribe>(async (_id, input) => ({

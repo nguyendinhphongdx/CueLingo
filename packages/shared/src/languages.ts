@@ -27,7 +27,11 @@ export const SUPPORTED_LANGUAGES = {
     translates: true as boolean,
     /** Whether the language feeds the learner model, review, phrases and progress. */
     learnable: true as boolean,
-    /** Whether people other than the user are told apart in the system stream (cloud recognition only). */
+    /**
+     * Whether people other than the user are told apart in the system stream (cloud recognition only).
+     * Off everywhere: the speaker-labels check (2026-11-04) found Gemini cannot match a voice against
+     * text descriptions of earlier speakers (33-67% wrong labels), so no wrong labels are shown.
+     */
     labelsSpeakers: false as boolean,
     /** Switched on for people. A language stays off until it passes its evaluation. */
     enabled: true,
@@ -61,7 +65,7 @@ export const SUPPORTED_LANGUAGES = {
     recognition: 'cloud',
     translates: true,
     learnable: true,
-    labelsSpeakers: true,
+    labelsSpeakers: false,
     enabled: true,
     sttHint:
       'Write Japanese in its normal script (kanji, hiragana, katakana) with natural punctuation; do not romanise; keep Latin-script product names and acronyms as spoken.',
@@ -81,7 +85,7 @@ export const SUPPORTED_LANGUAGES = {
     recognition: 'cloud',
     translates: true,
     learnable: false,
-    labelsSpeakers: true,
+    labelsSpeakers: false,
     enabled: true,
     sttHint:
       'Write Korean in Hangul with natural spacing and punctuation; do not romanise; keep Latin-script product names and acronyms as spoken.',
@@ -112,7 +116,7 @@ export const SUPPORTED_LANGUAGES = {
     recognition: 'cloud',
     translates: true,
     learnable: false,
-    labelsSpeakers: true,
+    labelsSpeakers: false,
     enabled: true,
     sttHint:
       'Write Mandarin Chinese in Simplified Chinese characters (简体中文) with Chinese punctuation, never Traditional characters and never pinyin; keep Latin-script product names and acronyms as spoken.',
@@ -132,7 +136,7 @@ export const SUPPORTED_LANGUAGES = {
     recognition: 'cloud',
     translates: false,
     learnable: false,
-    labelsSpeakers: true,
+    labelsSpeakers: false,
     enabled: true,
     sttHint:
       'Vietnamese rules:\n- Keep every diacritic (dấu) exact: tone marks and vowel marks must match what is said. Do not drop or guess them.\n- Write numbers, dates, times and amounts as plain digits where that is natural (for example "15 tháng 3", "2 giờ chiều", "30%"); keep small counts in words when they read better.\n- Keep proper names and English technical or product terms as they are spoken; do not translate them into Vietnamese and do not respell them.',

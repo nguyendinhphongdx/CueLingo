@@ -189,10 +189,9 @@ describe('Vietnamese registry entry', () => {
 });
 
 describe('labelsSpeakers', () => {
-  it('is on for the cloud languages and off for on-device English', () => {
-    expect(SUPPORTED_LANGUAGES.en.labelsSpeakers).toBe(false);
-    for (const code of ['vi', 'ja', 'ko', 'zh'] as const) {
-      expect(SUPPORTED_LANGUAGES[code].labelsSpeakers).toBe(true);
+  it('is off for every language until a better way to tell speakers apart passes its check', () => {
+    for (const language of Object.values(SUPPORTED_LANGUAGES)) {
+      expect(language.labelsSpeakers).toBe(false);
     }
   });
 
