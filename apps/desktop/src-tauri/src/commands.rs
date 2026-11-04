@@ -225,6 +225,18 @@ pub fn hide_overlay(app: AppHandle) {
     windows::hide_overlay(&app);
 }
 
+/// The menu-bar icon follows the meeting. `minutes` is the elapsed whole minutes; `problem` is `mic` or `system`.
+#[tauri::command]
+pub fn tray_set_state(
+    app: AppHandle,
+    state: String,
+    minutes: Option<u32>,
+    problem: Option<String>,
+) -> Result<(), String> {
+    let kind = crate::tray::Kind::parse(&state).ok_or("invalid_tray_state")?;
+    crate::tray::apply(&app, kind, minutes.unwrap_or(0), problem.as_deref())
+}
+
 #[tauri::command]
 pub fn toggle_overlay(app: AppHandle) -> bool {
     windows::toggle_overlay(&app)

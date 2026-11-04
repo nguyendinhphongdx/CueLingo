@@ -7,6 +7,7 @@ import { hasCloudConsent } from './cloud-consent';
 import { refreshOnGlossaryChange } from './glossary-refresh';
 import { createSessionController } from './session-controller';
 import { sessionsApi } from './sessions-api';
+import { startTraySync } from './tray-sync';
 
 const controller = createSessionController({
   native,
@@ -17,6 +18,9 @@ const controller = createSessionController({
   apiUrl: import.meta.env.VITE_API_URL || 'ws://localhost:4000',
   token: currentToken,
 });
+
+// The menu-bar icon follows the meeting even while the window is hidden.
+startTraySync(controller, native);
 
 // A glossary edit on the Terms page reaches the running meeting's speech model.
 refreshOnGlossaryChange(controller);

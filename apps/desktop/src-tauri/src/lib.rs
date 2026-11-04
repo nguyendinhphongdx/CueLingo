@@ -4,11 +4,13 @@ mod audio_bridge;
 mod auth;
 mod commands;
 mod hotkeys;
+mod tray;
 mod windows;
 
+use tauri::image::Image;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
-use tauri::WindowEvent;
+use tauri::{Emitter, Manager, WindowEvent};
 use tauri_plugin_deep_link::DeepLinkExt;
 
 pub fn run() {
@@ -28,6 +30,7 @@ pub fn run() {
             commands::set_assist_level,
             commands::toggle_overlay,
             commands::hide_overlay,
+            commands::tray_set_state,
             auth::auth_token_get,
             auth::auth_token_set,
             auth::auth_token_clear,
@@ -50,16 +53,30 @@ pub fn run() {
             windows::prepare_overlay(app.handle())?;
 
             let show = MenuItemBuilder::with_id("show", "Mở CueLingo").build(app)?;
-            let overlay = MenuItemBuilder::with_id("overlay", "Hiện/ẩn overlay").build(app)?;
+            let stop = MenuItemBuilder::with_id("stop", "Dừng họp")
+                .enabled(false)
+                .build(app)?;
+            let overlay =
+                MenuItemBuilder::with_id("overlay", "Hiện/ẩn overlay (⌘⇧L)").build(app)?;
             let quit = MenuItemBuilder::with_id("quit", "Thoát").build(app)?;
             let menu = MenuBuilder::new(app)
-                .items(&[&show, &overlay, &quit])
+                .items(&[&show, &stop, &overlay, &quit])
                 .build()?;
-            TrayIconBuilder::new()
-                .icon(app.default_window_icon().cloned().expect("window icon"))
+            app.manage(tray::TrayMenu {
+                stop: stop.clone(),
+                quit: quit.clone(),
+            });
+            TrayIconBuilder::with_id(tray::TRAY_ID)
+                .icon(Image::from_bytes(include_bytes!("../icons/tray/idle.png"))?)
+                .icon_as_template(true)
+                .tooltip("CueLingo")
                 .menu(&menu)
                 .on_menu_event(|app, event| match event.id().as_ref() {
                     "show" => windows::show_main(app),
+                    // The webview owns the meeting: it stops it exactly like the Stop button.
+                    "stop" => {
+                        let _ = app.emit_to("main", "tray-stop", ());
+                    }
                     "overlay" => {
                         windows::toggle_overlay(app);
                     }
