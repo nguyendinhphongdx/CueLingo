@@ -10,7 +10,7 @@ mod windows;
 use tauri::image::Image;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
-use tauri::{Emitter, Manager, WindowEvent};
+use tauri::{Emitter, Manager, RunEvent, WindowEvent};
 use tauri_plugin_deep_link::DeepLinkExt;
 
 pub fn run() {
@@ -96,6 +96,19 @@ pub fn run() {
                 }
             }
         })
-        .run(tauri::generate_context!())
-        .expect("error while running CueLingo");
+        .build(tauri::generate_context!())
+        .expect("error while building CueLingo")
+        .run(|app, event| {
+            // ⌘Q and Quit on the Dock arrive with no exit code; an exit we asked for carries one.
+            // During a meeting they go through the same stop-then-quit path as the tray item.
+            if let RunEvent::ExitRequested {
+                api, code: None, ..
+            } = event
+            {
+                if tray::is_live(app) {
+                    api.prevent_exit();
+                    tray::quit(app);
+                }
+            }
+        });
 }

@@ -35,5 +35,5 @@ cd apps/desktop/src-tauri && cargo clippy -- -D warnings   # sạch
 ## Còn lại
 
 - **Nhìn thật (cần người dùng):** AC1 (biểu tượng rảnh trên thanh menu sáng và tối, thứ tự đổi icon rồi cờ template) và AC6 (đang họp, đóng cửa sổ chính, biểu tượng vẫn đổi; "Dừng họp" và "Dừng họp và thoát" hoạt động).
-- **⌘Q và Quit trên Dock** vẫn thoát ngay giữa họp (không qua đường tray); chặn bằng `RunEvent::ExitRequested` là việc sau, cần tính tới việc không để kẹt.
+- **⌘Q và Quit trên Dock** giữa họp nay đi qua `tray::quit` (chặn `ExitRequested`, dừng họp rồi thoát, tối đa 20 giây); cần thử tay.
 - Chưa có nhãn trên biểu tượng Dock (câu hỏi mở số 5, để sau).
