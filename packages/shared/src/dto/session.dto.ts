@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { EnabledLanguageSchema, LanguageCodeSchema } from '../languages';
+import { SpeakerSchema } from './speaker.dto';
 
 /** A meeting session: created by the desktop app, ended when the user stops, debriefed by a worker. */
 export const SessionStatusSchema = z.enum(['live', 'ended', 'debriefed', 'deleted']);
@@ -42,12 +43,15 @@ export const StoredSegmentSchema = z
     endMs: z.number().int(),
     textEn: z.string(),
     textVi: z.string().nullable(),
+    /** Null or missing: the speaker was not told apart (shown from `source`). */
+    speakerId: z.uuid().nullable().optional(),
   })
   .strict();
 export type StoredSegment = z.infer<typeof StoredSegmentSchema>;
 
 export const SessionDetailSchema = SessionSchema.extend({
   segments: z.array(StoredSegmentSchema),
+  speakers: z.array(SpeakerSchema).default([]),
 }).strict();
 export type SessionDetail = z.infer<typeof SessionDetailSchema>;
 

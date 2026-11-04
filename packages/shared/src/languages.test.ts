@@ -187,3 +187,18 @@ describe('Vietnamese registry entry', () => {
     ]);
   });
 });
+
+describe('labelsSpeakers', () => {
+  it('is on for the cloud languages and off for on-device English', () => {
+    expect(SUPPORTED_LANGUAGES.en.labelsSpeakers).toBe(false);
+    for (const code of ['vi', 'ja', 'ko', 'zh'] as const) {
+      expect(SUPPORTED_LANGUAGES[code].labelsSpeakers).toBe(true);
+    }
+  });
+
+  it('is only ever on where recognition is in the cloud', () => {
+    for (const language of Object.values(SUPPORTED_LANGUAGES)) {
+      if (language.labelsSpeakers) expect(language.recognition).toBe('cloud');
+    }
+  });
+});

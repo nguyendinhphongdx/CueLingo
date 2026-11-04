@@ -140,6 +140,7 @@ export function createPostgresPrivacyRepository(sql: Sql): PrivacyRepository {
             assistLevel: row.assist_level,
             language: row.language,
             segments: segmentsBySession.get(row.id) ?? [],
+            speakers: [], // TODO(speaker-labels step 5): read speakers
             debrief: debriefs.get(row.id) ?? null,
           })),
           phrases: phraseRows.map((row) => ({

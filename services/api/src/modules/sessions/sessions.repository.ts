@@ -105,7 +105,7 @@ export function createPostgresSessionsRepository(sql: Sql): SessionsRepository {
         FROM segments JOIN sessions ON sessions.id = segments.session_id
         WHERE sessions.user_id = ${userId} AND sessions.id = ${id}
         ORDER BY start_ms`;
-      return { ...toSession(row), segments: segments.map(toSegment) };
+      return { ...toSession(row), segments: segments.map(toSegment), speakers: [] }; // TODO(speaker-labels step 5)
     },
     async findDebriefState(userId, id) {
       const [row] = await sql<{ status: Session['status']; segmentCount: number }[]>`

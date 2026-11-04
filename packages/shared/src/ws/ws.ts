@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SpeakerLabelSchema } from '../dto/speaker.dto';
 import { ErrorCode } from '../errors/error-code';
 
 export const WordSchema = z
@@ -30,6 +31,8 @@ export const SegmentFinalMessageSchema = z
     endMs: z.number(),
     text: z.string().min(1).max(2_000),
     words: z.array(WordSchema),
+    /** Who spoke. The server ignores it for `mic` (always `me`); missing means unlabelled. */
+    speaker: SpeakerLabelSchema.optional(),
   })
   .strict()
   .refine(({ startMs, endMs }) => endMs >= startMs, {

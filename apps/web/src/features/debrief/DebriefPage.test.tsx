@@ -46,6 +46,7 @@ const session: SessionDetail = {
       textVi: 'Tôi sẽ gửi hôm nay.',
     },
   ],
+  speakers: [],
 };
 
 const debrief: Debrief = {

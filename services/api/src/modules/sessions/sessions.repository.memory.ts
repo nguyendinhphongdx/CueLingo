@@ -33,6 +33,7 @@ export function createInMemorySessionsRepository(): SessionsRepository {
           .filter((segment) => segment.sessionId === id)
           .sort((a, b) => a.startMs - b.startMs)
           .map(({ sessionId: _sessionId, ...segment }) => segment),
+        speakers: [], // TODO(speaker-labels step 5)
       };
     },
     async findDebriefState(userId, id) {
