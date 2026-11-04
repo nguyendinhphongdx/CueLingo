@@ -2,7 +2,7 @@
 
 | Trạng thái | Loại    | Nhánh / PR             | Ước lượng → thực tế |
 | ---------- | ------- | ---------------------- | ------------------- |
-| Spec       | feature | `feat/m1-live-caption` | _1 ngày → ?_        |
+| Kết quả    | feature | `feat/m1-live-caption` | _1 ngày → ?_        |
 
 **Phạm vi:** trong: biểu tượng đơn sắc dạng template ở thanh menu, ba trạng thái (rảnh, đang nghe, cảnh báo thu âm), chữ thời lượng cạnh biểu tượng khi đang nghe, menu có "Dừng họp" · ngoài: bắt đầu họp từ menu, thông báo hệ thống, giao diện tray trên Windows và Linux, đổi tên hay biểu tượng Dock.
 
@@ -27,14 +27,15 @@ Khi đang họp, app chạy ẩn (đóng cửa sổ chính chỉ ẩn đi) và n
 
 ## 3. Câu hỏi mở
 
-- [ ] **Màu trạng thái:** đỏ cho "đang nghe" và hổ phách cho cảnh báo (đề xuất), hay xanh lá cho đang nghe?
-- [ ] **Chữ cạnh biểu tượng:** chỉ chấm và thời lượng ("● 12:34", cập nhật mỗi phút để thanh menu không nhấp nháy), hay chỉ biểu tượng không chữ?
-- [ ] **"Thoát" khi đang họp:** tắt hẳn (đề xuất, vì Thoát giữa chừng mất các câu cuối), hay cho thoát kèm hỏi xác nhận?
-- [ ] **Bắt đầu họp từ menu** để làm sau (cần đi qua hộp thoại đồng ý và kiểm quyền), đúng chưa?
-- [ ] Nếu biểu tượng bị macOS giấu vì thanh menu quá đông (máy có tai thỏ), có cần thêm chỉ báo khác, ví dụ nhãn trên biểu tượng Dock khi đang nghe?
+- [x] **Màu trạng thái:** đỏ cho "đang nghe" và hổ phách cho cảnh báo (đề xuất), hay xanh lá cho đang nghe?
+- [x] **Chữ cạnh biểu tượng:** chỉ chấm và thời lượng ("● 12:34", cập nhật mỗi phút để thanh menu không nhấp nháy), hay chỉ biểu tượng không chữ?
+- [x] **"Thoát" khi đang họp:** tắt hẳn (đề xuất, vì Thoát giữa chừng mất các câu cuối), hay cho thoát kèm hỏi xác nhận?
+- [x] **Bắt đầu họp từ menu** để làm sau (cần đi qua hộp thoại đồng ý và kiểm quyền), đúng chưa?
+- [x] Nếu biểu tượng bị macOS giấu vì thanh menu quá đông (máy có tai thỏ), có cần thêm chỉ báo khác, ví dụ nhãn trên biểu tượng Dock khi đang nghe?
 
 ## Decision log
 
-| Ngày       | Pha  | Quyết định / lý do bị từ chối                                                                     |
-| ---------- | ---- | ------------------------------------------------------------------------------------------------- |
-| 2026-11-03 | Spec | Mở hồ sơ theo yêu cầu của chủ sản phẩm: để app lên thanh menu, đổi màu và giao diện khi đang nghe |
+| Ngày       | Pha  | Quyết định / lý do bị từ chối                                                                                                                            |
+| ---------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-03 | Spec | Mở hồ sơ theo yêu cầu của chủ sản phẩm: để app lên thanh menu, đổi màu và giao diện khi đang nghe                                                        |
+| 2026-11-04 | Spec | Chủ sản phẩm duyệt, dùng đề xuất cho cả năm câu hỏi mở (đỏ/hổ phách, chấm + h:mm theo phút, Thoát tắt khi họp, bắt đầu từ menu để sau, nhãn Dock để sau) |
