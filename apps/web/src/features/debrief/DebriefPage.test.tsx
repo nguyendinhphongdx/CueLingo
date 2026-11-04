@@ -1,5 +1,5 @@
 import { ApiError } from '@cuelingo/core-sdk';
-import type { Debrief, SessionDetail } from '@cuelingo/shared';
+import type { Debrief, SessionDetail, StoredSegment } from '@cuelingo/shared';
 import type { ReactElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
@@ -7,9 +7,15 @@ import {
   DebriefPageView,
   focusTranscriptSegment,
   SavePhraseButton,
+  SpeakerRenameInput,
   visibleBlocks,
 } from './DebriefPage';
-import { buildBlockCopyText, countTranscriptSpeakers, filterTranscriptSegments } from './content';
+import {
+  buildBlockCopyText,
+  countTranscriptSpeakers,
+  filterTranscriptSegments,
+  transcriptFilterOptions,
+} from './content';
 import { buildDebriefMarkdown } from './markdown';
 import {
   COPY_CONFIRMATION_MS,
@@ -201,7 +207,7 @@ describe('DebriefPageView', () => {
     expect(markup).toContain('Let us circle back tomorrow.');
     expect(markup).toContain('Ngày mai chúng ta trao đổi lại nhé.');
     expect(markup).toContain('Tất cả 2');
-    expect(markup).toContain('Họ 1');
+    expect(markup).toContain('Người khác 1');
     expect(markup).toContain('Tôi 1');
     expect(markup).toContain('Sao chép cả debrief');
     expect(markup.match(/aria-label="Sao chép /g)).toHaveLength(4);
@@ -316,8 +322,81 @@ describe('DebriefPageView', () => {
 
 describe('debrief interactions', () => {
   it('filters Tôi to mic segments and counts each speaker', () => {
-    expect(countTranscriptSpeakers(session.segments)).toEqual({ all: 2, system: 1, mic: 1 });
-    expect(filterTranscriptSegments(session.segments, 'mic')).toEqual([session.segments[1]]);
+    expect(countTranscriptSpeakers(session.segments)).toEqual({ all: 2, me: 1, other: 1 });
+    expect(filterTranscriptSegments(session.segments, 'me')).toEqual([session.segments[1]]);
+    expect(filterTranscriptSegments(session.segments, 'other')).toEqual([session.segments[0]]);
+  });
+
+  it('filters by each person of the meeting and keeps older sentences under their source', () => {
+    const lan = { id: '11111111-1111-4111-8111-111111111111', label: 'speaker_1' as const };
+    const minh = { id: '22222222-2222-4222-8222-222222222222', label: 'speaker_2' as const };
+    const speakers = [
+      { ...minh, displayName: null },
+      { ...lan, displayName: 'Lan' },
+    ];
+    const [first, second] = session.segments as [StoredSegment, StoredSegment];
+    const segments = [
+      { ...first, speakerId: lan.id },
+      { ...first, id: 'a1111111-1111-4111-8111-111111111111', speakerId: lan.id },
+      { ...first, id: 'b1111111-1111-4111-8111-111111111111', speakerId: minh.id },
+      second,
+      { ...first, id: 'c1111111-1111-4111-8111-111111111111' },
+    ];
+    const detail = { ...session, segments, speakers };
+    expect(countTranscriptSpeakers(segments, speakers)).toEqual({
+      all: 5,
+      me: 1,
+      other: 1,
+      [lan.id]: 2,
+      [minh.id]: 1,
+    });
+    expect(transcriptFilterOptions(detail)).toEqual([
+      { value: 'all', label: 'Tất cả 5' },
+      { value: 'me', label: 'Tôi 1' },
+      { value: lan.id, label: 'Lan 2' },
+      { value: minh.id, label: 'Speaker 2 1' },
+      { value: 'other', label: 'Người khác 1' },
+    ]);
+    expect(filterTranscriptSegments(segments, lan.id, speakers)).toHaveLength(2);
+    expect(filterTranscriptSegments(segments, 'me', speakers)).toEqual([second]);
+  });
+
+  it('shows a speaker tag per sentence, renamable only for people of the meeting', () => {
+    const lan = { id: '11111111-1111-4111-8111-111111111111', label: 'speaker_1' as const };
+    const detail = {
+      ...session,
+      speakers: [{ ...lan, displayName: 'Lan' }],
+      segments: [{ ...session.segments[0]!, speakerId: lan.id }, session.segments[1]!],
+    };
+    const markup = renderToStaticMarkup(
+      <DebriefPageView {...defaultProps} session={detail} onRenameSpeaker={vi.fn()} />,
+    );
+    expect(markup).toContain('aria-label="Lan, đổi tên người nói"');
+    expect(markup.match(/đổi tên người nói/g)).toHaveLength(1);
+    expect(markup).toContain('>Tôi<');
+  });
+
+  it('offers to rebuild the debrief once after a rename, never by itself', () => {
+    const ask = renderToStaticMarkup(<DebriefPageView {...defaultProps} regeneratePrompt="ask" />);
+    expect(ask).toContain('Tạo lại debrief với tên mới');
+    const waiting = renderToStaticMarkup(
+      <DebriefPageView {...defaultProps} regeneratePrompt="waiting" />,
+    );
+    expect(waiting).not.toContain('Tạo lại debrief với tên mới');
+    expect(waiting).toContain('Đang tạo lại debrief với tên mới');
+    expect(renderToStaticMarkup(<DebriefPageView {...defaultProps} />)).not.toContain(
+      'Tạo lại debrief với tên mới',
+    );
+    expect(defaultProps.onRegenerate).not.toHaveBeenCalled();
+  });
+
+  it('labels the rename field for assistive tech', () => {
+    const markup = renderToStaticMarkup(
+      <SpeakerRenameInput initial="Lan" fallback="Speaker 1" onSave={vi.fn()} onCancel={vi.fn()} />,
+    );
+    expect(markup).toContain('aria-label="Tên người nói (Speaker 1)');
+    expect(markup).toContain('maxLength="40"');
+    expect(markup).toContain('value="Lan"');
   });
 
   it('scrolls and focuses the requested transcript segment with reduced motion respected', () => {
@@ -396,11 +475,25 @@ describe('buildDebriefMarkdown', () => {
       includeTranscript: true,
     });
     expect(markdown).toContain('## Transcript song ngữ');
-    expect(markdown).toContain('**00:00 · Họ**');
+    expect(markdown).toContain('**00:00 · Người khác**');
     expect(markdown).toContain('**01:05 · Tôi**');
     expect(markdown).toContain('EN: Let us circle back tomorrow.');
     expect(markdown).toContain('VI: Tôi sẽ gửi hôm nay.');
     expect(markdown.indexOf('00:00')).toBeLessThan(markdown.indexOf('01:05'));
+  });
+
+  it('names the speakers in the exported transcript', () => {
+    const lan = { id: '11111111-1111-4111-8111-111111111111', label: 'speaker_1' as const };
+    const markdown = buildDebriefMarkdown(debrief, {
+      session: {
+        ...session,
+        speakers: [{ ...lan, displayName: 'Lan' }],
+        segments: [{ ...session.segments[0]!, speakerId: lan.id }, session.segments[1]!],
+      },
+      includeTranscript: true,
+    });
+    expect(markdown).toContain('**00:00 · Lan**');
+    expect(markdown).toContain('**01:05 · Tôi**');
   });
 
   it('keeps the translation line but omits learning sections for a Korean meeting', () => {

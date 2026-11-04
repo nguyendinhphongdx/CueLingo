@@ -40,3 +40,12 @@ export function describeRegenerateError(error: unknown): string {
   }
   return 'Chưa tạo lại được debrief. Hãy thử lại sau.';
 }
+
+/** Message for a failed speaker rename: the person is gone (404), the name is rejected (400), else generic. */
+export function describeRenameError(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 404) return 'Không tìm thấy người nói này.';
+    if (error.status === 400) return 'Tên chưa hợp lệ, dùng từ 1 đến 40 ký tự.';
+  }
+  return describeError(error) ?? FALLBACK;
+}

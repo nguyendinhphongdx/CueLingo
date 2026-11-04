@@ -16,6 +16,8 @@ import { Kbd } from '@cuelingo/ui/components/kbd';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { Section } from '@cuelingo/ui/components/section';
 import { Segmented } from '@cuelingo/ui/components/segmented';
+import { SpeakerTag } from '@cuelingo/ui/components/speaker-tag';
+import { speakerDisplayName } from '@cuelingo/ui/lib/speaker';
 import {
   debriefOutlook,
   EMPTY_MEETING_TEXT,
@@ -23,11 +25,12 @@ import {
 } from '@cuelingo/ui/lib/session-state';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import {
   buildBlockCopyText,
-  countTranscriptSpeakers,
   filterTranscriptSegments,
+  segmentSpeaker,
+  transcriptFilterOptions,
   type CopyableBlock,
   type TranscriptFilter,
 } from './content';
@@ -204,6 +207,85 @@ function DebriefBlock({
   );
 }
 
+const MAX_SPEAKER_NAME = 40;
+
+/** Inline name field for one speaker: Enter saves, Esc cancels, an empty name removes the name. */
+export function SpeakerRenameInput({
+  initial,
+  fallback,
+  onSave,
+  onCancel,
+}: {
+  initial: string;
+  /** What the person is called without a name; the field label says whom it renames. */
+  fallback: string;
+  onSave: (displayName: string | null) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (saving) return;
+    const name = value.trim();
+    if (name === initial.trim()) return onCancel();
+    setSaving(true);
+    onSave(name || null).catch(() => setSaving(false));
+  };
+  return (
+    <form onSubmit={submit} className="inline-flex items-center gap-2">
+      <input
+        autoFocus
+        value={value}
+        maxLength={MAX_SPEAKER_NAME}
+        disabled={saving}
+        aria-label={`Tên người nói (${fallback}), 1 đến ${MAX_SPEAKER_NAME} ký tự, để trống để bỏ tên`}
+        onChange={(event) => setValue(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            onCancel();
+          }
+        }}
+        onBlur={() => !saving && onCancel()}
+        className="bg-background focus-visible:ring-ring h-7 w-40 rounded-md border px-2 text-xs focus-visible:ring-2 focus-visible:outline-none"
+      />
+    </form>
+  );
+}
+
+function SegmentSpeaker({
+  segment,
+  speakers,
+  renaming,
+  onStartRename,
+  onRename,
+}: {
+  segment: SessionDetail['segments'][number];
+  speakers: SessionDetail['speakers'];
+  renaming: string | null;
+  onStartRename: (speakerId: string | null) => void;
+  onRename?: (speakerId: string, displayName: string | null) => Promise<void>;
+}) {
+  const who = segmentSpeaker(segment, speakers);
+  const speaker = who.speaker;
+  // "Tôi" and sentences nobody could place are not people of the meeting, so they cannot be renamed.
+  const renamable = onRename && speaker && speaker.label !== 'me';
+  if (renamable && renaming === speaker.id)
+    return (
+      <SpeakerRenameInput
+        initial={speaker.displayName ?? ''}
+        fallback={speakerDisplayName({ ...speaker, displayName: null, source: 'system' })}
+        onSave={async (name) => {
+          await onRename(speaker.id, name);
+          onStartRename(null);
+        }}
+        onCancel={() => onStartRename(null)}
+      />
+    );
+  return <SpeakerTag {...who} onRename={renamable ? () => onStartRename(speaker.id) : undefined} />;
+}
+
 export interface DebriefPageViewProps {
   session?: SessionDetail;
   debrief?: Debrief;
@@ -225,6 +307,10 @@ export interface DebriefPageViewProps {
   /** Asks the server to build the debrief again (after the wait timed out). */
   onRegenerate: () => void;
   regenerating?: boolean;
+  /** Names a person of the meeting (`null` removes the name); resolves once saved, rejects on failure. */
+  onRenameSpeaker?: (speakerId: string, displayName: string | null) => Promise<void>;
+  /** After a rename: `ask` offers to rebuild the debrief with the new names, `waiting` says it is on its way. */
+  regeneratePrompt?: 'ask' | 'waiting' | null;
   deleting: boolean;
   onDelete: () => void;
   /** Drafts a follow-up message for this meeting; the section is hidden without it. */
@@ -274,6 +360,8 @@ export function DebriefPageView({
   onExport,
   onRegenerate,
   regenerating = false,
+  onRenameSpeaker,
+  regeneratePrompt = null,
   deleting,
   onDelete,
   onComposeFollowup,
@@ -282,6 +370,7 @@ export function DebriefPageView({
   const [followupOpen, setFollowupOpen] = useState(false);
   const [includeTranscript, setIncludeTranscript] = useState(false);
   const [transcriptFilter, setTranscriptFilter] = useState<TranscriptFilter>('all');
+  const [renamingSpeakerId, setRenamingSpeakerId] = useState<string | null>(null);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState(0);
   const [highlightedSegmentId, setHighlightedSegmentId] = useState<string | null>(null);
   const blockRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -434,12 +523,18 @@ export function DebriefPageView({
     id,
     segment: session?.segments.find((segment) => segment.id === id),
   }));
-  const counts = countTranscriptSpeakers(session?.segments ?? []);
-  const visibleSegments = filterTranscriptSegments(session?.segments ?? [], transcriptFilter);
+  const speakers = session?.speakers ?? [];
+  const totalSegments = session?.segments.length ?? 0;
+  const filterOptions = session ? transcriptFilterOptions(session) : [];
+  const visibleSegments = filterTranscriptSegments(
+    session?.segments ?? [],
+    transcriptFilter,
+    speakers,
+  );
 
   const showSegment = (segmentId: string) => {
     const segment = session?.segments.find((item) => item.id === segmentId);
-    if (segment) setTranscriptFilter(segment.source);
+    if (segment) setTranscriptFilter(segmentSpeaker(segment, speakers).key);
     setHighlightedSegmentId(segmentId);
     requestAnimationFrame(() => focusTranscriptSegment(segmentId));
     if (highlightTimer.current) clearTimeout(highlightTimer.current);
@@ -688,7 +783,7 @@ export function DebriefPageView({
 
       <Section
         title={translates ? 'Transcript song ngữ' : 'Transcript'}
-        description={`${counts.all} câu · Họ ${counts.system} · Tôi ${counts.mic}`}
+        description={`${totalSegments} câu`}
       >
         <Card>
           <CardContent className="space-y-5 pt-6">
@@ -696,12 +791,29 @@ export function DebriefPageView({
               label="Lọc transcript theo người nói"
               value={transcriptFilter}
               onChange={setTranscriptFilter}
-              options={[
-                { value: 'all', label: `Tất cả ${counts.all}` },
-                { value: 'system', label: `Họ ${counts.system}` },
-                { value: 'mic', label: `Tôi ${counts.mic}` },
-              ]}
+              options={filterOptions}
             />
+            {regeneratePrompt === 'ask' && (
+              <div
+                role="status"
+                className="bg-accent flex flex-wrap items-center gap-3 rounded-md p-3 text-sm"
+              >
+                <span>Bạn vừa đổi tên người nói. Debrief hiện tại vẫn dùng tên cũ.</span>
+                <Button
+                  variant="outline"
+                  className="min-h-11"
+                  disabled={regenerating}
+                  onClick={onRegenerate}
+                >
+                  {regenerating ? 'Đang gửi…' : 'Tạo lại debrief với tên mới'}
+                </Button>
+              </div>
+            )}
+            {regeneratePrompt === 'waiting' && (
+              <p role="status" className="text-muted-foreground text-sm">
+                Đang tạo lại debrief với tên mới. Trang sẽ tự cập nhật khi xong.
+              </p>
+            )}
             {visibleSegments.length ? (
               <ol className="space-y-4">
                 {visibleSegments.map((segment) => (
@@ -715,9 +827,13 @@ export function DebriefPageView({
                         : 'border-transparent focus:border-primary focus:bg-accent'
                     }`}
                   >
-                    <p className="text-muted-foreground text-xs font-medium">
-                      {segment.source === 'mic' ? 'Tôi' : 'Họ'}
-                    </p>
+                    <SegmentSpeaker
+                      segment={segment}
+                      speakers={speakers}
+                      renaming={renamingSpeakerId}
+                      onStartRename={setRenamingSpeakerId}
+                      onRename={onRenameSpeaker}
+                    />
                     <p className="mt-1 text-sm">{segment.textEn}</p>
                     {translates && (
                       <p className="text-muted-foreground mt-1 text-sm">
@@ -729,7 +845,7 @@ export function DebriefPageView({
               </ol>
             ) : (
               <p className="text-muted-foreground text-sm">
-                {counts.all
+                {totalSegments
                   ? 'Không có câu nào trong bộ lọc này.'
                   : 'Chưa có transcript cho cuộc họp này.'}
               </p>
@@ -765,6 +881,8 @@ export function DebriefPage({ sessionId }: { sessionId: string }) {
       onExport={state.exportMarkdown}
       onRegenerate={state.regenerateDebrief}
       regenerating={state.regenerating}
+      onRenameSpeaker={state.renameSpeaker}
+      regeneratePrompt={state.regeneratePrompt}
       deleting={state.deleting}
       onDelete={state.deleteSession}
       onComposeFollowup={(input) => client.followup(sessionId, input)}

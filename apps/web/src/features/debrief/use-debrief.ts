@@ -1,10 +1,15 @@
 import { ApiError } from '@cuelingo/core-sdk';
-import type { DebriefFeedbackRequest, SavePhraseRequest } from '@cuelingo/shared';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import type {
+  DebriefFeedbackRequest,
+  SavePhraseRequest,
+  SessionDetail,
+  Speaker,
+} from '@cuelingo/shared';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { client } from '../../lib/client';
 import { debriefOutlook } from '@cuelingo/ui/lib/session-state';
-import { describeError, describeRegenerateError } from '../../lib/errors';
+import { describeError, describeRegenerateError, describeRenameError } from '../../lib/errors';
 import { buildDebriefMarkdown } from './markdown';
 
 const POLL_INTERVAL_MS = 5_000;
@@ -50,11 +55,17 @@ function phraseKey(input: Pick<SavePhraseRequest, 'phrase' | 'meaningVi'>) {
 }
 
 export function useDebrief(sessionId: string, onDeleted?: () => void) {
+  const queryClient = useQueryClient();
   const pollingStartedAt = useRef(Date.now());
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [savedPhraseKeys, setSavedPhraseKeys] = useState<ReadonlySet<string>>(new Set());
   const [clipboardFeedback, setClipboardFeedback] = useState<ClipboardFeedback | null>(null);
+  // A speaker was renamed and the debrief was not rebuilt since.
+  const [namesChanged, setNamesChanged] = useState(false);
+  // Id of the debrief that a rebuild is replacing; the page polls until a newer one arrives.
+  const [replacingDebriefId, setReplacingDebriefId] = useState<string | null>(null);
+  const replacingRef = useRef<{ id: string; at: number } | null>(null);
 
   const session = useQuery({
     queryKey: ['sessions', sessionId],
@@ -66,11 +77,19 @@ export function useDebrief(sessionId: string, onDeleted?: () => void) {
     queryKey: ['sessions', sessionId, 'debrief'],
     queryFn: () => client.sessions.getDebrief(sessionId),
     retry: false,
-    refetchInterval: (query) =>
-      canWaitRef.current &&
-      shouldPollDebrief(query.state.error, Date.now() - pollingStartedAt.current)
+    refetchInterval: (query) => {
+      const replacing = replacingRef.current;
+      if (
+        replacing &&
+        query.state.data?.id === replacing.id &&
+        Date.now() - replacing.at < LONG_WAIT_MS
+      )
+        return POLL_INTERVAL_MS;
+      return canWaitRef.current &&
+        shouldPollDebrief(query.state.error, Date.now() - pollingStartedAt.current)
         ? POLL_INTERVAL_MS
-        : false,
+        : false;
+    },
   });
   const feedback = useMutation({
     mutationFn: ({ id, input }: { id: string; input: DebriefFeedbackRequest }) =>
@@ -85,10 +104,31 @@ export function useDebrief(sessionId: string, onDeleted?: () => void) {
   const regenerate = useMutation({
     mutationFn: () => client.regenerateDebrief(sessionId),
     onSuccess: () => {
+      setNamesChanged(false);
+      if (debrief.data) {
+        replacingRef.current = { id: debrief.data.id, at: Date.now() };
+        setReplacingDebriefId(debrief.data.id);
+      }
       // A new wait: reset the timer and poll again.
       pollingStartedAt.current = Date.now();
       setNow(pollingStartedAt.current);
       void debrief.refetch();
+    },
+  });
+  const rename = useMutation({
+    mutationFn: ({ speakerId, displayName }: { speakerId: string; displayName: string | null }) =>
+      client.renameSpeaker(sessionId, speakerId, displayName),
+    onSuccess: (speaker: Speaker) => {
+      // Every sentence reads its name through the speaker, so one cache edit renames them all.
+      queryClient.setQueryData<SessionDetail>(
+        ['sessions', sessionId],
+        (current) =>
+          current && {
+            ...current,
+            speakers: current.speakers.map((item) => (item.id === speaker.id ? speaker : item)),
+          },
+      );
+      setNamesChanged(true);
     },
   });
   const remove = useMutation({
@@ -135,8 +175,16 @@ export function useDebrief(sessionId: string, onDeleted?: () => void) {
     processingTimedOut: debriefNotFound && processingStatus.timedOut,
     regenerating: regenerate.isPending,
     regenerateDebrief: () => regenerate.mutate(),
+    renameSpeaker: (speakerId: string, displayName: string | null) =>
+      rename.mutateAsync({ speakerId, displayName }).then(() => undefined),
+    regeneratePrompt: namesChanged
+      ? ('ask' as const)
+      : replacingDebriefId && debrief.data?.id === replacingDebriefId
+        ? ('waiting' as const)
+        : null,
     error:
       (regenerate.error ? describeRegenerateError(regenerate.error) : null) ??
+      (rename.error ? describeRenameError(rename.error) : null) ??
       describeError(session.error) ??
       (debriefNotFound ? null : describeError(debrief.error)) ??
       describeError(feedback.error) ??

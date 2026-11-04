@@ -1,5 +1,6 @@
 import { isLanguageCode, SUPPORTED_LANGUAGES } from '@cuelingo/shared';
 import type { Debrief, SessionDetail, StoredSegment } from '@cuelingo/shared';
+import { segmentSpeakerName } from './content';
 
 export interface DebriefMarkdownOptions {
   session?: SessionDetail;
@@ -13,8 +14,12 @@ export function formatSegmentTime(startMs: number): string {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-function segmentLines(segment: StoredSegment, translates: boolean): string[] {
-  const head = `- **${formatSegmentTime(segment.startMs)} · ${segment.source === 'mic' ? 'Tôi' : 'Họ'}**`;
+function segmentLines(
+  segment: StoredSegment,
+  translates: boolean,
+  session: SessionDetail,
+): string[] {
+  const head = `- **${formatSegmentTime(segment.startMs)} · ${segmentSpeakerName(segment, session.speakers)}**`;
   return translates
     ? [head, `  - EN: ${segment.textEn}`, `  - VI: ${segment.textVi || 'Chưa có bản dịch'}`]
     : [head, `  - ${segment.textEn}`];
@@ -76,7 +81,7 @@ export function buildDebriefMarkdown(
       ...(session?.segments.length
         ? [...session.segments]
             .sort((left, right) => left.startMs - right.startMs)
-            .flatMap((segment) => segmentLines(segment, translates))
+            .flatMap((segment) => segmentLines(segment, translates, session))
         : ['- Chưa có transcript']),
       '',
     );
