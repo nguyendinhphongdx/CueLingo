@@ -14,17 +14,30 @@ Nhận dạng giọng nói bằng đám mây cho ngôn ngữ chưa có model tr�
 
 ## Interface
 
-- `POST /v1/sessions/:id/transcribe`: body `TranscribeRequestSchema` {segmentId, stream, startMs, endMs, sampleRate: 16000, pcm: base64 PCM 16-bit mono}, trả `TranscribeResponseSchema` {segmentId, text} (`text` rỗng khi không có tiếng nói)
+- `POST /v1/sessions/:id/transcribe`: body `TranscribeRequestSchema` {segmentId, stream, startMs, endMs, sampleRate: 16000, pcm: base64 PCM 16-bit mono}, trả `TranscribeResponseSchema` {segmentId, text, speaker?} (`text` rỗng khi không có tiếng nói)
 - Client: `client.transcribe(sessionId, input)` trong `@cuelingo/core-sdk`
 - Văn bản trả về đi tiếp bằng `segment.final` như họp tiếng Anh; realtime lưu câu nhưng không dịch ([realtime](./realtime.md))
 
 ## Phụ thuộc
 
-- `@cuelingo/ai-gateway` (task `stt.transcribe`, Gemini, âm thanh gửi inline), `@cuelingo/prompts` (`stt/v1`)
+- `@cuelingo/ai-gateway` (task `stt.transcribe`, Gemini, âm thanh gửi inline), `@cuelingo/prompts` (`stt/v3`, `stt/v4` khi gắn nhãn người nói)
 
 ## Dữ liệu & sự kiện
 
 - Không có bảng mới; chỉ ghi `ai_call` (độ dài âm thanh, độ trễ, chi phí)
+
+## Nhãn người nói (`knownSpeakers`)
+
+Body có thể kèm `knownSpeakers`: tối đa 8 người đã nghe trong cuộc họp, mỗi người `{label: speaker_1..8, hint ≤ 60, lastText ≤ 200}`. Có trường này nghĩa là "hãy gắn nhãn người nói" (mảng rỗng cũng vậy).
+
+| Quy tắc                                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Chỉ chuyển cho gateway khi `stream = 'system'` **và** ngôn ngữ phiên có `labelsSpeakers` trong registry (không rẽ nhánh theo mã ngôn ngữ)        |
+| Response chỉ có `speaker` khi request có `knownSpeakers` (bản desktop cũ parse strict nên không vỡ)                                              |
+| `speaker.label` là nhãn trong danh sách đã gửi, `new` (giữ `hint`, cắt ≤ 60) hoặc `unknown`; nhãn lạ hoặc câu mic/ngôn ngữ không gắn → `unknown` |
+| Log chỉ thêm `speakerKnown: boolean` (có nhận ra một nhãn đã biết); không log `hint`, `lastText`, văn bản                                        |
+
+API không giữ sổ người nói: desktop cấp nhãn và gửi lại qua `segment.final.speaker` ([realtime](./realtime.md)).
 
 ## Ngữ cảnh `previous`
 

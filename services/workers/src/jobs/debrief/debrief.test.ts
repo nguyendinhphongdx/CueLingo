@@ -1,7 +1,11 @@
 import type { AiGateway } from '@cuelingo/ai-gateway';
 import type { DebriefContent } from '@cuelingo/shared';
 import { describe, expect, it, vi } from 'vitest';
-import { debriefViFixtures } from '@cuelingo/prompts';
+import {
+  buildDebriefPromptFor,
+  debriefViFixtures,
+  type DebriefPromptInput,
+} from '@cuelingo/prompts';
 import { generateDebrief, type DebriefRepository, type DebriefSession } from './index';
 
 const SESSION_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -61,7 +65,7 @@ describe('debrief.generate', () => {
     });
 
     expect(state.saved).toHaveLength(2);
-    expect(state.saved[0]?.promptVersion).toBe('debrief.generate@v1');
+    expect(state.saved[0]?.promptVersion).toBe('debrief.generate@v4');
     expect(state.saved[0]?.content.summary.headlineVi).toBe('Kế hoạch phát hành');
   });
 
@@ -108,7 +112,7 @@ describe('debrief.generate', () => {
   });
 
   it.each(['vi', 'ko', 'zh'] as const)(
-    'writes a %s meeting debrief with v3 and empty learning blocks',
+    'writes a %s meeting debrief with v5 and empty learning blocks',
     async (language) => {
       const fixture = debriefViFixtures[0]!.input;
       const session: DebriefSession = {
@@ -134,7 +138,7 @@ describe('debrief.generate', () => {
         { sessionId: SESSION_ID },
       );
       const saved = state.saved[0]!;
-      expect(saved.promptVersion).toBe('debrief.generate@v3');
+      expect(saved.promptVersion).toBe('debrief.generate@v5');
       expect(saved.content.summary.headlineVi).toBe('Kế hoạch phát hành');
       expect(saved.content.actionItems).toHaveLength(1);
       expect(saved.content.hardSegmentIds).toEqual([]);
@@ -144,16 +148,50 @@ describe('debrief.generate', () => {
     },
   );
 
-  it('keeps the learning blocks and v1 for a Japanese meeting', async () => {
+  it('keeps the learning blocks and v4 for a Japanese meeting', async () => {
     const session: DebriefSession = { ...transcript(), language: 'ja' };
     const state = setup(session);
 
     await generateDebrief(state.deps, { sessionId: SESSION_ID });
 
     const saved = state.saved[0]!;
-    expect(saved.promptVersion).toBe('debrief.generate@v1');
+    expect(saved.promptVersion).toBe('debrief.generate@v4');
     expect(saved.content.hardSegmentIds).toEqual([SEGMENT_IDS[0]]);
     expect(saved.content.phraseSuggestions).toHaveLength(1);
     expect(saved.content.comprehensionPct).toBe(80);
+  });
+
+  it('passes speaker labels and names through to the prompt input', async () => {
+    const session: DebriefSession = {
+      ...transcript(),
+      segments: transcript().segments.map((segment, index) => ({
+        ...segment,
+        speakerLabel: index === 0 ? 'speaker_1' : null,
+        speakerName: index === 0 ? 'Lan' : null,
+      })),
+    };
+    const state = setup(session);
+
+    await generateDebrief(state.deps, { sessionId: SESSION_ID });
+
+    expect(state.json).toHaveBeenCalledWith(
+      'debrief.generate',
+      { segments: session.segments, language: 'en' },
+      expect.anything(),
+      { sessionId: SESSION_ID },
+    );
+    const input = (state.json.mock.calls as unknown[][])[0]![1] as DebriefPromptInput;
+    const prompt = buildDebriefPromptFor(input).prompt;
+    expect(prompt).toContain(`[${SEGMENT_IDS[0]}] Lan: Sentence 1`);
+    // A sentence from before speaker labels follows its source.
+    expect(prompt).toContain(`[${SEGMENT_IDS[1]}] Tôi: Sentence 2`);
+    expect(prompt).toContain(`[${SEGMENT_IDS[2]}] Người khác: Sentence 3`);
+  });
+
+  it('keeps the checks on a session without speakers: unknown ids removed, version saved', async () => {
+    const state = setup(transcript());
+    await generateDebrief(state.deps, { sessionId: SESSION_ID });
+    expect(state.saved[0]?.content.hardSegmentIds).toEqual([SEGMENT_IDS[0]]);
+    expect(state.saved[0]?.promptVersion).toBe('debrief.generate@v4');
   });
 });

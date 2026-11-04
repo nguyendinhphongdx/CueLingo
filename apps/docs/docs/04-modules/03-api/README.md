@@ -18,6 +18,7 @@ Backend modular monolith: REST + realtime WebSocket, điều phối dịch, Lear
 | [Phrases & review](./phrases-review.md) | `src/modules/review`     | Phrase Bank và hàng đợi ôn tập FSRS.                                                             |
 | [Learner Model service](./learner.md)   | `src/modules/learner`    | Nguồn sự thật về người học: profile, lexicon, kỹ năng; áp dụng event thành cập nhật.             |
 | [Progress](./progress.md)               | `src/modules/progress`   | Tổng hợp chỉ số tiến bộ theo tuần.                                                               |
+| [Speakers](./speakers.md)               | `src/modules/speakers`   | Đổi tên người nói của một cuộc họp (nhãn do desktop cấp, lưu ở `speakers`).                      |
 | [Glossary](./glossary.md)               | `src/modules/glossary`   | CRUD thuật ngữ cá nhân; cung cấp glossary cho realtime và STT.                                   |
 | [Privacy](./privacy.md)                 | `src/modules/privacy`    | Xoá dữ liệu, thời hạn lưu, xuất dữ liệu, consent.                                                |
 | [Settings](./settings.md)               | `src/modules/settings`   | Đọc và cập nhật cài đặt cá nhân dùng chung giữa web và desktop.                                  |

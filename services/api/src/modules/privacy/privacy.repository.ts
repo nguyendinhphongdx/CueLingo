@@ -1,4 +1,4 @@
-import type { Debrief, Export, ExportSession, LanguageCode } from '@cuelingo/shared';
+import type { Debrief, Export, ExportSession, LanguageCode, Speaker } from '@cuelingo/shared';
 import type { Sql } from '../../lib/db';
 
 export interface PrivacyRepository {
@@ -24,6 +24,7 @@ interface SegmentRow {
   end_ms: number;
   text_en: string;
   text_vi: string | null;
+  speaker_id: string | null;
 }
 
 interface DebriefRow {
@@ -60,11 +61,24 @@ export function createPostgresPrivacyRepository(sql: Sql): PrivacyRepository {
           ORDER BY started_at DESC`;
         const segmentRows = await tx<SegmentRow[]>`
           SELECT segments.id, segments.session_id, segments.source, segments.start_ms,
-            segments.end_ms, segments.text_en, segments.text_vi
+            segments.end_ms, segments.text_en, segments.text_vi, segments.speaker_id
           FROM segments
           JOIN sessions ON sessions.id = segments.session_id
           WHERE sessions.user_id = ${userId} AND sessions.status <> 'deleted'
           ORDER BY segments.session_id, segments.start_ms`;
+        const speakerRows = await tx<
+          Array<{
+            id: string;
+            session_id: string;
+            label: Speaker['label'];
+            display_name: string | null;
+          }>
+        >`
+          SELECT speakers.id, speakers.session_id, speakers.label, speakers.display_name
+          FROM speakers
+          JOIN sessions ON sessions.id = speakers.session_id
+          WHERE sessions.user_id = ${userId} AND sessions.status <> 'deleted'
+          ORDER BY speakers.session_id, speakers.label`;
         const debriefRows = await tx<DebriefRow[]>`
           SELECT DISTINCT ON (debriefs.session_id)
             debriefs.id, debriefs.session_id, debriefs.version, debriefs.summary,
@@ -108,8 +122,15 @@ export function createPostgresPrivacyRepository(sql: Sql): PrivacyRepository {
             endMs: row.end_ms,
             textEn: row.text_en,
             textVi: row.text_vi,
+            speakerId: row.speaker_id,
           });
           segmentsBySession.set(row.session_id, segments);
+        }
+        const speakersBySession = new Map<string, Speaker[]>();
+        for (const row of speakerRows) {
+          const speakers = speakersBySession.get(row.session_id) ?? [];
+          speakers.push({ id: row.id, label: row.label, displayName: row.display_name });
+          speakersBySession.set(row.session_id, speakers);
         }
         const debriefs = new Map(
           debriefRows.map((row) => [
@@ -140,7 +161,7 @@ export function createPostgresPrivacyRepository(sql: Sql): PrivacyRepository {
             assistLevel: row.assist_level,
             language: row.language,
             segments: segmentsBySession.get(row.id) ?? [],
-            speakers: [], // TODO(speaker-labels step 5): read speakers
+            speakers: speakersBySession.get(row.id) ?? [],
             debrief: debriefs.get(row.id) ?? null,
           })),
           phrases: phraseRows.map((row) => ({

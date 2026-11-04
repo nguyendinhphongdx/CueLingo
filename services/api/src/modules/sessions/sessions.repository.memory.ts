@@ -1,14 +1,21 @@
 import { randomUUID } from 'node:crypto';
-import { DEFAULT_LANGUAGE, type Session, type StoredSegment } from '@cuelingo/shared';
+import { DEFAULT_LANGUAGE, type Session, type Speaker, type StoredSegment } from '@cuelingo/shared';
 import type { SessionsRepository } from './sessions.repository';
 
+/** The in-memory store also exposes its speaker rows so the in-memory speakers repository can share them. */
+export type InMemorySessionsRepository = SessionsRepository & {
+  speakerRows: Array<Speaker & { sessionId: string }>;
+};
+
 /** In-memory session and segment store for tests. */
-export function createInMemorySessionsRepository(): SessionsRepository {
+export function createInMemorySessionsRepository(): InMemorySessionsRepository {
   const sessions: Array<Session & { userId: string }> = [];
   const segments: Array<StoredSegment & { sessionId: string }> = [];
+  const speakerRows: Array<Speaker & { sessionId: string }> = [];
   const strip = ({ userId: _userId, ...session }: Session & { userId: string }): Session => session;
 
   return {
+    speakerRows,
     async list(userId) {
       return sessions
         .filter((row) => row.userId === userId && row.status !== 'deleted')
@@ -33,7 +40,13 @@ export function createInMemorySessionsRepository(): SessionsRepository {
           .filter((segment) => segment.sessionId === id)
           .sort((a, b) => a.startMs - b.startMs)
           .map(({ sessionId: _sessionId, ...segment }) => segment),
-        speakers: [], // TODO(speaker-labels step 5)
+        speakers: speakerRows
+          .filter((speaker) => speaker.sessionId === id)
+          .sort(
+            (a, b) =>
+              Number(b.label === 'me') - Number(a.label === 'me') || a.label.localeCompare(b.label),
+          )
+          .map(({ sessionId: _sessionId, ...speaker }) => speaker),
       };
     },
     async findDebriefState(userId, id) {
@@ -98,6 +111,22 @@ export function createInMemorySessionsRepository(): SessionsRepository {
       }
       const existing = segments.find((row) => row.id === input.segmentId);
       if (existing) return existing.sessionId === input.sessionId;
+      let speakerId: string | null = null;
+      if (input.speaker) {
+        let speaker = speakerRows.find(
+          (row) => row.sessionId === input.sessionId && row.label === input.speaker,
+        );
+        if (!speaker) {
+          speaker = {
+            id: randomUUID(),
+            sessionId: input.sessionId,
+            label: input.speaker,
+            displayName: null,
+          };
+          speakerRows.push(speaker);
+        }
+        speakerId = speaker.id;
+      }
       segments.push({
         id: input.segmentId,
         sessionId: input.sessionId,
@@ -106,6 +135,7 @@ export function createInMemorySessionsRepository(): SessionsRepository {
         endMs: input.endMs,
         textEn: input.textEn,
         textVi: null,
+        speakerId,
       });
       return true;
     },

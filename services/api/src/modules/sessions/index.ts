@@ -15,4 +15,5 @@ export function createSessionsModule(repo: SessionsRepository, queue: JobQueue) 
 export type { SaveSegmentInput, SessionsRepository } from './sessions.repository';
 export type { SessionsService } from './sessions.service';
 export { createPostgresSessionsRepository } from './sessions.repository';
+export type { InMemorySessionsRepository } from './sessions.repository.memory';
 export { createInMemorySessionsRepository } from './sessions.repository.memory';

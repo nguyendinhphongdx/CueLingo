@@ -7,6 +7,7 @@ WebSocket theo phiên: nhận transcript final từ STT local, dịch và đẩy
 ## Trách nhiệm
 
 - Xác thực kết nối bằng message `hello`
+- `segment.final` có thể kèm `speaker` (nhãn `speaker_1..8` do desktop cấp). Lưu vào `speakers`/`segments.speaker_id`: luồng `mic` luôn là `me` bất kể client gửi gì; luồng `system` không có nhãn hoặc nhãn không hợp lệ (kể cả `me`) thì `speaker_id` NULL, câu vẫn được lưu; nhãn chỉ ghi được vào phiên của chính người dùng đã xác thực
 - Nhận `segment.final`; chỉ dịch stream `system`, và **không dịch** khi ngôn ngữ cuộc họp không cần dịch (`translates: false`, ví dụ tiếng Việt); câu vẫn được lưu
 - Dịch tuần tự mỗi câu final kèm tối đa 3 câu `system` trước và glossary của người dùng
 - Lưu câu final của cả `system` và `mic`, sau đó cập nhật bản dịch nếu session thuộc người dùng

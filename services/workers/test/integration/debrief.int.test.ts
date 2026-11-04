@@ -58,9 +58,23 @@ describe('debrief.generate on real Postgres', () => {
     const [session] = await sql<{ status: string }[]>`
       SELECT status FROM sessions WHERE id = ${sessionId}`;
     expect(rows).toEqual([
-      { version: 1, prompt_version: 'debrief.generate@v1', headline: 'Kế hoạch phát hành' },
-      { version: 2, prompt_version: 'debrief.generate@v1', headline: 'Kế hoạch phát hành' },
+      { version: 1, prompt_version: 'debrief.generate@v4', headline: 'Kế hoạch phát hành' },
+      { version: 2, prompt_version: 'debrief.generate@v4', headline: 'Kế hoạch phát hành' },
     ]);
     expect(session?.status).toBe('debriefed');
+  });
+
+  it('reads speaker label and name through segments.speaker_id; sentences without one stay null', async () => {
+    const [speaker] = await sql<{ id: string }[]>`
+      INSERT INTO speakers (session_id, label, display_name)
+      VALUES (${sessionId}, 'speaker_1', 'Lan') RETURNING id`;
+    await sql`
+      UPDATE segments SET speaker_id = ${speaker!.id}
+      WHERE id = (SELECT id FROM segments WHERE session_id = ${sessionId} ORDER BY start_ms LIMIT 1)`;
+
+    const found = await createPostgresDebriefRepository(sql).findSession(sessionId);
+
+    expect(found?.segments[0]).toMatchObject({ speakerLabel: 'speaker_1', speakerName: 'Lan' });
+    expect(found?.segments[1]).toMatchObject({ speakerLabel: null, speakerName: null });
   });
 });

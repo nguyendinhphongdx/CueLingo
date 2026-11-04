@@ -10,6 +10,7 @@ import { createPostgresEventsRepository } from '../../src/modules/events';
 import { createPostgresGlossaryRepository } from '../../src/modules/glossary';
 import { createPostgresPrivacyRepository } from '../../src/modules/privacy';
 import { createPostgresSessionsRepository } from '../../src/modules/sessions';
+import { createPostgresSpeakersRepository } from '../../src/modules/speakers';
 import {
   createPostgresPhrasesRepository,
   createPostgresStudyRepository,
@@ -54,6 +55,7 @@ describe('auth on real Postgres (AC3, AC4)', () => {
         glossary: createPostgresGlossaryRepository(sql),
         privacy: createPostgresPrivacyRepository(sql),
         sessions: createPostgresSessionsRepository(sql),
+        speakers: createPostgresSpeakersRepository(sql),
         account: createPostgresAccountRepository(sql),
         dial: createPostgresDialRepository(sql),
         placement: createPostgresPlacementRepository(sql),

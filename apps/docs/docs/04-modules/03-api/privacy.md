@@ -8,7 +8,7 @@ Xoá mềm cuộc họp, xoá dữ liệu cá nhân và xuất bản sao dữ li
 
 - Xoá mềm một cuộc họp; mọi API danh sách/chi tiết ẩn phiên đã xoá
 - Xoá cứng toàn bộ dữ liệu học và cuộc họp của người dùng trong một transaction, giữ tài khoản
-- Xuất cuộc họp (segments + debrief mới nhất), cụm từ và thuật ngữ của người dùng
+- Xuất cuộc họp (segments, người nói kèm tên người dùng đặt, debrief mới nhất), cụm từ và thuật ngữ của người dùng
 
 ## Phạm vi MVP
 

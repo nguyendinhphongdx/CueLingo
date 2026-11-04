@@ -6,6 +6,7 @@ import { createInMemoryEventsRepository } from './modules/events';
 import { createInMemoryGlossaryRepository } from './modules/glossary';
 import type { PrivacyRepository } from './modules/privacy';
 import { createInMemorySessionsRepository } from './modules/sessions';
+import { createInMemorySpeakersRepository } from './modules/speakers';
 import { createInMemorySettingsRepository } from './modules/settings';
 import { createInMemoryDialRepository } from './modules/dial';
 import { createInMemoryPlacementRepository } from './modules/placement';
@@ -32,13 +33,20 @@ export async function buildTestApp(
 ): Promise<FastifyInstance & { queue: ReturnType<typeof createInMemoryQueue> }> {
   const queue = createInMemoryQueue();
   const { repos, ...appOverrides } = overrides;
+  const sessions = repos?.sessions ?? createInMemorySessionsRepository();
   const app = await buildApp({
     repos: {
       debrief: createInMemoryDebriefRepository(),
       events: createInMemoryEventsRepository(),
       glossary: createInMemoryGlossaryRepository(),
       privacy: emptyPrivacyRepository(),
-      sessions: createInMemorySessionsRepository(),
+      sessions,
+      // Shares the speaker rows of the in-memory sessions store, so a rename shows up in the transcript.
+      speakers: createInMemorySpeakersRepository(
+        'speakerRows' in sessions
+          ? (sessions as ReturnType<typeof createInMemorySessionsRepository>)
+          : createInMemorySessionsRepository(),
+      ),
       settings: emptySettingsRepository(),
       account: createInMemoryAccountRepository(),
       dial: createInMemoryDialRepository(),

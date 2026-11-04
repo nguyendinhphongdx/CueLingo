@@ -9,6 +9,7 @@ import { createAuthModule } from './modules/auth';
 import { createPostgresDebriefRepository } from './modules/debrief';
 import { createPostgresEventsRepository } from './modules/events';
 import { createPostgresGlossaryRepository } from './modules/glossary';
+import { createPostgresSpeakersRepository } from './modules/speakers';
 import { createPostgresPrivacyRepository } from './modules/privacy';
 import { createPostgresSessionsRepository } from './modules/sessions';
 import { createPostgresSettingsRepository } from './modules/settings';
@@ -84,6 +85,7 @@ const app = await buildApp({
     glossary: glossaryRepository,
     privacy: privacyRepository,
     sessions: sessionsRepository,
+    speakers: createPostgresSpeakersRepository(sql),
     settings: createPostgresSettingsRepository(sql),
     account: createPostgresAccountRepository(sql),
     dial: createPostgresDialRepository(sql),

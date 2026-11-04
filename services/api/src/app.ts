@@ -27,6 +27,7 @@ import {
   type PhrasesRepository,
   type StudyRepository,
 } from './modules/review';
+import { createSpeakersModule, type SpeakersRepository } from './modules/speakers';
 import { createSessionsModule, type SessionsRepository } from './modules/sessions';
 import { createAdminModule, type AdminRepository } from './modules/admin';
 import { createTranscribeModule, type TranscribeDeps } from './modules/transcribe';
@@ -63,6 +64,7 @@ export interface AppDeps {
     privacy: PrivacyRepository;
     study: StudyRepository;
     sessions: SessionsRepository;
+    speakers: SpeakersRepository;
     admin: AdminRepository;
     settings: SettingsRepository;
   };
@@ -146,6 +148,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(createSessionsModule(deps.repos.sessions, deps.queue).routes, {
     prefix: '/v1/sessions',
   });
+  await app.register(createSpeakersModule(deps.repos.speakers).routes);
   await app.register(createReviewModule(deps.repos.phrases).routes, { prefix: '/v1/phrases' });
   const study = createStudyModule(deps.repos.study);
   await app.register(study.reviewRoutes, { prefix: '/v1/review' });

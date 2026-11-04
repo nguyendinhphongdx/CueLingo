@@ -34,6 +34,8 @@ Tài nguyên không thuộc người dùng hiện tại trả `404`.
 ## Dữ liệu & sự kiện
 
 - Bảng `sessions`, `segments`; mọi truy vấn lọc theo `user_id`.
+- Bảng `speakers` (`session_id`, `label` `me`/`speaker_1..8`, `display_name`; unique `(session_id, label)`): `saveSegment` upsert hàng người nói trong cùng câu SQL có kiểm `sessions.user_id`, rồi gán `segments.speaker_id`. Đổi tên ở [speakers](./speakers.md). Không lưu mẫu giọng hay vân giọng.
+- `SessionDetail` trả `speakers[]` {id, label, displayName} và `speakerId` ở từng segment (null: không tách được người, hiện theo `source`).
 - Realtime chỉ ghi `segments` khi `session_id` thuộc `user_id`; không lưu audio.
 
 ## Tạo lại debrief

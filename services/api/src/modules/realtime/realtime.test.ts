@@ -9,6 +9,7 @@ import type { WebSocket } from 'ws';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RealtimeDeps } from './realtime.service';
 import { buildTestApp, TEST_USER_HEADER } from '../../testing';
+import { createInMemorySessionsRepository } from '../sessions';
 
 const SESSION_ID = '9ee72a14-8cd4-4f2e-8131-4ed638e2d875';
 const SEGMENT_IDS = [
@@ -286,6 +287,102 @@ describe('realtime module', () => {
       endMs: 900,
       textEn: 'my voice',
       language: 'en',
+      speaker: 'me',
+    });
+    expect(saveSegment).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ source: 'system', speaker: null }),
+    );
+  });
+
+  describe('speaker labels', () => {
+    const labelled = (text: string, index: number, speaker: unknown, stream = 'system') => ({
+      ...segment(text, index, stream as SegmentFinalMessage['stream']),
+      speaker,
+    });
+
+    async function storeWith(rows: {
+      sessions: ReturnType<typeof createInMemorySessionsRepository>;
+    }) {
+      deps.store = rows.sessions;
+      deps.verifyToken = vi.fn(async (token) => token);
+      await connect();
+      return rows.sessions;
+    }
+
+    it('stores the label of a system sentence, always "me" for the mic, and no label when none is sent', async () => {
+      const sessions = createInMemorySessionsRepository();
+      const session = await sessions.create(USER_ID, { assistLevel: 0 });
+      await storeWith({ sessions });
+      const ready = nextMessage(socket);
+      socket.send(
+        JSON.stringify({
+          type: 'hello',
+          sessionId: session.id,
+          token: USER_ID,
+          sttSource: 'local',
+          assistLevel: 0,
+        }),
+      );
+      await ready;
+
+      socket.send(JSON.stringify(labelled('a', 0, 'speaker_2')));
+      socket.send(JSON.stringify(labelled('b', 1, 'speaker_3', 'mic')));
+      socket.send(JSON.stringify(segment('c', 2)));
+      await vi.waitFor(async () =>
+        expect((await sessions.findDetail(USER_ID, session.id))?.segments).toHaveLength(3),
+      );
+
+      const detail = (await sessions.findDetail(USER_ID, session.id))!;
+      const labelOf = (index: number) =>
+        detail.speakers.find((speaker) => speaker.id === detail.segments[index]!.speakerId)?.label;
+      expect(labelOf(0)).toBe('speaker_2');
+      expect(labelOf(1)).toBe('me');
+      expect(detail.segments[2]!.speakerId).toBeNull();
+      expect(detail.speakers.map((speaker) => speaker.label).sort()).toEqual(['me', 'speaker_2']);
+    });
+
+    it('drops an unusable label without losing the sentence, and never lets a system sentence be "me"', async () => {
+      const saveSegment = vi.fn(async () => true);
+      deps.store = { saveSegment, saveTranslation: vi.fn(), findById: vi.fn(async () => null) };
+      await connect();
+      await authenticate();
+
+      // Not a valid message for the schema, so send it through the connection API directly.
+      const { createRealtimeConnection } = await import('./realtime.service');
+      const connection = createRealtimeConnection({ ...deps, store: deps.store }, () => undefined);
+      await connection.hello(VALID_TOKEN, SESSION_ID);
+      connection.segment(labelled('x', 0, 'speaker_99') as SegmentFinalMessage);
+      connection.segment(labelled('y', 1, 'me') as SegmentFinalMessage);
+
+      await vi.waitFor(() => expect(saveSegment).toHaveBeenCalledTimes(2));
+      expect(saveSegment).toHaveBeenNthCalledWith(1, expect.objectContaining({ speaker: null }));
+      expect(saveSegment).toHaveBeenNthCalledWith(2, expect.objectContaining({ speaker: null }));
+    });
+
+    it("does not let another user's socket attach a label to someone else's meeting", async () => {
+      const sessions = createInMemorySessionsRepository();
+      const session = await sessions.create('alice', { assistLevel: 0 });
+      await storeWith({ sessions });
+      const ready = nextMessage(socket);
+      socket.send(
+        JSON.stringify({
+          type: 'hello',
+          sessionId: session.id,
+          token: 'bob',
+          sttSource: 'local',
+          assistLevel: 0,
+        }),
+      );
+      await ready;
+
+      socket.send(JSON.stringify(labelled('intruder', 0, 'speaker_1')));
+      socket.send(JSON.stringify(labelled('me?', 1, undefined, 'mic')));
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const detail = (await sessions.findDetail('alice', session.id))!;
+      expect(detail.segments).toEqual([]);
+      expect(detail.speakers).toEqual([]);
     });
   });
 

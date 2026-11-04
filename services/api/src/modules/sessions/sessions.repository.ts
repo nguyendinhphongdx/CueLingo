@@ -4,6 +4,8 @@ import {
   type LanguageCode,
   type Session,
   type SessionDetail,
+  type Speaker,
+  type SpeakerLabel,
   type StoredSegment,
 } from '@cuelingo/shared';
 import type { Sql } from '../../lib/db';
@@ -18,6 +20,8 @@ export interface SaveSegmentInput {
   textEn: string;
   /** Language of this segment; stored only when it differs from the meeting's. */
   language?: LanguageCode;
+  /** Already validated label of who spoke; null/absent leaves the segment unlabelled. */
+  speaker?: SpeakerLabel | null;
 }
 
 export interface EndSessionResult {
@@ -60,7 +64,20 @@ interface SegmentRow {
   end_ms: number;
   text_en: string;
   text_vi: string | null;
+  speaker_id: string | null;
 }
+
+interface SpeakerRow {
+  id: string;
+  label: SpeakerLabel;
+  display_name: string | null;
+}
+
+const toSpeaker = (row: SpeakerRow): Speaker => ({
+  id: row.id,
+  label: row.label,
+  displayName: row.display_name,
+});
 
 const toSession = (row: SessionRow): Session => ({
   id: row.id,
@@ -79,6 +96,7 @@ const toSegment = (row: SegmentRow): StoredSegment => ({
   endMs: row.end_ms,
   textEn: row.text_en,
   textVi: row.text_vi,
+  speakerId: row.speaker_id,
 });
 
 export function createPostgresSessionsRepository(sql: Sql): SessionsRepository {
@@ -101,11 +119,20 @@ export function createPostgresSessionsRepository(sql: Sql): SessionsRepository {
         WHERE user_id = ${userId} AND id = ${id} AND status <> 'deleted'`;
       if (!row) return null;
       const segments = await sql<SegmentRow[]>`
-        SELECT segments.id, source, start_ms, end_ms, text_en, text_vi
+        SELECT segments.id, source, start_ms, end_ms, text_en, text_vi, speaker_id
         FROM segments JOIN sessions ON sessions.id = segments.session_id
         WHERE sessions.user_id = ${userId} AND sessions.id = ${id}
         ORDER BY start_ms`;
-      return { ...toSession(row), segments: segments.map(toSegment), speakers: [] }; // TODO(speaker-labels step 5)
+      const speakers = await sql<SpeakerRow[]>`
+        SELECT speakers.id, speakers.label, speakers.display_name
+        FROM speakers JOIN sessions ON sessions.id = speakers.session_id
+        WHERE sessions.user_id = ${userId} AND sessions.id = ${id}
+        ORDER BY (speakers.label = 'me') DESC, speakers.label`;
+      return {
+        ...toSession(row),
+        segments: segments.map(toSegment),
+        speakers: speakers.map(toSpeaker),
+      };
     },
     async findDebriefState(userId, id) {
       const [row] = await sql<{ status: Session['status']; segmentCount: number }[]>`
@@ -146,15 +173,26 @@ export function createPostgresSessionsRepository(sql: Sql): SessionsRepository {
       return row ? toSession(row) : null;
     },
     async saveSegment(input) {
+      const label = input.speaker ?? null;
+      // One statement: the speaker row is only created for a session the user owns, then the segment points at it.
       const inserted = await sql<{ id: string }[]>`
-        INSERT INTO segments (id, session_id, source, start_ms, end_ms, text_en, language)
-        SELECT ${input.segmentId}, sessions.id, ${input.source}, ${input.startMs},
+        WITH owned AS (
+          SELECT sessions.id, sessions.language FROM sessions
+          WHERE sessions.id = ${input.sessionId} AND sessions.user_id = ${input.userId}
+            AND sessions.status <> 'deleted'
+        ), speaker AS (
+          INSERT INTO speakers (session_id, label)
+          SELECT owned.id, ${label}::text FROM owned WHERE ${label}::text IS NOT NULL
+          ON CONFLICT (session_id, label) DO UPDATE SET label = EXCLUDED.label
+          RETURNING id
+        )
+        INSERT INTO segments (id, session_id, source, start_ms, end_ms, text_en, language, speaker_id)
+        SELECT ${input.segmentId}, owned.id, ${input.source}, ${input.startMs},
           ${input.endMs}, ${input.textEn},
-          CASE WHEN ${input.language ?? null}::text IS NULL OR sessions.language = ${input.language ?? null}
-               THEN NULL ELSE ${input.language ?? null} END
-        FROM sessions
-        WHERE sessions.id = ${input.sessionId} AND sessions.user_id = ${input.userId}
-          AND sessions.status <> 'deleted'
+          CASE WHEN ${input.language ?? null}::text IS NULL OR owned.language = ${input.language ?? null}
+               THEN NULL ELSE ${input.language ?? null} END,
+          (SELECT id FROM speaker)
+        FROM owned
         ON CONFLICT (id) DO NOTHING
         RETURNING id`;
       if (inserted.length > 0) return true;

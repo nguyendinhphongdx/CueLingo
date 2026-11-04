@@ -5,6 +5,10 @@ export interface DebriefSegment {
   id: string;
   source: 'mic' | 'system';
   textEn: string;
+  /** `me` or `speaker_N`; null for sentences saved before speaker labels or without a speaker. */
+  speakerLabel?: string | null;
+  /** The name the user gave this speaker. */
+  speakerName?: string | null;
 }
 
 export interface DebriefSession {
@@ -26,10 +30,12 @@ export function createPostgresDebriefRepository(sql: Sql): DebriefRepository {
       if (!session) return null;
 
       const segments = await sql<DebriefSegment[]>`
-        SELECT id, source, text_en AS "textEn"
-        FROM segments
-        WHERE session_id = ${sessionId}
-        ORDER BY start_ms, id`;
+        SELECT seg.id, seg.source, seg.text_en AS "textEn",
+               sp.label AS "speakerLabel", sp.display_name AS "speakerName"
+        FROM segments seg
+        LEFT JOIN speakers sp ON sp.id = seg.speaker_id AND sp.session_id = seg.session_id
+        WHERE seg.session_id = ${sessionId}
+        ORDER BY seg.start_ms, seg.id`;
       return { id: session.id, language: session.language, segments };
     },
 

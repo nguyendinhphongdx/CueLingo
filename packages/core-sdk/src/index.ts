@@ -6,6 +6,7 @@ import { followupApi } from './followup';
 import { glossaryApi } from './glossary';
 import { createHttp, type ClientOptions } from './http';
 import { sessionsApi } from './sessions';
+import { speakersApi } from './speakers';
 import { transcribeApi } from './transcribe';
 
 export function createClient(options: ClientOptions) {
@@ -15,6 +16,7 @@ export function createClient(options: ClientOptions) {
     ...transcribeApi(http),
     ...followupApi(http),
     ...sessionsApi(http),
+    ...speakersApi(http),
   };
 }
 

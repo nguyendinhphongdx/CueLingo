@@ -247,4 +247,72 @@ describe('POST /v1/sessions/:id/transcribe', () => {
     expect(logs).not.toContain('secret earlier sentence');
     expect(failure.body).not.toContain('confidential');
   });
+
+  describe('speaker labels', () => {
+    const known = [{ label: 'speaker_1', hint: 'low voice', lastText: 'We ship Friday.' }];
+    const guessing = (speaker?: { label: string; hint?: string }) => ({
+      transcribe: vi.fn<Transcribe>((async () => ({
+        text: 'Xin chào',
+        model: 'm',
+        fallback: false,
+        latencyMs: 1,
+        ...(speaker ? { speaker } : {}),
+      })) as unknown as Transcribe),
+    });
+
+    it('forwards knownSpeakers and returns a known label for a cloud language system sentence', async () => {
+      const gateway = guessing({ label: 'speaker_1' });
+      const { viSession, post } = await setup({ gateway });
+      const response = await post('alice', viSession.id, { knownSpeakers: known });
+      expect(response.json().speaker).toEqual({ label: 'speaker_1' });
+      expect(gateway.transcribe.mock.calls[0]![0]).toMatchObject({ knownSpeakers: known });
+    });
+
+    it('keeps `new` with its hint and turns a label that was never sent into unknown', async () => {
+      const fresh = await setup({ gateway: guessing({ label: 'new', hint: 'high, fast' }) });
+      const created = await fresh.post('alice', fresh.viSession.id, { knownSpeakers: [] });
+      expect(created.json().speaker).toEqual({ label: 'new', hint: 'high, fast' });
+
+      const stray = await setup({ gateway: guessing({ label: 'speaker_5' }) });
+      const response = await stray.post('alice', stray.viSession.id, { knownSpeakers: known });
+      expect(response.json().speaker).toEqual({ label: 'unknown' });
+
+      const unclear = await setup({ gateway: guessing() });
+      const none = await unclear.post('alice', unclear.viSession.id, { knownSpeakers: known });
+      expect(none.json().speaker).toEqual({ label: 'unknown' });
+    });
+
+    it('does not ask the gateway for labels on the mic stream, and answers old clients without `speaker`', async () => {
+      const gateway = guessing({ label: 'speaker_1' });
+      const { viSession, post } = await setup({ gateway });
+      const mic = await post('alice', viSession.id, { stream: 'mic', knownSpeakers: known });
+      expect(gateway.transcribe.mock.calls[0]![0]).not.toHaveProperty('knownSpeakers');
+      expect(mic.json().speaker).toEqual({ label: 'unknown' });
+
+      const old = await post('alice', viSession.id);
+      expect(gateway.transcribe.mock.calls[1]![0]).not.toHaveProperty('knownSpeakers');
+      expect(old.json()).not.toHaveProperty('speaker');
+    });
+
+    it('logs only whether a speaker was recognised, never the hint or the last sentence', async () => {
+      let logs = '';
+      const stream = new Writable({
+        write(chunk, _encoding, callback) {
+          logs += chunk.toString();
+          callback();
+        },
+      });
+      const { viSession, post } = await setup({
+        gateway: guessing({ label: 'new', hint: 'secret-hint' }),
+        logger: { level: 'info', stream },
+      });
+      await post('alice', viSession.id, {
+        knownSpeakers: [{ label: 'speaker_1', hint: 'hint-x', lastText: 'last-text-x' }],
+      });
+      expect(logs).toContain('"speakerKnown":false');
+      for (const secret of ['secret-hint', 'hint-x', 'last-text-x']) {
+        expect(logs).not.toContain(secret);
+      }
+    });
+  });
 });

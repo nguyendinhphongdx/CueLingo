@@ -8,6 +8,28 @@ import {
 import { AppError } from '../../lib/errors';
 import type { SessionsRepository } from '../sessions';
 
+/**
+ * Old clients parse the response strictly, so `speaker` only goes back to a request that carried `knownSpeakers`.
+ * A label that was not among the ones sent is treated as `unknown`; `new` keeps its hint.
+ */
+function withSpeaker(
+  base: TranscribeResponse,
+  input: TranscribeRequest,
+  asked: TranscribeRequest['knownSpeakers'],
+  result: { speaker?: { label: string; hint?: string } } | undefined,
+): TranscribeResponse {
+  if (input.knownSpeakers === undefined) return base;
+  const guess = asked ? result?.speaker : undefined;
+  if (guess?.label === 'new') {
+    return {
+      ...base,
+      speaker: { label: 'new', ...(guess.hint ? { hint: guess.hint.slice(0, 60) } : {}) },
+    };
+  }
+  const known = asked?.find((speaker) => speaker.label === guess?.label);
+  return { ...base, speaker: { label: known?.label ?? 'unknown' } };
+}
+
 export type TranscribeService = ReturnType<typeof createTranscribeService>;
 
 export interface TranscribeDeps {
@@ -73,18 +95,26 @@ export function createTranscribeService(
         throw new AppError(ErrorCode.Validation, 'Audio must be 16-bit samples');
       }
       const pcm = new Uint8Array(decoded.buffer, decoded.byteOffset, decoded.length);
-      if (pcm.length === 0) return { segmentId: input.segmentId, text: '' };
+      if (pcm.length === 0) {
+        return withSpeaker({ segmentId: input.segmentId, text: '' }, input, undefined, undefined);
+      }
+
+      // Only the system stream of a language that tells speakers apart asks for labels; the registry decides.
+      const labelling =
+        input.stream === 'system' &&
+        SUPPORTED_LANGUAGES[session.language].labelsSpeakers &&
+        input.knownSpeakers !== undefined;
+      const known = labelling ? input.knownSpeakers! : undefined;
+      const request = {
+        audio: wrapPcmAsWav(pcm, SAMPLE_RATE),
+        language: session.language,
+        previous: input.previous,
+        ...(known ? { knownSpeakers: known } : {}),
+      };
 
       try {
-        const { text } = await gateway.transcribe(
-          {
-            audio: wrapPcmAsWav(pcm, SAMPLE_RATE),
-            language: session.language,
-            previous: input.previous,
-          },
-          { userId, sessionId },
-        );
-        return { segmentId: input.segmentId, text };
+        const result = await gateway.transcribe(request, { userId, sessionId });
+        return withSpeaker({ segmentId: input.segmentId, text: result.text }, input, known, result);
       } catch {
         // Nothing from the provider error is forwarded: it may carry what was said.
         throw new AppError(ErrorCode.TranscribeFailed, 'Could not transcribe the audio');

@@ -34,6 +34,10 @@ describe('privacy on real Postgres (AC3, AC4)', () => {
       INSERT INTO segments (session_id, source, start_ms, end_ms, text_en, text_vi)
       VALUES (${session!.id}, 'system', 0, 1000, ${`${label} transcript`}, 'Bản dịch')
       RETURNING id`;
+    const [speaker] = await sql<{ id: string }[]>`
+      INSERT INTO speakers (session_id, label, display_name)
+      VALUES (${session!.id}, 'speaker_1', ${`${label} guest`}) RETURNING id`;
+    await sql`UPDATE segments SET speaker_id = ${speaker!.id} WHERE id = ${segment!.id}`;
     await sql`
       INSERT INTO debriefs (session_id, summary, prompt_version)
       VALUES (${session!.id}, ${sql.json({ headlineVi: `${label} debrief`, bulletsVi: [] })}, 'v1')`;
@@ -65,6 +69,12 @@ describe('privacy on real Postgres (AC3, AC4)', () => {
     expect(exported.sessions).toHaveLength(1);
     expect(exported.sessions[0]).toMatchObject({ id: aliceData.sessionId, title: 'Alice meeting' });
     expect(exported.sessions[0]?.segments[0]?.textEn).toBe('Alice transcript');
+    expect(exported.sessions[0]?.speakers).toMatchObject([
+      { label: 'speaker_1', displayName: 'Alice guest' },
+    ]);
+    expect(exported.sessions[0]?.segments[0]?.speakerId).toBe(
+      exported.sessions[0]?.speakers[0]?.id,
+    );
     expect(exported.sessions[0]?.debrief?.summary.headlineVi).toBe('Alice debrief');
     expect(exported.phrases.map((phrase) => phrase.phrase)).toEqual(['Alice phrase']);
     expect(exported.glossaryTerms.map((term) => term.term)).toEqual(['Alice term']);

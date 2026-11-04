@@ -5,7 +5,7 @@ import type { TranscribeService } from './transcribe.service';
 
 /**
  * `POST /v1/sessions/:id/transcribe`: the audio is in the body (never the URL) and is not stored.
- * Only ids and sizes are logged, never the audio or the text.
+ * Only ids, sizes and whether a speaker was recognised are logged, never the audio or the text.
  */
 export function transcribeRoutes(service: TranscribeService): FastifyPluginAsync {
   return async (app) => {
@@ -22,6 +22,7 @@ export function transcribeRoutes(service: TranscribeService): FastifyPluginAsync
             segmentId: result.segmentId,
             pcmChars: input.pcm.length,
             textChars: result.text.length,
+            speakerKnown: result.speaker?.label.startsWith('speaker_') ?? false,
           },
           'utterance transcribed',
         );

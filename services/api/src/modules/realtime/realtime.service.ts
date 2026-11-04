@@ -2,6 +2,7 @@ import {
   DEFAULT_LANGUAGE,
   ErrorCode,
   SUPPORTED_LANGUAGES,
+  SpeakerLabelSchema,
   type GlossaryTerm,
   type LanguageCode,
   type SegmentFinalMessage,
@@ -35,6 +36,14 @@ export function createRealtimeConnection(
   let translationQueue = Promise.resolve();
   const previousSystem: string[] = [];
   const storedSegments = new Map<string, Promise<boolean>>();
+
+  // Mic is always the user. A system sentence may carry a label of someone else; anything unusable is dropped
+  // so one bad label never costs the sentence itself.
+  const labelFor = (message: SegmentFinalMessage) => {
+    if (message.stream === 'mic') return 'me' as const;
+    const parsed = SpeakerLabelSchema.safeParse(message.speaker);
+    return parsed.success && parsed.data !== 'me' ? parsed.data : null;
+  };
 
   const rejectUnauthorized = () => {
     send({ type: 'error', code: ErrorCode.WsUnauthorized, retryable: false });
@@ -82,6 +91,7 @@ export function createRealtimeConnection(
               endMs: message.endMs,
               textEn: message.text,
               language: meetingLanguage,
+              speaker: labelFor(message),
             }),
           )
           .catch((error: unknown) => {
