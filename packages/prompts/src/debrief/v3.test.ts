@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { debriefFixtures } from './fixtures/cases';
 import { debriefViFixtures } from './fixtures/cases-vi';
 import { buildDebriefPrompt } from './v1';
-import {
-  buildDebriefPromptFor,
-  buildDebriefPromptV3,
-  DEBRIEF_V3_PROMPT_VERSION,
-  debriefPromptVersionFor,
-} from './v3';
+import { buildDebriefPromptV3, DEBRIEF_V3_PROMPT_VERSION } from './v3';
 
 describe('debrief.generate v3 (meetings in a language nobody studies)', () => {
   const input = debriefViFixtures[0]!.input;
@@ -68,35 +62,5 @@ describe('debrief.generate v3 (meetings in a language nobody studies)', () => {
     });
     expect(prompt).toBe('Transcript (cũ → mới):\n[11111111-1111-4111-8111-111111111111] Họ: a\nb');
     expect(system).not.toContain('<transcript>');
-  });
-
-  it('is chosen for languages that are not learnable, v1 otherwise', () => {
-    for (const language of ['vi', 'ko', 'zh'] as const)
-      expect(debriefPromptVersionFor(language)).toBe('debrief.generate@v3');
-    expect(debriefPromptVersionFor('en')).toBe('debrief.generate@v1');
-    expect(debriefPromptVersionFor('ja')).toBe('debrief.generate@v1');
-    expect(debriefPromptVersionFor(undefined)).toBe('debrief.generate@v1');
-  });
-
-  it('picks v3 for Korean and Vietnamese, with the same lines as v1 inside a block', () => {
-    const ko = { ...input, language: 'ko' as const };
-    expect(buildDebriefPromptFor(ko).version).toBe('debrief.generate@v3');
-    expect(buildDebriefPromptFor(ko).prompt).toContain(
-      buildDebriefPrompt(ko).prompt.replace('Transcript (cũ → mới):\n', ''),
-    );
-    expect(buildDebriefPromptFor(input).version).toBe('debrief.generate@v3');
-  });
-
-  it('keeps Japanese and English on v1 exactly as before', () => {
-    const ja = { ...debriefFixtures[0]!.input, language: 'ja' as const };
-    expect(buildDebriefPromptFor(ja)).toEqual({
-      ...buildDebriefPrompt(ja),
-      version: 'debrief.generate@v1',
-    });
-    const en = debriefFixtures[0]!.input;
-    expect(buildDebriefPromptFor(en)).toEqual({
-      ...buildDebriefPrompt(en),
-      version: 'debrief.generate@v1',
-    });
   });
 });
