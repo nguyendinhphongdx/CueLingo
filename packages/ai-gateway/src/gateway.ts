@@ -6,6 +6,7 @@ import {
   buildLookupPrompt,
   buildRecapPrompt,
   buildSttPromptV3,
+  buildSttPromptV4,
   buildTranslatePrompt,
   COMPOSE_PROMPT_VERSION,
   FOLLOWUP_PROMPT_VERSION,
@@ -13,6 +14,8 @@ import {
   RECAP_PROMPT_VERSION,
   isContextEcho,
   STT_V3_PROMPT_VERSION,
+  STT_V4_PROMPT_VERSION,
+  type KnownSpeaker,
   TRANSLATE_PROMPT_VERSION,
   type TranslateInput,
   type DebriefPromptInput,
@@ -21,7 +24,12 @@ import {
 import type { ComposeRequest, LanguageCode, LookupRequest, RecapRequest } from '@cuelingo/shared';
 import { generateText } from 'ai';
 import { createGeminiSpeak, DEFAULT_VOICE, type SpeakFn } from './speech';
-import { createGeminiTranscribe, type TranscribeFn } from './stt';
+import {
+  createGeminiTranscribe,
+  parseSpeakerOutput,
+  type SpeakerGuess,
+  type TranscribeFn,
+} from './stt';
 import { TASKS, type JsonTaskName, type TaskName } from './tasks';
 
 export interface AiCallRecord {
@@ -94,10 +102,17 @@ export interface AiGateway {
   ): Promise<SpeechResult>;
   /**
    * Transcribes one short utterance (a complete WAV). Never records or logs the audio or the text;
-   * an empty `text` means no intelligible speech and is not an error.
+   * an empty `text` means no intelligible speech and is not an error. With `knownSpeakers` (even
+   * an empty list) the call uses stt/v4 and the result also carries `speaker`; without it, stt/v3
+   * and the result is the text alone. The hints and last sentences are never recorded or logged.
    */
   transcribe(
-    input: { audio: Uint8Array; language: LanguageCode; previous?: string[] },
+    input: {
+      audio: Uint8Array;
+      language: LanguageCode;
+      previous?: string[];
+      knownSpeakers?: KnownSpeaker[];
+    },
     context?: AiCallContext,
   ): Promise<TranscribeResult>;
   json<TTask extends JsonTaskName, TOutput>(
@@ -118,6 +133,8 @@ export interface SpeechResult {
 
 export interface TranscribeResult {
   text: string;
+  /** Only when the call carried `knownSpeakers`. */
+  speaker?: SpeakerGuess;
   model: string;
   fallback: boolean;
   latencyMs: number;
@@ -247,25 +264,29 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
     audio: Uint8Array,
     language: LanguageCode,
     previous: string[] | undefined,
+    knownSpeakers: KnownSpeaker[] | undefined,
     context?: AiCallContext,
   ): Promise<TranscribeResult> {
     const started = performance.now();
     const record: AiCallRecord = {
       task: 'stt.transcribe',
       model,
-      promptVersion: STT_V3_PROMPT_VERSION,
+      promptVersion: knownSpeakers ? STT_V4_PROMPT_VERSION : STT_V3_PROMPT_VERSION,
       latencyMs: 0,
       fallback,
       ok: false,
       ...context,
     };
     try {
-      const { system, prompt } = buildSttPromptV3({ language, previous });
+      const { system, prompt } = knownSpeakers
+        ? buildSttPromptV4({ language, previous, knownSpeakers })
+        : buildSttPromptV3({ language, previous });
       const out = await transcribe({
         model,
         system,
         prompt,
         audio,
+        ...(knownSpeakers ? { json: true } : {}),
         signal: AbortSignal.timeout(TASKS['stt.transcribe'].timeoutMs),
       });
       record.ok = true;
@@ -273,10 +294,12 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
       record.outputTokens = out.outputTokens;
       // WAV: 44-byte header, then 16 kHz 16-bit mono PCM.
       const seconds = Math.max(0, audio.length - 44) / 32_000;
-      const text = out.text.trim();
+      const parsed = knownSpeakers ? parseSpeakerOutput(out.text) : undefined;
+      const text = (parsed?.text ?? out.text).trim();
       return {
         // A model may echo the context on silence; on very short audio that is not speech.
         text: isContextEcho(text, previous, seconds) ? '' : text,
+        ...(parsed ? { speaker: parsed.speaker } : {}),
         model,
         fallback,
         latencyMs: Math.round(performance.now() - started),
@@ -351,10 +374,18 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
       }
     },
 
-    async transcribe({ audio, language, previous }, context) {
+    async transcribe({ audio, language, previous, knownSpeakers }, context) {
       const config = TASKS['stt.transcribe'];
       try {
-        return await transcribeAttempt(config.model, false, audio, language, previous, context);
+        return await transcribeAttempt(
+          config.model,
+          false,
+          audio,
+          language,
+          previous,
+          knownSpeakers,
+          context,
+        );
       } catch {
         try {
           return await transcribeAttempt(
@@ -363,6 +394,7 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
             audio,
             language,
             previous,
+            knownSpeakers,
             context,
           );
         } catch {

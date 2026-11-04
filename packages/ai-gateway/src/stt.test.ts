@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createGeminiTranscribe } from './stt';
+import { createGeminiTranscribe, parseSpeakerOutput } from './stt';
 
 const args = (audio = new Uint8Array([1, 2, 3])) => ({
   model: 'm',
@@ -67,5 +67,36 @@ describe('createGeminiTranscribe', () => {
       request as never,
     )(args()).catch((e: Error) => e);
     expect((error as Error).message).toBe('transcribe request failed (503)');
+  });
+});
+
+describe('createGeminiTranscribe JSON mode', () => {
+  it('asks for JSON only when told to', async () => {
+    const request = vi.fn(async () =>
+      json({ candidates: [{ content: { parts: [{ text: '{"text":"a","speaker":"new"}' }] } }] }),
+    );
+    const call = createGeminiTranscribe('k', request as never);
+    await call({ ...args(), json: true });
+    await call(args());
+    const [, a] = request.mock.calls[0] as unknown as [string, RequestInit];
+    const [, b] = request.mock.calls[1] as unknown as [string, RequestInit];
+    expect(JSON.parse(a.body as string).generationConfig.responseMimeType).toBe('application/json');
+    expect(JSON.parse(b.body as string).generationConfig).toEqual({ temperature: 0 });
+  });
+});
+
+describe('parseSpeakerOutput', () => {
+  it('reads a valid answer', () => {
+    expect(parseSpeakerOutput('{"text":"Vâng","speaker":"speaker_2"}')).toEqual({
+      text: 'Vâng',
+      speaker: { label: 'speaker_2' },
+    });
+  });
+
+  it('falls back to the raw text for anything that is not an object with a text', () => {
+    for (const raw of ['oops', '[1]', '"x"', '{"speaker":"new"}', 'null']) {
+      expect(parseSpeakerOutput(raw).speaker).toEqual({ label: 'unknown' });
+    }
+    expect(parseSpeakerOutput('oops').text).toBe('oops');
   });
 });

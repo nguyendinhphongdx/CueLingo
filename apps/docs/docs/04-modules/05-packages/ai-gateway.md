@@ -37,7 +37,9 @@ Nhận dạng giọng nói bằng Gemini, âm thanh WAV gửi inline ([ADR 0014]
 
 Soạn bản nháp follow-up (model theo `AI_ASSIST_MODEL`, hạn 8 giây; không gọi lại cùng một model khi model dự phòng trùng model chính). Dùng `gateway.json` như các task `assist.*`; `ai_call` ghi phiên bản prompt và người dùng, không ghi nội dung debrief hay bản nháp.
 
-`stt.transcribe` ghi `stt.transcribe@v3`. Debrief chọn `v1` hay `v3` theo `learnable` của ngôn ngữ cuộc họp.
+`gateway.transcribe` nhận thêm `knownSpeakers?: {label, hint, lastText}[]` (tối đa 8). Có trường này (kể cả mảng rỗng) thì dùng prompt `stt/v4`, Gemini ở chế độ `responseMimeType: application/json`, và kết quả có thêm `speaker: {label: 'speaker_1'…'speaker_8' | 'new' | 'unknown', hint?}`; không có thì dùng `stt/v3` và kết quả không có `speaker`. Parse phòng thủ: JSON hỏng thành `{text: <chữ thô đã làm sạch>, speaker: {label: 'unknown'}}`, nhãn ngoài tập hợp thành `unknown`, hint cắt 60 ký tự và bỏ ký tự điều khiển. `text` vẫn qua bước làm sạch và loại bỏ echo như v3. `hint` và `lastText` không vào `ai_call`, không vào log.
+
+`stt.transcribe` ghi `stt.transcribe@v3`, hoặc `stt.transcribe@v4` khi có `knownSpeakers`. Debrief chọn `v1` hay `v3` theo `learnable` của ngôn ngữ cuộc họp.
 
 ## Câu hỏi mở
 

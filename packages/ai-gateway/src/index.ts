@@ -17,7 +17,7 @@ export type {
 } from './gateway';
 export { DEFAULT_VOICE, wrapPcmAsWav } from './speech';
 export type { SpeakFn } from './speech';
-export type { TranscribeFn } from './stt';
+export type { SpeakerGuess, SpeakerLabel, TranscribeFn } from './stt';
 export { TASKS } from './tasks';
 export type { JsonTaskName, TaskName } from './tasks';
 export { estimateCostUsd, MODEL_PRICES } from './pricing';
