@@ -55,6 +55,11 @@ export const TranscriptEvent = z.object({
   partial: z.boolean(),
   /** Language of `text` (the meeting's); English when left out. */
   language: z.string().optional(),
+  /** Who spoke: `speaker_1`..`speaker_8` for a labelled other person; left out for the user and for "Người khác". */
+  speaker: z
+    .string()
+    .regex(/^speaker_[1-8]$/)
+    .optional(),
 });
 export type TranscriptEvent = z.infer<typeof TranscriptEvent>;
 

@@ -182,7 +182,8 @@ describe('session controller', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it('publishes every segment immediately and sends only final system segments', async () => {
+  // Both final streams go to the server as text so the English transcript has "Tôi" (AC1); partials never do.
+  it('publishes every segment immediately and sends the final segments of both streams', async () => {
     const context = setup();
     await context.controller.start(3);
 
@@ -220,6 +221,15 @@ describe('session controller', () => {
       {
         type: 'segment.final',
         segmentId,
+        stream: 'mic',
+        startMs: 100,
+        endMs: 500,
+        text: 'Original text',
+        words: [],
+      },
+      {
+        type: 'segment.final',
+        segmentId,
         stream: 'system',
         startMs: 100,
         endMs: 500,
@@ -227,6 +237,15 @@ describe('session controller', () => {
         words: [],
       },
     ]);
+  });
+
+  it('gives the English path no speaker labels and sends no knownSpeakers (AC7)', async () => {
+    const context = setup();
+    await context.controller.start(3);
+    context.emitSegment(segment());
+    expect(context.published.every((event) => event.speaker === undefined)).toBe(true);
+    expect(context.sent.every((message) => !('speaker' in (message as object)))).toBe(true);
+    expect(context.sessions.transcribe).not.toHaveBeenCalled();
   });
 
   it('publishes translations with the matching original segment id', async () => {
@@ -1075,6 +1094,79 @@ describe('session controller', () => {
           words: [],
         }),
       ]);
+    });
+
+    describe('speaker labels', () => {
+      const verdicts = (list: NonNullable<TranscribeResponse['speaker']>[]) => {
+        let n = 0;
+        return vi.fn<Transcribe>(async (_id, input) => ({
+          segmentId: input.segmentId,
+          text: `câu ${(n += 1)}`,
+          ...(list[n - 1] ? { speaker: list[n - 1] } : {}),
+        }));
+      };
+      const speak = async (ctx: Awaited<ReturnType<typeof running>>, stream: 'system' | 'mic') => {
+        ctx.emitUtterance(utterance({ segmentId: crypto.randomUUID(), stream }));
+        await flush();
+      };
+
+      it('asks for labels with an empty list, then sends the people already heard', async () => {
+        const transcribe = verdicts([
+          { label: 'new', hint: 'male low' },
+          { label: 'speaker_1' },
+          { label: 'new', hint: 'female high' },
+        ]);
+        const ctx = await running({ transcribe });
+        await speak(ctx, 'system');
+        await speak(ctx, 'system');
+        await speak(ctx, 'system');
+
+        const sent = transcribe.mock.calls.map(([, input]) => input.knownSpeakers);
+        expect(sent[0]).toEqual([]);
+        expect(sent[1]).toEqual([{ label: 'speaker_1', hint: 'male low', lastText: 'câu 1' }]);
+        expect(sent[2]).toEqual([{ label: 'speaker_1', hint: 'male low', lastText: 'câu 2' }]);
+        const finals = ctx.sent as { speaker?: string }[];
+        expect(finals.map((message) => message.speaker)).toEqual([
+          'speaker_1',
+          'speaker_1',
+          'speaker_2',
+        ]);
+        expect(ctx.published.map((event) => event.speaker)).toEqual([
+          'speaker_1',
+          'speaker_1',
+          'speaker_2',
+        ]);
+      });
+
+      it('never sends knownSpeakers for the microphone and sends no label for it', async () => {
+        const transcribe = verdicts([{ label: 'new', hint: 'x' }]);
+        const ctx = await running({ transcribe });
+        await speak(ctx, 'mic');
+        expect(transcribe.mock.calls[0]![1].knownSpeakers).toBeUndefined();
+        expect(ctx.published[0]!.speaker).toBeUndefined();
+        expect(ctx.sent[0]).not.toHaveProperty('speaker');
+      });
+
+      it('shows "Người khác" (no label) for unknown, and when the server sends no verdict', async () => {
+        const transcribe = verdicts([{ label: 'unknown' }]);
+        const ctx = await running({ transcribe });
+        await speak(ctx, 'system');
+        await speak(ctx, 'system');
+        expect(ctx.published.map((event) => event.speaker)).toEqual([undefined, undefined]);
+        expect(ctx.sent.every((message) => !('speaker' in (message as object)))).toBe(true);
+      });
+
+      it('forgets everyone when a new meeting starts', async () => {
+        const transcribe = verdicts([{ label: 'new', hint: 'male low' }]);
+        const ctx = await running({ transcribe });
+        await speak(ctx, 'system');
+        const stopped = ctx.controller.stop();
+        await vi.advanceTimersByTimeAsync(20_000);
+        await stopped;
+        await ctx.controller.start(3, lang);
+        await speak(ctx, 'system');
+        expect(transcribe.mock.calls.at(-1)![1].knownSpeakers).toEqual([]);
+      });
     });
 
     describe('context and counting', () => {

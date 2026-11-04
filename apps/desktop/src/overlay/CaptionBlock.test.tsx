@@ -35,3 +35,26 @@ describe('CaptionBlock without a translation', () => {
     }
   });
 });
+
+describe('CaptionBlock speaker tag', () => {
+  const tag = (event: Partial<ReturnType<typeof segment>> & { speaker?: string }) =>
+    renderToStaticMarkup(
+      <CaptionBlock
+        segment={{ ...segment('vi'), ...event }}
+        level={3}
+        faded={false}
+        showSpeaker
+        onLookup={() => {}}
+      />,
+    );
+
+  it('names the user, a labelled speaker and an unlabelled other person', () => {
+    expect(tag({ stream: 'mic' })).toContain('Tôi');
+    expect(tag({ speaker: 'speaker_2' })).toContain('Speaker 2');
+    expect(tag({})).toContain('Người khác');
+  });
+
+  it('shows no tag when showSpeaker is off', () => {
+    expect(render('vi')).not.toContain('data-slot="speaker-tag"');
+  });
+});

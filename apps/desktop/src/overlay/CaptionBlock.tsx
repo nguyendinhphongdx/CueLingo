@@ -1,6 +1,7 @@
 import { isLanguageCode, SUPPORTED_LANGUAGES } from '@cuelingo/shared';
 import type { TranscriptEvent } from '../lib/native';
 import { splitParts } from '@cuelingo/ui/lib/text-units';
+import { SpeakerTag } from '@cuelingo/ui/components/speaker-tag';
 
 interface CaptionBlockProps {
   segment: TranscriptEvent;
@@ -62,7 +63,9 @@ export function CaptionBlock({ segment, level, faded, showSpeaker, onLookup }: C
       className={`transition-opacity duration-300 ${faded ? 'opacity-50' : ''}`}
     >
       {showSpeaker ? (
-        <p className="text-muted-foreground mb-1 text-[0.7em] font-medium">{mine ? 'Tôi' : 'Họ'}</p>
+        <p className="mb-1 text-[0.7em]">
+          <SpeakerTag label={segment.speaker} source={mine ? 'mic' : 'system'} />
+        </p>
       ) : null}
       {showEnglish ? (
         <p

@@ -9,6 +9,7 @@ Cửa sổ caption song ngữ nổi trên app họp.
 - Hiển 3–6 câu gần nhất, partial màu nhạt, final màu đậm, bản dịch bên dưới
 - Hiển thị theo Assist level: `4` đầy đủ, `3` bản dịch nổi bật, `1` chỉ bản dịch, `0` ẩn caption
 - Gạch chân từ khó theo Lexicon của người dùng
+- Nhãn người nói (khi bật "hiện người nói") dùng `SpeakerTag` của `@cuelingo/ui`: "Tôi" (luồng mic), "Speaker N" (có nhãn), "Người khác" (không nhãn)
 - Thanh công cụ: cỡ chữ 14–28 px, nền 55–100%, giao diện sáng/tối lưu trong `localStorage`
 
 ## Phạm vi MVP
@@ -30,7 +31,7 @@ Cửa sổ caption song ngữ nổi trên app họp.
 
 ## Dữ liệu & sự kiện
 
-- Nhận `transcript`: `{segmentId, text, translation, partial}` từ Tauri core
+- Nhận `transcript`: `{segmentId, text, translation, partial, speaker?}` từ Tauri core; `speaker` là `speaker_1`..`speaker_8` khi câu của người khác đã được gắn nhãn
 - Nhận `settings`: `{assistLevel}` từ cửa sổ chính
 - Lắng nghe `storage` để áp dụng các khoá overlay do cửa sổ chính tải từ tài khoản
 - Thay đổi Assist hoặc hiển thị được đưa vào hàng đợi PATCH cài đặt 800 ms

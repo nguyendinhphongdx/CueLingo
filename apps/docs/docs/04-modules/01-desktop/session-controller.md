@@ -8,7 +8,7 @@ Máy trạng thái của một cuộc họp phía client: nhận segment từ ST
 
 - Trạng thái kết nối `idle | connecting | running | reconnecting | error`
 - Gọi `native.sessionStart/Stop`, đăng ký `native.onSegment` và mở WebSocket qua `createRealtimeClient`
-- Phát ngay mọi segment sang overlay; chỉ gửi segment final của luồng `system` lên API
+- Phát ngay mọi segment sang overlay; gửi segment final của cả hai luồng lên API dưới dạng văn bản (không âm thanh) để transcript tiếng Anh có câu "Tôi"; server chỉ dịch luồng `system`
 - Ghép bản dịch từ API với câu gốc theo `segmentId`, rồi phát lại sang overlay
 - Đưa thuật ngữ cá nhân cho bộ nhận dạng: lấy glossary (chỉ cho `en`, tối đa 200 mục mới nhất) song song với tạo phiên, chờ tối đa 1,5 giây rồi bắt đầu với danh sách rỗng nếu chậm, và áp dụng ngay khi tải xong. Lỗi hoặc chưa đăng nhập thì bắt đầu bình thường không có thuật ngữ
 - `refreshVocabulary()`: khi glossary đổi (trang Thuật ngữ báo qua `lib/glossary-changes`) hoặc sau khi đổi ngôn ngữ, tải lại và gửi danh sách mới, gom các lần đổi trong 500 ms, không dừng thu âm, lỗi thì bỏ qua
@@ -56,6 +56,7 @@ Máy trạng thái của một cuộc họp phía client: nhận segment từ ST
 - **Sóng âm:** hai thanh "Micro" và "Âm thanh hệ thống" (`LevelMeter` trong `@cuelingo/ui`) lấy từ `audio-level`, 20 khung hình/giây, chỉ nghe sự kiện trong lúc phiên chạy.
 - **Thẻ "Cuộc họp vừa xong":** sau khi dừng hiện thời lượng, số câu đã ghi (không tính câu "[không nhận dạng được]") và trạng thái debrief: "Đang tạo debrief…" rồi tóm tắt (3 dòng), quyết định và việc cần làm (tối đa 3 mục mỗi loại), lấy từ `GET /v1/sessions/:id/debrief` (hỏi lại mỗi 3 giây tối đa 2 phút). "Xem đầy đủ" mở debrief trên web.
 - **Ngữ cảnh nhận dạng:** mỗi câu tải lên kèm tối đa 3 câu đã nhận dạng trước đó của cùng luồng (`previous`).
+- **Sổ người nói** (`speaker-registry.ts`, chỉ trong RAM theo cuộc họp, xoá khi dừng và khi bắt đầu họp mới; không ghi đĩa, không log): ngôn ngữ có cờ `labelsSpeakers` gửi kèm câu `system` danh sách `knownSpeakers` (tối đa 8 mục `{label, hint ≤ 60, lastText ≤ 200}`, rỗng ở câu đầu). Server trả nhãn đã biết thì cập nhật `lastText`; trả `new` thì cấp `speaker_N` tăng dần (một `new` đến trong 5 giây với hint gần trùng, tức chung từ từ một nửa trở lên, được gộp vào nhãn vừa cấp); `unknown`, không có `speaker` (API cũ) hoặc đã đủ 8 người thì câu không nhãn, hiện "Người khác". Nhãn đi kèm `segment.final.speaker` và `TranscriptEvent.speaker`. Câu `mic` luôn là "Tôi", không gửi `knownSpeakers`. Tên người dùng đặt ở debrief không hiện trong caption trực tiếp.
 
 ## Soạn follow-up sau họp
 

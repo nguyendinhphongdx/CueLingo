@@ -7,9 +7,11 @@ import {
   type GlossaryTerm,
   type LanguageCode,
   type ServerMessage,
+  type TranscribeResponse,
 } from '@cuelingo/shared';
 import { captureProblemOf } from './capture-problems';
 import { nativeErrorCode } from './session-errors';
+import { createSpeakerRegistry } from './speaker-registry';
 import type {
   AudioModelEvent,
   AudioStatusEvent,
@@ -240,6 +242,8 @@ export function createSessionController({
     system: [],
     mic: [],
   };
+  /** The people heard in this meeting, in memory only; cleared when the meeting ends and when one starts. */
+  const speakerRegistry = createSpeakerRegistry(now);
   const transcriptById = new Map<string, TranscriptEvent>();
   const listeners = new Set<() => void>();
 
@@ -278,7 +282,8 @@ export function createSessionController({
       partial: segment.partial,
     });
 
-    if (!segment.partial && segment.stream === 'system') {
+    // The device recognises English: the server stores both streams as text, translates only the system one.
+    if (!segment.partial) {
       realtime?.send({
         type: 'segment.final',
         segmentId: segment.segmentId,
@@ -310,9 +315,14 @@ export function createSessionController({
     utterance: UtteranceEvent,
     signal: AbortSignal,
     previous: string[],
-  ): Promise<string | null> {
+    labelsSpeakers: boolean,
+  ): Promise<TranscribeResponse | null> {
     const request = {
       ...(previous.length > 0 ? { previous } : {}),
+      // Present (even empty) asks the server to label who speaks; only the other side of the call is labelled.
+      ...(labelsSpeakers && utterance.stream === 'system'
+        ? { knownSpeakers: speakerRegistry.known() }
+        : {}),
       segmentId: utterance.segmentId,
       stream: utterance.stream,
       startMs: Math.round(utterance.startMs),
@@ -322,7 +332,7 @@ export function createSessionController({
     };
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
-        return (await sessions.transcribe(sessionId, request, signal)).text;
+        return await sessions.transcribe(sessionId, request, signal);
       } catch (error) {
         // Retry once, and only for what can heal; give up on this sentence otherwise.
         if (attempt === 1 || signal.aborted || !isRetryable(error)) return null;
@@ -347,8 +357,16 @@ export function createSessionController({
       const previous = recentTexts[utterance.stream]
         .slice(-PREVIOUS_COUNT)
         .map((entry) => entry.text);
-      const text = await recognise(sessionId, utterance, current.abort.signal, previous);
+      const labelsSpeakers = SUPPORTED_LANGUAGES[meetingLanguage].labelsSpeakers;
+      const result = await recognise(
+        sessionId,
+        utterance,
+        current.abort.signal,
+        previous,
+        labelsSpeakers,
+      );
       if (generation !== runtimeGeneration || current.closed) return;
+      const text = result === null ? null : result.text;
       // Each result goes out as soon as it is ready; a slow upload never holds a later one back.
       if (text === null) {
         // Local only: the server never hears about a sentence it did not recognise.
@@ -369,12 +387,18 @@ export function createSessionController({
       ]
         .sort((a, b) => a.startMs - b.startMs)
         .slice(-PREVIOUS_COUNT);
+      // A server that does not label (older, or a language without labels) sends no verdict: no label.
+      const speaker =
+        labelsSpeakers && utterance.stream === 'system'
+          ? speakerRegistry.resolve(result?.speaker, text)
+          : null;
       publish({
         segmentId: utterance.segmentId,
         stream: utterance.stream,
         text,
         translation: null,
         partial: false,
+        ...(speaker ? { speaker } : {}),
       });
       realtime?.send({
         type: 'segment.final',
@@ -384,6 +408,7 @@ export function createSessionController({
         endMs: Math.round(utterance.endMs),
         text,
         words: [],
+        ...(speaker ? { speaker } : {}),
       });
     });
     pump(current);
@@ -484,6 +509,7 @@ export function createSessionController({
     demoTimers.forEach(clearTimeout);
     demoTimers = [];
     transcriptById.clear();
+    speakerRegistry.clear();
   }
 
   /**
@@ -599,6 +625,7 @@ export function createSessionController({
       finalIds.clear();
       recentTexts.system = [];
       recentTexts.mic = [];
+      speakerRegistry.clear();
       const generation = runtimeGeneration;
       startingGeneration = generation;
       update({
