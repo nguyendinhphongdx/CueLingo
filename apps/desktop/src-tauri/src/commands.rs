@@ -15,6 +15,16 @@ pub struct AppState {
     assist_level: Mutex<u8>,
 }
 
+impl AppState {
+    /// A native session is running (capture may be on even if the webview thinks otherwise).
+    pub fn is_running(&self) -> bool {
+        self.session_id
+            .lock()
+            .map(|id| id.is_some())
+            .unwrap_or(false)
+    }
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionStartOpts {
@@ -99,6 +109,9 @@ pub fn session_start(
     // The captions live in the overlay, so a new meeting brings it up instead of waiting for the shortcut.
     windows::show_overlay(&app);
     *current = Some(id.clone());
+    drop(current);
+    // Live from the moment capture runs, even before the webview has reported anything.
+    let _ = crate::tray::refresh(&app);
     Ok(SessionStartResult { session_id: id })
 }
 
@@ -118,9 +131,11 @@ pub fn session_set_vocabulary(state: State<AppState>, terms: Vec<String>) -> Res
 }
 
 #[tauri::command]
-pub fn session_stop(state: State<AppState>) -> Result<(), String> {
+pub fn session_stop(app: AppHandle, state: State<AppState>) -> Result<(), String> {
     *state.session_id.lock().map_err(|e| e.to_string())? = None;
-    state.audio.stop()
+    let stopped = state.audio.stop();
+    let _ = crate::tray::refresh(&app);
+    stopped
 }
 
 /// Runs the sidecar in a one-shot mode and returns the JSON line whose `type` is `kind`.
@@ -225,16 +240,23 @@ pub fn hide_overlay(app: AppHandle) {
     windows::hide_overlay(&app);
 }
 
-/// The menu-bar icon follows the meeting. `minutes` is the elapsed whole minutes; `problem` is `mic` or `system`.
+/// What only the webview knows about the meeting: still going (also while the last sentences are
+/// sent), elapsed whole minutes, and `problem` = `mic` or `system` when a stream could not open.
 #[tauri::command]
-pub fn tray_set_state(
+pub fn tray_report(
     app: AppHandle,
-    state: String,
+    active: bool,
     minutes: Option<u32>,
     problem: Option<String>,
 ) -> Result<(), String> {
-    let kind = crate::tray::Kind::parse(&state).ok_or("invalid_tray_state")?;
-    crate::tray::apply(&app, kind, minutes.unwrap_or(0), problem.as_deref())
+    crate::tray::report(
+        &app,
+        crate::tray::Report {
+            active,
+            minutes: minutes.unwrap_or(0),
+            problem,
+        },
+    )
 }
 
 #[tauri::command]

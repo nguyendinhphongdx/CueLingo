@@ -18,6 +18,7 @@ pub fn run() {
         .plugin(hotkeys::plugin())
         .plugin(tauri_plugin_deep_link::init())
         .manage(commands::AppState::default())
+        .manage(tray::TrayReport::default())
         .invoke_handler(tauri::generate_handler![
             commands::session_start,
             commands::session_set_language,
@@ -30,7 +31,7 @@ pub fn run() {
             commands::set_assist_level,
             commands::toggle_overlay,
             commands::hide_overlay,
-            commands::tray_set_state,
+            commands::tray_report,
             auth::auth_token_get,
             auth::auth_token_set,
             auth::auth_token_clear,
@@ -80,7 +81,7 @@ pub fn run() {
                     "overlay" => {
                         windows::toggle_overlay(app);
                     }
-                    "quit" => app.exit(0),
+                    "quit" => tray::quit(app),
                     _ => {}
                 })
                 .build(app)?;

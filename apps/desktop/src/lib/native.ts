@@ -189,12 +189,9 @@ export const native = {
   setAssistLevel: (level: number) =>
     invoke('set_assist_level', { level: AssistLevel.parse(level) }).then(() => undefined),
   hideOverlay: () => invoke('hide_overlay').then(() => undefined),
-  /** The menu-bar icon: `minutes` is whole elapsed minutes, `problem` the stream that failed. Fixed codes only, never meeting content. */
-  setTray: (view: {
-    state: 'idle' | 'live' | 'warning';
-    minutes: number;
-    problem?: 'mic' | 'system';
-  }) => invoke('tray_set_state', view).then(() => undefined),
+  /** What the menu-bar icon cannot know: a meeting still going, whole minutes, the stream that failed. Fixed codes only, never meeting content. */
+  trayReport: (view: { active: boolean; minutes: number; problem?: 'mic' | 'system' | 'both' }) =>
+    invoke('tray_report', view).then(() => undefined),
   /** The menu-bar "Dừng họp" item was chosen. */
   onTrayStop: (cb: () => void): Promise<UnlistenFn> => listen('tray-stop', () => cb()),
   toggleOverlay: () => invoke('toggle_overlay').then((v) => z.boolean().parse(v)),
