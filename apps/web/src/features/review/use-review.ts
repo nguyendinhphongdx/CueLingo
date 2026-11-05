@@ -77,6 +77,31 @@ export function useReview(language: LanguageCode) {
     [answerMutation, card, selectedChoice],
   );
 
+  /** Flashcard mode: the person graded themselves after turning the card, with no multiple choice. */
+  const grade = useCallback(
+    async (rating: ReviewAnswerRequest['rating']) => {
+      if (!card || submitting.current) return;
+      submitting.current = true;
+      try {
+        await answerMutation.mutateAsync({
+          itemId: card.itemId,
+          exercise: card.exercise,
+          rating,
+          responseMs: Math.min(600_000, Math.max(0, Math.round(nowMs() - startedAt.current))),
+        });
+        setCardIndex((value) => value + 1);
+        setSelectedChoice(null);
+        if (rating >= 3) setCorrect((value) => value + 1);
+        startedAt.current = nowMs();
+      } catch {
+        // The mutation exposes a localized error while keeping this card ready to retry.
+      } finally {
+        submitting.current = false;
+      }
+    },
+    [answerMutation, card],
+  );
+
   const restart = useCallback(async () => {
     const refreshed = await queueQuery.refetch();
     if (refreshed.data) reset(refreshed.data);
@@ -105,6 +130,7 @@ export function useReview(language: LanguageCode) {
     submitting: answerMutation.isPending,
     choose,
     rate,
+    grade,
     restart,
   };
 }

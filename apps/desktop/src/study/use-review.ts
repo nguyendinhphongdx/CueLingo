@@ -106,6 +106,31 @@ export function useReview(language: LanguageCode) {
     [answerMutation.mutateAsync, card, selectedChoice],
   );
 
+  /** Flashcard mode: the person graded themselves after turning the card, with no multiple choice. */
+  const grade = useCallback(
+    async (rating: ReviewAnswerRequest['rating']) => {
+      if (!card) return;
+      try {
+        await submitReviewAnswer({
+          api: { answerReview: answerMutation.mutateAsync },
+          card,
+          rating,
+          responseMs: nowMs() - startedAt.current,
+          submitting,
+          advance: () => {
+            setCardIndex((value) => value + 1);
+            setSelectedChoice(null);
+            if (rating >= 3) setCorrect((value) => value + 1);
+            startedAt.current = nowMs();
+          },
+        });
+      } catch {
+        // The mutation error remains visible and this card stays ready to retry.
+      }
+    },
+    [answerMutation.mutateAsync, card],
+  );
+
   const restart = useCallback(async () => {
     const refreshed = await queueQuery.refetch();
     if (refreshed.data) reset(refreshed.data);
@@ -133,6 +158,7 @@ export function useReview(language: LanguageCode) {
     submitting: answerMutation.isPending || submitting.current,
     choose,
     rate,
+    grade,
     restart,
   };
 }

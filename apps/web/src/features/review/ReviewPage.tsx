@@ -14,7 +14,9 @@ import { LanguageSwitcher } from '@cuelingo/ui/components/language-switcher';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { SpeakButton } from '@cuelingo/ui/components/speak-button';
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { FlashcardDeck } from '@cuelingo/ui/components/flashcard-deck';
+import { Segmented } from '@cuelingo/ui/components/segmented';
+import { useEffect, useState } from 'react';
 import { client } from '../../lib/client';
 import { useLanguage } from '../../lib/language';
 import { type ReviewResult, useReview } from './use-review';
@@ -25,6 +27,13 @@ const RATINGS = [
   { value: 3, label: 'Được' },
   { value: 4, label: 'Dễ' },
 ] as const;
+
+type ReviewMode = 'flip' | 'quiz';
+const MODES: { value: ReviewMode; label: string }[] = [
+  { value: 'flip', label: 'Lật thẻ' },
+  { value: 'quiz', label: 'Trắc nghiệm' },
+];
+const MODE_KEY = 'cuelingo.reviewMode';
 
 export function ReviewSession({
   card,
@@ -230,8 +239,25 @@ export function ReviewEmptyState() {
 export function ReviewPage() {
   const { language, setLanguage, options } = useLanguage();
   const review = useReview(language);
+  const [mode, setModeState] = useState<ReviewMode>('flip');
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(MODE_KEY) === 'quiz') setModeState('quiz');
+    } catch {
+      // Blocked storage: stay on flashcards.
+    }
+  }, []);
+  const setMode = (next: ReviewMode) => {
+    setModeState(next);
+    try {
+      localStorage.setItem(MODE_KEY, next);
+    } catch {
+      // The choice just lasts until the page closes.
+    }
+  };
 
   useEffect(() => {
+    if (mode !== 'quiz') return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (!review.card || review.submitting) return;
       const choiceIndex = Number(event.key) - 1;
@@ -245,7 +271,7 @@ export function ReviewPage() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [review]);
+  }, [review, mode]);
 
   let content;
 
@@ -269,15 +295,35 @@ export function ReviewPage() {
             {review.error}
           </p>
         )}
-        <ReviewSession
-          card={review.card}
-          position={review.cardIndex + 1}
-          total={review.total}
-          selectedChoice={review.selectedChoice}
-          submitting={review.submitting}
-          onChoose={review.choose}
-          onRate={(rating) => void review.rate(rating)}
-        />
+        <div className="flex justify-center">
+          <Segmented
+            label="Kiểu ôn"
+            options={MODES}
+            value={mode}
+            onChange={setMode}
+            disabled={review.selectedChoice !== null || review.submitting}
+          />
+        </div>
+        {mode === 'flip' ? (
+          <FlashcardDeck
+            card={review.card}
+            position={review.cardIndex + 1}
+            total={review.total}
+            submitting={review.submitting}
+            onRate={(rating) => void review.grade(rating)}
+            loadAudio={client.tts.speak}
+          />
+        ) : (
+          <ReviewSession
+            card={review.card}
+            position={review.cardIndex + 1}
+            total={review.total}
+            selectedChoice={review.selectedChoice}
+            submitting={review.submitting}
+            onChoose={review.choose}
+            onRate={(rating) => void review.rate(rating)}
+          />
+        )}
       </div>
     );
   }

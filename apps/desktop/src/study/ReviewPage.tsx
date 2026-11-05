@@ -3,7 +3,9 @@ import { Button } from '@cuelingo/ui/components/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@cuelingo/ui/components/card';
 import { DictationCard } from '@cuelingo/ui/components/dictation-card';
 import { SpeakButton } from '@cuelingo/ui/components/speak-button';
-import { useEffect } from 'react';
+import { FlashcardDeck } from '@cuelingo/ui/components/flashcard-deck';
+import { Segmented } from '@cuelingo/ui/components/segmented';
+import { useEffect, useState } from 'react';
 import { studyApi } from './study-api';
 import { type ReviewResult, useReview } from './use-review';
 import { useLearnLanguage } from '../settings';
@@ -14,6 +16,33 @@ const RATINGS = [
   { value: 3, label: 'Được' },
   { value: 4, label: 'Dễ' },
 ] as const;
+
+type ReviewMode = 'flip' | 'quiz';
+const MODES: { value: ReviewMode; label: string }[] = [
+  { value: 'flip', label: 'Lật thẻ' },
+  { value: 'quiz', label: 'Trắc nghiệm' },
+];
+const MODE_KEY = 'cuelingo.reviewMode';
+
+/** Flashcards by default; the choice is remembered on this device when storage is available. */
+function useModeChoice() {
+  const [mode, setModeState] = useState<ReviewMode>(() => {
+    try {
+      return localStorage.getItem(MODE_KEY) === 'quiz' ? 'quiz' : 'flip';
+    } catch {
+      return 'flip';
+    }
+  });
+  const setMode = (next: ReviewMode) => {
+    setModeState(next);
+    try {
+      localStorage.setItem(MODE_KEY, next);
+    } catch {
+      // Private mode or blocked storage: the choice just lasts until the page closes.
+    }
+  };
+  return [mode, setMode] as const;
+}
 
 export function ReviewCardView({
   card,
@@ -208,8 +237,10 @@ export function ReviewEmptyState() {
 
 export function ReviewPage() {
   const review = useReview(useLearnLanguage().language);
+  const [mode, setMode] = useModeChoice();
 
   useEffect(() => {
+    if (mode !== 'quiz') return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (!review.card || review.submitting) return;
       const choiceIndex = Number(event.key) - 1;
@@ -223,7 +254,7 @@ export function ReviewPage() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [review]);
+  }, [review, mode]);
 
   if (review.loading) {
     return <p className="text-muted-foreground text-sm">Đang chuẩn bị thẻ ôn…</p>;
@@ -256,15 +287,35 @@ export function ReviewPage() {
           </Button>
         </div>
       ) : null}
-      <ReviewCardView
-        card={review.card}
-        position={review.cardIndex + 1}
-        total={review.total}
-        selectedChoice={review.selectedChoice}
-        submitting={review.submitting}
-        onChoose={review.choose}
-        onRate={(rating) => void review.rate(rating)}
-      />
+      <div className="flex justify-center">
+        <Segmented
+          label="Kiểu ôn"
+          options={MODES}
+          value={mode}
+          onChange={setMode}
+          disabled={review.selectedChoice !== null || review.submitting}
+        />
+      </div>
+      {mode === 'flip' ? (
+        <FlashcardDeck
+          card={review.card}
+          position={review.cardIndex + 1}
+          total={review.total}
+          submitting={review.submitting}
+          onRate={(rating) => void review.grade(rating)}
+          loadAudio={studyApi.speak}
+        />
+      ) : (
+        <ReviewCardView
+          card={review.card}
+          position={review.cardIndex + 1}
+          total={review.total}
+          selectedChoice={review.selectedChoice}
+          submitting={review.submitting}
+          onChoose={review.choose}
+          onRate={(rating) => void review.rate(rating)}
+        />
+      )}
     </div>
   );
 }

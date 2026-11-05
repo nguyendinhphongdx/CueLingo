@@ -55,3 +55,7 @@ Nhãn người nói dùng chung cho overlay và web: `SpeakerTag({label, display
 
 - Bảng màu thương hiệu cuối cùng sẽ thay neutral token ở giai đoạn nào?
 - (chưa có)
+
+## FlashcardDeck
+
+`FlashcardDeck({card, position, total, submitting, onRate, loadAudio?})` (`components/flashcard-deck`): thẻ ôn lật 3D và vuốt. `card` là kiểu cấu trúc `ReviewCardLike` (không phụ thuộc `shared`). Logic thuần nằm ở `lib/swipe` (`swipeRating`, `isTap`, `ratingForKey`, `exitOffset`) và có test riêng; `FlashcardFace` là phần markup để test. Ngưỡng vuốt 90px, dưới 10px tính là chạm.
