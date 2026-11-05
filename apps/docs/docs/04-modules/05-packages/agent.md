@@ -48,8 +48,8 @@ function createToolRegistry<C>(): ToolRegistry<C>   // register · unregister ·
 **`runTurn`**
 
 - Luôn kết thúc bằng đúng một `done`, không ném lỗi. Thứ tự: `status{thinking}` (đầu mỗi bước) → `text_delta`\* → `tool_call` → `tool_result` → `card`? → … → `done`.
-- `done.status`: `complete` (mô hình trả lời không gọi công cụ), `stopped` (người dùng abort), `limited` (hết 6 bước, hết 60 giây hoặc `hooks.beforeStep` trả `false`, ví dụ hết quota), `error` (bước mô hình lỗi: phát `error{AGENT_FAILED}` trước `done`).
-- Mặc định (`DEFAULT_LIMITS`): 6 bước, 3 lần gọi tool ghi (lần thứ 4 trở đi nhận `tool_result{ok:false}` "Đã đạt giới hạn…" mà không chạy), 60 giây một lượt, ngân sách ngữ cảnh 24k token, tool 8 giây.
+- `done.status`: `complete` (mô hình trả lời không gọi công cụ), `stopped` (người dùng abort), `limited` (hết 6 bước, 8 lần gọi công cụ, hết 60 giây hoặc `hooks.beforeStep` trả `false`, ví dụ hết quota), `error` (bước mô hình lỗi: phát `error{AGENT_FAILED}` trước `done`).
+- Mặc định (`DEFAULT_LIMITS`): 6 bước, tối đa 8 lần gọi tool mỗi lượt (cả tool đọc; vượt thì `done{limited}`), 3 lần gọi tool ghi (lần thứ 4 trở đi nhận `tool_result{ok:false}` "Đã đạt giới hạn…" mà không chạy), 60 giây một lượt, ngân sách ngữ cảnh 24k token, tool 8 giây.
 - Mỗi lời gọi tool nhận `callId` do vòng lặp đặt (`s<bước>c<thứ tự>`), không dùng id của mô hình, nên luôn duy nhất và khớp cặp call/result.
 - `hooks.beforeStep(step)` để API kiểm quota trước mỗi bước; `hooks.afterStep({step, inputTokens, outputTokens})` để cộng token.
 

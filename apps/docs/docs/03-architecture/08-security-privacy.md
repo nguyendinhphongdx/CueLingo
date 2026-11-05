@@ -14,6 +14,13 @@ Dữ liệu họp là dữ liệu nhạy cảm của doanh nghiệp người dù
 | Mã hoá                     | TLS khi truyền, mã hoá khi lưu; token lưu trong Keychain trên desktop                                |
 | Overlay                    | Loại khỏi screen capture để không lộ khi chia sẻ màn hình                                            |
 
+## Hội thoại với trợ lý AI
+
+- Nội dung hội thoại (`agent_conversations`, `agent_messages`: chữ người dùng gõ, câu trả lời, bước công cụ, thẻ) được **lưu trên server** theo `userId`, chỉ chủ sở hữu đọc được. Xoá hội thoại ẩn ngay và xoá hẳn sau 7 ngày (workers/retention); xoá tài khoản hoặc `DELETE /v1/me/data` xoá tất cả ngay.
+- Để trả lời, **nội dung tin nhắn, lịch sử gần đây và kết quả công cụ (vd. cụm từ đã lưu) được gửi tới Google Gemini** qua `@cuelingo/ai-gateway`. Chỉ dùng gói API cam kết không huấn luyện trên dữ liệu khách hàng. Dùng agent là tự nguyện: tính năng sau cờ `AGENT_ENABLED`.
+- Log chỉ ghi id và số đếm, không ghi nội dung tin nhắn, output công cụ hay lỗi gốc của nhà cung cấp.
+- Chính sách quyền riêng tư (khi viết, xem mục Pháp lý) phải nêu: có lưu hội thoại, gửi nội dung tới Gemini, thời hạn lưu và cách xoá. Repo chưa có trang chính sách nên chưa sửa được ở đây.
+
 ## Phân quyền
 
 | Vai trò                            | Thấy gì                                                                      |

@@ -17,3 +17,6 @@
 | Quick Assist               | Các công cụ trong họp: tra từ, "Họ vừa nói gì?", "Nói giúp tôi"                                                                                 |
 | Event                      | Một tương tác được ghi lại (append-only), ví dụ `lookup`, `review_answer`. Là đầu vào của Learner Model                                         |
 | Glossary                   | Danh sách thuật ngữ và tên riêng giúp STT và bản dịch đúng hơn                                                                                  |
+| Agent (trợ lý AI)          | Trợ lý trò chuyện gọi được công cụ (tra từ, lưu cụm từ, hiện thẻ) thay người dùng. Xem [Agent](../04-modules/03-api/agent.md)                   |
+| Plugin (của agent)         | Gói công cụ + quyền khai báo mà agent nạp vào registry; lô 1 chỉ có plugin `core`                                                               |
+| Thẻ agent (agent card)     | Khối giao diện có cấu trúc (vd. `phrase_list`) agent gửi kèm câu trả lời, được kiểm bằng `AgentCardSchema`                                      |

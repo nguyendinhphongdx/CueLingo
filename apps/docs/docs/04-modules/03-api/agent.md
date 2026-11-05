@@ -7,7 +7,7 @@ Một lượt trả lời của trợ lý AI mỗi request: dựng ngữ cảnh,
 ## Trách nhiệm
 
 - `POST /v1/conversations/:id/messages` trả `text/event-stream`; tin của người dùng được lưu **ngay**, tin của trợ lý lưu `streaming` rồi cập nhật `parts` sau mỗi bước mô hình và mỗi kết quả công cụ, trạng thái cuối lưu **trước** khi gửi `done`
-- Khoá trong tiến trình theo `(userId, conversationId)`: đang có lượt chạy thì `409 CONFLICT` (khớp ADR-0011, một container; nợ khi scale ngang)
+- Khoá trong tiến trình theo `userId` (mọi hội thoại): người dùng đã có một lượt đang chạy thì lượt thứ hai là `409 CONFLICT`. Quota được kiểm trước khi lưu tin `user`, nên nếu khoá theo hội thoại thì N hội thoại song song cùng qua một lần kiểm; khoá theo người dùng đóng lỗ hổng đó. Khoá được nhả ngay sau khi lưu trạng thái cuối (trước khi gửi `done`). Khớp ADR-0011, một container; nợ khi scale ngang
 - Quota theo ngày UTC, kiểm **trước khi stream** (429) và trước mỗi bước tiếp theo (`done{limited}`)
 - Khách ngắt kết nối → huỷ lượt → tin lưu `stopped`, giữ phần chữ đã sinh; khoá được nhả
 - Lỗi của nhà cung cấp không lộ ra: client chỉ thấy `error{AGENT_FAILED}` rồi `done{error}`
@@ -28,7 +28,7 @@ Một lượt trả lời của trợ lý AI mỗi request: dựng ngữ cảnh,
 | 400    | `VALIDATION_ERROR`     | body/`id` sai                                                                                |
 | 401    | `UNAUTHORIZED`         | chưa đăng nhập                                                                               |
 | 404    | `NOT_FOUND`            | hội thoại không tồn tại, đã xoá hoặc của người khác                                          |
-| 409    | `CONFLICT`             | hội thoại đang có một lượt chạy                                                              |
+| 409    | `CONFLICT`             | người dùng đang có một lượt chạy (ở bất kỳ hội thoại nào)                                    |
 | 429    | `AGENT_QUOTA_EXCEEDED` | hết lượt/token/USD trong ngày; `error.details` là `AgentQuota` (`used`, `limit`, `resetsAt`) |
 | 503    | `AGENT_DISABLED`       | `AGENT_ENABLED=false` hoặc thiếu `GEMINI_API_KEY`                                            |
 
@@ -63,7 +63,7 @@ data: {"type":"done","status":"complete"}
 
 ```
 
-Thứ tự: `status{thinking}` (đầu mỗi bước) → `text_delta`\* → `tool_call` → `tool_result` → `card`? → … → `done` (luôn cuối, đúng một lần). Lỗi mô hình: `error{AGENT_FAILED}` rồi `done{error}`. `done.status`: `complete` · `stopped` · `limited` (hết 6 bước, 60 giây hoặc quota giữa lượt) · `error`. Sau `done`, client đọc lại `GET /v1/conversations/:id` để lấy id và `parts` đã lưu.
+Thứ tự: `status{thinking}` (đầu mỗi bước) → `text_delta`\* → `tool_call` → `tool_result` → `card`? → … → `done` (luôn cuối, đúng một lần). Lỗi mô hình: `error{AGENT_FAILED}` rồi `done{error}`. `done.status`: `complete` · `stopped` · `limited` (hết 6 bước, 8 lần gọi công cụ, 60 giây hoặc quota giữa lượt) · `error`. Sau `done`, client đọc lại `GET /v1/conversations/:id` để lấy id và `parts` đã lưu.
 
 **Công cụ của plugin `core`** (quyền khai báo: `phrases:read`, `phrases:write`, `lookup`, `cards`):
 
@@ -93,6 +93,11 @@ Thứ tự: `status{thinking}` (đầu mỗi bước) → `text_delta`\* → `to
 
 - Ghi `agent_messages` qua `ConversationsRepository`. Mỗi bước mô hình là một `ai_call` (task `agent.chat`) do hook của gateway ghi (`lib/ai-calls.ts`); payload nay có thêm `inputTokens`, `outputTokens` để cộng quota.
 - Quota ngày (UTC): **lượt** = số tin `user` hôm nay trong `agent_messages`; **token** và **USD** = tổng `ai_call` của task `agent.chat` trong `events` (index `events_type_user_at_idx`). `recordAiCall` bất đồng bộ nên quota có thể trễ một bước; trong lượt, token của chính lượt được cộng thêm để làm biên an toàn.
+- Công cụ đọc không ghi `ai_call` riêng. `lookup_word` gọi `AssistService.lookup` (task `assist.lookup`, không thuộc quota agent), nên chặn lạm dụng bằng **trần 8 lần gọi công cụ mỗi lượt** (`maxToolCalls`, tính cả công cụ đọc; vượt thì lượt kết thúc `done{limited}`) và mỗi lượt vẫn tính vào số lượt/ngày. Cách này đơn giản hơn ghi thêm chi phí và đủ để chi phí mỗi lượt có trần.
+- Khi người dùng bấm Dừng giữa chừng, gateway ghi `ai_call` với token **ước tính** (đầu vào ≈ độ dài prompt + tin nhắn / 4, đầu ra ≈ chữ đã nhận / 4) thay vì không ghi gì, để Dừng không né được chi phí.
+- Đọc hội thoại (`GET /v1/conversations/:id`) trả **500 tin mới nhất** theo thứ tự cũ → mới, nên lịch sử gửi cho mô hình luôn là phần gần nhất.
+- `DELETE /v1/me/data` xoá `agent_messages` và `events`, mà quota ngày được tính từ hai nguồn đó, nên **quota trong ngày cũng về 0**. Chấp nhận được ở MVP (thao tác xoá hiếm, có xác nhận); nếu bị lạm dụng thì cần bảng đếm riêng không bị xoá theo.
+- Index một phần `agent_messages_streaming_idx (status) WHERE status = 'streaming'` (migration `20261110090000`) để tìm tin bị kẹt `streaming`.
 - Lịch sử gửi cho mô hình chỉ gồm chữ của các tin đã `complete`/`stopped`/`limited`; bước công cụ và thẻ của lượt cũ không được phát lại.
 - Không log nội dung tin nhắn, output công cụ hay lỗi gốc của nhà cung cấp; log chỉ có id.
 

@@ -40,4 +40,4 @@ Contract ở `packages/shared/src/dto/agent.dto.ts`.
 
 ## Câu hỏi mở
 
-- Phân trang tin nhắn (hiện đọc tối đa 500 tin, một lượt không tới mức đó).
+- Phân trang tin nhắn (hiện đọc 500 tin mới nhất theo thứ tự cũ → mới, một lượt không tới mức đó).
