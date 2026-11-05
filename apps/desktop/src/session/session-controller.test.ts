@@ -60,7 +60,12 @@ type Transcribe = (
 
 function setup(
   glossaryList?: GlossaryList,
-  options: { transcribe?: Transcribe; consent?: boolean; now?: () => number } = {},
+  options: {
+    transcribe?: Transcribe;
+    consent?: boolean;
+    now?: () => number;
+    onFirstCaption?: (sessionId: string) => void;
+  } = {},
 ) {
   let onUtterance: ((event: UtteranceEvent) => void) | undefined;
   const unlistenUtterance = vi.fn();
@@ -157,6 +162,7 @@ function setup(
     },
     apiUrl: 'ws://api.test/',
     token: 'dev-token',
+    onFirstCaption: options.onFirstCaption,
     now: options.now ?? (() => 1_000),
   });
 
@@ -1721,6 +1727,45 @@ describe('session controller', () => {
       await flush();
 
       expect(ctx.sessions.transcribe).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('first caption of a meeting (AC7)', () => {
+    it('is reported once per meeting with its id, only for a final caption', async () => {
+      const onFirstCaption = vi.fn();
+      const context = setup(undefined, { onFirstCaption });
+      await context.controller.start(3);
+
+      context.emitSegment(segment({ partial: true }));
+      expect(onFirstCaption).not.toHaveBeenCalled();
+      context.emitSegment(segment());
+      context.emitSegment(segment({ segmentId: crypto.randomUUID() }));
+      expect(onFirstCaption).toHaveBeenCalledTimes(1);
+      expect(onFirstCaption).toHaveBeenCalledWith(sessionId);
+
+      await context.controller.stop();
+      await context.controller.start(3);
+      context.emitSegment(segment());
+      expect(onFirstCaption).toHaveBeenCalledTimes(2);
+    });
+
+    it('is not reported for the sample captions of the demo', async () => {
+      const onFirstCaption = vi.fn();
+      const context = setup(undefined, { onFirstCaption });
+      context.controller.runDemo();
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(onFirstCaption).not.toHaveBeenCalled();
+    });
+
+    it('does not let a failing counter break the caption', async () => {
+      const context = setup(undefined, {
+        onFirstCaption: () => {
+          throw new Error('boom');
+        },
+      });
+      await context.controller.start(3);
+      context.emitSegment(segment());
+      expect(context.published.at(-1)?.text).toBe('Original text');
     });
   });
 });

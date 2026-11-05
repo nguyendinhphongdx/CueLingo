@@ -5,7 +5,7 @@
 export type FeatureStatus = 'ready' | 'soon';
 export type FeatureGroup = 'meeting' | 'learn' | 'app';
 export type FeatureIconName =
-  'mic' | 'history' | 'review' | 'bookmark' | 'languages' | 'progress' | 'settings';
+  'mic' | 'history' | 'review' | 'bookmark' | 'languages' | 'progress' | 'settings' | 'feedback';
 
 export interface Feature {
   id: string;
@@ -109,6 +109,16 @@ export const features: Feature[] = [
     summary: 'Tài khoản, quyền riêng tư và thông tin ứng dụng.',
     bullets: ['Quản lý tài khoản và thiết bị', 'Xoá dữ liệu cuộc họp và cụm từ của bạn'],
     webPath: '/settings',
+  },
+  {
+    id: 'feedback',
+    label: 'Góp ý',
+    group: 'app',
+    icon: 'feedback',
+    status: { desktop: 'ready', web: 'ready' },
+    summary: 'Báo lỗi hoặc góp ý cho đội CueLingo.',
+    bullets: ['Chỉ gửi nội dung bạn gõ cùng phiên bản app', 'Không kèm transcript hay âm thanh'],
+    webPath: '/feedback',
   },
 ];
 

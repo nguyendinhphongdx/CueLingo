@@ -14,6 +14,7 @@ import { createInMemoryAccountRepository } from './modules/account';
 import { createInMemoryDeviceRepository } from './modules/device';
 import { createInMemoryPhrasesRepository, createInMemoryStudyRepository } from './modules/review';
 import { createInMemoryAdminRepository } from './modules/admin';
+import { createInMemoryFeedbackRepository } from './modules/feedback';
 import { createInMemoryInvitesRepository } from './modules/invites';
 
 /** Header the test resolver reads in place of a real session. */
@@ -57,6 +58,7 @@ export async function buildTestApp(
       study: createInMemoryStudyRepository(),
       admin: createInMemoryAdminRepository(),
       invites: createInMemoryInvitesRepository(),
+      feedback: createInMemoryFeedbackRepository(),
       ...repos,
     },
     queue,

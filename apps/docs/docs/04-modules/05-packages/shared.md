@@ -30,6 +30,10 @@ Kiểu domain, schema API/WebSocket (zod), catalog event.
 
 - (chưa có)
 
+## Mã mời, phản hồi và số liệu beta
+
+`invite.dto.ts`: `InviteCodeSchema` (12 ký tự Crockford, gõ thế nào cũng chuẩn hoá), `InviteIntentRequestSchema`, `CreateInviteRequestSchema` (mặc định 1 lần dùng, 30 ngày), `InviteSchema` (không có mã), `CreatedInviteSchema` (có `code`, chỉ lúc tạo); mã lỗi `INVITE_INVALID`. `feedback.dto.ts`: `CreateFeedbackRequestSchema` (`.strict()`, không có trường nào cho transcript/audio/token). `events.dto.ts`: thêm `app_installed_first_run`, `first_caption_shown`; `session_started` chỉ server ghi nên không nằm trong schema client. `admin.dto.ts`: khối `beta` (các số nullable khi chưa đủ dữ liệu).
+
 ## Follow-up
 
 Hợp đồng `FollowupRequestSchema` (channel, tone), `FollowupResponseSchema` (subject hoặc null, body, language) và mã lỗi `FOLLOWUP_FAILED` (502).

@@ -235,3 +235,25 @@ describe('sessions module', () => {
     });
   });
 });
+
+describe('session_started event (AC7)', () => {
+  it('records exactly one event for the owner, with the meeting language', async () => {
+    const sessions = createInMemorySessionsRepository();
+    const app = await buildTestApp({ repos: { sessions } });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/sessions',
+      headers: { [TEST_USER_HEADER]: ALICE },
+      payload: { title: 'Sync', assistLevel: 3 },
+    });
+    expect(sessions.startedEvents).toEqual([
+      {
+        userId: ALICE,
+        sessionId: res.json().id,
+        at: res.json().startedAt,
+        language: 'en',
+      },
+    ]);
+    await app.close();
+  });
+});

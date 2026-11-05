@@ -3,6 +3,7 @@
  * Command/event table: apps/docs/docs/04-modules/01-desktop/tauri-core.md
  */
 import { invoke } from '@tauri-apps/api/core';
+import { getVersion } from '@tauri-apps/api/app';
 import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { z } from 'zod';
 
@@ -154,7 +155,18 @@ export const HotkeyEvent = z.object({
 });
 export type HotkeyEvent = z.infer<typeof HotkeyEvent>;
 
+/** What the app tells the server about itself with a piece of feedback. Never anything about the person. */
+export interface AppInfo {
+  version: string;
+  os: string;
+}
+
 export const native = {
+  /** The app's version and the OS it runs on; falls back to placeholders rather than failing a report. */
+  appInfo: async (): Promise<AppInfo> => ({
+    version: await getVersion().catch(() => 'unknown'),
+    os: 'macOS',
+  }),
   sessionStart: (opts: SessionStartInput) =>
     invoke('session_start', { opts: SessionStartInput.parse(opts) }).then((v) =>
       SessionStartResult.parse(v),

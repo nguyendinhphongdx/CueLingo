@@ -17,12 +17,12 @@ Vòng đời cuộc họp: tạo, kết thúc, liệt kê, transcript.
 
 ## Interface
 
-| Endpoint                    | Kết quả                                                      |
-| --------------------------- | ------------------------------------------------------------ |
-| `POST /v1/sessions`         | Tạo `Session` trạng thái `live`                              |
-| `POST /v1/sessions/:id/end` | Trả `Session` trạng thái `ended`; gọi lại không tạo thêm job |
-| `GET /v1/sessions`          | `SessionList`, mới nhất trước                                |
-| `GET /v1/sessions/:id`      | `SessionDetail`, segment tăng dần theo `startMs`             |
+| Endpoint                    | Kết quả                                                                                                      |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `POST /v1/sessions`         | Tạo `Session` trạng thái `live` và ghi event `session_started` trong **cùng câu lệnh** (đo họp/tuần, D1, D7) |
+| `POST /v1/sessions/:id/end` | Trả `Session` trạng thái `ended`; gọi lại không tạo thêm job                                                 |
+| `GET /v1/sessions`          | `SessionList`, mới nhất trước                                                                                |
+| `GET /v1/sessions/:id`      | `SessionDetail`, segment tăng dần theo `startMs`                                                             |
 
 Tài nguyên không thuộc người dùng hiện tại trả `404`.
 

@@ -19,6 +19,8 @@ function payload(event: LearningEvent): Record<string, string | number> {
       return { action: event.action, level: event.level, language: event.language ?? 'en' };
     case 'translation_expanded':
     case 'recap_used':
+    case 'app_installed_first_run':
+    case 'first_caption_shown':
       return {};
   }
 }
@@ -52,6 +54,15 @@ export function createPostgresEventsRepository(sql: Sql): EventsRepository {
         }
 
         for (const event of events) {
+          // Activation events happen once per person: a resend (lost response, second device) is dropped.
+          if (event.type === 'app_installed_first_run' || event.type === 'first_caption_shown') {
+            await tx`
+              INSERT INTO events (id, user_id, session_id, type, payload, at)
+              SELECT ${randomUUID()}, ${userId}, ${event.sessionId ?? null}, ${event.type}, '{}'::jsonb, ${event.at}
+              WHERE NOT EXISTS (
+                SELECT 1 FROM events WHERE user_id = ${userId} AND type = ${event.type})`;
+            continue;
+          }
           await tx`
             INSERT INTO events (id, user_id, session_id, segment_id, type, payload, at)
             VALUES (

@@ -16,7 +16,8 @@ SDK client dùng chung cho desktop và web: auth, REST, stream phiên, hàng đ�
 
 ## Interface
 
-- `createClient({baseUrl, getToken})` → `{sessions, assist, review, events, stream}`
+- `createClient({baseUrl, getToken})` → `{sessions, assist, review, events, stream, glossary, feedback}`
+- `client.feedback.send(input)` → `POST /v1/feedback`, trả `{id, createdAt}`
 - `createRealtimeClient({url, token, sessionId, assistLevel, onMessage, onState, onError})`
   → `{connect, send, close, state}`
 - Trạng thái realtime: `idle | connecting | open | reconnecting | closed`; chỉ `open` sau message

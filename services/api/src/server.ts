@@ -22,6 +22,7 @@ import { createPostgresAccountRepository } from './modules/account';
 import { createDeviceService, createPostgresDeviceRepository } from './modules/device';
 import { createPostgresPhrasesRepository, createPostgresStudyRepository } from './modules/review';
 import { createPostgresAdminRepository } from './modules/admin';
+import { createPostgresFeedbackRepository } from './modules/feedback';
 import { createInviteGate, createPostgresInvitesRepository } from './modules/invites';
 import type { LanguageCode } from '@cuelingo/shared';
 
@@ -101,6 +102,7 @@ const app = await buildApp({
     study: studyRepository,
     admin: adminRepository,
     invites: invitesRepository,
+    feedback: createPostgresFeedbackRepository(sql),
   },
   queue,
   resolveUserId: authModule.resolveUserId,

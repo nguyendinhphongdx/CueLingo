@@ -80,3 +80,58 @@ describe('events module', () => {
     expect(append).not.toHaveBeenCalled();
   });
 });
+
+describe('activation events (AC7)', () => {
+  it('accepts app_installed_first_run and first_caption_shown, and no text rides along', async () => {
+    const append = vi.fn().mockResolvedValue(undefined);
+    const app = await buildTestApp({ repos: { events: { append } } });
+    const post = (events: unknown[]) =>
+      app.inject({
+        method: 'POST',
+        url: '/v1/events',
+        headers: { [TEST_USER_HEADER]: ALICE },
+        payload: { events },
+      });
+
+    const ok = await post([
+      { type: 'app_installed_first_run', at: AT },
+      { type: 'first_caption_shown', at: AT },
+    ]);
+    expect(ok.statusCode).toBe(204);
+
+    const withText = await post([{ type: 'first_caption_shown', at: AT, text: 'hello' }]);
+    expect(withText.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it('does not let a client write session_started: the server does', async () => {
+    const append = vi.fn().mockResolvedValue(undefined);
+    const app = await buildTestApp({ repos: { events: { append } } });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/events',
+      headers: { [TEST_USER_HEADER]: ALICE },
+      payload: { events: [{ type: 'session_started', at: AT }] },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(append).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it('refuses an assist suggestion for Vietnamese, which is not a learnable language (AC15)', async () => {
+    const append = vi.fn().mockResolvedValue(undefined);
+    const app = await buildTestApp({ repos: { events: { append } } });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/events',
+      headers: { [TEST_USER_HEADER]: ALICE },
+      payload: {
+        events: [
+          { type: 'assist_suggestion', action: 'applied', level: 1, language: 'vi', at: AT },
+        ],
+      },
+    });
+    expect(res.statusCode).toBe(400);
+    await app.close();
+  });
+});

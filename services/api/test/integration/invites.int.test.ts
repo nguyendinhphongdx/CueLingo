@@ -17,6 +17,7 @@ import {
   generateInviteCode,
   hashInviteCode,
 } from '../../src/modules/invites';
+import { createPostgresFeedbackRepository } from '../../src/modules/feedback';
 import { createPostgresPlacementRepository } from '../../src/modules/placement';
 import { createPostgresPrivacyRepository } from '../../src/modules/privacy';
 import {
@@ -74,6 +75,7 @@ describe('invite codes on real Postgres (AC1-AC5)', () => {
         admin: createPostgresAdminRepository(sql),
         settings: createPostgresSettingsRepository(sql),
         invites,
+        feedback: createPostgresFeedbackRepository(sql),
       },
       queue: createInMemoryQueue(),
       resolveUserId: authModule.resolveUserId,

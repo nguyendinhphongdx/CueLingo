@@ -5,6 +5,8 @@ import type { SessionsRepository } from './sessions.repository';
 /** The in-memory store also exposes its speaker rows so the in-memory speakers repository can share them. */
 export type InMemorySessionsRepository = SessionsRepository & {
   speakerRows: Array<Speaker & { sessionId: string }>;
+  /** What the Postgres repository writes as `session_started` events, kept here for tests to read. */
+  startedEvents: Array<{ userId: string; sessionId: string; at: string; language: string }>;
 };
 
 /** In-memory session and segment store for tests. */
@@ -12,10 +14,12 @@ export function createInMemorySessionsRepository(): InMemorySessionsRepository {
   const sessions: Array<Session & { userId: string }> = [];
   const segments: Array<StoredSegment & { sessionId: string }> = [];
   const speakerRows: Array<Speaker & { sessionId: string }> = [];
+  const startedEvents: InMemorySessionsRepository['startedEvents'] = [];
   const strip = ({ userId: _userId, ...session }: Session & { userId: string }): Session => session;
 
   return {
     speakerRows,
+    startedEvents,
     async list(userId) {
       return sessions
         .filter((row) => row.userId === userId && row.status !== 'deleted')
@@ -71,6 +75,12 @@ export function createInMemorySessionsRepository(): InMemorySessionsRepository {
         userId,
       };
       sessions.push(row);
+      startedEvents.push({
+        userId,
+        sessionId: row.id,
+        at: row.startedAt,
+        language: row.language,
+      });
       return strip(row);
     },
     async end(userId, id) {

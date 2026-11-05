@@ -18,7 +18,7 @@ title: Số liệu nội bộ
 ## Interface
 
 - Đọc `GET /v1/admin/metrics` qua web API client.
-- Chỉ số chữ lớn và bảng phiên ôn 14 ngày; không biểu đồ.
+- Chỉ số chữ lớn, khối **Beta** (số chưa đủ dữ liệu hiện "Chưa đủ dữ liệu", không phải 0) và bảng phiên ôn 14 ngày; không biểu đồ.
 
 ## Phụ thuộc
 

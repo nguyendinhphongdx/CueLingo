@@ -142,10 +142,19 @@ export function createPostgresSessionsRepository(sql: Sql): SessionsRepository {
       return row ?? null;
     },
     async create(userId, input) {
+      // One statement, so the `session_started` event and the meeting can never disagree (beta metrics).
       const [row] = await sql<SessionRow[]>`
-        INSERT INTO sessions (user_id, title, assist_level, language)
-        VALUES (${userId}, ${input.title ?? null}, ${input.assistLevel}, ${input.language ?? DEFAULT_LANGUAGE})
-        RETURNING id, title, started_at, ended_at, status, assist_level, language`;
+        WITH created AS (
+          INSERT INTO sessions (user_id, title, assist_level, language)
+          VALUES (${userId}, ${input.title ?? null}, ${input.assistLevel}, ${input.language ?? DEFAULT_LANGUAGE})
+          RETURNING id, title, started_at, ended_at, status, assist_level, language
+        ), started AS (
+          INSERT INTO events (id, user_id, session_id, type, payload, at)
+          SELECT gen_random_uuid(), ${userId}, created.id, 'session_started',
+            jsonb_build_object('language', created.language), created.started_at
+          FROM created
+        )
+        SELECT id, title, started_at, ended_at, status, assist_level, language FROM created`;
       return toSession(row!);
     },
     async end(userId, id) {

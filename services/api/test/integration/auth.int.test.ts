@@ -22,6 +22,7 @@ import { createPostgresDeviceRepository } from '../../src/modules/device';
 import { createPostgresAdminRepository } from '../../src/modules/admin';
 import { createPostgresSettingsRepository } from '../../src/modules/settings';
 import { createPostgresInvitesRepository } from '../../src/modules/invites';
+import { createPostgresFeedbackRepository } from '../../src/modules/feedback';
 import { startMigratedPostgres, type TestDatabase } from './postgres';
 
 /** AC3 + AC4: magic-link sign-in creates a session that the API accepts; no session means 401. */
@@ -66,6 +67,7 @@ describe('auth on real Postgres (AC3, AC4)', () => {
         admin: createPostgresAdminRepository(sql),
         settings: createPostgresSettingsRepository(sql),
         invites: createPostgresInvitesRepository(sql),
+        feedback: createPostgresFeedbackRepository(sql),
       },
       queue: createInMemoryQueue(),
       resolveUserId: authModule.resolveUserId,

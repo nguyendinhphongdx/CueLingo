@@ -30,6 +30,7 @@ import {
 import { createSpeakersModule, type SpeakersRepository } from './modules/speakers';
 import { createSessionsModule, type SessionsRepository } from './modules/sessions';
 import { createAdminModule, type AdminRepository } from './modules/admin';
+import { createFeedbackModule, type FeedbackRepository } from './modules/feedback';
 import { createInvitesModule, type InvitesRepository } from './modules/invites';
 import { createTranscribeModule, type TranscribeDeps } from './modules/transcribe';
 import { createSettingsModule, type SettingsRepository } from './modules/settings';
@@ -68,6 +69,7 @@ export interface AppDeps {
     speakers: SpeakersRepository;
     admin: AdminRepository;
     invites: InvitesRepository;
+    feedback: FeedbackRepository;
     settings: SettingsRepository;
   };
   queue: JobQueue;
@@ -150,6 +152,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   if (deps.authRoutes) await app.register(deps.authRoutes);
   await app.register(createDebriefModule(deps.repos.debrief).routes);
   await app.register(createEventsModule(deps.repos.events).routes, { prefix: '/v1/events' });
+  await app.register(createFeedbackModule(deps.repos.feedback).routes);
   await app.register(createGlossaryModule(deps.repos.glossary).routes, { prefix: '/v1/glossary' });
   await app.register(createPrivacyModule(deps.repos.privacy).routes);
   await app.register(createSettingsModule(deps.repos.settings).routes);

@@ -14,6 +14,7 @@ title: Admin metrics
 ## Phạm vi MVP
 
 - `GET /v1/admin/metrics`
+- Khối `beta` trong metrics: thời gian từ cài tới caption đầu (trung vị phút, theo người), họp/tuần/người, D1, D7, số phản hồi 30 ngày. Mỗi số `null` khi chưa đủ dữ liệu. Định nghĩa: D1 = tỉ lệ người đã mở app ≥ 2 ngày có `session_started` trong `[24h, 48h)` sau lần mở đầu; D7 = như vậy với `[7 ngày, 8 ngày)` cho người ≥ 8 ngày; UTC, cửa sổ tuyệt đối.
 - `isAdmin(userId)` cho module khác dùng chung allowlist (ví dụ [invites](./invites.md)).
 
 ## Interface

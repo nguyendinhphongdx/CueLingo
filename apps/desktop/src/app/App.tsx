@@ -10,7 +10,9 @@ import {
   PermissionsStep,
   shouldShowOnboarding,
 } from '../onboarding';
+import { FeedbackPage } from '../feedback';
 import { PrivacyPanel } from '../privacy';
+import { useActivationTelemetry } from '../telemetry';
 import { RecentSessions, SessionPanel } from '../session';
 import { PlacementSection } from '../study';
 import { CalendarHintCard, CalendarSettings } from '../calendar';
@@ -41,6 +43,7 @@ export function App() {
   const account = useMe();
   useSettingsSync();
   useSyncAssistLevel();
+  useActivationTelemetry(account.me?.id ?? null);
   const [view, setView] = useState('home');
   const [onboardingMode, setOnboardingMode] = useState<OnboardingMode>('auto');
 
@@ -144,6 +147,7 @@ function CurrentView({
       </>
     );
   }
+  if (view === 'feedback') return <FeedbackPage />;
   if (view === 'settings') {
     return (
       <>

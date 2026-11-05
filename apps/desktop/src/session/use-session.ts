@@ -8,6 +8,7 @@ import { refreshOnGlossaryChange } from './glossary-refresh';
 import { createSessionController } from './session-controller';
 import { sessionsApi } from './sessions-api';
 import { startTraySync } from './tray-sync';
+import { activation } from '../telemetry/instance';
 
 const controller = createSessionController({
   native,
@@ -15,6 +16,7 @@ const controller = createSessionController({
   hasCloudConsent: () => hasCloudConsent(),
   glossary: { list: insightsApi.listGlossary },
   createRealtime: createRealtimeClient,
+  onFirstCaption: (sessionId) => void activation.captionShown(sessionId),
   apiUrl: import.meta.env.VITE_API_URL || 'ws://localhost:4000',
   token: currentToken,
 });

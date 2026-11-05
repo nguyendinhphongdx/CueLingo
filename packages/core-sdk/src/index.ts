@@ -2,6 +2,7 @@
  * @cuelingo/core-sdk — typed client used by apps/desktop and apps/web. Apps never call fetch directly.
  * Design: apps/docs/docs/04-modules/05-packages/core-sdk.md
  */
+import { feedbackApi } from './feedback';
 import { followupApi } from './followup';
 import { glossaryApi } from './glossary';
 import { createHttp, type ClientOptions } from './http';
@@ -13,6 +14,7 @@ export function createClient(options: ClientOptions) {
   const http = createHttp(options);
   return {
     glossary: glossaryApi(http),
+    feedback: feedbackApi(http),
     ...transcribeApi(http),
     ...followupApi(http),
     ...sessionsApi(http),

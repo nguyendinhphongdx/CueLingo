@@ -17,6 +17,28 @@ const usd = new Intl.NumberFormat('vi-VN', {
 const valueOrDash = (value: number | null, format = number) =>
   value === null ? '—' : format.format(value);
 
+const percent = (value: number | null) =>
+  value === null ? null : `${number.format(value * 100)}%`;
+
+/** The beta gate numbers. A figure with no data yet says so instead of showing a misleading 0. */
+export function betaStats(beta: AdminMetrics['beta']): Array<[string, string | null]> {
+  return [
+    [
+      'Từ cài tới caption đầu · trung vị',
+      beta.medianMinutesToFirstCaption === null
+        ? null
+        : `${number.format(beta.medianMinutesToFirstCaption)} phút`,
+    ],
+    [
+      'Họp / tuần / người',
+      beta.meetingsPerUserWeek === null ? null : number.format(beta.meetingsPerUserWeek),
+    ],
+    ['D1', percent(beta.d1)],
+    ['D7', percent(beta.d7)],
+    ['Phản hồi · 30 ngày', number.format(beta.feedback30d)],
+  ];
+}
+
 export function AdminMetricsView({ metrics }: { metrics: AdminMetrics }) {
   const stats = [
     ['Người dùng hoạt động · 7 ngày', number.format(metrics.activeUsers7d)],
@@ -59,6 +81,22 @@ export function AdminMetricsView({ metrics }: { metrics: AdminMetrics }) {
                 <dt className="text-muted-foreground text-sm leading-5">{label}</dt>
                 <dd className="mt-2 text-3xl leading-none font-semibold tracking-tight tabular-nums">
                   {value}
+                </dd>
+              </CardContent>
+            </Card>
+          ))}
+        </dl>
+      </Section>
+      <Section title="Beta">
+        <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {betaStats(metrics.beta).map(([label, value]) => (
+            <Card key={label}>
+              <CardContent className="pt-5">
+                <dt className="text-muted-foreground text-sm leading-5">{label}</dt>
+                <dd className="mt-2 text-3xl leading-none font-semibold tracking-tight tabular-nums">
+                  {value ?? (
+                    <span className="text-muted-foreground text-base">Chưa đủ dữ liệu</span>
+                  )}
                 </dd>
               </CardContent>
             </Card>

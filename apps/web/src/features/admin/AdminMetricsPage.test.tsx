@@ -20,6 +20,13 @@ const metrics: AdminMetrics = {
   aiCostPerMeetingHourUsd: 0.042,
   reviewSessions14d: dates,
   debriefSuccessRate: 0.86,
+  beta: {
+    medianMinutesToFirstCaption: 4.5,
+    meetingsPerUserWeek: 1.5,
+    d1: 0.6,
+    d7: null,
+    feedback30d: 3,
+  },
 };
 
 describe('AdminMetricsView', () => {
@@ -31,5 +38,16 @@ describe('AdminMetricsView', () => {
     expect(markup).toContain('<caption class="sr-only">');
     expect(markup.match(/scope="row"/g) ?? []).toHaveLength(14);
     expect(markup).not.toMatch(/email|transcript/i);
+  });
+
+  it('shows the beta numbers and says so when there is not enough data (AC8)', () => {
+    const markup = renderToStaticMarkup(<AdminMetricsView metrics={metrics} />);
+    expect(markup).toContain('Từ cài tới caption đầu');
+    expect(markup).toContain('4,5 phút');
+    expect(markup).toContain('60%');
+    // d7 is null in the sample: no number, a plain note instead of 0%.
+    expect(markup).toContain('Chưa đủ dữ liệu');
+    expect(markup).toMatch(/D7<\/dt><dd[^>]*><span[^>]*>Chưa đủ dữ liệu/);
+    expect(markup).toContain('Phản hồi · 30 ngày');
   });
 });

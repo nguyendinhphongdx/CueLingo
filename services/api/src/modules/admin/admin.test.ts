@@ -19,6 +19,13 @@ const metrics: AdminMetrics = {
     return { date: date.toISOString().slice(0, 10), count: index };
   }),
   debriefSuccessRate: 0.75,
+  beta: {
+    medianMinutesToFirstCaption: 4.5,
+    meetingsPerUserWeek: 1.5,
+    d1: 0.6,
+    d7: 0.4,
+    feedback30d: 3,
+  },
 };
 
 describe('GET /v1/admin/metrics', () => {

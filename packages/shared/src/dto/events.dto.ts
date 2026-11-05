@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LanguageCodeSchema } from '../languages';
+import { LearnableLanguageSchema } from '../languages';
 
 /** Append-only learning events sent by clients. The server stamps the user id, never the client. */
 const base = { sessionId: z.uuid().optional(), at: z.iso.datetime() };
@@ -25,10 +25,14 @@ export const LearningEventSchema = z.discriminatedUnion('type', [
       type: z.literal('assist_suggestion'),
       action: z.enum(['applied', 'dismissed']),
       /** Language whose assist level was suggested; English when left out. */
-      language: LanguageCodeSchema.optional(),
+      language: LearnableLanguageSchema.optional(),
       level: z.union([z.literal(0), z.literal(1), z.literal(3), z.literal(4)]),
     })
     .strict(),
+  /** First time the desktop app was opened on this Mac (`at`), sent once after sign-in. Starts the activation clock. */
+  z.object({ ...base, type: z.literal('app_installed_first_run') }).strict(),
+  /** The first live caption this person saw in a real meeting. Carries no caption text. */
+  z.object({ ...base, type: z.literal('first_caption_shown') }).strict(),
 ]);
 export type LearningEvent = z.infer<typeof LearningEventSchema>;
 

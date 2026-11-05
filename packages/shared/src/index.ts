@@ -9,6 +9,7 @@ export * from './dto/assist.dto';
 export * from './dto/debrief.dto';
 export * from './dto/device.dto';
 export * from './dto/events.dto';
+export * from './dto/feedback.dto';
 export * from './dto/followup.dto';
 export * from './dto/glossary.dto';
 export * from './dto/invite.dto';

@@ -20,10 +20,13 @@ const EXPECTED_TABLES = [
   'device_codes',
   'device_tokens',
   'learner_languages',
+  'invites',
+  'invite_redemptions',
+  'feedback',
 ];
 
-/** Created by the latest migration (speaker labels only add constraints and indexes, no table). */
-const LATEST_TABLES: string[] = [];
+/** Created by the latest migration (feedback); the one before it only adds the invite tables. */
+const LATEST_TABLES: string[] = ['feedback'];
 
 describe('migrations (AC2)', () => {
   let db: TestDatabase;
@@ -58,15 +61,34 @@ describe('migrations (AC2)', () => {
       .map((r) => r.indexname)
       .sort();
 
+  const eventsIndex = async () =>
+    (
+      await sql<{ indexname: string }[]>`
+        SELECT indexname FROM pg_indexes
+        WHERE schemaname = 'public' AND indexname = 'events_type_user_at_idx'`
+    ).map((r) => r.indexname);
+
   it('rolls the last migration back and applies it again', async () => {
     expect(await speakerIndexes()).toEqual(['segments_speaker_idx', 'speakers_session_label_idx']);
+    expect(await eventsIndex()).toEqual(['events_type_user_at_idx']);
     dbmate(db.url, 'rollback');
     expect((await tables()).sort()).toEqual(
       EXPECTED_TABLES.filter((table) => !LATEST_TABLES.includes(table)).sort(),
     );
-    expect(await speakerIndexes()).toEqual([]);
+    expect(await eventsIndex()).toEqual([]);
+    // The migrations before it are untouched.
+    expect(await speakerIndexes()).toEqual(['segments_speaker_idx', 'speakers_session_label_idx']);
     dbmate(db.url, 'up');
     expect(await tables()).toHaveLength(EXPECTED_TABLES.length);
-    expect(await speakerIndexes()).toEqual(['segments_speaker_idx', 'speakers_session_label_idx']);
+    expect(await eventsIndex()).toEqual(['events_type_user_at_idx']);
+  });
+
+  it('rolls the invites migration back too', async () => {
+    dbmate(db.url, 'rollback');
+    dbmate(db.url, 'rollback');
+    expect(await tables()).not.toContain('invites');
+    expect(await tables()).not.toContain('invite_redemptions');
+    dbmate(db.url, 'up');
+    expect(await tables()).toHaveLength(EXPECTED_TABLES.length);
   });
 });

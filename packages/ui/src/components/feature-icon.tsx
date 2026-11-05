@@ -3,6 +3,7 @@ import {
   Bookmark,
   History,
   Languages,
+  MessageSquare,
   Mic,
   Settings,
   TrendingUp,
@@ -18,6 +19,7 @@ const icons: Record<FeatureIconName, LucideIcon> = {
   languages: Languages,
   progress: TrendingUp,
   settings: Settings,
+  feedback: MessageSquare,
 };
 
 export function FeatureIcon({ name, className }: { name: FeatureIconName; className?: string }) {

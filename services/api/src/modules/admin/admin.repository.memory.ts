@@ -16,6 +16,13 @@ const emptyMetrics = (now: Date): AdminMetrics => ({
     return { date: date.toISOString().slice(0, 10), count: 0 };
   }),
   debriefSuccessRate: null,
+  beta: {
+    medianMinutesToFirstCaption: null,
+    meetingsPerUserWeek: null,
+    d1: null,
+    d7: null,
+    feedback30d: 0,
+  },
 });
 
 export function createInMemoryAdminRepository(

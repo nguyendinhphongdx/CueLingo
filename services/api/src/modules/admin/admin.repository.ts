@@ -18,6 +18,14 @@ interface SummaryRow {
   debrief_success_rate: number | null;
 }
 
+interface BetaRow {
+  median_minutes_to_first_caption: number | null;
+  meetings_per_user_week: number | null;
+  d1: number | null;
+  d7: number | null;
+  feedback_30d: number;
+}
+
 interface ReviewDayRow {
   date: string;
   count: number;
@@ -41,21 +49,21 @@ export function createPostgresAdminRepository(sql: Sql): AdminRepository {
         ),
         meeting_stats AS (
           SELECT
-            count(*) FILTER (WHERE started_at >= ${now} - interval '7 days')::integer AS meetings_7d,
+            count(*) FILTER (WHERE started_at >= ${now}::timestamptz - interval '7 days')::integer AS meetings_7d,
             COALESCE(sum(EXTRACT(epoch FROM (ended_at - started_at)))
-              FILTER (WHERE started_at >= ${now} - interval '7 days' AND ended_at IS NOT NULL), 0)::float / 3600 AS meeting_hours_7d,
-            count(*) FILTER (WHERE started_at >= ${now} - interval '30 days')::integer AS meetings_30d,
+              FILTER (WHERE started_at >= ${now}::timestamptz - interval '7 days' AND ended_at IS NOT NULL), 0)::float / 3600 AS meeting_hours_7d,
+            count(*) FILTER (WHERE started_at >= ${now}::timestamptz - interval '30 days')::integer AS meetings_30d,
             COALESCE(sum(EXTRACT(epoch FROM (ended_at - started_at)))
-              FILTER (WHERE started_at >= ${now} - interval '30 days' AND ended_at IS NOT NULL), 0)::float / 3600 AS meeting_hours_30d,
-            COALESCE(sum(cost_usd) FILTER (WHERE started_at >= ${now} - interval '30 days'), 0)::float AS cost_30d,
-            count(*) FILTER (WHERE started_at >= ${now} - interval '30 days' AND ended_at IS NOT NULL)::integer AS ended_30d
+              FILTER (WHERE started_at >= ${now}::timestamptz - interval '30 days' AND ended_at IS NOT NULL), 0)::float / 3600 AS meeting_hours_30d,
+            COALESCE(sum(cost_usd) FILTER (WHERE started_at >= ${now}::timestamptz - interval '30 days'), 0)::float AS cost_30d,
+            count(*) FILTER (WHERE started_at >= ${now}::timestamptz - interval '30 days' AND ended_at IS NOT NULL)::integer AS ended_30d
           FROM sessions WHERE status <> 'deleted'
         ),
         first_debrief AS (
           SELECT sessions.id, sessions.ended_at, min(debriefs.created_at) AS created_at
           FROM sessions LEFT JOIN debriefs ON debriefs.session_id = sessions.id
           WHERE sessions.status <> 'deleted' AND sessions.ended_at IS NOT NULL
-            AND sessions.started_at >= ${now} - interval '30 days'
+            AND sessions.started_at >= ${now}::timestamptz - interval '30 days'
           GROUP BY sessions.id, sessions.ended_at
         ),
         debrief_stats AS (
@@ -71,7 +79,7 @@ export function createPostgresAdminRepository(sql: Sql): AdminRepository {
         )
         SELECT
           (SELECT count(DISTINCT user_id)::integer FROM activity
-            WHERE at >= ${now} - interval '7 days') AS active_users_7d,
+            WHERE at >= ${now}::timestamptz - interval '7 days') AS active_users_7d,
           meeting_stats.meetings_7d,
           meeting_stats.meeting_hours_7d,
           meeting_stats.meetings_30d,
@@ -103,6 +111,52 @@ export function createPostgresAdminRepository(sql: Sql): AdminRepository {
           COALESCE(reviews.count, 0)::integer AS count
         FROM days LEFT JOIN reviews USING (day) ORDER BY days.day`;
 
+      // Beta numbers. A person's clock starts at their first app launch; UTC and absolute 24-hour windows (spec G5).
+      const [beta] = await sql<BetaRow[]>`
+        WITH installs AS (
+          SELECT user_id, min(at) AS installed_at FROM events
+          WHERE type = 'app_installed_first_run' GROUP BY user_id
+        ),
+        first_caption AS (
+          SELECT user_id, min(at) AS at FROM events
+          WHERE type = 'first_caption_shown' GROUP BY user_id
+        ),
+        starts AS (
+          SELECT user_id, at FROM events WHERE type = 'session_started'
+        ),
+        to_caption AS (
+          SELECT EXTRACT(epoch FROM (first_caption.at - installs.installed_at)) / 60 AS minutes
+          FROM installs JOIN first_caption USING (user_id)
+          WHERE first_caption.at >= installs.installed_at
+        ),
+        d1_users AS (
+          SELECT installs.user_id,
+            EXISTS (SELECT 1 FROM starts WHERE starts.user_id = installs.user_id
+              AND starts.at >= installs.installed_at + interval '24 hours'
+              AND starts.at < installs.installed_at + interval '48 hours') AS returned
+          FROM installs WHERE installs.installed_at <= ${now}::timestamptz - interval '2 days'
+        ),
+        d7_users AS (
+          SELECT installs.user_id,
+            EXISTS (SELECT 1 FROM starts WHERE starts.user_id = installs.user_id
+              AND starts.at >= installs.installed_at + interval '7 days'
+              AND starts.at < installs.installed_at + interval '8 days') AS returned
+          FROM installs WHERE installs.installed_at <= ${now}::timestamptz - interval '8 days'
+        )
+        SELECT
+          (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY minutes)::float FROM to_caption)
+            AS median_minutes_to_first_caption,
+          (SELECT CASE WHEN count(*) > 0
+              THEN (SELECT count(*) FROM starts WHERE at >= ${now}::timestamptz - interval '7 days'
+                      AND user_id IN (SELECT user_id FROM installs))::float / count(*)
+              END FROM installs) AS meetings_per_user_week,
+          (SELECT CASE WHEN count(*) > 0 THEN count(*) FILTER (WHERE returned)::float / count(*) END
+            FROM d1_users) AS d1,
+          (SELECT CASE WHEN count(*) > 0 THEN count(*) FILTER (WHERE returned)::float / count(*) END
+            FROM d7_users) AS d7,
+          (SELECT count(*)::integer FROM feedback
+            WHERE created_at >= ${now}::timestamptz - interval '30 days') AS feedback_30d`;
+
       const row = summary!;
       return {
         generatedAt: now.toISOString(),
@@ -118,6 +172,13 @@ export function createPostgresAdminRepository(sql: Sql): AdminRepository {
         aiCostPerMeetingHourUsd: row.ai_cost_per_meeting_hour_usd,
         reviewSessions14d: reviewDays,
         debriefSuccessRate: row.debrief_success_rate,
+        beta: {
+          medianMinutesToFirstCaption: beta!.median_minutes_to_first_caption,
+          meetingsPerUserWeek: beta!.meetings_per_user_week,
+          d1: beta!.d1,
+          d7: beta!.d7,
+          feedback30d: beta!.feedback_30d,
+        },
       };
     },
   };

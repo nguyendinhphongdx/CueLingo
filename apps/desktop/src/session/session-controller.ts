@@ -66,6 +66,8 @@ interface SessionControllerOptions {
   /** Whether the person agreed to send meeting audio to the cloud (ADR 0014); without it a cloud-language meeting does not start. */
   hasCloudConsent?: () => boolean;
   createRealtime(options: RealtimeClientOptions): RealtimeClient;
+  /** Called once per meeting, with its id, when the first final caption of a real meeting appears (never for the demo). */
+  onFirstCaption?: (sessionId: string) => void;
   now?: () => number;
   apiUrl?: string;
   token?: string | (() => string);
@@ -195,6 +197,7 @@ export function createSessionController({
   glossary,
   hasCloudConsent = () => false,
   createRealtime,
+  onFirstCaption,
   now = Date.now,
   apiUrl = 'ws://localhost:4000',
   token = '',
@@ -237,6 +240,7 @@ export function createSessionController({
   let refreshPending = false;
   /** Ids of final sentences published in this meeting. */
   const finalIds = new Set<string>();
+  let firstCaptionReported = false;
   /** Recognised text of the latest sentences per stream, sent as context for the next upload. */
   const recentTexts: Record<'system' | 'mic', { startMs: number; text: string }[]> = {
     system: [],
@@ -269,7 +273,17 @@ export function createSessionController({
   function publish(input: TranscriptEvent) {
     const event = { ...input, language: input.language ?? meetingLanguage };
     transcriptById.set(event.segmentId, event);
-    if (!event.partial && event.text !== UNRECOGNISED_TEXT) finalIds.add(event.segmentId);
+    if (!event.partial && event.text !== UNRECOGNISED_TEXT) {
+      finalIds.add(event.segmentId);
+      if (!firstCaptionReported && activeSessionId) {
+        firstCaptionReported = true;
+        try {
+          onFirstCaption?.(activeSessionId);
+        } catch {
+          // Counting must never get in the way of a caption.
+        }
+      }
+    }
     void native.publishTranscript(event).catch(fail);
   }
 
@@ -623,6 +637,7 @@ export function createSessionController({
       }
       meetingLanguage = language;
       finalIds.clear();
+      firstCaptionReported = false;
       recentTexts.system = [];
       recentTexts.mic = [];
       speakerRegistry.clear();
