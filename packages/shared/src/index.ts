@@ -4,6 +4,7 @@
  */
 export * from './dto/account.dto';
 export * from './dto/admin.dto';
+export * from './dto/agent.dto';
 export * from './dto/assist-suggestion.dto';
 export * from './dto/assist.dto';
 export * from './dto/debrief.dto';

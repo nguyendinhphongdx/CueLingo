@@ -38,6 +38,22 @@ Kiểu domain, schema API/WebSocket (zod), catalog event.
 
 Hợp đồng `FollowupRequestSchema` (channel, tone), `FollowupResponseSchema` (subject hoặc null, body, language) và mã lỗi `FOLLOWUP_FAILED` (502).
 
+## Trợ lý AI (agent)
+
+`dto/agent.dto.ts` ([ADR 0018](../../08-adr/0018-agent-harness.md), [ADR 0019](../../08-adr/0019-ai-generated-ui.md)):
+
+| Thành phần                                                                 | Nội dung                                                                                                                                                                                                          |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ConversationSchema`, `ConversationListSchema`, `ConversationDetailSchema` | `{id, title ≤ 120, language, createdAt, updatedAt}`; list là `{items}`; detail kèm `messages` cũ → mới. `CreateConversationRequestSchema` (`language?`), `RenameConversationRequestSchema` (`title`)              |
+| `MessageSchema`                                                            | `{id, conversationId, seq, role: user \| assistant, parts, status: streaming \| complete \| stopped \| error \| limited, createdAt}`                                                                              |
+| `MessagePartSchema`                                                        | Union theo `type`: `text`, `tool_step {callId, tool, status: running \| ok \| error, summary?}`, `card {card}`                                                                                                    |
+| `SendMessageRequestSchema`                                                 | `{content 1–4000 sau trim, language?}` (`.strict()`, không có `userId`)                                                                                                                                           |
+| `AgentStreamEventSchema`                                                   | Một sự kiện SSE của một lượt: `status{thinking}`, `text_delta`, `tool_call`, `tool_result{ok, summary?}`, `card`, `done{status: complete \| stopped \| limited \| error}`, `error{code}`                          |
+| `AgentCardSchema`                                                          | Union theo `kind`, mỗi thẻ là `{kind, data}`: `flashcards`, `cloze` (câu có `___`), `quiz_choice` (`answerIndex` thuộc `options`), `compare_table` (mỗi hàng đủ số cột), `phrase_list`. Không có HTML hay URL ảnh |
+| `AgentQuotaSchema`                                                         | `{turns, tokens, costUsd}` mỗi mục `{used, limit}` cộng `resetsAt`                                                                                                                                                |
+
+`phrase.dto.ts`: `SavePhraseRequest.context?` (≤ 500, câu chứa cụm từ khi lưu từ chat) và `normalizePhrase` (gộp khoảng trắng, chữ thường; chuyển từ `phrases.service` để web và API cùng một cách chuẩn hoá, kiểm "Đã lưu"). Mã lỗi mới: `AGENT_QUOTA_EXCEEDED` (429), `AGENT_DISABLED` (503), `AGENT_FAILED` (502); khi hội thoại đang bận dùng `CONFLICT` (409).
+
 ## Ngôn ngữ họp: Anh, Nhật, Hàn, Trung, Việt
 
 `SUPPORTED_LANGUAGES` có năm mục. `ja`, `ko`, `zh`, `vi` đều `recognition: 'cloud'` ([ADR 0014](../../08-adr/0014-cloud-stt-for-vietnamese.md), [ADR 0016](../../08-adr/0016-cloud-stt-for-japanese-korean-chinese.md)); chỉ `en` nhận dạng trên máy. `translates` (có dịch từng câu sang tiếng Việt) và `learnable` (có khối học và ôn tập) là hai cờ độc lập: `ko` và `zh` dịch nhưng không học, `vi` không dịch và không học, `ja` dịch và học. Mỗi mục có `sttHint` (chỉ dẫn viết đúng chữ cho prompt nhận dạng, ví dụ tiếng Trung giản thể) và nhãn tuỳ chọn dạng "Tiếng Nhật · 日本語".

@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { LearnableLanguageSchema } from '../languages';
 
+/** One spelling per phrase: collapse whitespace and lowercase, so "Follow  UP" and "follow up" are one row. */
+export const normalizePhrase = (phrase: string): string =>
+  phrase.replace(/\s+/g, ' ').toLowerCase();
+
 /** Phrase Bank: phrases the user saved (from a debrief or a lookup) so they can be reviewed later. */
 export const SavePhraseRequestSchema = z
   .object({
@@ -10,6 +14,8 @@ export const SavePhraseRequestSchema = z
     segmentId: z.uuid().optional(),
     /** Used when the phrase is not tied to a meeting; a meeting's own language wins. */
     language: LearnableLanguageSchema.optional(),
+    /** The sentence the phrase was read in (assistant chat); kept as the review context when no meeting segment exists. */
+    context: z.string().trim().max(500).optional(),
   })
   .strict();
 export type SavePhraseRequest = z.infer<typeof SavePhraseRequestSchema>;
