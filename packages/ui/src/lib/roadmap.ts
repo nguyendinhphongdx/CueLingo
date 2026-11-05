@@ -5,7 +5,15 @@
 export type FeatureStatus = 'ready' | 'soon';
 export type FeatureGroup = 'meeting' | 'learn' | 'app';
 export type FeatureIconName =
-  'mic' | 'history' | 'review' | 'bookmark' | 'languages' | 'progress' | 'settings' | 'feedback';
+  | 'mic'
+  | 'history'
+  | 'review'
+  | 'bookmark'
+  | 'languages'
+  | 'progress'
+  | 'settings'
+  | 'feedback'
+  | 'assistant';
 
 export interface Feature {
   id: string;
@@ -57,6 +65,20 @@ export const features: Feature[] = [
       'Bài nghe–gõ với giọng đọc tiếng Anh',
     ],
     webPath: '/review',
+  },
+  {
+    id: 'assistant',
+    label: 'Trợ lý AI',
+    group: 'learn',
+    icon: 'assistant',
+    status: { desktop: 'soon', web: 'soon' },
+    summary: 'Hỏi trợ lý về tiếng Anh công sở và chuẩn bị cho cuộc họp (thử nghiệm).',
+    bullets: [
+      'Giải thích từ, câu và cách diễn đạt, có ví dụ',
+      'Nhấp đúp vào một từ để tra nghĩa, nghe và lưu vào Cụm từ',
+      'Tạo thẻ ghi nhớ, điền chỗ trống và câu hỏi trắc nghiệm ngay trong cuộc trò chuyện',
+    ],
+    webPath: '/assistant',
   },
   {
     id: 'phrases',

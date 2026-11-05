@@ -4,6 +4,7 @@ import {
   History,
   Languages,
   MessageSquare,
+  Sparkles,
   Mic,
   Settings,
   TrendingUp,
@@ -20,6 +21,7 @@ const icons: Record<FeatureIconName, LucideIcon> = {
   progress: TrendingUp,
   settings: Settings,
   feedback: MessageSquare,
+  assistant: Sparkles,
 };
 
 export function FeatureIcon({ name, className }: { name: FeatureIconName; className?: string }) {
