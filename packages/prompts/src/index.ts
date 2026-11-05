@@ -27,3 +27,5 @@ export { sttV4Fixtures } from './stt/fixtures/cases-v4';
 export { sttV2Fixtures } from './stt/fixtures/cases-v2';
 export * from './followup/v1';
 export { followupFixtures } from './followup/fixtures/cases';
+export * from './agent/v1';
+export { agentFixtures } from './agent/fixtures/cases';
