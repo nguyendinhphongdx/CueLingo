@@ -20,7 +20,8 @@ Danh tính và đăng nhập bằng **Better Auth** tự host trên Postgres ([A
 
 - `GET|POST /api/auth/*` — API của Better Auth (ví dụ `POST /api/auth/sign-in/magic-link`, `GET /api/auth/magic-link/verify`, `GET /api/auth/get-session`, `POST /api/auth/sign-out`).
 - Hook `onRequest` trong `lib/auth.ts`: bỏ qua `/healthz` và `/api/auth/*`; còn lại yêu cầu session.
-- `createAuthModule(config, mailer?)` → `{ auth, routes, resolveUserId }`.
+- `createAuthModule(config, mailer?, inviteGate?)` → `{ auth, routes, resolveUserId }`.
+- Khi `INVITES_REQUIRED`, `user.validateUserInfo` chặn việc **tạo user mới** nếu thiếu mã mời hợp lệ (cookie `cl_invite`); xem [invites](./invites.md). Người đã có tài khoản không bị hỏi.
 - Client: `createAuthClient` từ `better-auth/react` (web, [scaffold](../../05-engineering/scaffold/04-web-nextjs.md)).
 
 ## Phụ thuộc

@@ -14,6 +14,7 @@ title: Admin metrics
 ## Phạm vi MVP
 
 - `GET /v1/admin/metrics`
+- `isAdmin(userId)` cho module khác dùng chung allowlist (ví dụ [invites](./invites.md)).
 
 ## Interface
 

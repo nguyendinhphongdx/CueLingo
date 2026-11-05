@@ -1,6 +1,10 @@
+import { ApiError } from '@cuelingo/core-sdk';
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
+import { INVITE_INVALID_AUTH_ERROR } from '@cuelingo/shared';
 import { authClient } from '../../lib/auth-client';
+import { client } from '../../lib/client';
+import { INVITE_ERROR_MESSAGE } from './invite-error';
 
 /** `/login?app=1` is how the desktop app sends people here: after signing in they go to the hand-off page. */
 export const APP_SIGN_IN_PATH = '/app-auth';
@@ -11,9 +15,24 @@ export const POPUP_CHANNEL = 'cuelingo-auth';
 /** How long to wait for someone to finish in the Google window before letting them try again. */
 const POPUP_TIMEOUT_MS = 3 * 60 * 1000;
 
+/** Remembers a typed code on the server so the sign-in that follows can use it. No code, no call. */
+async function rememberInvite(code: string): Promise<void> {
+  if (!code.trim()) return;
+  try {
+    await client.invites.intent(code.trim());
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 429) {
+      throw new Error('Bạn thử quá nhiều lần, vui lòng đợi ít phút rồi thử lại', { cause: error });
+    }
+    throw new Error(INVITE_ERROR_MESSAGE, { cause: error });
+  }
+}
+
 const fromDesktop = () => new URLSearchParams(window.location.search).get('app') === '1';
 const redirectTarget = () =>
   `${window.location.origin}${fromDesktop() ? APP_SIGN_IN_PATH : '/glossary'}`;
+/** Where Better Auth sends people when it refuses them; keeps `?app=1` so the desktop hand-off survives. */
+const errorTarget = () => `${window.location.origin}/login${fromDesktop() ? '?app=1' : ''}`;
 
 /** A centred window for Google's account chooser. Must run inside the click so browsers allow it. */
 function openPopup(): Window | null {
@@ -35,22 +54,35 @@ function openPopup(): Window | null {
  */
 export function useLogin() {
   const [popupOpen, setPopupOpen] = useState(false);
+  const [popupError, setPopupError] = useState<string | null>(null);
   const popup = useRef<Window | null>(null);
 
   const magicLink = useMutation({
-    mutationFn: async (email: string) => {
-      const result = await authClient.signIn.magicLink({ email, callbackURL: redirectTarget() });
+    mutationFn: async ({ email, code }: { email: string; code: string }) => {
+      await rememberInvite(code);
+      const result = await authClient.signIn.magicLink({
+        email,
+        callbackURL: redirectTarget(),
+        errorCallbackURL: errorTarget(),
+      });
       if (result.error) throw new Error('Không gửi được liên kết đăng nhập, vui lòng thử lại');
     },
   });
 
   const google = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (code: string) => {
       const opened = openPopup();
+      try {
+        await rememberInvite(code);
+      } catch (error) {
+        opened?.close();
+        throw error;
+      }
       if (!opened) {
         const result = await authClient.signIn.social({
           provider: 'google',
           callbackURL: redirectTarget(),
+          errorCallbackURL: errorTarget(),
         });
         if (result.error) throw new Error('Không đăng nhập được bằng Google, vui lòng thử lại');
         return;
@@ -61,6 +93,7 @@ export function useLogin() {
       const result = await authClient.signIn.social({
         provider: 'google',
         callbackURL: `${window.location.origin}${POPUP_DONE_PATH}`,
+        errorCallbackURL: `${window.location.origin}${POPUP_DONE_PATH}`,
         disableRedirect: true,
       });
       const url = result.data?.url;
@@ -78,17 +111,18 @@ export function useLogin() {
   useEffect(() => {
     if (!popupOpen) return;
     let finished = false;
-    const finish = (ok: boolean) => {
+    const finish = (ok: boolean, error?: string) => {
       if (finished) return;
       finished = true;
       popup.current?.close();
       setPopupOpen(false);
+      if (!ok && error === INVITE_INVALID_AUTH_ERROR) setPopupError(INVITE_ERROR_MESSAGE);
       if (ok) window.location.href = redirectTarget();
     };
     const channel =
       typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(POPUP_CHANNEL);
     channel?.addEventListener('message', (event) => {
-      if (event.data?.type === POPUP_MESSAGE) finish(Boolean(event.data.ok));
+      if (event.data?.type === POPUP_MESSAGE) finish(Boolean(event.data.ok), event.data.error);
     });
     const watcher = window.setInterval(async () => {
       const { data } = await authClient.getSession().catch(() => ({ data: null }));
@@ -109,6 +143,6 @@ export function useLogin() {
     sent: magicLink.isSuccess,
     signInWithGoogle: google.mutate,
     googleWaiting: popupOpen,
-    error: magicLink.error?.message ?? google.error?.message ?? null,
+    error: magicLink.error?.message ?? google.error?.message ?? popupError,
   };
 }

@@ -34,6 +34,7 @@ erDiagram
 | `user_lexicon`                                                      | Trạng thái FSRS receptive/productive, giai đoạn, ngữ cảnh gốc                                                                                                 | api/learner, workers/learner-recompute |
 | `debriefs`                                                          | Kết quả debrief, có phiên bản và `prompt_version`                                                                                                             | workers/debrief-job                    |
 | `review_logs`                                                       | Kết quả từng lần ôn                                                                                                                                           | api/phrases-review                     |
+| `invites` · `invite_redemptions`                                    | Mã mời beta: chỉ lưu SHA-256, số lần dùng, hạn, thu hồi; mỗi người dùng một lần tiêu mã                                                                       | api/invites, api/auth (cổng đăng ký)   |
 
 ## Quy tắc
 

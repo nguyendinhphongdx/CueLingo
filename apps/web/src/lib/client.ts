@@ -25,6 +25,11 @@ import {
   TtsRequestSchema,
   DeleteMyDataRequestSchema,
   AdminMetricsSchema,
+  CreateInviteRequestSchema,
+  CreatedInviteSchema,
+  InviteIntentRequestSchema,
+  InviteListSchema,
+  type CreateInviteInput,
   DeviceCodeResponseSchema,
   UpdateMeRequestSchema,
   UpdateUserSettingsSchema,
@@ -191,6 +196,22 @@ export const client = {
     request('GET', `/v1/progress?language=${language}`, ProgressSchema),
   admin: {
     metrics: () => request('GET', '/v1/admin/metrics', AdminMetricsSchema),
+    invites: {
+      list: () => request('GET', '/v1/admin/invites', InviteListSchema),
+      create: (input: CreateInviteInput) =>
+        request(
+          'POST',
+          '/v1/admin/invites',
+          CreatedInviteSchema,
+          CreateInviteRequestSchema.parse(input),
+        ),
+      revoke: (id: string) => request('DELETE', `/v1/admin/invites/${id}`, null),
+    },
+  },
+  /** Asks the API to remember a typed invite code for the sign-in that follows (sets an httpOnly cookie). */
+  invites: {
+    intent: (code: string) =>
+      request('POST', '/v1/invites/intent', null, InviteIntentRequestSchema.parse({ code })),
   },
   privacy: {
     export: () => request('GET', '/v1/me/export', ExportSchema),

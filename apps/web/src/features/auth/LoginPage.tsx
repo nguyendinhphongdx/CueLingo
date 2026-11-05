@@ -10,19 +10,25 @@ import {
 } from '@cuelingo/ui/components/card';
 import { Input } from '@cuelingo/ui/components/input';
 import { Logo } from '@cuelingo/ui/components/logo';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { GOOGLE_ENABLED, IS_DEV } from '../../lib/config';
 import { GoogleIcon } from './GoogleIcon';
+import { inviteErrorFromUrl } from './invite-error';
 import { useLogin } from './use-login';
 
 /** Passwordless sign-in: a magic link by email, plus Google when it is configured (US-01). */
 export function LoginPage() {
   const { sendLink, sending, sent, signInWithGoogle, googleWaiting, error } = useLogin();
   const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [refused, setRefused] = useState<string | null>(null);
+
+  // Better Auth sends people back here with ?error=invite_invalid when it declines to create an account.
+  useEffect(() => setRefused(inviteErrorFromUrl(window.location.search)), []);
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (email.trim()) sendLink(email.trim());
+    if (email.trim()) sendLink({ email: email.trim(), code });
   };
 
   return (
@@ -50,6 +56,15 @@ export function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 aria-label="Email"
               />
+              <Input
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                placeholder="Mã mời (nếu bạn mới dùng)"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                aria-label="Mã mời"
+              />
               <Button type="submit" className="min-h-11 w-full" disabled={sending}>
                 {sending ? 'Đang gửi…' : 'Gửi liên kết đăng nhập'}
               </Button>
@@ -66,9 +81,9 @@ export function LoginPage() {
                 )}
               </p>
             )}
-            {error && (
+            {(error ?? refused) && (
               <p role="alert" className="text-destructive text-sm">
-                {error}
+                {error ?? refused}
               </p>
             )}
 
@@ -78,7 +93,7 @@ export function LoginPage() {
                 variant="outline"
                 className="min-h-11 w-full gap-2.5"
                 disabled={googleWaiting}
-                onClick={() => signInWithGoogle()}
+                onClick={() => signInWithGoogle(code)}
               >
                 <GoogleIcon />
                 {googleWaiting ? 'Đang chờ cửa sổ Google…' : 'Tiếp tục với Google'}

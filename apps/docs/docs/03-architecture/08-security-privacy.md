@@ -22,6 +22,11 @@ Dữ liệu họp là dữ liệu nhạy cảm của doanh nghiệp người dù
 | Team admin / L&D (giai đoạn Scale) | Chỉ số tổng hợp, ẩn danh; **không** xem transcript hay câu nói của nhân viên |
 | Nhân viên vận hành                 | Không truy cập transcript, trừ khi người dùng gửi kèm báo cáo lỗi            |
 
+## Mã mời (beta kín)
+
+- Tài khoản mới cần mã mời hợp lệ ở mọi đường đăng ký (email, Google, desktop qua web). Mã lưu dạng SHA-256, hiện bản rõ một lần cho admin, ~60 bit ngẫu nhiên, giới hạn 10 lần thử/10 phút/IP, mọi lý do từ chối dùng chung một thông báo.
+- Cookie `cl_invite`: httpOnly, `SameSite=Lax`, `Secure` ở production, sống 30 phút; header `cookie` bị che trong log.
+
 ## Pháp lý
 
 - Chính sách quyền riêng tư và điều khoản theo Nghị định 13/2023/NĐ-CP (Việt Nam) và GDPR (nếu có người dùng EU), phải xong trước beta.

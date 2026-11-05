@@ -7,8 +7,8 @@ import { POPUP_CHANNEL, POPUP_MESSAGE } from './use-login';
 /** The last page of the Google popup: tell the login page it is done, then close. */
 export function AuthPopupDonePage() {
   useEffect(() => {
-    const failed = new URLSearchParams(window.location.search).has('error');
-    const message = { type: POPUP_MESSAGE, ok: !failed };
+    const error = new URLSearchParams(window.location.search).get('error');
+    const message = { type: POPUP_MESSAGE, ok: error === null, error: error ?? undefined };
     if (typeof BroadcastChannel !== 'undefined') {
       const channel = new BroadcastChannel(POPUP_CHANNEL);
       channel.postMessage(message);
