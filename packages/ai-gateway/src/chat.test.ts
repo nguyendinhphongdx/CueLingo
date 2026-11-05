@@ -132,6 +132,21 @@ describe('ai-gateway agent.chat', () => {
     expect(calls[0]).toMatchObject({ ok: false });
   });
 
+  it('records an estimated usage when the stream is aborted before it finishes', async () => {
+    const controller = new AbortController();
+    const calls: AiCallRecord[] = [];
+    const streamChat: StreamChatFn = async function* () {
+      yield { type: 'text_delta', text: 'a'.repeat(40) };
+      controller.abort();
+      throw new Error('aborted');
+    };
+    const long = { ...input, messages: [{ role: 'user' as const, content: 'b'.repeat(400) }] };
+    await collect(make(streamChat, calls).chat({ ...long, signal: controller.signal }));
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toMatchObject({ ok: false, outputTokens: 10 });
+    expect(calls[0]!.inputTokens).toBeGreaterThanOrEqual(100);
+  });
+
   it('never puts message content in the call record', async () => {
     const calls: AiCallRecord[] = [];
     const secret = 'my private sentence';

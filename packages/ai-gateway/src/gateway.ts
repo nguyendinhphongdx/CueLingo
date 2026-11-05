@@ -458,6 +458,7 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
           ...context,
         };
         let produced = false;
+        let received = 0;
         try {
           const stepSignal = AbortSignal.any([
             AbortSignal.timeout(config.timeoutMs),
@@ -480,6 +481,7 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
               if (!produced) record.firstTokenMs = Math.round(performance.now() - started);
               produced = true;
             }
+            if (part.type === 'text_delta') received += part.text.length;
             yield part;
           }
           if (!record.ok) throw new Error('stream ended without a finish part');
@@ -489,6 +491,12 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
           lastError = error;
           if (produced) break;
         } finally {
+          if (!record.ok && signal?.aborted && record.inputTokens === undefined) {
+            // Stop must not dodge the cost: the provider bills what was read, so estimate it (about 4 chars/token).
+            const sent = messages.reduce((sum, m) => sum + JSON.stringify(m).length, system.length);
+            record.inputTokens = Math.ceil(sent / 4);
+            record.outputTokens = Math.ceil(received / 4);
+          }
           record.latencyMs = Math.round(performance.now() - started);
           void Promise.resolve()
             .then(() => options.onCall?.(record))
