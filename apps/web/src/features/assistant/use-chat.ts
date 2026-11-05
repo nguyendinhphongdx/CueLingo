@@ -60,6 +60,7 @@ export function useChat({
       abort.current = controller;
 
       let id = conversationId;
+      let createdId: string | null = null;
       let started = false;
       let failure: unknown = null;
       let draft = emptyDraft();
@@ -76,8 +77,8 @@ export function useChat({
           const created = await client.conversations.create({ language });
           id = created.id;
           setPending((p) => (p ? { ...p, targetId: created.id } : p));
+          createdId = created.id;
           void queryClient.invalidateQueries({ queryKey: CONVERSATIONS_KEY });
-          onCreated(created.id);
         }
         await client.agent.sendMessage(
           id,
@@ -130,6 +131,9 @@ export function useChat({
       setPending(null);
       abort.current = null;
       busy.current = false;
+      // Moving to the new conversation's address remounts the page, which would abort the stream:
+      // do it only once the turn is over and the stored conversation is already in the cache.
+      if (createdId) onCreated(createdId);
       return true;
     },
     [conversationId, language, onCreated, queryClient, stored],
