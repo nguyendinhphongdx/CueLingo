@@ -89,7 +89,9 @@ export function createAgentService(deps: AgentServiceDeps) {
   const clock = deps.clock ?? (() => new Date());
   const registry = createToolRegistry<CoreCapabilities>();
   const ready = registry.register(corePlugin);
-  // One turn at a time per conversation. In memory is enough while the API is a single container (ADR 0011).
+  // One running turn per user, whatever the conversation: the daily quota is checked before the user message is
+  // stored, so parallel turns would all pass the same check. In memory is enough while the API is a single
+  // container (ADR 0011).
   const running = new Set<string>();
 
   async function usageOf(userId: string): Promise<{ usage: AgentUsage; resetsAt: Date }> {
@@ -115,13 +117,10 @@ export function createAgentService(deps: AgentServiceDeps) {
       if (!deps.enabled || !deps.model) {
         throw new AppError(ErrorCode.AgentDisabled, 'The assistant is turned off');
       }
-      // The key holds the user too, so probing someone else's conversation id never reveals that it is busy.
-      const lockKey = `${userId}:${conversationId}`;
+      // Keyed by user only, so probing someone else's conversation id never reveals that it is busy.
+      const lockKey = userId;
       if (running.has(lockKey)) {
-        throw new AppError(
-          ErrorCode.Conflict,
-          'The assistant is still answering this conversation',
-        );
+        throw new AppError(ErrorCode.Conflict, 'The assistant is still answering you');
       }
       running.add(lockKey);
 
@@ -163,7 +162,7 @@ export function createAgentService(deps: AgentServiceDeps) {
         const pump = async (): Promise<void> => {
           const parts = createPartsBuilder();
           const spent = { input: 0, output: 0 };
-          let final: MessageStatus = 'error';
+          let persisted = false;
 
           const persist = async (status?: MessageStatus): Promise<void> => {
             try {
@@ -184,6 +183,12 @@ export function createAgentService(deps: AgentServiceDeps) {
                 'assistant message not saved',
               );
             }
+          };
+          const finish = async (status: MessageStatus): Promise<void> => {
+            if (persisted) return;
+            persisted = true;
+            await persist(status);
+            running.delete(lockKey);
           };
           const write = (event: AgentStreamEvent) => {
             if (!out.destroyed) out.push(frame(event));
@@ -223,9 +228,9 @@ export function createAgentService(deps: AgentServiceDeps) {
             })) {
               parts.apply(event);
               if (event.type === 'done') {
-                final = event.status;
-                // Stored before the client sees `done`, so a refetch right after it finds the final state.
-                await persist(final);
+                // Stored (and the user's lock released) before the client sees `done`, so a refetch or the
+                // next message right after it finds the final state.
+                await finish(event.status);
               } else if (event.type === 'tool_result' || event.type === 'card') {
                 await persist();
               }
@@ -236,10 +241,8 @@ export function createAgentService(deps: AgentServiceDeps) {
             log?.warn({ conversationId }, 'assistant turn failed');
             write({ type: 'error', code: ErrorCode.AgentFailed });
             write({ type: 'done', status: 'error' });
-            final = 'error';
           } finally {
-            await persist(final);
-            running.delete(lockKey);
+            await finish('error');
             if (!out.destroyed) out.push(null);
           }
         };

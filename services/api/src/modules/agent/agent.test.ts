@@ -220,7 +220,7 @@ describe('agent module', () => {
     expect(next.statusCode).toBe(200);
   });
 
-  it('answers 409 while a turn of the same conversation is running, and not for other conversations', async () => {
+  it('answers 409 while a turn of the same user is running, in any conversation', async () => {
     let release!: () => void;
     const gate = new Promise<void>((resolve) => (release = resolve));
     const t = await setup([
@@ -238,11 +238,41 @@ describe('agent module', () => {
     expect(busy.statusCode).toBe(409);
     expect(busy.json().error.code).toBe('CONFLICT');
     expect((await t.detail(id)).messages).toHaveLength(2);
+    expect((await t.send(other, 'hello')).statusCode).toBe(409);
 
     release();
     expect((await first).statusCode).toBe(200);
     expect((await t.send(id, 'three')).statusCode).toBe(200);
     expect((await t.send(other, 'hello')).statusCode).toBe(200);
+  });
+
+  it('lets only one turn per user run at a time, so parallel conversations cannot beat the quota', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const t = await setup(
+      [
+        async function* () {
+          await gate;
+          yield* text('late');
+        },
+      ],
+      { quota: { turns: 1 } },
+    );
+    const a = await t.create();
+    const b = await t.create();
+    const results = [t.send(a, 'one'), t.send(b, 'two')];
+    // The loser answers at once; the winner waits for the gate.
+    const loser = await Promise.race(results.map((r, i) => r.then((res) => ({ res, i }))));
+    release();
+    const all = await Promise.all(results);
+    const codes = all.map((r) => r.statusCode).sort();
+    expect(codes).toEqual([200, 409]);
+    expect(loser.res.statusCode).toBe(409);
+    expect(t.seen).toHaveLength(1);
+    const stored = (await t.detail(a)).messages.length + (await t.detail(b)).messages.length;
+    expect(stored).toBe(2); // one user message and one assistant message, never two turns
+    // Another user is not blocked.
+    expect((await t.send(await t.create(BOB), 'hi', BOB)).statusCode).toBe(200);
   });
 
   describe('quota (AC15)', () => {
