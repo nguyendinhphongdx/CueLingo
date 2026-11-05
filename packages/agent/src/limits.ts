@@ -4,6 +4,8 @@ export interface TurnLimits {
   maxSteps: number;
   /** Write-tool calls per turn; extra calls get a failed result instead of running. */
   maxWriteCalls: number;
+  /** All tool calls per turn, read tools included; extra calls get a failed result instead of running. */
+  maxToolCalls: number;
   /** Wall-clock budget of the whole turn; running out ends it as `limited`. */
   turnTimeoutMs: number;
   /** Estimated tokens of the messages sent to the model. */
@@ -15,6 +17,7 @@ export interface TurnLimits {
 export const DEFAULT_LIMITS: TurnLimits = {
   maxSteps: 6,
   maxWriteCalls: 3,
+  maxToolCalls: 8,
   turnTimeoutMs: 60_000,
   contextBudgetTokens: 24_000,
   toolTimeoutMs: 8_000,

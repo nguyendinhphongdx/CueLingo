@@ -56,6 +56,7 @@ export async function* runTurn<C>(
 
   const messages: ModelMessage[] = [...input.history, { role: 'user', content: input.userMessage }];
   let writeCalls = 0;
+  let toolCalls = 0;
 
   for (let step = 0; step < limits.maxSteps; step += 1) {
     if (signal.aborted) return yield done(interrupted());
@@ -103,6 +104,9 @@ export async function* runTurn<C>(
 
     messages.push({ role: 'assistant', content: text, toolCalls: calls });
     for (const call of calls) {
+      // Read tools count too: a model that keeps calling tools ends the turn instead of running up cost.
+      if (toolCalls >= limits.maxToolCalls) return yield done('limited');
+      toolCalls += 1;
       yield { type: 'tool_call', callId: call.id, tool: call.name };
       const tool = input.registry.get(call.name);
       let result: ToolRunResult;

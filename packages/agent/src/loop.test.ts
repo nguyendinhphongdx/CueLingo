@@ -234,6 +234,20 @@ describe('runTurn: limits and failures', () => {
     expect(doneOf(events)).toHaveLength(1);
   });
 
+  it('ends as limited when a turn calls more tools than allowed, read tools included', async () => {
+    const many = Array.from({ length: 5 }, () => call('lookup_word', { term: 'x' }));
+    const model = scriptedModel([
+      [...many, finish],
+      [...many, finish],
+      [text('never'), finish],
+    ]);
+    const events = await run(model);
+    expect(events.filter((e) => e.type === 'tool_result')).toHaveLength(8);
+    expect(model.inputs).toHaveLength(2);
+    expect(events.at(-1)).toEqual({ type: 'done', status: 'limited' });
+    expect(doneOf(events)).toHaveLength(1);
+  });
+
   it('ends as limited when the hook refuses a step (quota)', async () => {
     const model = scriptedModel([
       [call('lookup_word', { term: 'x' }), finish],
