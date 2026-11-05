@@ -27,6 +27,9 @@ export async function recordAiCall(sql: Sql, record: AiCallRecord): Promise<void
           model: record.model,
           fallback: record.fallback,
           ok: record.ok,
+          // The assistant's daily token quota is summed from these.
+          ...(record.inputTokens !== undefined ? { inputTokens: record.inputTokens } : {}),
+          ...(record.outputTokens !== undefined ? { outputTokens: record.outputTokens } : {}),
         })},
         now()
       )`;

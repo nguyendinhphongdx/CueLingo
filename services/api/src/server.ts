@@ -8,6 +8,7 @@ import { createAiCallHook } from './lib/ai-calls';
 import { createAuthModule } from './modules/auth';
 import { createPostgresDebriefRepository } from './modules/debrief';
 import { createPostgresEventsRepository } from './modules/events';
+import { createPostgresAgentRepository } from './modules/agent';
 import { createPostgresConversationsRepository } from './modules/conversations';
 import { createPostgresGlossaryRepository } from './modules/glossary';
 import { createPostgresSpeakersRepository } from './modules/speakers';
@@ -93,6 +94,7 @@ const app = await buildApp({
     events: eventsRepository,
     glossary: glossaryRepository,
     conversations: conversationsRepository,
+    agent: createPostgresAgentRepository(sql),
     privacy: privacyRepository,
     sessions: sessionsRepository,
     speakers: createPostgresSpeakersRepository(sql),
@@ -113,6 +115,15 @@ const app = await buildApp({
   webOrigin: config.WEB_ORIGIN,
   realtime,
   assist: gateway ? { gateway } : undefined,
+  agent: {
+    enabled: config.AGENT_ENABLED && Boolean(gateway),
+    gateway,
+    quota: {
+      turns: config.AGENT_QUOTA_TURNS_PER_DAY,
+      tokens: config.AGENT_QUOTA_TOKENS_PER_DAY,
+      costUsd: config.AGENT_QUOTA_USD_PER_DAY,
+    },
+  },
   transcribe: gateway ? { gateway } : undefined,
   followup: gateway ? { gateway } : undefined,
   tts: gateway

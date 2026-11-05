@@ -7,6 +7,7 @@ import { createInMemoryQueue } from '../../src/lib/queue';
 import { createAuthModule, type Mailer } from '../../src/modules/auth';
 import { createInMemoryDebriefRepository } from '../../src/modules/debrief';
 import { createPostgresEventsRepository } from '../../src/modules/events';
+import { createPostgresAgentRepository } from '../../src/modules/agent';
 import { createPostgresConversationsRepository } from '../../src/modules/conversations';
 import { createPostgresGlossaryRepository } from '../../src/modules/glossary';
 import { createPostgresPrivacyRepository } from '../../src/modules/privacy';
@@ -57,6 +58,7 @@ describe('auth on real Postgres (AC3, AC4)', () => {
         events: createPostgresEventsRepository(sql),
         glossary: createPostgresGlossaryRepository(sql),
         conversations: createPostgresConversationsRepository(sql),
+        agent: createPostgresAgentRepository(sql),
         privacy: createPostgresPrivacyRepository(sql),
         sessions: createPostgresSessionsRepository(sql),
         speakers: createPostgresSpeakersRepository(sql),

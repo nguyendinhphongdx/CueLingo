@@ -22,6 +22,14 @@ const ConfigSchema = z
     /** Where generated speech is kept; defaults to a folder in the system temp directory. */
     TTS_CACHE_DIR: z.string().min(1).optional(),
     GEMINI_API_KEY: z.string().min(1).optional(),
+    /** Turns the assistant on or off for everyone. Off (or no GEMINI_API_KEY) answers 503 AGENT_DISABLED. */
+    AGENT_ENABLED: z.enum(['true', 'false']).default('true'),
+    /** Model of the assistant (task `agent.chat`). The gateway reads it itself; listed here so it is documented and checked. */
+    AI_AGENT_MODEL: z.string().min(1).optional(),
+    /** Daily allowance per person (UTC day). */
+    AGENT_QUOTA_TURNS_PER_DAY: z.coerce.number().int().min(0).default(60),
+    AGENT_QUOTA_TOKENS_PER_DAY: z.coerce.number().int().min(0).default(400_000),
+    AGENT_QUOTA_USD_PER_DAY: z.coerce.number().min(0).default(0.25),
     REALTIME_DEV_TOKEN: z.string().min(16).optional(),
     REALTIME_DEV_USER_ID: z.uuid().optional(),
     /** Sign-up needs an invite code. Defaults to on in production and off elsewhere. */
@@ -55,8 +63,9 @@ const ConfigSchema = z
     path: ['GOOGLE_CLIENT_ID'],
   });
 
-export type Config = Omit<z.infer<typeof ConfigSchema>, 'INVITES_REQUIRED'> & {
+export type Config = Omit<z.infer<typeof ConfigSchema>, 'INVITES_REQUIRED' | 'AGENT_ENABLED'> & {
   INVITES_REQUIRED: boolean;
+  AGENT_ENABLED: boolean;
 };
 
 export class ConfigError extends Error {}
@@ -80,6 +89,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const data = result.data;
   return {
     ...data,
+    AGENT_ENABLED: data.AGENT_ENABLED === 'true',
     INVITES_REQUIRED: data.INVITES_REQUIRED
       ? data.INVITES_REQUIRED === 'true'
       : data.NODE_ENV === 'production',

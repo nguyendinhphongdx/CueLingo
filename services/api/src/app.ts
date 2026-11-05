@@ -9,6 +9,7 @@ import Fastify, {
 import { registerAuth, type AuthOptions } from './lib/auth';
 import { registerErrorHandler } from './lib/errors';
 import type { JobQueue } from './lib/queue';
+import { createAgentModule, type AgentDeps, type AgentRepository } from './modules/agent';
 import { createAssistModule, type AssistDeps } from './modules/assist';
 import { createTtsModule, type TtsDeps } from './modules/tts';
 import { createDebriefModule, type DebriefRepository } from './modules/debrief';
@@ -60,6 +61,8 @@ export interface AppDeps {
     events: EventsRepository;
     glossary: GlossaryRepository;
     conversations: ConversationsRepository;
+    /** Read model of assistant spend (`ai_call` events) for the daily quota. */
+    agent: AgentRepository;
     account: AccountRepository;
     dial: DialRepository;
     placement: PlacementRepository;
@@ -82,6 +85,8 @@ export interface AppDeps {
   authRoutes?: FastifyPluginAsync;
   /** Enables the live-caption WebSocket route when its provider credentials are available. */
   realtime?: RealtimeDeps;
+  /** Mounts the assistant turn route; `enabled: false` makes it answer 503. Needs `assist` for the lookup tool. */
+  agent?: AgentDeps;
   /** Enables Quick Assist routes when an AI gateway is available. */
   assist?: AssistDeps;
   /** Enables text to speech when an AI gateway and an audio cache are available. */
@@ -165,7 +170,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     prefix: '/v1/sessions',
   });
   await app.register(createSpeakersModule(deps.repos.speakers).routes);
-  await app.register(createReviewModule(deps.repos.phrases).routes, { prefix: '/v1/phrases' });
+  const review = createReviewModule(deps.repos.phrases);
+  await app.register(review.routes, { prefix: '/v1/phrases' });
   const study = createStudyModule(deps.repos.study);
   await app.register(study.reviewRoutes, { prefix: '/v1/review' });
   await app.register(study.progressRoutes, { prefix: '/v1/progress' });
@@ -178,8 +184,16 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     );
   }
   if (deps.tts) await app.register(createTtsModule(deps.tts).routes, { prefix: '/v1/tts' });
-  if (deps.assist) {
-    await app.register(createAssistModule(deps.assist).routes, { prefix: '/v1/assist' });
+  const assist = deps.assist ? createAssistModule(deps.assist) : undefined;
+  if (assist) await app.register(assist.routes, { prefix: '/v1/assist' });
+  if (deps.agent) {
+    const agent = createAgentModule(deps.agent, {
+      conversations: deps.repos.conversations,
+      usage: deps.repos.agent,
+      lookup: assist?.service.lookup,
+      phrases: { list: review.phrases.list, save: review.phrases.save },
+    });
+    await app.register(agent.routes, { prefix: '/v1/conversations' });
   }
   if (deps.realtime) await app.register(createRealtimeModule(deps.realtime).routes);
 

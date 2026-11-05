@@ -318,6 +318,9 @@ importers:
 
   services/api:
     dependencies:
+      '@cuelingo/agent':
+        specifier: workspace:*
+        version: link:../../packages/agent
       '@cuelingo/ai-gateway':
         specifier: workspace:*
         version: link:../../packages/ai-gateway

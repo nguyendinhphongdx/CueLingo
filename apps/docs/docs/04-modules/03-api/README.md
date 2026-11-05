@@ -21,6 +21,7 @@ Backend modular monolith: REST + realtime WebSocket, điều phối dịch, Lear
 | [Speakers](./speakers.md)               | `src/modules/speakers`      | Đổi tên người nói của một cuộc họp (nhãn do desktop cấp, lưu ở `speakers`).                      |
 | [Glossary](./glossary.md)               | `src/modules/glossary`      | CRUD thuật ngữ cá nhân; cung cấp glossary cho realtime và STT.                                   |
 | [Conversations](./conversations.md)     | `src/modules/conversations` | Hội thoại với trợ lý AI và tin nhắn: list, đọc, tạo, đổi tên, xoá mềm.                           |
+| [Agent](./agent.md)                     | `src/modules/agent`         | Một lượt trợ lý AI: công cụ, quota, khoá theo hội thoại, stream SSE.                             |
 | [Privacy](./privacy.md)                 | `src/modules/privacy`       | Xoá dữ liệu, thời hạn lưu, xuất dữ liệu, consent.                                                |
 | [Settings](./settings.md)               | `src/modules/settings`      | Đọc và cập nhật cài đặt cá nhân dùng chung giữa web và desktop.                                  |
 | [Events](./events.md)                   | `src/modules/events`        | Nhận và kiểm tra event học tập/sản phẩm, ghi vào bảng `events` (append-only).                    |

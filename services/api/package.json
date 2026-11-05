@@ -11,6 +11,7 @@
     "invite:create": "tsx --env-file-if-exists=../../.env src/scripts/invite.ts"
   },
   "dependencies": {
+    "@cuelingo/agent": "workspace:*",
     "@cuelingo/ai-gateway": "workspace:*",
     "@cuelingo/learner-model": "workspace:*",
     "@cuelingo/prompts": "workspace:*",

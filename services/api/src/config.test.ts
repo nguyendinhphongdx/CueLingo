@@ -98,4 +98,23 @@ describe('INVITES_REQUIRED', () => {
       }).INVITES_REQUIRED,
     ).toBe(false);
   });
+
+  it('defaults the assistant to on with the planned daily allowance, and reads overrides', () => {
+    const defaults = loadConfig(valid);
+    expect(defaults.AGENT_ENABLED).toBe(true);
+    expect(defaults.AGENT_QUOTA_TURNS_PER_DAY).toBe(60);
+    expect(defaults.AGENT_QUOTA_TOKENS_PER_DAY).toBe(400_000);
+    expect(defaults.AGENT_QUOTA_USD_PER_DAY).toBe(0.25);
+
+    const custom = loadConfig({
+      ...valid,
+      AGENT_ENABLED: 'false',
+      AGENT_QUOTA_TURNS_PER_DAY: '10',
+      AGENT_QUOTA_USD_PER_DAY: '1.5',
+    });
+    expect(custom.AGENT_ENABLED).toBe(false);
+    expect(custom.AGENT_QUOTA_TURNS_PER_DAY).toBe(10);
+    expect(custom.AGENT_QUOTA_USD_PER_DAY).toBe(1.5);
+    expect(() => loadConfig({ ...valid, AGENT_ENABLED: 'maybe' })).toThrow(/AGENT_ENABLED/);
+  });
 });
