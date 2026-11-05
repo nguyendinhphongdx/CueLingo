@@ -64,7 +64,7 @@ describe('ReviewSession', () => {
 
   it('shows a cheerful empty state with a meetings link', () => {
     const markup = renderToStaticMarkup(<ReviewEmptyState />);
-    expect(markup).toContain('Hôm nay bạn đã ôn xong');
+    expect(markup).toContain('Chưa có thẻ nào đến hạn');
     expect(markup).toContain('href="/sessions"');
   });
 

@@ -98,8 +98,8 @@ describe('desktop review', () => {
 
     expect(summary).toContain('Hoàn thành phiên ôn');
     expect(summary).toContain('Ôn tiếp');
-    expect(empty).toContain('Hôm nay bạn đã ôn xong');
-    expect(empty).toContain('tiếp tục dùng CueLingo trong cuộc họp');
+    expect(empty).toContain('Chưa có thẻ nào đến hạn');
+    expect(empty).toContain('Lưu cụm từ ở debrief');
   });
 
   it('shows a listen-and-type card without revealing the phrase before an answer', () => {

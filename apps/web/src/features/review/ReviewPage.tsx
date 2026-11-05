@@ -219,9 +219,10 @@ export function ReviewEmptyState() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Hôm nay bạn đã ôn xong</CardTitle>
+        <CardTitle>Chưa có thẻ nào đến hạn</CardTitle>
         <CardDescription>
-          Không còn thẻ nào đến hạn. Những cụm mới từ cuộc họp tiếp theo sẽ xuất hiện ở đây.
+          Lưu cụm từ ở debrief sau mỗi cuộc họp, chúng sẽ hiện ở đây đúng lúc cần ôn. Nếu bạn vừa ôn
+          xong, hãy quay lại sau.
         </CardDescription>
       </CardHeader>
       <CardContent>

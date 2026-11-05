@@ -225,10 +225,10 @@ export function ReviewEmptyState() {
   return (
     <Card className="w-full max-w-[560px] self-center shadow-none">
       <CardHeader>
-        <CardTitle>Hôm nay bạn đã ôn xong</CardTitle>
+        <CardTitle>Chưa có thẻ nào đến hạn</CardTitle>
         <p className="text-muted-foreground text-sm leading-relaxed">
-          Hãy tiếp tục dùng CueLingo trong cuộc họp. Những cụm từ mới sẽ xuất hiện ở đây để bạn ôn
-          lại.
+          Lưu cụm từ ở debrief sau mỗi cuộc họp, chúng sẽ hiện ở đây đúng lúc cần ôn. Nếu bạn vừa ôn
+          xong, hãy quay lại sau.
         </p>
       </CardHeader>
     </Card>

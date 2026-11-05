@@ -183,7 +183,7 @@ function DebriefBlock({
       data-debrief-block={block}
       onClick={onSelect}
       onFocusCapture={onSelect}
-      className={`scroll-mt-4 rounded-xl outline-none ${selected ? 'ring-ring ring-2 ring-offset-2' : ''}`}
+      className={`-m-2 scroll-mt-4 rounded-xl p-2 outline-none ${selected ? 'ring-ring ring-2' : ''}`}
     >
       <Section title={title}>
         <Card>
@@ -293,7 +293,9 @@ function SegmentSpeaker({
     );
   return (
     <SpeakerTag
-      {...who}
+      label={who.label}
+      displayName={who.displayName}
+      source={who.source}
       onRename={
         renamable
           ? () => onStartRename({ speakerId: speaker.id, segmentId: segment.id })
@@ -389,6 +391,8 @@ export function DebriefPageView({
   const [transcriptFilter, setTranscriptFilter] = useState<TranscriptFilter>('all');
   const [renaming, setRenaming] = useState<RenameTarget | null>(null);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState(0);
+  // The outline marks the block J/K and C act on; before anyone picks one it is just noise.
+  const [blockPicked, setBlockPicked] = useState(false);
   const [highlightedSegmentId, setHighlightedSegmentId] = useState<string | null>(null);
   const blockRefs = useRef<Array<HTMLDivElement | null>>([]);
   const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -422,6 +426,7 @@ export function DebriefPageView({
       if (key === 'j' || key === 'k') {
         event.preventDefault();
         const direction = key === 'j' ? 1 : -1;
+        setBlockPicked(true);
         const nextIndex = (selectedBlockIndex + direction + blocks.length) % blocks.length;
         setSelectedBlockIndex(nextIndex);
         blockRefs.current[nextIndex]?.focus({ preventScroll: true });
@@ -501,35 +506,37 @@ export function DebriefPageView({
                 {error}
               </p>
             )}
-            <Link
-              href="/sessions"
-              className="focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-            >
-              Quay lại danh sách cuộc họp
-            </Link>
-            {!confirmingDelete ? (
-              <Button variant="destructive" onClick={() => setConfirmingDelete(true)}>
-                Xoá cuộc họp
-              </Button>
-            ) : (
-              <div
-                className="flex flex-wrap items-center gap-2"
-                role="group"
-                aria-label="Xác nhận xoá cuộc họp"
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <Link
+                href="/sessions"
+                className="focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
               >
-                <span className="text-sm">Xoá vĩnh viễn?</span>
-                <Button variant="destructive" disabled={deleting} onClick={onDelete}>
-                  {deleting ? 'Đang xoá…' : 'Xác nhận'}
+                Quay lại danh sách cuộc họp
+              </Link>
+              {!confirmingDelete ? (
+                <Button variant="destructive" onClick={() => setConfirmingDelete(true)}>
+                  Xoá cuộc họp
                 </Button>
-                <Button
-                  variant="outline"
-                  disabled={deleting}
-                  onClick={() => setConfirmingDelete(false)}
+              ) : (
+                <div
+                  className="flex flex-wrap items-center gap-2"
+                  role="group"
+                  aria-label="Xác nhận xoá cuộc họp"
                 >
-                  Huỷ
-                </Button>
-              </div>
-            )}
+                  <span className="text-sm">Xoá vĩnh viễn?</span>
+                  <Button variant="destructive" disabled={deleting} onClick={onDelete}>
+                    {deleting ? 'Đang xoá…' : 'Xác nhận'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={deleting}
+                    onClick={() => setConfirmingDelete(false)}
+                  >
+                    Huỷ
+                  </Button>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </>
@@ -562,7 +569,7 @@ export function DebriefPageView({
     const index = blocks.indexOf(block);
     return {
       block,
-      selected: selectedBlockIndex === index,
+      selected: blockPicked && selectedBlockIndex === index,
       feedbackBlock,
       feedbackValue,
       clipboardFeedback: clipboardFeedback?.key === block ? clipboardFeedback : undefined,
@@ -572,7 +579,10 @@ export function DebriefPageView({
       setRef: (element: HTMLDivElement | null) => {
         blockRefs.current[index] = element;
       },
-      onSelect: () => setSelectedBlockIndex(index),
+      onSelect: () => {
+        setBlockPicked(true);
+        setSelectedBlockIndex(index);
+      },
     };
   };
 
