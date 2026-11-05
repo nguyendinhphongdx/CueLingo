@@ -45,3 +45,7 @@ SDK client dùng chung cho desktop và web: auth, REST, stream phiên, hàng đ�
 ## Câu hỏi mở
 
 - (chưa có)
+
+## Nhận dạng đám mây (`transcribe`)
+
+`client.transcribe(sessionId, input, {signal?, timeoutMs?})` là client duy nhất gọi `POST /v1/sessions/:id/transcribe`; desktop dùng lại qua `transcribeApi(createHttp(...))` thay vì có bản riêng. Hết hạn mặc định 16 giây (`TRANSCRIBE_TIMEOUT_MS`). Lỗi chưa tới server là `ApiError` status 0 với câu cố định ("timed out", "aborted", "failed"): thông báo không bao giờ lặp lại audio hay chữ. Yêu cầu đã bị huỷ trước khi bắt đầu thì không được gửi.

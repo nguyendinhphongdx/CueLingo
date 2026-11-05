@@ -1,10 +1,9 @@
+import { ApiError, createHttp, transcribeApi } from '@cuelingo/core-sdk';
 import { currentToken, resolveToken, type TokenSource } from '../auth';
 import {
   CreateSessionRequestSchema,
   SessionListSchema,
   SessionSchema,
-  TranscribeRequestSchema,
-  TranscribeResponseSchema,
   type TranscribeRequest,
   type TranscribeResponse,
   type CreateSessionRequest,
@@ -14,9 +13,6 @@ import {
 } from '@cuelingo/shared';
 
 type Fetch = typeof fetch;
-
-// Two models at 7 s each on the server, plus a little for the network.
-const TRANSCRIBE_TIMEOUT_MS = 16_000;
 
 /** Why a recognition request failed; the message never holds audio or text. */
 export class TranscribeError extends Error {
@@ -63,6 +59,10 @@ export function createSessionsApi({ apiUrl, token, fetch: request = fetch }: Ses
     'Content-Type': 'application/json',
   };
 
+  const recognition = transcribeApi(
+    createHttp({ baseUrl, getToken: () => resolveToken(token), fetch: request }),
+  );
+
   async function post(path: string, body?: unknown): Promise<Session> {
     const response = await request(`${baseUrl}${path}`, {
       method: 'POST',
@@ -89,42 +89,18 @@ export function createSessionsApi({ apiUrl, token, fetch: request = fetch }: Ses
       return SessionSchema.parse(await response.json());
     },
     async transcribe(sessionId, input, signal?: AbortSignal) {
-      const body = JSON.stringify(TranscribeRequestSchema.parse(input));
-      const abort = new AbortController();
-      let timedOut = false;
-      const timer = setTimeout(() => {
-        timedOut = true;
-        abort.abort();
-      }, TRANSCRIBE_TIMEOUT_MS);
-      const onCallerAbort = () => abort.abort();
-      if (signal?.aborted) abort.abort();
-      else signal?.addEventListener('abort', onCallerAbort, { once: true });
-      let response: Response;
       try {
-        response = await request(
-          `${baseUrl}/v1/sessions/${encodeURIComponent(sessionId)}/transcribe`,
-          { method: 'POST', headers, body, signal: abort.signal },
-        );
-      } catch {
-        // The original error is dropped on purpose: nothing in the message may echo the request.
+        return await recognition.transcribe(sessionId, input, { signal });
+      } catch (error) {
+        if (!(error instanceof ApiError)) throw error;
+        // The server's own message is dropped on purpose: nothing here may echo the request.
         throw new TranscribeError(
-          timedOut
-            ? 'Transcribe request timed out'
-            : abort.signal.aborted
-              ? 'Transcribe request aborted'
-              : 'Transcribe request failed',
-        );
-      } finally {
-        clearTimeout(timer);
-        signal?.removeEventListener('abort', onCallerAbort);
-      }
-      if (!response.ok) {
-        throw new TranscribeError(
-          `Transcribe request failed with status ${response.status}`,
-          response.status,
+          error.status === 0
+            ? error.message
+            : `Transcribe request failed with status ${error.status}`,
+          error.status === 0 ? undefined : error.status,
         );
       }
-      return TranscribeResponseSchema.parse(await response.json());
     },
     async list() {
       const response = await request(`${baseUrl}/v1/sessions`, { headers });

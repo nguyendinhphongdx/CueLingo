@@ -24,6 +24,8 @@ export function createClient(options: ClientOptions) {
 
 export type CueLingoClient = ReturnType<typeof createClient>;
 export { ApiError, type ClientOptions } from './http';
+export { TRANSCRIBE_TIMEOUT_MS, transcribeApi, type TranscribeOptions } from './transcribe';
+export { createHttp } from './http';
 export {
   createRealtimeClient,
   type RealtimeClient,

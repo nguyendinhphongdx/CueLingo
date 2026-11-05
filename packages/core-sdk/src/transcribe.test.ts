@@ -52,3 +52,35 @@ describe('transcribe client', () => {
     expect(error).toMatchObject({ status: 413, code: 'AUDIO_TOO_LARGE' });
   });
 });
+
+describe('transcribe client cancellation', () => {
+  it('does not send a request that was cancelled before it started, and says so in fixed text', async () => {
+    const fetch = vi.fn();
+    const client = createClient({ baseUrl: 'http://api', getToken: async () => 't', fetch });
+    const caller = new AbortController();
+    const result = client.transcribe('sess-1', input, { signal: caller.signal }).catch((e) => e);
+    caller.abort();
+    const error = await result;
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.message).toBe('Transcribe request aborted');
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('times out with fixed text', async () => {
+    vi.useFakeTimers();
+    try {
+      const fetch = vi.fn<typeof globalThis.fetch>(
+        (_url, init) =>
+          new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => reject(new Error('aborted AAAA')));
+          }),
+      );
+      const client = createClient({ baseUrl: 'http://api', getToken: () => 't', fetch });
+      const result = client.transcribe('sess-1', input, { timeoutMs: 50 }).catch((e) => e);
+      await vi.advanceTimersByTimeAsync(50);
+      expect((await result).message).toBe('Transcribe request timed out');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

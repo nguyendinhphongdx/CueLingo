@@ -32,11 +32,15 @@ export function createHttp(options: ClientOptions) {
     path: string,
     schema: S | null,
     body?: unknown,
+    init?: { signal?: AbortSignal },
   ): Promise<z.output<S>> {
     const token = await options.getToken();
     const headers: Record<string, string> = {};
     if (token) headers.authorization = `Bearer ${token}`;
     if (body !== undefined) headers['content-type'] = 'application/json';
+
+    // The token lookup is async: a request cancelled meanwhile must not be sent at all.
+    if (init?.signal?.aborted) throw new ApiError(0, 'NETWORK_ERROR', 'Request aborted');
 
     let res: Response;
     try {
@@ -44,6 +48,7 @@ export function createHttp(options: ClientOptions) {
         method,
         headers,
         credentials: options.credentials,
+        signal: init?.signal,
         body: body === undefined ? undefined : JSON.stringify(body),
       });
     } catch (err) {
