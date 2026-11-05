@@ -7,6 +7,7 @@ const STATUS: Record<ErrorCode, number> = {
   [ErrorCode.Forbidden]: 403,
   [ErrorCode.NotFound]: 404,
   [ErrorCode.Conflict]: 409,
+  [ErrorCode.InviteInvalid]: 400,
   [ErrorCode.AssistFailed]: 502,
   [ErrorCode.TtsFailed]: 502,
   [ErrorCode.TranscribeFailed]: 502,

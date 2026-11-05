@@ -22,13 +22,19 @@ import { createPostgresAccountRepository } from './modules/account';
 import { createDeviceService, createPostgresDeviceRepository } from './modules/device';
 import { createPostgresPhrasesRepository, createPostgresStudyRepository } from './modules/review';
 import { createPostgresAdminRepository } from './modules/admin';
+import { createInviteGate, createPostgresInvitesRepository } from './modules/invites';
 import type { LanguageCode } from '@cuelingo/shared';
 
 const config = loadConfig();
 
 const sql = createSql(config.DATABASE_URL);
 const queue = await createPgBossQueue(config.DATABASE_URL);
-const authModule = createAuthModule(config);
+const invitesRepository = createPostgresInvitesRepository(sql);
+const authModule = createAuthModule(
+  config,
+  undefined,
+  createInviteGate(invitesRepository, config.INVITES_REQUIRED),
+);
 const debriefRepository = createPostgresDebriefRepository(sql);
 const eventsRepository = createPostgresEventsRepository(sql);
 const glossaryRepository = createPostgresGlossaryRepository(sql);
@@ -94,6 +100,7 @@ const app = await buildApp({
     phrases: phrasesRepository,
     study: studyRepository,
     admin: adminRepository,
+    invites: invitesRepository,
   },
   queue,
   resolveUserId: authModule.resolveUserId,
@@ -109,6 +116,7 @@ const app = await buildApp({
   verifyDevToken: config.NODE_ENV === 'production' ? undefined : verifyDevToken,
   logger: true,
   adminEmails: config.ADMIN_EMAILS,
+  secureCookies: config.NODE_ENV === 'production',
 });
 
 appRef.current = app;

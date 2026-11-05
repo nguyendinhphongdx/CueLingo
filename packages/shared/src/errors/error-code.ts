@@ -7,6 +7,7 @@ export const ErrorCode = {
   Forbidden: 'FORBIDDEN',
   NotFound: 'NOT_FOUND',
   Conflict: 'CONFLICT',
+  InviteInvalid: 'INVITE_INVALID',
   AssistFailed: 'ASSIST_FAILED',
   TtsFailed: 'TTS_FAILED',
   TranscribeFailed: 'TRANSCRIBE_FAILED',

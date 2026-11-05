@@ -24,6 +24,8 @@ const ConfigSchema = z
     GEMINI_API_KEY: z.string().min(1).optional(),
     REALTIME_DEV_TOKEN: z.string().min(16).optional(),
     REALTIME_DEV_USER_ID: z.uuid().optional(),
+    /** Sign-up needs an invite code. Defaults to on in production and off elsewhere. */
+    INVITES_REQUIRED: z.enum(['true', 'false']).optional(),
     /** Comma-separated internal dashboard allowlist. Empty or absent denies everyone. */
     ADMIN_EMAILS: z
       .string()
@@ -53,7 +55,9 @@ const ConfigSchema = z
     path: ['GOOGLE_CLIENT_ID'],
   });
 
-export type Config = z.infer<typeof ConfigSchema>;
+export type Config = Omit<z.infer<typeof ConfigSchema>, 'INVITES_REQUIRED'> & {
+  INVITES_REQUIRED: boolean;
+};
 
 export class ConfigError extends Error {}
 
@@ -73,5 +77,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     );
     throw new ConfigError(`Invalid environment: ${problems.join('; ')}`);
   }
-  return result.data;
+  const data = result.data;
+  return {
+    ...data,
+    INVITES_REQUIRED: data.INVITES_REQUIRED
+      ? data.INVITES_REQUIRED === 'true'
+      : data.NODE_ENV === 'production',
+  };
 }

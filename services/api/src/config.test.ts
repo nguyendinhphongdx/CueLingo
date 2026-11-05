@@ -69,3 +69,33 @@ describe('loadConfig', () => {
     );
   });
 });
+
+describe('INVITES_REQUIRED', () => {
+  it('is off in development and test, on in production', () => {
+    expect(loadConfig({ ...valid }).INVITES_REQUIRED).toBe(false);
+    expect(loadConfig({ ...valid, NODE_ENV: 'test' }).INVITES_REQUIRED).toBe(false);
+    expect(
+      loadConfig({
+        ...valid,
+        NODE_ENV: 'production',
+        MAIL_PROVIDER: 'smtp',
+        SMTP_URL: 'smtp://localhost',
+        MAIL_FROM: 'CueLingo <a@b.co>',
+      }).INVITES_REQUIRED,
+    ).toBe(true);
+  });
+
+  it('can be switched either way', () => {
+    expect(loadConfig({ ...valid, INVITES_REQUIRED: 'true' }).INVITES_REQUIRED).toBe(true);
+    expect(
+      loadConfig({
+        ...valid,
+        NODE_ENV: 'production',
+        MAIL_PROVIDER: 'smtp',
+        SMTP_URL: 'smtp://localhost',
+        MAIL_FROM: 'CueLingo <a@b.co>',
+        INVITES_REQUIRED: 'false',
+      }).INVITES_REQUIRED,
+    ).toBe(false);
+  });
+});

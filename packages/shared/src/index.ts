@@ -11,6 +11,7 @@ export * from './dto/device.dto';
 export * from './dto/events.dto';
 export * from './dto/followup.dto';
 export * from './dto/glossary.dto';
+export * from './dto/invite.dto';
 export * from './dto/phrase.dto';
 export * from './dto/privacy.dto';
 export * from './dto/review.dto';

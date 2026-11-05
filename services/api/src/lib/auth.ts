@@ -22,6 +22,7 @@ const isPublic = (url: string) =>
   url === '/healthz' ||
   url.startsWith('/api/auth/') ||
   url === '/v1/device/exchange' ||
+  url === '/v1/invites/intent' ||
   /^\/v1\/sessions\/[^/]+\/stream(?:\?|$)/.test(url);
 
 const acceptsDevToken = (url: string) =>

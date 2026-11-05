@@ -30,6 +30,7 @@ import {
 import { createSpeakersModule, type SpeakersRepository } from './modules/speakers';
 import { createSessionsModule, type SessionsRepository } from './modules/sessions';
 import { createAdminModule, type AdminRepository } from './modules/admin';
+import { createInvitesModule, type InvitesRepository } from './modules/invites';
 import { createTranscribeModule, type TranscribeDeps } from './modules/transcribe';
 import { createSettingsModule, type SettingsRepository } from './modules/settings';
 
@@ -66,6 +67,7 @@ export interface AppDeps {
     sessions: SessionsRepository;
     speakers: SpeakersRepository;
     admin: AdminRepository;
+    invites: InvitesRepository;
     settings: SettingsRepository;
   };
   queue: JobQueue;
@@ -89,6 +91,8 @@ export interface AppDeps {
   /** False disables logs. Object form is mainly a test seam for an in-memory stream. */
   logger?: FastifyServerOptions['logger'];
   adminEmails?: readonly string[];
+  /** Adds `Secure` to the invite cookie. True in production. */
+  secureCookies?: boolean;
 }
 
 /** Composition root: the only place that wires repositories, services and routes together. */
@@ -135,9 +139,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(createAccountModule(deps.repos.account).routes);
   await app.register(createDialModule(deps.repos.dial).routes);
   await app.register(createPlacementModule(deps.repos.placement).routes);
-  await app.register(createAdminModule(deps.repos.admin, deps.adminEmails ?? []).routes, {
-    prefix: '/v1/admin',
-  });
+  const admin = createAdminModule(deps.repos.admin, deps.adminEmails ?? []);
+  await app.register(admin.routes, { prefix: '/v1/admin' });
+  await app.register(
+    createInvitesModule(deps.repos.invites, admin.service.isAdmin, {
+      secureCookie: deps.secureCookies ?? false,
+    }).routes,
+  );
   app.get('/healthz', async () => ({ ok: true }));
   if (deps.authRoutes) await app.register(deps.authRoutes);
   await app.register(createDebriefModule(deps.repos.debrief).routes);
