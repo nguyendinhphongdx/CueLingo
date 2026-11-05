@@ -490,6 +490,14 @@ describe('buildDebriefMarkdown', () => {
     expect(markdown.indexOf('00:00')).toBeLessThan(markdown.indexOf('01:05'));
   });
 
+  // AC14: the copied text is the exported Markdown, so ticking "Kèm transcript" copies the whole meeting.
+  it('gives the whole meeting as text, with no audio or link', () => {
+    const markdown = buildDebriefMarkdown(debrief, { session, includeTranscript: true });
+    expect(markdown).toContain('## Tóm tắt');
+    expect(markdown).toContain('## Transcript song ngữ');
+    expect(markdown).not.toMatch(/https?:\/\/|\.(mp3|wav|m4a|ogg|webm)\b|audio/i);
+  });
+
   it('names the speakers in the exported transcript', () => {
     const lan = { id: '11111111-1111-4111-8111-111111111111', label: 'speaker_1' as const };
     const markdown = buildDebriefMarkdown(debrief, {

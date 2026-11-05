@@ -604,7 +604,10 @@ export function DebriefPageView({
               <Button
                 variant="outline"
                 className="min-h-11"
-                onClick={() => onCopy('all', buildDebriefMarkdown(debrief, { session }))}
+                // "Kèm transcript" decides what is copied too, so one tick gives the whole meeting to paste.
+                onClick={() =>
+                  onCopy('all', buildDebriefMarkdown(debrief, { session, includeTranscript }))
+                }
               >
                 Sao chép cả debrief
               </Button>

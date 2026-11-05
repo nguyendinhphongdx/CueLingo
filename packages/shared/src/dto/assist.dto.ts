@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LanguageCodeSchema } from '../languages';
+import { EnabledLanguageSchema, LearnableLanguageSchema } from '../languages';
 
 /** Quick Assist: contextual word lookup, recap of the last minute, and VI → EN composing. */
 export const LookupRequestSchema = z
@@ -7,8 +7,8 @@ export const LookupRequestSchema = z
     term: z.string().trim().min(1).max(80),
     /** Sentence(s) the term appeared in. */
     context: z.string().max(600).optional(),
-    /** Language of the term; English when left out. */
-    language: LanguageCodeSchema.optional(),
+    /** Language of the term; English when left out. Only languages a person studies: Vietnamese is refused. */
+    language: LearnableLanguageSchema.optional(),
   })
   .strict();
 export type LookupRequest = z.infer<typeof LookupRequestSchema>;
@@ -36,7 +36,7 @@ export const RecapRequestSchema = z
       )
       .min(1)
       .max(40),
-    language: LanguageCodeSchema.optional(),
+    language: EnabledLanguageSchema.optional(),
   })
   .strict();
 export type RecapRequest = z.infer<typeof RecapRequestSchema>;
@@ -55,7 +55,7 @@ export const ComposeRequestSchema = z
     /** Recent meeting sentences so the reply fits the conversation. */
     context: z.array(z.string().max(2_000)).max(10).optional(),
     /** Language the sentence should be spoken in; English when left out. */
-    language: LanguageCodeSchema.optional(),
+    language: LearnableLanguageSchema.optional(),
   })
   .strict();
 export type ComposeRequest = z.infer<typeof ComposeRequestSchema>;
