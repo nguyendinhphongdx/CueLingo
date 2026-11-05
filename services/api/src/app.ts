@@ -18,6 +18,7 @@ import { createPlacementModule, type PlacementRepository } from './modules/place
 import { createAccountModule, type AccountRepository } from './modules/account';
 import { createDeviceModule, type DeviceRepository } from './modules/device';
 import { createFollowupModule, type FollowupDeps } from './modules/followup';
+import { createConversationsModule, type ConversationsRepository } from './modules/conversations';
 import { createGlossaryModule, type GlossaryRepository } from './modules/glossary';
 import { createPrivacyModule, type PrivacyRepository } from './modules/privacy';
 import { createRealtimeModule, type RealtimeDeps } from './modules/realtime';
@@ -58,6 +59,7 @@ export interface AppDeps {
     debrief: DebriefRepository;
     events: EventsRepository;
     glossary: GlossaryRepository;
+    conversations: ConversationsRepository;
     account: AccountRepository;
     dial: DialRepository;
     placement: PlacementRepository;
@@ -153,6 +155,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(createDebriefModule(deps.repos.debrief).routes);
   await app.register(createEventsModule(deps.repos.events).routes, { prefix: '/v1/events' });
   await app.register(createFeedbackModule(deps.repos.feedback).routes);
+  await app.register(createConversationsModule(deps.repos.conversations).routes, {
+    prefix: '/v1/conversations',
+  });
   await app.register(createGlossaryModule(deps.repos.glossary).routes, { prefix: '/v1/glossary' });
   await app.register(createPrivacyModule(deps.repos.privacy).routes);
   await app.register(createSettingsModule(deps.repos.settings).routes);

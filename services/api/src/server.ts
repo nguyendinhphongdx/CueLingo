@@ -8,6 +8,7 @@ import { createAiCallHook } from './lib/ai-calls';
 import { createAuthModule } from './modules/auth';
 import { createPostgresDebriefRepository } from './modules/debrief';
 import { createPostgresEventsRepository } from './modules/events';
+import { createPostgresConversationsRepository } from './modules/conversations';
 import { createPostgresGlossaryRepository } from './modules/glossary';
 import { createPostgresSpeakersRepository } from './modules/speakers';
 import { createPostgresPrivacyRepository } from './modules/privacy';
@@ -39,6 +40,7 @@ const authModule = createAuthModule(
 const debriefRepository = createPostgresDebriefRepository(sql);
 const eventsRepository = createPostgresEventsRepository(sql);
 const glossaryRepository = createPostgresGlossaryRepository(sql);
+const conversationsRepository = createPostgresConversationsRepository(sql);
 const privacyRepository = createPostgresPrivacyRepository(sql);
 const sessionsRepository = createPostgresSessionsRepository(sql);
 const phrasesRepository = createPostgresPhrasesRepository(sql);
@@ -90,6 +92,7 @@ const app = await buildApp({
     debrief: debriefRepository,
     events: eventsRepository,
     glossary: glossaryRepository,
+    conversations: conversationsRepository,
     privacy: privacyRepository,
     sessions: sessionsRepository,
     speakers: createPostgresSpeakersRepository(sql),

@@ -3,6 +3,7 @@ import { buildApp, type AppDeps } from './app';
 import { createInMemoryQueue } from './lib/queue';
 import { createInMemoryDebriefRepository } from './modules/debrief';
 import { createInMemoryEventsRepository } from './modules/events';
+import { createInMemoryConversationsRepository } from './modules/conversations';
 import { createInMemoryGlossaryRepository } from './modules/glossary';
 import type { PrivacyRepository } from './modules/privacy';
 import { createInMemorySessionsRepository } from './modules/sessions';
@@ -41,6 +42,7 @@ export async function buildTestApp(
       debrief: createInMemoryDebriefRepository(),
       events: createInMemoryEventsRepository(),
       glossary: createInMemoryGlossaryRepository(),
+      conversations: createInMemoryConversationsRepository(),
       privacy: emptyPrivacyRepository(),
       sessions,
       // Shares the speaker rows of the in-memory sessions store, so a rename shows up in the transcript.
