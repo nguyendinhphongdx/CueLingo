@@ -26,6 +26,7 @@ cuelingo/
 │   ├── core-sdk/       ✅ client có kiểu
 │   ├── learner-model/  🟡 logic thuần: FSRS, giai đoạn, Assist Dial
 │   ├── ai-gateway/     🟡 STT/LLM/TTS provider, routing, chi phí
+│   ├── agent/          🟡 harness trợ lý AI không I/O (ADR 0018)
 │   ├── prompts/        🟡 prompt có phiên bản
 │   └── ui/             🟡 design system dùng chung
 ├── ml/                 ✅ bench (đã chạy) · 🟡 eval

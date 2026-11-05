@@ -48,6 +48,16 @@ module.exports = {
       },
     },
     {
+      name: 'agent-has-no-io',
+      comment:
+        '@cuelingo/agent là harness không I/O (ADR 0018): không fs, mạng, DB, SDK AI, và không import gateway/prompts/client. Mô hình và công cụ được tiêm vào; chỉ dùng @cuelingo/shared và zod.',
+      severity: 'error',
+      from: { path: '^packages/agent/' },
+      to: {
+        path: '^(node:)?(fs|fs/promises|net|tls|http|https|http2|child_process|worker_threads|dgram|dns|dns/promises)$|(^|/)node_modules/(postgres|pg|pg-boss|ioredis|fastify|ai|@ai-sdk/google)/|^packages/(ai-gateway|prompts|core-sdk|learner-model|ui)/',
+      },
+    },
+    {
       name: 'api-modules-via-index',
       comment: 'Module trong services/api chỉ gọi module khác qua index.ts của nó.',
       severity: 'error',

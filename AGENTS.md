@@ -9,7 +9,7 @@ CueLingo: trợ lý giao tiếp + học ngoại ngữ lấy AI làm trung tâm. 
 ```text
 apps/       desktop (Tauri+React+Swift) · web (Next.js) · docs (Docusaurus — toàn bộ tài liệu) · extension, mobile (chưa làm)
 services/   api (Fastify modular monolith) · workers (pg-boss jobs)
-packages/   shared · core-sdk · learner-model · ai-gateway · prompts · ui
+packages/   shared · core-sdk · learner-model · ai-gateway · prompts · agent · ui
 ml/         bench · eval (Python)        infra/  docker-compose, db/migrations
 apps/docs/docs/  01 tổng quan → 02 sản phẩm → 03 kiến trúc → 04 phần & module → 05 engineering → 06 delivery → 07 nghiên cứu → 08 adr
 .claude/    settings, hooks, skills, agents, commands — phần riêng của Claude Code, trỏ về docs
@@ -54,7 +54,7 @@ Mỗi phần có `AGENTS.md` (quy ước riêng, kèm link scaffold/workflow) v�
 3. **`userId` chỉ từ auth context**; mọi query lọc theo user; mỗi module API có test ranh giới người dùng.
 4. **Contract ở `@cuelingo/shared`** (Zod là nguồn sự thật). Không khai báo lại type ở app/service.
 5. **Mọi lời gọi AI qua `@cuelingo/ai-gateway`**; prompt có phiên bản ở `@cuelingo/prompts`.
-6. **`@cuelingo/learner-model` là logic thuần**, không I/O.
+6. **`@cuelingo/learner-model` và `@cuelingo/agent` là logic thuần**, không I/O.
 7. **Migration chỉ thêm file mới**, không sửa file đã chạy.
 8. **Quyền riêng tư:** không log transcript/audio/token; không lưu audio nếu người dùng chưa bật; nhà cung cấp mới nhận dữ liệu → ADR.
 9. **Spec ↔ code đồng bộ:** đổi interface/dữ liệu của module → sửa trang module trong `apps/docs/docs/04-modules/` trong cùng commit. Tài liệu chỉ nằm trong `apps/docs/docs/` ([cách viết](apps/docs/docs/05-engineering/conventions/writing-docs.md)).

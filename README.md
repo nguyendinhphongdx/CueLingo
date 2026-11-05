@@ -21,6 +21,7 @@ packages/
   core-sdk/     SDK client cho desktop và web
   learner-model/ Logic Learner Model (FSRS, lexicon, Assist Dial)
   ai-gateway/   Trừu tượng hoá STT/LLM/TTS, routing, log chi phí
+  agent/        Harness trợ lý AI không I/O (vòng lặp, công cụ, plugin)
   prompts/      Prompt có phiên bản + schema đầu ra
   ui/           Component React dùng chung
 ml/

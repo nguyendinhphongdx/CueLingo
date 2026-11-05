@@ -179,7 +179,7 @@ export type SendMessageRequest = z.infer<typeof SendMessageRequestSchema>;
 export const AgentDoneStatusSchema = z.enum(['complete', 'stopped', 'limited', 'error']);
 export type AgentDoneStatus = z.infer<typeof AgentDoneStatusSchema>;
 
-/** One server-sent event of a turn. `done` is always the last event except after `error`. */
+/** One server-sent event of a turn. `done` is always the last event; a failed turn sends `error` and then `done{error}`. */
 export const AgentStreamEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('status'), status: z.literal('thinking') }).strict(),
   z.object({ type: z.literal('text_delta'), text: z.string() }).strict(),
