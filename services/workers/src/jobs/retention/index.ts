@@ -5,7 +5,12 @@
  */
 import { JobName } from '@cuelingo/shared';
 import { defineJob } from '../types';
-import { sweepDeletedSessions, sweepExpiredAudio } from './retention.handler';
+import {
+  sweepDeletedConversations,
+  sweepDeletedSessions,
+  sweepExpiredAudio,
+  sweepStaleStreamingMessages,
+} from './retention.handler';
 
 export const retentionSweep = defineJob({
   name: JobName.RetentionSweep,
@@ -13,14 +18,20 @@ export const retentionSweep = defineJob({
   handle: async (deps) => {
     await sweepExpiredAudio(deps);
     await sweepDeletedSessions(deps);
+    await sweepDeletedConversations(deps);
+    await sweepStaleStreamingMessages(deps);
   },
 });
 
 export {
+  sweepDeletedConversations,
   sweepDeletedSessions,
   sweepExpiredAudio,
+  sweepStaleStreamingMessages,
   AUDIO_RETENTION_DAYS,
+  DELETED_CONVERSATION_RETENTION_DAYS,
   DELETED_SESSION_RETENTION_DAYS,
+  STALE_STREAMING_MINUTES,
 } from './retention.handler';
 export {
   createPostgresRetentionRepository,

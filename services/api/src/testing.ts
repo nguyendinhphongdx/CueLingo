@@ -24,7 +24,13 @@ export const TEST_USER_HEADER = 'x-test-user-id';
 const emptyPrivacyRepository = (): PrivacyRepository => ({
   async deleteMyData() {},
   async exportMyData(_userId, exportedAt) {
-    return { exportedAt: exportedAt.toISOString(), sessions: [], phrases: [], glossaryTerms: [] };
+    return {
+      exportedAt: exportedAt.toISOString(),
+      sessions: [],
+      phrases: [],
+      glossaryTerms: [],
+      conversations: [],
+    };
   },
 });
 

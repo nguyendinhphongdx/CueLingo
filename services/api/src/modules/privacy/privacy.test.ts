@@ -16,6 +16,7 @@ describe('privacy module', () => {
     sessions: [],
     phrases: [],
     glossaryTerms: [],
+    conversations: [],
   };
 
   beforeEach(async () => {

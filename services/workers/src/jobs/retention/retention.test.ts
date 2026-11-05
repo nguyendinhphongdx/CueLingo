@@ -1,14 +1,26 @@
 import { describe, expect, it } from 'vitest';
 import {
   AUDIO_RETENTION_DAYS,
+  DELETED_CONVERSATION_RETENTION_DAYS,
   DELETED_SESSION_RETENTION_DAYS,
+  STALE_STREAMING_MINUTES,
+  sweepDeletedConversations,
   sweepDeletedSessions,
   sweepExpiredAudio,
+  sweepStaleStreamingMessages,
   type RetentionRepository,
 } from './index';
 
 const DAY = 24 * 60 * 60 * 1000;
 const NOW = new Date('2026-11-01T00:00:00Z');
+const noConversations = {
+  async deleteExpiredConversations() {
+    return 0;
+  },
+  async failStaleStreamingMessages() {
+    return 0;
+  },
+};
 
 function setup(segments: Array<{ id: string; key: string | null; startedDaysAgo: number }>) {
   const rows = segments.map((s) => ({ ...s }));
@@ -26,6 +38,7 @@ function setup(segments: Array<{ id: string; key: string | null; startedDaysAgo:
     async deleteExpiredSessions() {
       return 0;
     },
+    ...noConversations,
   };
   const storage = {
     async deleteMany(keys: string[]) {
@@ -89,6 +102,7 @@ describe('sweepDeletedSessions', () => {
         return [];
       },
       async clearAudioKeys() {},
+      ...noConversations,
       async deleteExpiredSessions(cutoff, limit) {
         const expired = sessions
           .filter(
@@ -107,5 +121,93 @@ describe('sweepDeletedSessions', () => {
     expect(await sweepDeletedSessions(deps)).toEqual({ removed: 0 });
     expect(sessions.map((session) => session.id)).toEqual(['recent-deleted', 'old-ended']);
     expect(DELETED_SESSION_RETENTION_DAYS).toBe(7);
+  });
+});
+
+describe('assistant conversation retention', () => {
+  interface Conversation {
+    id: string;
+    deletedDaysAgo: number | null;
+    messages: Array<{ id: string; status: string; ageMinutes: number }>;
+  }
+
+  function setup(conversations: Conversation[]) {
+    const rows = [...conversations];
+    const retention: RetentionRepository = {
+      async findExpiredAudio() {
+        return [];
+      },
+      async clearAudioKeys() {},
+      async deleteExpiredSessions() {
+        return 0;
+      },
+      async deleteExpiredConversations(cutoff, limit) {
+        const expired = rows
+          .filter(
+            (c) =>
+              c.deletedDaysAgo !== null &&
+              NOW.getTime() - c.deletedDaysAgo * DAY < cutoff.getTime(),
+          )
+          .slice(0, limit);
+        // Messages go with their conversation (ON DELETE CASCADE).
+        for (const c of expired) rows.splice(rows.indexOf(c), 1);
+        return expired.length;
+      },
+      async failStaleStreamingMessages(cutoff) {
+        let marked = 0;
+        for (const c of rows) {
+          for (const m of c.messages) {
+            if (
+              m.status === 'streaming' &&
+              NOW.getTime() - m.ageMinutes * 60_000 < cutoff.getTime()
+            ) {
+              m.status = 'error';
+              marked += 1;
+            }
+          }
+        }
+        return marked;
+      },
+    };
+    return { rows, deps: { retention, now: () => NOW } };
+  }
+
+  it('hard-deletes only conversations soft-deleted more than seven days ago, with their messages, and is idempotent', async () => {
+    const { rows, deps } = setup([
+      {
+        id: 'old-deleted',
+        deletedDaysAgo: 8,
+        messages: [{ id: 'm1', status: 'complete', ageMinutes: 9000 }],
+      },
+      { id: 'recent-deleted', deletedDaysAgo: 6, messages: [] },
+      { id: 'alive', deletedDaysAgo: null, messages: [] },
+    ]);
+
+    expect(await sweepDeletedConversations(deps)).toEqual({ removed: 1 });
+    expect(await sweepDeletedConversations(deps)).toEqual({ removed: 0 });
+    expect(rows.map((c) => c.id)).toEqual(['recent-deleted', 'alive']);
+    expect(DELETED_CONVERSATION_RETENTION_DAYS).toBe(7);
+  });
+
+  it('marks messages stuck in streaming for over ten minutes as error and leaves the rest', async () => {
+    const { rows, deps } = setup([
+      {
+        id: 'c',
+        deletedDaysAgo: null,
+        messages: [
+          { id: 'stale', status: 'streaming', ageMinutes: STALE_STREAMING_MINUTES + 1 },
+          { id: 'live', status: 'streaming', ageMinutes: STALE_STREAMING_MINUTES - 1 },
+          { id: 'done', status: 'complete', ageMinutes: 600 },
+        ],
+      },
+    ]);
+
+    expect(await sweepStaleStreamingMessages(deps)).toEqual({ marked: 1 });
+    expect(await sweepStaleStreamingMessages(deps)).toEqual({ marked: 0 });
+    expect(rows[0]?.messages.map((m) => [m.id, m.status])).toEqual([
+      ['stale', 'error'],
+      ['live', 'streaming'],
+      ['done', 'complete'],
+    ]);
   });
 });

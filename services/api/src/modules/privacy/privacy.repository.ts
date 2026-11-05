@@ -1,4 +1,13 @@
-import type { Debrief, Export, ExportSession, LanguageCode, Speaker } from '@cuelingo/shared';
+import type {
+  ConversationDetail,
+  Debrief,
+  Export,
+  ExportSession,
+  LanguageCode,
+  MessagePart,
+  MessageStatus,
+  Speaker,
+} from '@cuelingo/shared';
 import type { Sql } from '../../lib/db';
 
 export interface PrivacyRepository {
@@ -44,6 +53,9 @@ export function createPostgresPrivacyRepository(sql: Sql): PrivacyRepository {
   return {
     async deleteMyData(userId) {
       await sql.begin(async (tx) => {
+        // Soft-deleted conversations too: "delete my data" does not wait for the 7-day retention window.
+        await tx`DELETE FROM agent_messages WHERE user_id = ${userId}`;
+        await tx`DELETE FROM agent_conversations WHERE user_id = ${userId}`;
         await tx`DELETE FROM review_logs WHERE user_id = ${userId}`;
         await tx`DELETE FROM user_lexicon WHERE user_id = ${userId}`;
         await tx`DELETE FROM glossary_terms WHERE user_id = ${userId}`;
@@ -112,6 +124,51 @@ export function createPostgresPrivacyRepository(sql: Sql): PrivacyRepository {
           WHERE user_id = ${userId}
           ORDER BY lower(term)`;
 
+        const conversationRows = await tx<
+          Array<{
+            id: string;
+            title: string;
+            language: LanguageCode;
+            created_at: Date;
+            updated_at: Date;
+          }>
+        >`
+          SELECT id, title, language, created_at, updated_at
+          FROM agent_conversations
+          WHERE user_id = ${userId} AND deleted_at IS NULL
+          ORDER BY updated_at DESC`;
+        const messageRows = await tx<
+          Array<{
+            id: string;
+            conversation_id: string;
+            seq: number;
+            role: 'user' | 'assistant';
+            parts: MessagePart[];
+            status: MessageStatus;
+            created_at: Date;
+          }>
+        >`
+          SELECT agent_messages.id, agent_messages.conversation_id, agent_messages.seq,
+            agent_messages.role, agent_messages.parts, agent_messages.status, agent_messages.created_at
+          FROM agent_messages
+          JOIN agent_conversations ON agent_conversations.id = agent_messages.conversation_id
+          WHERE agent_messages.user_id = ${userId} AND agent_conversations.deleted_at IS NULL
+          ORDER BY agent_messages.conversation_id, agent_messages.seq`;
+        const messagesByConversation = new Map<string, ConversationDetail['messages']>();
+        for (const row of messageRows) {
+          const messages = messagesByConversation.get(row.conversation_id) ?? [];
+          messages.push({
+            id: row.id,
+            conversationId: row.conversation_id,
+            seq: row.seq,
+            role: row.role,
+            parts: row.parts,
+            status: row.status,
+            createdAt: row.created_at.toISOString(),
+          });
+          messagesByConversation.set(row.conversation_id, messages);
+        }
+
         const segmentsBySession = new Map<string, ExportSession['segments']>();
         for (const row of segmentRows) {
           const segments = segmentsBySession.get(row.session_id) ?? [];
@@ -177,6 +234,16 @@ export function createPostgresPrivacyRepository(sql: Sql): PrivacyRepository {
             note: row.note,
             createdAt: row.created_at.toISOString(),
             language: row.language,
+          })),
+          conversations: conversationRows.map((row) => ({
+            conversation: {
+              id: row.id,
+              title: row.title,
+              language: row.language,
+              createdAt: row.created_at.toISOString(),
+              updatedAt: row.updated_at.toISOString(),
+            },
+            messages: messagesByConversation.get(row.id) ?? [],
           })),
         };
       });

@@ -3,6 +3,10 @@ import type { JobDeps } from '../types';
 /** Saved audio is removed this many days after the meeting started (docs: security & privacy). */
 export const AUDIO_RETENTION_DAYS = 30;
 export const DELETED_SESSION_RETENTION_DAYS = 7;
+/** Soft-deleted assistant conversations follow the same window (US-15). */
+export const DELETED_CONVERSATION_RETENTION_DAYS = 7;
+/** An assistant message still `streaming` after this long belongs to a process that died. */
+export const STALE_STREAMING_MINUTES = 10;
 const BATCH_SIZE = 500;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -32,4 +36,21 @@ export async function sweepDeletedSessions(deps: Pick<JobDeps, 'retention' | 'no
     removed += batchRemoved;
     if (batchRemoved < BATCH_SIZE) return { removed };
   }
+}
+
+/** Permanently removes assistant conversations after the seven-day recovery window; their messages cascade. */
+export async function sweepDeletedConversations(deps: Pick<JobDeps, 'retention' | 'now'>) {
+  const cutoff = new Date(deps.now().getTime() - DELETED_CONVERSATION_RETENTION_DAYS * DAY_MS);
+  let removed = 0;
+  for (;;) {
+    const batchRemoved = await deps.retention.deleteExpiredConversations(cutoff, BATCH_SIZE);
+    removed += batchRemoved;
+    if (batchRemoved < BATCH_SIZE) return { removed };
+  }
+}
+
+/** Turns messages stuck in `streaming` into `error`, so a reopened conversation does not show a typing assistant forever. */
+export async function sweepStaleStreamingMessages(deps: Pick<JobDeps, 'retention' | 'now'>) {
+  const cutoff = new Date(deps.now().getTime() - STALE_STREAMING_MINUTES * 60_000);
+  return { marked: await deps.retention.failStaleStreamingMessages(cutoff) };
 }

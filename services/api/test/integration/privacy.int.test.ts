@@ -55,6 +55,16 @@ describe('privacy on real Postgres (AC3, AC4)', () => {
     await sql`
       INSERT INTO review_logs (user_id, item_id, exercise_type, rating)
       VALUES (${userId}, ${item!.id}, 'recognize', 3)`;
+    const conversations = await sql<{ id: string }[]>`
+      INSERT INTO agent_conversations (user_id, title, deleted_at)
+      VALUES (${userId}, ${`${label} chat`}, NULL), (${userId}, ${`${label} hidden chat`}, now())
+      RETURNING id`;
+    for (const conversation of conversations) {
+      await sql`
+        INSERT INTO agent_messages (conversation_id, user_id, seq, role, parts)
+        VALUES (${conversation.id}, ${userId}, 0, 'user',
+                ${sql.json([{ type: 'text', text: `${label} question` }])})`;
+    }
     return { sessionId: session!.id };
   }
 
@@ -78,6 +88,11 @@ describe('privacy on real Postgres (AC3, AC4)', () => {
     expect(exported.sessions[0]?.debrief?.summary.headlineVi).toBe('Alice debrief');
     expect(exported.phrases.map((phrase) => phrase.phrase)).toEqual(['Alice phrase']);
     expect(exported.glossaryTerms.map((term) => term.term)).toEqual(['Alice term']);
+    // Only the conversation that is not deleted, with its messages.
+    expect(exported.conversations.map((c) => c.conversation.title)).toEqual(['Alice chat']);
+    expect(exported.conversations[0]?.messages[0]?.parts).toEqual([
+      { type: 'text', text: 'Alice question' },
+    ]);
     expect(JSON.stringify(exported)).not.toContain('Bob');
   });
 
@@ -85,7 +100,15 @@ describe('privacy on real Postgres (AC3, AC4)', () => {
     const repo = createPostgresPrivacyRepository(sql);
     await repo.deleteMyData(alice);
 
-    for (const table of ['sessions', 'events', 'glossary_terms', 'user_lexicon', 'review_logs']) {
+    for (const table of [
+      'sessions',
+      'events',
+      'glossary_terms',
+      'user_lexicon',
+      'review_logs',
+      'agent_conversations',
+      'agent_messages',
+    ]) {
       const [aliceCount] = await sql<{ count: number }[]>`
         SELECT count(*)::int AS count FROM ${sql(table)} WHERE user_id = ${alice}`;
       const [bobCount] = await sql<{ count: number }[]>`
