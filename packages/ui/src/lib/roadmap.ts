@@ -71,7 +71,7 @@ export const features: Feature[] = [
     label: 'Trợ lý AI',
     group: 'learn',
     icon: 'assistant',
-    status: { desktop: 'soon', web: 'soon' },
+    status: { desktop: 'soon', web: 'ready' },
     summary: 'Hỏi trợ lý về tiếng Anh công sở và chuẩn bị cho cuộc họp (thử nghiệm).',
     bullets: [
       'Giải thích từ, câu và cách diễn đạt, có ví dụ',

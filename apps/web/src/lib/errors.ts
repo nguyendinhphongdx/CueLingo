@@ -1,5 +1,5 @@
 import { ApiError } from '@cuelingo/core-sdk';
-import { ErrorCode } from '@cuelingo/shared';
+import { AgentQuotaSchema, ErrorCode } from '@cuelingo/shared';
 
 /** What the user reads for each API error code. Server messages are English and for developers, never shown. */
 const MESSAGES: Record<string, string> = {
@@ -48,4 +48,46 @@ export function describeRenameError(error: unknown): string {
     if (error.status === 400) return 'Tên chưa hợp lệ, dùng từ 1 đến 40 ký tự.';
   }
   return describeError(error) ?? FALLBACK;
+}
+
+const AGENT_MESSAGES: Record<string, string> = {
+  [ErrorCode.AgentDisabled]: 'Trợ lý AI đang tạm tắt. Hãy quay lại sau.',
+  [ErrorCode.AgentFailed]: 'Trợ lý gặp sự cố khi trả lời. Hãy thử lại.',
+};
+
+/** "14:30" in the reader's own time zone; `timeZone` is only for tests. */
+export function formatClock(iso: string, timeZone?: string): string {
+  return new Date(iso).toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone,
+  });
+}
+
+/** Message for a turn the assistant could not start or finish: busy (409), quota (429), off (503), offline. */
+export function describeAgentError(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 409) return 'Trợ lý đang trả lời tin trước đó. Đợi một chút rồi gửi lại.';
+    if (error.code === ErrorCode.AgentQuotaExceeded) {
+      const quota = AgentQuotaSchema.safeParse(error.details);
+      if (!quota.success) return 'Bạn đã dùng hết lượt hỏi trợ lý hôm nay. Mai hãy quay lại nhé.';
+      const { turns, resetsAt } = quota.data;
+      const reset = `Lượt hỏi được làm mới lúc ${formatClock(resetsAt)}.`;
+      return turns.used >= turns.limit
+        ? `Bạn đã dùng hết ${turns.limit} lượt hỏi trợ lý hôm nay. ${reset}`
+        : `Bạn đã đạt giới hạn dùng trợ lý hôm nay. ${reset}`;
+    }
+    if (error.status === 404) return 'Cuộc trò chuyện này không còn nữa.';
+    if (error.code === 'NETWORK_ERROR')
+      return 'Mất kết nối tới máy chủ. Hãy kiểm tra mạng rồi thử lại.';
+    const known = AGENT_MESSAGES[error.code];
+    if (known) return known;
+  }
+  return describeError(error) ?? FALLBACK;
+}
+
+/** Message for an `error` event in the stream: only the code is sent, never provider details. */
+export function describeAgentErrorCode(code: string): string {
+  return AGENT_MESSAGES[code] ?? 'Trợ lý gặp sự cố khi trả lời. Hãy thử lại.';
 }

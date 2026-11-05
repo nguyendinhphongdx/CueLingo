@@ -20,6 +20,9 @@ import {
   SessionDetailSchema,
   SessionListSchema,
   AssistSuggestionSchema,
+  LookupRequestSchema,
+  LookupResponseSchema,
+  type LookupRequest,
   PostEventsRequestSchema,
   type LearningEvent,
   TtsRequestSchema,
@@ -123,6 +126,9 @@ export const client = {
   ...coreClient,
   tts: { speak },
   assist: {
+    /** Meaning of a word in its sentence (also what the assistant's lookup tool uses). */
+    lookup: (input: LookupRequest) =>
+      request('POST', '/v1/assist/lookup', LookupResponseSchema, LookupRequestSchema.parse(input)),
     /** Whether to offer a different assist level; the server decides from recent meetings. */
     suggestion: (language: LanguageCode) =>
       request('GET', `/v1/me/assist-suggestion?language=${language}`, AssistSuggestionSchema),
