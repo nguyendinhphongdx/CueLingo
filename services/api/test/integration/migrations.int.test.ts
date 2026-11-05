@@ -27,7 +27,7 @@ const EXPECTED_TABLES = [
   'agent_messages',
 ];
 
-/** Created by the latest migration (agent conversations). */
+/** Created by the agent conversations migration (the latest one only adds an index). */
 const LATEST_TABLES: string[] = ['agent_conversations', 'agent_messages'];
 /** Created by the migration before it (feedback + events index). */
 const FEEDBACK_TABLES: string[] = ['feedback'];
@@ -72,40 +72,61 @@ describe('migrations (AC2)', () => {
         WHERE schemaname = 'public' AND indexname = 'events_type_user_at_idx'`
     ).map((r) => r.indexname);
 
-  it('rolls the last migration back and applies it again', async () => {
+  const streamingIndex = async () =>
+    (
+      await sql<{ indexname: string }[]>`
+        SELECT indexname FROM pg_indexes
+        WHERE schemaname = 'public' AND indexname = 'agent_messages_streaming_idx'`
+    ).map((r) => r.indexname);
+
+  const rollback = (times: number) => {
+    for (let i = 0; i < times; i += 1) dbmate(db.url, 'rollback');
+  };
+  const up = (times: number) => {
+    for (let i = 0; i < times; i += 1) dbmate(db.url, 'up');
+  };
+
+  it('rolls the last migration (streaming index) back and applies it again', async () => {
+    expect(await streamingIndex()).toEqual(['agent_messages_streaming_idx']);
+    rollback(1);
+    expect(await streamingIndex()).toEqual([]);
+    // The migrations before it are untouched.
+    expect(await tables()).toHaveLength(EXPECTED_TABLES.length);
+    up(1);
+    expect(await streamingIndex()).toEqual(['agent_messages_streaming_idx']);
+  });
+
+  it('rolls the agent conversations migration back too', async () => {
     expect(await speakerIndexes()).toEqual(['segments_speaker_idx', 'speakers_session_label_idx']);
     expect(await eventsIndex()).toEqual(['events_type_user_at_idx']);
-    dbmate(db.url, 'rollback');
+    rollback(2);
     expect((await tables()).sort()).toEqual(
       EXPECTED_TABLES.filter((table) => !LATEST_TABLES.includes(table)).sort(),
     );
-    // The migrations before it are untouched.
     expect(await eventsIndex()).toEqual(['events_type_user_at_idx']);
     expect(await speakerIndexes()).toEqual(['segments_speaker_idx', 'speakers_session_label_idx']);
-    dbmate(db.url, 'up');
+    up(2);
     expect(await tables()).toHaveLength(EXPECTED_TABLES.length);
   });
 
   it('rolls the feedback migration back too', async () => {
-    dbmate(db.url, 'rollback');
-    dbmate(db.url, 'rollback');
+    rollback(3);
     expect((await tables()).sort()).toEqual(
       EXPECTED_TABLES.filter(
         (table) => !LATEST_TABLES.includes(table) && !FEEDBACK_TABLES.includes(table),
       ).sort(),
     );
     expect(await eventsIndex()).toEqual([]);
-    dbmate(db.url, 'up');
-    dbmate(db.url, 'up');
+    up(3);
     expect(await tables()).toHaveLength(EXPECTED_TABLES.length);
     expect(await eventsIndex()).toEqual(['events_type_user_at_idx']);
   });
 
   it('rolls the invites migration back too', async () => {
-    for (let i = 0; i < 3; i += 1) dbmate(db.url, 'rollback');
+    rollback(4);
     expect(await tables()).not.toContain('invites');
     expect(await tables()).not.toContain('invite_redemptions');
-    for (let i = 0; i < 3; i += 1) dbmate(db.url, 'up');
+    up(4);
     expect(await tables()).toHaveLength(EXPECTED_TABLES.length);
   });
 });
