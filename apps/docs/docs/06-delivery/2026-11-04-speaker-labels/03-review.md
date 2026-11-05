@@ -61,3 +61,7 @@ Không có mẫu giọng hay vân giọng. Mô tả giọng (hint) chỉ trong R
 | 🟡  | Tên người dùng đặt trùng nhãn hệ thống ("Tôi", "Speaker 3") làm prompt debrief nhầm người | Schema từ chối các tên đó (không phân biệt hoa thường), có test |
 | 🟡  | Test bật cờ tạm gán cứng `false` khi dọn                                                  | Khôi phục giá trị gốc                                           |
 | 🟢  | Ký tự `\|` trong mô tả giọng giả được cột trong khối người nói                            | Đổi `\|` thành `/`                                              |
+
+## Quyết định cuối
+
+2026-11-05: chủ sản phẩm chọn **C**. AC2, AC3 không làm trong MVP; muốn có "Speaker N" thật thì mở ADR cho tách người trên máy (B) rồi bật lại cờ `labelsSpeakers`.
