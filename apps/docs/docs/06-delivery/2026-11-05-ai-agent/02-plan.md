@@ -1,35 +1,245 @@
-# Plan — <slug>
+# Plan — ai-agent
+
+Spec đã qua cổng với các mặc định ghi trong Decision log của `01-specs.md`: Gemini qua gateway, giao diện AI theo hai lớp, plugin chỉ nội bộ, web trước, có trần chi phí, hội thoại giữ đến khi người dùng xoá.
 
 ## 1. Bối cảnh code
 
-_File/module liên quan, convention áp dụng (apps/docs/docs/05-engineering/…), module mẫu sẽ copy._
+| Vùng                                                                                             | Hiện trạng (đã đọc)                                                                                                                                                                                          | Hệ quả cho task                                                                                                               |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `packages/ai-gateway/src/gateway.ts`, `tasks.ts`, `pricing.ts`                                   | Có `llm`, `json`, `speech`, `transcribe`. Mỗi lời gọi chạy một lần qua `generateText`. **Chưa có streaming, chưa có tool calling.** `onCall` ghi `AiCallRecord`. Bảng giá mới có `gemini-3.1/3.5-flash-lite` | Thêm phương thức `chat` (stream, nhận khai báo tool, không chạy tool) và task `agent.chat`. ADR-0010 đã cho phép `streamText` |
+| `packages/prompts/src/<task>/v<n>.ts` + `fixtures/`                                              | Mẫu: `lookup/v1.ts`, `followup/v1.ts`                                                                                                                                                                        | Thêm `agent/v1.ts` và fixture                                                                                                 |
+| `packages/shared/src/dto/*.dto.ts`, `errors/error-code.ts`                                       | Mẫu `glossary.dto.ts`. `phrase.dto.ts` có `SavePhraseRequest` nhưng **không có trường ngữ cảnh tự do**                                                                                                       | Thêm `agent.dto.ts`. Thêm `context?` vào `SavePhraseRequest` (chỉ thêm). Thêm mã lỗi mới                                      |
+| `services/api/src/modules/glossary/`                                                             | Module mẫu: index, routes, service, repository và repository in-memory, test                                                                                                                                 | Hai module mới copy theo mẫu: `conversations` và `agent`                                                                      |
+| `services/api/src/modules/assist`, `followup`                                                    | `followup` có rate limit trong bộ nhớ (`takeSlot`), lỗi AI quy về `AppError` mà không chuyển tiếp nội dung lỗi của nhà cung cấp                                                                              | Dùng lại hai mẫu này cho quota và xử lý lỗi của agent                                                                         |
+| `services/api/src/modules/review/phrases.repository.ts`, `study.repository.ts`                   | `save` là upsert `ON CONFLICT (user_id,item_id)`, đặt `in_review=true`. Ngữ cảnh ôn lấy từ `segments.text_en` qua `first_context_segment_id`                                                                 | Có sẵn chống trùng (AC12). Cần cột `context_text` và `COALESCE` trong truy vấn hàng đợi ôn                                    |
+| `services/api/src/modules/privacy/privacy.repository.ts`, `services/workers/src/jobs/retention/` | `deleteMyData` xoá cứng trong một transaction. Phiên xoá mềm được dọn sau 7 ngày (US-15)                                                                                                                     | Thêm bảng hội thoại vào cả hai chỗ                                                                                            |
+| `services/api/src/lib/ai-calls.ts`                                                               | `recordAiCall` ghi `events(type='ai_call', cost_usd)`; có index `events_type_user_at_idx`                                                                                                                    | Tính quota ngày từ `events`, không cần bảng mới                                                                               |
+| `services/api/src/app.ts`, `server.ts`, `config.ts`                                              | Composition root. `@fastify/websocket` chỉ đăng ký khi có realtime. CORS dùng `@fastify/cors`                                                                                                                | Route SSE đi qua `reply.send(stream)`, không `hijack`, để hook CORS vẫn chạy                                                  |
+| `packages/core-sdk/src/http.ts`, `glossary.ts`, `realtime.ts`                                    | `createHttp().request` chỉ trả JSON                                                                                                                                                                          | Cần hàm stream riêng đọc SSE qua `fetch`                                                                                      |
+| `apps/web/src/features/glossary/` (mẫu), `phrase-bank`, `review`, `debrief/DebriefPage.tsx`      | Trạng thái Lưu/Đang lưu…/Đã lưu đã có ở debrief. `src/lib/client.ts` là client duy nhất. **Chưa có renderer Markdown, chưa có CSP** (`next.config.ts`)                                                       | Feature mới `assistant`                                                                                                       |
+| `packages/ui`                                                                                    | Đã có `FlashcardDeck`, `DictationCard`, `ConfirmDialog`, `SpeakButton`/`useSpeaker`, `lib/text-units.ts`, `lib/roadmap.ts`                                                                                   | Bộ thẻ lớp 1 dùng lại các thành phần này, thêm vài thẻ mới                                                                    |
+| `.dependency-cruiser.cjs`, `eslint.config.mjs`                                                   | Luật `learner-model-is-pure`, `packages-not-to-apps-or-services`                                                                                                                                             | Package mới `@cuelingo/agent` cần luật không I/O                                                                              |
+| `infra/db/migrations/`                                                                           | Mới nhất: `20261108100000_feedback.sql`                                                                                                                                                                      | Migration mới `20261109090000_agent_conversations.sql`                                                                        |
+
+Convention áp dụng: `05-engineering/conventions/{api-module, shared-contract, web-feature, ai-calls, shared-ui, privacy-security, testing}.md`, `scaffold/01-workspace-package.md` cho package mới, `workflows/{new-module, contract-sync, ai-task}.md`.
+
+**Không vừa ô nào trong extension-points:** (1) vòng lặp agent có công cụ và plugin, (2) chạy mã do AI sinh ra. Theo luật cứng số 2 phải có ADR. Đề xuất hai ADR mới:
+
+- **ADR-0018 · Agent harness:** package `@cuelingo/agent`, vòng lặp chạy trong API, stream bằng SSE, interface plugin. Thêm hai dòng vào `01-extension-points.md`: "Công cụ/plugin agent" và "Kiểu thẻ agent".
+- **ADR-0019 · Giao diện do AI sinh ra:** lớp 1 là thẻ JSON, lớp 2 là HTML/JS ở origin riêng có hộp cát, kèm cầu nối có allowlist.
 
 ## 2. Phương án
 
-| #   | Phương án | Ưu  | Nhược |
-| --- | --------- | --- | ----- |
-| A   | …         | …   | …     |
-| B   | …         | …   | …     |
+### a) Harness agent và nơi chạy vòng lặp
 
-**Chọn:** … — lý do. _(Quyết định khó đảo ngược → ADR, link ở đây.)_
+| #      | Phương án                                                                                                                                                                                                               | Ưu                                                                                                                             | Nhược                                                                                                                                            |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A1     | Vòng lặp viết thẳng trong `services/api/src/modules/agent`                                                                                                                                                              | Ít file, không thêm package                                                                                                    | Mô hình, ngữ cảnh, công cụ và vòng lặp dính vào Fastify/DB, khó test riêng (AC18). Desktop/worker không dùng lại được                            |
+| A2     | Dùng vòng lặp sẵn của AI SDK (`streamText` + `tools.execute` + `stopWhen`) trong `ai-gateway`                                                                                                                           | Ít code nhất                                                                                                                   | Gateway phải biết công cụ của sản phẩm, trái vai trò "lớp nhà cung cấp". Khó cô lập lỗi theo plugin, khó ghi tin theo từng bước, bị khoá vào SDK |
+| **A3** | **Package mới `@cuelingo/agent`:** `ModelPort`, `buildContext`, `ToolRegistry`/`AgentPlugin`, `runTurn`. Không I/O, mọi thứ được tiêm vào. Gateway chỉ cung cấp `chat()` một bước stream. API nối plugin với repository | Bốn phần tách rõ, mỗi phần có test (AC18). Thay mô hình chỉ đổi adapter. Plugin cắm vào registry (AC16). Desktop dùng lại được | Thêm một package và một ADR; cần adapter gateway → ModelPort                                                                                     |
 
-| Tác động                            | Có? | Chi tiết |
-| ----------------------------------- | --- | -------- |
-| DB migration                        |     |          |
-| Contract (`@cuelingo/shared`)       |     |          |
-| Event / Learner Model               |     |          |
-| Prompt / model AI                   |     |          |
-| Quyền riêng tư / dữ liệu người dùng |     |          |
+| #      | Transport                                                                         | Ưu                                                                                                                  | Nhược                                                                                                 |
+| ------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| T1     | WebSocket sẵn có                                                                  | Có hạ tầng, client tự kết nối lại                                                                                   | Kênh WS gắn với phiên họp, xác thực bằng `hello` token; web dùng cookie. ADR-0012 dành WS cho caption |
+| **T2** | **HTTP POST trả `text/event-stream`**, client đọc bằng `fetch` + `ReadableStream` | Đi cùng auth và CORS hiện có. Dừng chỉ cần `AbortController`. Mỗi lượt là một request nên dễ test bằng `app.inject` | Tự viết parser SSE trong core-sdk. Proxy có thể buffer: cần `X-Accel-Buffering: no`, không nén        |
+| T3     | Chạy agent trong worker (pg-boss) rồi đẩy qua pub/sub                             | Không chặn API                                                                                                      | Chưa có pub/sub (Centrifugo dự kiến M3); độ trễ và độ phức tạp tăng                                   |
 
-## 3. Các bước (mỗi bước ≈ 1 commit)
+**Chọn A3 + T2.** Vòng lặp chạy trong request của API, khoá một lượt đang chạy cho mỗi hội thoại (trong tiến trình, khớp ADR-0011 một container). Mô hình: Gemini qua task `agent.chat` (env `AI_AGENT_MODEL`). "Đang nghĩ" chỉ gồm trạng thái và các bước công cụ, không có suy luận thô.
 
-| #   | Bước     | File                        | Điểm mở rộng |
-| --- | -------- | --------------------------- | ------------ |
-| 1   | Contract | `packages/shared/src/dto/…` | Contract     |
-| 2   | …        | …                           | …            |
+### b) Plugin runtime
 
-## 4. Rủi ro
+| #      | Phương án                                                                                                                                                                   | Ưu                                                                                           | Nhược                                                            |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| **B1** | **Plugin là module TS nội bộ** (`services/api/src/modules/agent/plugins/<id>/`), import tĩnh. Registry `register/unregister/enable/disable` lúc chạy; admin bật/tắt qua API | Không nạp mã lạ, đúng mặc định "chỉ nội bộ". Gỡ/tắt lúc chạy không sửa lõi. Typecheck đầy đủ | Thêm plugin mới vẫn cần deploy (chấp nhận với plugin nội bộ)     |
+| B2     | `import()` động từ thư mục có manifest `plugin.json`                                                                                                                        | Thêm plugin không cần build lại                                                              | Nạp mã theo đường dẫn lúc chạy là bề mặt tấn công; mất typecheck |
+| B3     | Plugin ngoài tiến trình (kiểu MCP server)                                                                                                                                   | Cô lập mạnh nhất, mở được cho bên thứ ba                                                     | Vận hành nặng, độ trễ cao; vượt phạm vi                          |
 
-| Rủi ro | Giảm thiểu |
-| ------ | ---------- |
-| …      | …          |
+**Chọn B1.** Interface viết theo hướng tương thích MCP (input là JSON Schema/Zod) để sau mở sang B3:
+
+```ts
+interface AgentPlugin {
+  id: string;
+  version: string;
+  permissions: AgentPermission[]; // 'phrases:read' | 'phrases:write' | 'lookup' | 'cards' | 'html'
+  tools: AgentTool[]; // { name, description, input: ZodType, output: ZodType, kind: 'read'|'write', run(input, ctx) }
+  cardKinds?: AgentCardKind[];
+  setup?(host: PluginHost): Promise<void>;
+}
+```
+
+- **Cô lập lỗi (AC17).** `setup` lỗi thì plugin thành `failed` và bị loại khỏi danh sách tool gửi cho mô hình. Mỗi `run` có timeout 8 s, `try/catch`, validate input/output bằng Zod, cắt output (≤ 2 KB vào ngữ cảnh). Lỗi thành `tool_result{ok:false}` kèm một câu tiếng Việt. Cầu dao: 3 lỗi liên tiếp thì tắt plugin 10 phút.
+- **Quyền.** Plugin không nhận `sql` hay `userId` thô; nhận `ctx.capabilities` là facade đã gắn `userId` từ auth và chỉ chứa những gì plugin khai báo trong `permissions`.
+
+### c) Giao diện do AI sinh ra
+
+| #                     | Phương án                                                                                                                                                                                      | Ưu                                                                                                          | Nhược                                                                                                 |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **C1 (lớp 1, lô 1)**  | AI gọi tool `show_card({kind, data})`, `data` khớp `AgentCardSchema` (union Zod trong shared). Web render bằng thành phần `@cuelingo/ui`                                                       | Không chạy mã lạ. Cùng hệ thiết kế. Desktop dùng lại                                                        | Chỉ có các kiểu thẻ sẵn                                                                               |
+| C2a                   | HTML/JS trong `iframe srcdoc sandbox="allow-scripts"` cùng origin cha                                                                                                                          | Không cần domain riêng                                                                                      | Iframe opaque có thể chạy chung tiến trình, `while(true)` treo cả tab; `srcdoc` kế thừa CSP trang cha |
+| **C2b (lớp 2, lô 3)** | **Trang runner tĩnh trên origin riêng** (vd `https://sandbox.<domain>`, dev `http://localhost:3101`). Runner nhận HTML qua `postMessage`, dựng iframe con `srcdoc` kế thừa CSP chặt của runner | Origin/site khác nên cô lập tiến trình, watchdog chạy được. CSP bằng header HTTP, không phụ thuộc trang cha | Cần domain, DNS và deploy tĩnh (việc cần người). Phải kiểm trên Chrome và WebKit (Tauri)              |
+
+**Chi tiết C2b**
+
+- Iframe ở host: `<iframe src="{RUNNER_ORIGIN}/runner.html" sandbox="allow-scripts" allow="" referrerpolicy="no-referrer" loading="lazy">`. **Không** có `allow-same-origin`, `allow-forms`, `allow-popups`, `allow-modals`, `allow-top-navigation*`, `allow-downloads`, `allow-pointer-lock`. `allow=""` tắt camera, mic, vị trí, clipboard.
+- Header runner: `Content-Security-Policy: default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; frame-src 'self' about:; form-action 'none'; base-uri 'none'`; `Cross-Origin-Opener-Policy: same-origin`; `Cross-Origin-Resource-Policy: same-origin`; `X-Content-Type-Options: nosniff`. Không cookie hay storage gắn với domain này.
+- Trang cha (route chat): `frame-src {RUNNER_ORIGIN}` và `img-src 'self' data:` để chặn ảnh Markdown trỏ ra ngoài.
+- Kiểm tĩnh (lớp phụ, không phải ranh giới chính): từ chối `fetch|XMLHttpRequest|WebSocket|EventSource|RTCPeerConnection|import(|<base|<meta http-equiv`; mã ≤ 64 KB.
+- Watchdog: runner gửi `ui.ready` trong 3 s và trả lời ping 2 s một lần. Quá hạn, hoặc có `error`/`securitypolicyviolation`, thì gỡ iframe và hiện "Khối giao diện đã bị dừng" cùng nút "Xem mã nguồn" (AC8).
+- Bridge (AC9): tin `{v:1, id, op, args}`. Host chỉ nhận khi `event.source === iframe.contentWindow` **và** `event.origin === RUNNER_ORIGIN`, validate bằng Zod, ≤ 20 thao tác/phút mỗi khối, payload ≤ 16 KB. Allowlist: `ui.resize`, `ui.ready`, `ui.error`, `phrases.list` (đọc, chỉ `phrase, meaningVi`, tối đa 50), `phrases.save` (**ghi: luôn mở `ConfirmDialog` của host**), `tts.speak` (host tự phát, không trả audio vào iframe). Thao tác lạ bị từ chối và ghi log (không ghi nội dung).
+
+**Chọn C1 cho lô 1 và C2b cho lô 3**, bật bằng cờ `AGENT_HTML_BLOCKS`, mặc định tắt.
+
+### d) Lưu hội thoại và schema DB
+
+| #      | Phương án                                                                                                              | Ưu                                                                            | Nhược                                                        |
+| ------ | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| **D1** | Hai bảng `agent_conversations` và `agent_messages` (một hàng mỗi tin, `parts jsonb`). Khối giao diện nằm trong `parts` | Ghi theo từng tin (AC13). Truy vấn và phân trang đơn giản. Xoá cascade (AC14) | Phải tự định nghĩa schema `parts` (đã có Zod)                |
+| D2     | Một tài liệu JSONB cho mỗi hội thoại                                                                                   | Một bảng                                                                      | Mỗi tin ghi lại cả tài liệu; dễ ghi đè; phình theo thời gian |
+| D3     | D1 cộng bảng `agent_artifacts` riêng cho HTML                                                                          | Dễ dùng lại hoặc xem mã                                                       | Thêm bảng khi chưa cần                                       |
+
+**Chọn D1.** Migration `infra/db/migrations/20261109090000_agent_conversations.sql`:
+
+- `agent_conversations(id uuid pk, user_id → auth_user on delete cascade, title text check ≤ 120, language text default 'en', created_at, updated_at, deleted_at)`, index `(user_id, updated_at desc) where deleted_at is null`.
+- `agent_messages(id uuid pk, conversation_id → agent_conversations on delete cascade, user_id → auth_user on delete cascade, seq int, role in ('user','assistant'), parts jsonb, status in ('streaming','complete','stopped','error','limited'), prompt_version, input_tokens, output_tokens, created_at)`, `unique(conversation_id, seq)`.
+- `alter table user_lexicon add column context_text text check (char_length(context_text) <= 500)`.
+
+**Xoá (AC14, theo US-15):** `DELETE /v1/conversations/:id` đặt `deleted_at` và ẩn ngay; `retention.sweep` xoá cứng sau 7 ngày; `DELETE /v1/me/data` xoá cứng trong cùng transaction hiện có. Không log nội dung tin nhắn.
+
+**Câu ngữ cảnh** được **sao** vào `user_lexicon.context_text` vì cụm từ đã lưu là dữ liệu của Phrase Bank. Xoá hội thoại **không** xoá cụm từ đã lưu; "xoá dữ liệu cá nhân" thì xoá cả hai (câu hỏi 5).
+
+### Bảng tác động
+
+| Tác động                      | Có? | Chi tiết                                                                                                                                                                                                                                                                                                                                                   |
+| ----------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DB migration                  | Có  | 1 file cho lô 1 (2 bảng, 1 cột). Lô 2 và 3 không cần migration                                                                                                                                                                                                                                                                                             |
+| Contract (`@cuelingo/shared`) | Có  | `dto/agent.dto.ts`: Conversation, Message, MessagePart, SendMessageRequest, AgentStreamEvent, AgentCard, AgentQuota. Lô 3 thêm `agent-bridge.ts`. `phrase.dto.ts` thêm `context?` và `normalizePhrase` (chuyển từ `phrases.service`). Mã lỗi mới `AGENT_QUOTA_EXCEEDED` (429), `AGENT_DISABLED` (503), `AGENT_FAILED` (502); khi bận dùng `CONFLICT` (409) |
+| Event / Learner Model         | Ít  | Mỗi bước mô hình ghi `ai_call` (task `agent.chat`). Lưu từ chat thì client ghi `phrase_saved` như hiện có                                                                                                                                                                                                                                                  |
+| Prompt / model AI             | Có  | `prompts/agent/v1.ts` (lô 3 có `v2`). Task `agent.chat`, gateway có `chat()` stream. Thêm giá vào `MODEL_PRICES` nếu đổi model. Fixture và eval theo `ai-task`                                                                                                                                                                                             |
+| Quyền riêng tư                | Có  | Lưu nội dung hội thoại (loại dữ liệu mới), gửi cho Gemini (nhà cung cấp đã duyệt). Cập nhật `08-security-privacy.md`, `privacy.md`, chính sách quyền riêng tư; có xoá, có quota                                                                                                                                                                            |
+| Theo package                  |     | `shared`, `ai-gateway`, `prompts`, `agent` (mới), `core-sdk`, `ui`, `services/api` (`conversations`, `agent` mới; sửa `review`, `privacy`, `admin`), `services/workers/retention`, `apps/web` (`assistant` mới), `infra/sandbox-runner` (lô 3), `.dependency-cruiser.cjs`. Desktop không sửa                                                               |
+| Phụ thuộc npm mới             | Có  | `react-markdown` và `remark-gfm` (MIT) trong `packages/ui`. Không bật `rehype-raw`                                                                                                                                                                                                                                                                         |
+
+**Quota mặc định** (câu hỏi 3):
+
+| Giới hạn           | Mặc định                                     |
+| ------------------ | -------------------------------------------- |
+| Mỗi người mỗi ngày | 60 lượt, 400k token, 0,25 USD                |
+| Mỗi lượt           | ≤ 6 bước mô hình, ≤ 3 lần gọi tool ghi, 60 s |
+| Mỗi bước           | ≤ 2k token đầu ra                            |
+| Ngân sách ngữ cảnh | 24k token                                    |
+
+Công tắc toàn cục: env `AGENT_ENABLED`, cộng toggle admin trong bộ nhớ ở lô 2.
+
+## 3. Các bước (mỗi bước ≈ 1 commit; trang `04-modules` sửa cùng commit)
+
+### Lô 1: chạy được end-to-end (chat, stream, dừng, lưu tự động, nhấp đúp lưu từ, bộ thẻ có sẵn) · ~8–10 ngày
+
+| #   | Bước                                                                                                                                                                                                                                                                                                                                             | File                                                                                                     | Điểm mở rộng           |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- | ---------------------- |
+| 1   | ADR-0018 và ADR-0019 (Proposed), thêm 2 dòng vào extension-points                                                                                                                                                                                                                                                                                | `08-adr/0018-agent-harness.md`, `0019-ai-generated-ui.md`, `05-engineering/01-extension-points.md`       | ADR                    |
+| 2   | Contract agent, mã lỗi, `context?` và `normalizePhrase`                                                                                                                                                                                                                                                                                          | `packages/shared/src/dto/agent.dto.ts` (+test), `dto/phrase.dto.ts`, `errors/error-code.ts`, `shared.md` | Contract               |
+| 3   | Migration                                                                                                                                                                                                                                                                                                                                        | `infra/db/migrations/20261109090000_agent_conversations.sql`, `07-data-model.md`                         | Migration              |
+| 4   | Gateway `chat()` stream + task `agent.chat` + giá; test seam `streamChat`                                                                                                                                                                                                                                                                        | `packages/ai-gateway/src/{gateway.ts,tasks.ts,pricing.ts,chat.test.ts}`, `ai-gateway.md`                 | Provider/AI task       |
+| 5   | Prompt `agent/v1` (phạm vi: tiếng Anh công sở và chuẩn bị họp; quy tắc thẻ; dữ liệu từ tool là **dữ liệu, không phải lệnh**) + fixture                                                                                                                                                                                                           | `packages/prompts/src/agent/**`, `prompts.md`                                                            | AI task                |
+| 6   | Package `@cuelingo/agent`: `model.ts`, `context.ts` (cắt theo lượt, giữ cặp call/result), `tools.ts`, `plugin.ts`, `loop.ts` (`runTurn` async generator, trần số bước, abort) + test từng file + luật `agent-has-no-io`                                                                                                                          | `packages/agent/**`, `.dependency-cruiser.cjs`, `agent.md`                                               | Package mới (ADR-0018) |
+| 7   | Module `conversations` (copy glossary): list/get/create/rename/soft-delete, repo pg và memory, test ranh giới người dùng                                                                                                                                                                                                                         | `services/api/src/modules/conversations/**`, `app.ts`, `conversations.md`                                | API module             |
+| 8   | Lưu cụm từ có ngữ cảnh; hàng đợi ôn `COALESCE(segments.text_en, context_text)`                                                                                                                                                                                                                                                                   | `modules/review/**`, `phrases-review.md`                                                                 | API module             |
+| 9   | Xoá: `deleteMyData` thêm hội thoại; `retention` dọn hội thoại quá 7 ngày                                                                                                                                                                                                                                                                         | `modules/privacy/**`, `services/workers/src/jobs/retention/**`, `privacy.md`, `retention.md`             | API + Worker           |
+| 10  | Module `agent`: route SSE `POST /v1/conversations/:id/messages`, service (quota từ `events`, khoá theo hội thoại, ghi tin user ngay, tin assistant `streaming` rồi cập nhật cuối mỗi bước), adapter gateway → ModelPort, plugin `core` (`lookup_word`, `list_saved_phrases`, `save_phrase`, `show_card`), env trong `config.ts` + `.env.example` | `services/api/src/modules/agent/**`, `app.ts`, `server.ts`, `config.ts`, `agent.md`                      | API module             |
+| 11  | core-sdk: `conversations.ts` (CRUD) và `agent.ts` (`sendMessage(id, body, {signal, onEvent})`, parser SSE)                                                                                                                                                                                                                                       | `packages/core-sdk/src/{conversations,agent}.ts` (+test), `core-sdk.md`                                  | Client                 |
+| 12  | UI dùng chung: `MarkdownView` (không raw HTML, không ảnh ngoài), `AgentCardView` (flashcards dùng `FlashcardDeck`, `cloze`, `quiz_choice`, `compare_table`, `phrase_list`), `WordActionsMenu` (Tra nghĩa / Nghe / Lưu, Đã lưu), `ChatMessage`, `ToolStep`, `ThinkingIndicator`; mục roadmap `assistant`                                          | `packages/ui/src/components/*.tsx` (+test), `lib/roadmap.ts`, `ui.md`                                    | UI dùng chung          |
+| 13  | Web feature `assistant`: danh sách và khung chat, `use-chat` (stream, nút Dừng), `use-word-actions` (nhấp đúp lấy từ qua `getSelection` + câu chứa nó, "Đã lưu" so với `phrases.list` đã chuẩn hoá); route `(app)/assistant/[[...id]]`                                                                                                           | `apps/web/src/features/assistant/**`, `src/lib/client.ts`, `assistant.md`                                | Web feature            |
+| 14  | Chạy thật: chat, dừng, lưu từ, rồi kiểm từ đó xuất hiện ở Ôn tập; điền `03-review.md`                                                                                                                                                                                                                                                            | —                                                                                                        | —                      |
+
+### Lô 2: plugin runtime đầy đủ (AC16, AC17) · ~3–4 ngày
+
+| #   | Bước                                                                                                                         | File                                                              |
+| --- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| 15  | Registry lúc chạy: trạng thái `loaded/failed/disabled`, `register/unregister/enable/disable`, kiểm quyền qua facade, cầu dao | `packages/agent/src/{plugin,registry}.ts` (+test)                 |
+| 16  | Admin: `GET/PATCH /v1/admin/agent` (công tắc toàn cục, bật/tắt plugin)                                                       | `shared/dto/admin.dto.ts`, `modules/admin/**`, `modules/agent/**` |
+| 17  | Plugin thứ hai `exercise` (`create_exercise`), chứng minh thêm plugin không sửa lõi                                          | `modules/agent/plugins/exercise/**`                               |
+| 18  | Toggle trên trang admin (tối thiểu)                                                                                          | `apps/web/src/features/admin/**`                                  |
+
+### Lô 3: HTML/JS trong hộp cát (AC7, AC8, AC9), sau cờ `AGENT_HTML_BLOCKS` · ~5–7 ngày
+
+| #   | Bước                                                                                                                         | File                                                                                    |
+| --- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| 19  | Contract: part `html_block` (≤ 64 KB) và giao thức bridge                                                                    | `shared/dto/agent-bridge.ts` (+test)                                                    |
+| 20  | Prompt `agent/v2` và plugin `html-ui` (`render_html`, kiểm tĩnh, cờ)                                                         | `prompts/agent/v2.ts`, `modules/agent/plugins/html-ui/**`                               |
+| 21  | Runner tĩnh và header CSP, chạy dev ở `:3101`                                                                                | `infra/sandbox-runner/**`, `infra/docker-compose.yml`                                   |
+| 22  | UI: `SandboxFrame` (iframe, watchdog, "Xem mã nguồn") và `bridge-host.ts` (allowlist, Zod, `ConfirmDialog` cho thao tác ghi) | `packages/ui/src/components/sandbox-frame.tsx`, `lib/bridge-host.ts` (+test)            |
+| 23  | Web nối vào, CSP cho route chat, e2e thử thoát hộp cát                                                                       | `apps/web/src/features/assistant/**`, `next.config.ts`, `e2e/assistant-sandbox.spec.ts` |
+
+## 4. Test theo AC
+
+| AC   | Test                                                                                                                                                                                                               |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| AC1  | `agent/loop.test.ts`: `status:thinking` trước `text_delta` đầu tiên. `modules/agent/agent.test.ts`: `app.inject` đọc SSE, kiểm thứ tự event. `core-sdk/agent.test.ts`: parser chịu chunk cắt giữa dòng             |
+| AC2  | `loop.test.ts`: abort giữa stream thì `done{status:'stopped'}`. `agent.test.ts`: đóng kết nối thì tin lưu `status=stopped` và giữ phần chữ đã sinh. Web: nút Dừng gọi abort                                        |
+| AC3  | `loop.test.ts`: mô hình giả gọi tool thì có `tool_call`/`tool_result` và lần sau nhận kết quả. `agent.test.ts`: `save_phrase`, `list_saved_phrases` chỉ trên dữ liệu của user. UI: `ToolStep` hiện nhãn tiếng Việt |
+| AC4  | `tools.test.ts`: tool lỗi/quá hạn ra `ok:false` kèm câu tiếng Việt. `loop.test.ts`: đạt trần 6 bước thì `done{status:'limited'}`. Lỗi mô hình thì `error{AGENT_FAILED}`                                            |
+| AC5  | `context.test.ts`: cùng input ra cùng output; vượt ngân sách thì bỏ lượt cũ nhất, không tách cặp call/result, luôn giữ system và lượt cuối. `agent.test.ts`: lượt 2 thấy lượt 1                                    |
+| AC6  | `markdown-view.test.tsx`: render tiêu đề, danh sách, bảng, mã. `<script>`, `<img onerror>`, `javascript:` link, ảnh `https:` đều không chạy hoặc không tải                                                         |
+| AC7  | e2e (lô 3): mã sinh ra thử `document.cookie`, `parent.document`, `fetch`, `new WebSocket`, `window.open`, `top.location` đều thất bại. Kiểm header CSP của runner                                                  |
+| AC8  | `sandbox-frame.test.tsx`: không có `ready`/ping, hoặc có `ui.error`, thì gỡ iframe và hiện "Xem mã nguồn". e2e: `while(true)` không làm treo trang chat                                                            |
+| AC9  | `bridge-host.test.ts`: op ngoài allowlist bị từ chối; sai `source`/`origin` bị bỏ; `phrases.save` chỉ chạy sau khi xác nhận; vượt tần suất bị từ chối                                                              |
+| AC10 | `word-actions-menu.test.tsx`, `AssistantPage.test.tsx`: nhấp đúp mở menu có đủ 3 mục                                                                                                                               |
+| AC11 | `phrases.test.ts`: lưu kèm `context` thì có `context_text` và `in_review=true`. `study.test.ts`: thẻ ôn có `contextEn` từ `context_text`. Web: "Đã lưu" ngay, không đổi route                                      |
+| AC12 | `phrases.test.ts`: lưu hai lần (khác hoa/thường, khoảng trắng) vẫn một hàng. `shared` test `normalizePhrase`. Web: từ đã có hiện "Đã lưu"                                                                          |
+| AC13 | `conversations.test.ts`: tin ghi ngay khi gửi; list/get; **ranh giới người dùng** (user B nhận 404). Integration `conversations.int.test.ts`                                                                       |
+| AC14 | `conversations.test.ts`: xoá thì ẩn ngay. `retention.test.ts`: quá 7 ngày xoá cứng, cascade tin. `privacy.test.ts` + int: `deleteMyData` xoá sạch `agent_*`                                                        |
+| AC15 | `agent.service` test: vượt lượt/token/USD thì 429 `AGENT_QUOTA_EXCEEDED`, web hiện câu rõ ràng. `AGENT_ENABLED=false` thì 503. `chat.test.ts`: mỗi bước một `AiCallRecord`                                         |
+| AC16 | `registry.test.ts`: register/unregister lúc chạy thì danh sách tool đổi, lõi không đổi. Plugin `exercise` thêm mà không sửa `packages/agent` (kiểm qua diff ở review)                                              |
+| AC17 | `registry.test.ts`: `setup` throw thì plugin `failed`, plugin khác vẫn chạy. `loop.test.ts`: tool của plugin lỗi thì agent vẫn trả lời. Test cầu dao                                                               |
+| AC18 | Mỗi phần có file test riêng (adapter model, `context`, `tools`, `loop`). `loop.test.ts` chạy với `ModelPort` giả, chứng minh thay mô hình không chạm phần khác. depcruise `agent-has-no-io`                        |
+
+## 5. Rủi ro
+
+| Rủi ro                                                   | Giảm thiểu                                                                                                                                                                                                                                                                             |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mã AI sinh ra thoát hộp cát hoặc đánh cắp dữ liệu (lô 3) | Origin riêng, `sandbox` không `allow-same-origin`, CSP `connect-src 'none'` bằng header, `allow=""`. Kiểm tĩnh chặn WebRTC/fetch. Bridge đọc trả tối thiểu. Mặc định tắt bằng cờ. Bộ e2e thử thoát. Review bảo mật bằng agent khác trước cổng RESULT                                   |
+| Vòng lặp vô hạn trong iframe treo tab                    | Origin khác nên cô lập tiến trình, cộng watchdog ping. **Cần spike** trên Chrome và WKWebView (Tauri) trước khi bật cờ                                                                                                                                                                 |
+| Prompt injection qua nội dung hội thoại hoặc output tool | Prompt ghi rõ output tool là dữ liệu, bọc trong delimiter. Tool ghi chỉ tác động dữ liệu của chính user, tối đa 3 lần/lượt, hiện bước cho người dùng, xoá lại được. Bridge ghi cần xác nhận. Markdown không tải ảnh hay chạy HTML (chặn kênh rò qua URL ảnh). Không có tool mạng tự do |
+| Chi phí vượt dự kiến                                     | Quota ngày từ `events.cost_usd`, kiểm trước mỗi bước. Trần bước, token, thời gian. Công tắc toàn cục. Model nhỏ mặc định. `recordAiCall` bất đồng bộ nên quota có thể trễ một bước; chấp nhận và cộng biên an toàn                                                                     |
+| Xoá dữ liệu sót hoặc sai                                 | Mọi bảng có `user_id`, cascade. Test `deleteMyData` và retention, integration Postgres. Không log nội dung. Câu ngữ cảnh trong Phrase Bank là quyết định có chủ ý                                                                                                                      |
+| Độ trễ (chữ đầu chậm, proxy buffer SSE)                  | Gửi `status:thinking` ngay. Header `X-Accel-Buffering: no`, `Cache-Control: no-transform`, không nén route SSE. Đo thời gian tới chữ đầu tiên trong `ai_call`                                                                                                                          |
+| SSE bị CORS hoặc auth chặn                               | `reply.send(stream)` để hook `@fastify/cors` và auth vẫn chạy. Test inject với Origin web                                                                                                                                                                                              |
+| Khoá theo hội thoại chỉ đúng với một instance            | Đủ với ADR-0011; ghi là nợ khi scale trong ADR-0018                                                                                                                                                                                                                                    |
+| Tin kẹt ở `streaming` khi tiến trình chết                | Khi đọc coi là `error`; retention đổi trạng thái các tin quá 10 phút                                                                                                                                                                                                                   |
+| Phạm vi phình, lấn việc chuẩn bị beta                    | Lô 1 giao độc lập. Lô 2 và 3 chỉ làm sau khi được duyệt riêng. Mục roadmap để `soon` cho tới khi lô 1 xong                                                                                                                                                                             |
+
+## 6. Giả định
+
+- Gemini là nhà cung cấp duy nhất. Model mặc định `gemini-3.5-flash-lite` (đã có giá). Không hiện suy luận thô.
+- Hội thoại có `language`, mặc định là ngôn ngữ đang học; lưu cụm từ dùng ngôn ngữ này.
+- "Tra nghĩa" dùng lại `POST /v1/assist/lookup`; "Nghe" dùng lại `/v1/tts`. Không có endpoint mới cho hai thao tác này.
+- Tiêu đề hội thoại lấy từ 60 ký tự đầu của tin đầu tiên, không gọi thêm AI.
+- Desktop chưa nhúng chat trong task này; thành phần đã ở `@cuelingo/ui` nên dùng lại được.
+
+## 7. Việc cần người
+
+| Việc                                                                                       | Khi nào                 |
+| ------------------------------------------------------------------------------------------ | ----------------------- |
+| Duyệt ADR-0018 (harness, SSE, package `@cuelingo/agent`) và ADR-0019 (UI do AI sinh)       | Trước bước 2            |
+| Quyết định phạm vi MVP và thứ tự so với beta                                               | Cổng PLAN               |
+| Chốt quota mặc định và USD/ngày                                                            | Trước bước 10           |
+| Domain và DNS cho sandbox runner, chỗ deploy tĩnh                                          | Trước lô 3              |
+| Đồng ý thêm phụ thuộc `react-markdown`, `remark-gfm`                                       | Trước bước 12           |
+| Cập nhật chính sách quyền riêng tư và mẫu đồng ý beta (có lưu hội thoại và gửi cho Gemini) | Trước khi mở cho tester |
+| Chạy thử thật với khoá Gemini, xem `ai_call` và chi phí                                    | Bước 14                 |
+
+## 8. Câu hỏi cho cổng PLAN
+
+1. **Phạm vi MVP và thứ tự.** Có mở phạm vi chính thức (sửa `03-mvp-scope.md`, vì mục này gần "roleplay" đang bị loại) không? Đề xuất: beta-readiness xong trước (đã xong phần code); ai-agent lô 1 làm ngay sau, ra cho tester dưới cờ, ghi là "thử nghiệm". Lô 2 và 3 đợi số liệu dùng thật từ lô 1.
+2. **Lô 3 (HTML/JS)** giao trong đợt này hay hoãn tới khi có domain runner và review bảo mật? Đề xuất: hoãn; lô 1 với bộ thẻ đáp ứng phần lớn nhu cầu.
+3. **Quota:** 60 lượt / 400k token / 0,25 USD mỗi người mỗi ngày có ổn không? Công tắc toàn cục chỉ env cộng toggle trong bộ nhớ, hay lưu DB (thêm migration)?
+4. **Xoá hội thoại:** theo US-15 (ẩn ngay, xoá cứng sau 7 ngày) hay xoá cứng ngay?
+5. **Câu ngữ cảnh của từ đã lưu:** sao vào Phrase Bank và giữ khi xoá hội thoại (đề xuất), hay xoá theo hội thoại?
+6. **Xuất dữ liệu (`/v1/me/export`):** thêm hội thoại ở lô 1 (~nửa ngày)? Đề xuất: có.
+7. **Eval:** cần task `ml/eval` riêng cho `agent.chat` trước beta, hay fixture trong `packages/prompts` là đủ lúc này?
+
+## Decision log
+
+| Ngày       | Pha  | Quyết định                                                                                   |
+| ---------- | ---- | -------------------------------------------------------------------------------------------- |
+| 2026-11-05 | Plan | Agent kiến trúc đề xuất A3 + T2, B1, C1 rồi C2b, D1; chia ba lô. Chờ người duyệt ở cổng PLAN |
