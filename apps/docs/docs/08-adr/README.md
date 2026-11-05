@@ -21,3 +21,5 @@ Mỗi quyết định khó đảo ngược có một ADR: bối cảnh, quyết 
 | [0015](0015-email-provider-resend.md)                 | Email đăng nhập (magic link) gửi qua Resend                              | Accepted   |
 | [0016](0016-cloud-stt-for-japanese-korean-chinese.md) | Nhận dạng đám mây cho tiếng Nhật, Hàn, Trung                             | Accepted   |
 | [0017](0017-beta-distribution-adhoc-updater.md)       | Phát hành beta: ký ad-hoc, GitHub Releases, tự cập nhật Tauri            | Accepted   |
+| [0018](0018-agent-harness.md)                         | Agent harness: package `@cuelingo/agent`, SSE, plugin nội bộ             | Accepted   |
+| [0019](0019-ai-generated-ui.md)                       | Giao diện do AI sinh ra: thẻ JSON trước, HTML/JS trong hộp cát sau       | Accepted   |

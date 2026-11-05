@@ -240,6 +240,7 @@ Công tắc toàn cục: env `AGENT_ENABLED`, cộng toggle admin trong bộ nh�
 
 ## Decision log
 
-| Ngày       | Pha  | Quyết định                                                                                   |
-| ---------- | ---- | -------------------------------------------------------------------------------------------- |
-| 2026-11-05 | Plan | Agent kiến trúc đề xuất A3 + T2, B1, C1 rồi C2b, D1; chia ba lô. Chờ người duyệt ở cổng PLAN |
+| Ngày       | Pha  | Quyết định                                                                                                                                                                                                                                |
+| ---------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-05 | Plan | Agent kiến trúc đề xuất A3 + T2, B1, C1 rồi C2b, D1; chia ba lô. Chờ người duyệt ở cổng PLAN                                                                                                                                              |
+| 2026-11-05 | Plan | Người duyệt Lô 1. Câu 1–7 theo đề xuất: mở phạm vi dưới cờ thử nghiệm; hoãn Lô 3; quota 60 lượt/400k token/0,25 USD, công tắc env cộng bộ nhớ; xoá ẩn ngay rồi xoá cứng sau 7 ngày; giữ câu ngữ cảnh ở Phrase Bank; có export; fixture đủ |
