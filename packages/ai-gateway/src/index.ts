@@ -15,6 +15,15 @@ export type {
   SpeechResult,
   TranscribeResult,
 } from './gateway';
+export type {
+  ChatFinishReason,
+  ChatMessage,
+  ChatStreamPart,
+  ChatToolCall,
+  ChatToolDeclaration,
+  StreamChatArgs,
+  StreamChatFn,
+} from './chat';
 export { DEFAULT_VOICE, wrapPcmAsWav } from './speech';
 export type { SpeakFn } from './speech';
 export type { SpeakerGuess, SpeakerLabel, TranscribeFn } from './stt';

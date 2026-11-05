@@ -1,5 +1,7 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import {
+  AGENT_PROMPT_VERSION,
+  buildAgentPrompt,
   buildComposePrompt,
   buildDebriefPromptFor,
   buildFollowupPrompt,
@@ -23,6 +25,13 @@ import {
 } from '@cuelingo/prompts';
 import type { ComposeRequest, LanguageCode, LookupRequest, RecapRequest } from '@cuelingo/shared';
 import { generateText } from 'ai';
+import {
+  createGeminiStreamChat,
+  type ChatMessage,
+  type ChatStreamPart,
+  type ChatToolDeclaration,
+  type StreamChatFn,
+} from './chat';
 import { createGeminiSpeak, DEFAULT_VOICE, type SpeakFn } from './speech';
 import {
   createGeminiTranscribe,
@@ -41,6 +50,8 @@ export interface AiCallRecord {
   outputTokens?: number;
   fallback: boolean;
   ok: boolean;
+  /** Streaming tasks only: time to the first text or tool call. */
+  firstTokenMs?: number;
   userId?: string;
   sessionId?: string;
 }
@@ -82,6 +93,8 @@ export interface AiGatewayOptions {
   onCall?: (record: AiCallRecord) => void;
   /** Test seam: replaces the real provider call. */
   generate?: GenerateFn;
+  /** Test seam: replaces the real streaming call used by `chat`. */
+  streamChat?: StreamChatFn;
   /** Test seam: replaces the real text-to-speech call. */
   speak?: SpeakFn;
   /** Test seam: replaces the real speech-to-text call. */
@@ -115,6 +128,21 @@ export interface AiGateway {
     },
     context?: AiCallContext,
   ): Promise<TranscribeResult>;
+  /**
+   * One streamed step of the assistant (`agent.chat`, prompt `agent.chat@v1`): text deltas, the tool calls
+   * the model asked for, then a `finish` part. Tools are only declared, never run here. One `AiCallRecord`
+   * per attempt. The primary model is replaced by the fallback only if it fails before sending anything.
+   * Throws `AiGatewayError` on failure; if `signal` aborts the stream just ends. Messages are never logged.
+   */
+  chat(
+    input: {
+      language: LanguageCode;
+      messages: ChatMessage[];
+      tools: ChatToolDeclaration[];
+      signal?: AbortSignal;
+    },
+    context?: AiCallContext,
+  ): AsyncGenerator<ChatStreamPart, void, void>;
   json<TTask extends JsonTaskName, TOutput>(
     task: TTask,
     input: JsonTaskInputMap[TTask],
@@ -139,6 +167,9 @@ export interface TranscribeResult {
   fallback: boolean;
   latencyMs: number;
 }
+
+/** Upper bound of one assistant step (plan: <= 2k output tokens). */
+const AGENT_MAX_OUTPUT_TOKENS = 2_000;
 
 export class AiGatewayError extends Error {
   constructor(
@@ -254,6 +285,9 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
         .catch(() => undefined);
     }
   }
+
+  const streamChat: StreamChatFn =
+    options.streamChat ?? createGeminiStreamChat(options.googleApiKey);
 
   const transcribe: TranscribeFn =
     options.transcribe ?? createGeminiTranscribe(options.googleApiKey);
@@ -402,6 +436,66 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
           throw new AiGatewayError('stt.transcribe', undefined);
         }
       }
+    },
+
+    async *chat({ language, messages, tools, signal }, context) {
+      const config = TASKS['agent.chat'];
+      const { system } = buildAgentPrompt({ language });
+      const models = [{ model: config.model, fallback: false }];
+      if (config.fallbackModel !== config.model)
+        models.push({ model: config.fallbackModel, fallback: true });
+
+      let lastError: unknown;
+      for (const { model, fallback } of models) {
+        const started = performance.now();
+        const record: AiCallRecord = {
+          task: 'agent.chat',
+          model,
+          promptVersion: AGENT_PROMPT_VERSION,
+          latencyMs: 0,
+          fallback,
+          ok: false,
+          ...context,
+        };
+        let produced = false;
+        try {
+          const stepSignal = AbortSignal.any([
+            AbortSignal.timeout(config.timeoutMs),
+            ...(signal ? [signal] : []),
+          ]);
+          for await (const part of streamChat({
+            model,
+            system,
+            messages,
+            tools,
+            maxOutputTokens: AGENT_MAX_OUTPUT_TOKENS,
+            signal: stepSignal,
+          })) {
+            if (part.type === 'finish') {
+              if (!produced) throw new Error('empty completion');
+              record.ok = true;
+              record.inputTokens = part.inputTokens;
+              record.outputTokens = part.outputTokens;
+            } else if (part.type !== 'text_delta' || part.text) {
+              if (!produced) record.firstTokenMs = Math.round(performance.now() - started);
+              produced = true;
+            }
+            yield part;
+          }
+          if (!record.ok) throw new Error('stream ended without a finish part');
+          return;
+        } catch (error) {
+          if (signal?.aborted) return;
+          lastError = error;
+          if (produced) break;
+        } finally {
+          record.latencyMs = Math.round(performance.now() - started);
+          void Promise.resolve()
+            .then(() => options.onCall?.(record))
+            .catch(() => undefined);
+        }
+      }
+      throw new AiGatewayError('agent.chat', lastError);
     },
 
     async json(task, input, schema, context) {
