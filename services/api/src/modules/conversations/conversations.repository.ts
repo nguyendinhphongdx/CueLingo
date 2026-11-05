@@ -117,11 +117,13 @@ export function createPostgresConversationsRepository(sql: Sql): ConversationsRe
       if (!conversation) return null;
       const staleBefore = new Date(Date.now() - STALE_STREAMING_MS);
       const messages = await sql<MessageRow[]>`
-        SELECT id, conversation_id, seq, role, parts, created_at,
-          CASE WHEN status = 'streaming' AND created_at < ${staleBefore} THEN 'error' ELSE status END AS status
-        FROM agent_messages
-        WHERE user_id = ${userId} AND conversation_id = ${id}
-        ORDER BY seq LIMIT ${MAX_MESSAGES_PER_READ}`;
+        SELECT * FROM (
+          SELECT id, conversation_id, seq, role, parts, created_at,
+            CASE WHEN status = 'streaming' AND created_at < ${staleBefore} THEN 'error' ELSE status END AS status
+          FROM agent_messages
+          WHERE user_id = ${userId} AND conversation_id = ${id}
+          ORDER BY seq DESC LIMIT ${MAX_MESSAGES_PER_READ}
+        ) newest ORDER BY seq`;
       return { conversation: toConversation(conversation), messages: messages.map(toMessage) };
     },
 

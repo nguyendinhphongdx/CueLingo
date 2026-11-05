@@ -131,6 +131,15 @@ describe('conversations module', () => {
     expect((await aging.get(ALICE, id))?.messages[0]?.status).toBe('error');
   });
 
+  it('reads the newest 500 messages, oldest of them first', async () => {
+    const { id } = await repo.create(ALICE, 'en');
+    for (let i = 0; i < 520; i += 1) await repo.appendUserMessage(ALICE, id, `m${i}`);
+    const { messages } = (await repo.get(ALICE, id))!;
+    expect(messages).toHaveLength(500);
+    expect(messages[0]!.seq).toBe(20);
+    expect(messages.at(-1)!.seq).toBe(519);
+  });
+
   it('counts only the caller messages for the quota', async () => {
     const { id } = (await create(ALICE)).json();
     await repo.appendUserMessage(ALICE, id, 'one');

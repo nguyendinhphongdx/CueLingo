@@ -72,7 +72,7 @@ export function createInMemoryConversationsRepository(
         messages: messages
           .filter((m) => m.userId === userId && m.conversationId === id)
           .sort((a, b) => a.seq - b.seq)
-          .slice(0, MAX_MESSAGES_PER_READ)
+          .slice(-MAX_MESSAGES_PER_READ)
           .map(toMessage),
       };
     },
