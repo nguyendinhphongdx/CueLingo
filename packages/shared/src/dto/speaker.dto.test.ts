@@ -80,3 +80,26 @@ describe('speakers in stored data and WebSocket', () => {
     );
   });
 });
+
+describe('reserved speaker names', () => {
+  it('rejects names that look like the system labels', () => {
+    for (const name of [
+      'Tôi',
+      'tôi',
+      'Me',
+      'Người khác',
+      'NGƯỜI KHÁC',
+      'Speaker 3',
+      'speaker',
+      ' speaker 12 ',
+    ]) {
+      expect(RenameSpeakerRequestSchema.safeParse({ displayName: name }).success).toBe(false);
+    }
+  });
+
+  it('accepts real names, including ones that merely contain those words', () => {
+    for (const name of ['Lan', 'Anh Tôi', 'Speaker Nam', 'Minh Người']) {
+      expect(RenameSpeakerRequestSchema.safeParse({ displayName: name }).success).toBe(true);
+    }
+  });
+});

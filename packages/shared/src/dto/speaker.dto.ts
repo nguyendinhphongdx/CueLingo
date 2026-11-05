@@ -21,9 +21,23 @@ export const SpeakerSchema = z
   .strict();
 export type Speaker = z.infer<typeof SpeakerSchema>;
 
+/** Names the system already uses for people; a typed name must not look like one of them. */
+export const isReservedSpeakerName = (name: string): boolean =>
+  /^(tôi|me|người khác|speaker\s*\d*)$/iu.test(name.trim().normalize('NFC'));
+
 /** `PATCH /v1/sessions/:id/speakers/:speakerId`. `null` removes the name. */
 export const RenameSpeakerRequestSchema = z
-  .object({ displayName: z.string().trim().min(1).max(40).nullable() })
+  .object({
+    displayName: z
+      .string()
+      .trim()
+      .min(1)
+      .max(40)
+      .refine((name) => !isReservedSpeakerName(name), {
+        message: 'This name is already used for another role',
+      })
+      .nullable(),
+  })
   .strict();
 export type RenameSpeakerRequest = z.infer<typeof RenameSpeakerRequestSchema>;
 

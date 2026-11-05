@@ -2,7 +2,7 @@
 
 | Trạng thái | Loại    | Nhánh / PR             | Ước lượng → thực tế |
 | ---------- | ------- | ---------------------- | ------------------- |
-| Spec       | feature | `feat/m1-live-caption` | _3 ngày → ?_        |
+| Kết quả    | feature | `feat/m1-live-caption` | _3 ngày → ?_        |
 
 **Phạm vi:** trong: nhãn người nói trên caption (overlay), transcript và debrief; "Tôi" cho luồng mic; "Speaker N" cho người khác trong luồng hệ thống; đổi tên trong debrief · ngoài: nhận diện giọng qua nhiều cuộc họp, tên tự lấy từ lịch, nhãn người nói trong ôn tập.
 
@@ -27,13 +27,16 @@ Họp nhiều người thì transcript và debrief không nói được ai quy�
 
 ## 3. Câu hỏi mở (mỗi câu có đề xuất)
 
-- [ ] **Cách tách người trong luồng hệ thống.** (A) **Nhờ Gemini gắn nhãn người nói khi nhận dạng** cho ngôn ngữ đám mây, và với tiếng Anh trên máy thì chỉ có "Tôi" và "Người khác" ở giai đoạn này; không thêm dịch vụ, không lưu vân giọng, độ chính xác trung bình. (B) Thêm model tách người trên máy (sherpa/pyannote qua sidecar): chính xác hơn, nặng, thêm phụ thuộc và phải qua ADR. **Đề xuất: A trước**, B khi có bộ đánh giá.
-- [ ] **Tiếng Anh trên máy chỉ có "Tôi" và "Người khác"** trong giai đoạn này, đúng chưa? Đề xuất: đúng, ghi rõ giới hạn.
-- [ ] **Đổi tên chỉ trong một cuộc họp**, không nhớ giữa các cuộc họp (để tránh lưu dữ liệu nhận dạng người). Đề xuất: đúng.
-- [ ] Giới hạn số người: tối đa 8 nhãn mỗi cuộc họp, vượt thì gộp vào "Người khác". Đề xuất: đúng.
+- [x] **Cách tách người trong luồng hệ thống.** (A) **Nhờ Gemini gắn nhãn người nói khi nhận dạng** cho ngôn ngữ đám mây, và với tiếng Anh trên máy thì chỉ có "Tôi" và "Người khác" ở giai đoạn này; không thêm dịch vụ, không lưu vân giọng, độ chính xác trung bình. (B) Thêm model tách người trên máy (sherpa/pyannote qua sidecar): chính xác hơn, nặng, thêm phụ thuộc và phải qua ADR. **Đề xuất: A trước**, B khi có bộ đánh giá.
+- [x] **Tiếng Anh trên máy chỉ có "Tôi" và "Người khác"** trong giai đoạn này, đúng chưa? Đề xuất: đúng, ghi rõ giới hạn.
+- [x] **Đổi tên chỉ trong một cuộc họp**, không nhớ giữa các cuộc họp (để tránh lưu dữ liệu nhận dạng người). Đề xuất: đúng.
+- [x] Giới hạn số người: tối đa 8 nhãn mỗi cuộc họp, vượt thì gộp vào "Người khác". Đề xuất: đúng.
 
 ## Decision log
 
-| Ngày       | Pha  | Quyết định / lý do bị từ chối                                                              |
-| ---------- | ---- | ------------------------------------------------------------------------------------------ |
-| 2026-11-04 | Spec | Mở hồ sơ theo yêu cầu "làm hết" của chủ sản phẩm; đề xuất phương án A, chờ duyệt cổng spec |
+| Ngày       | Pha     | Quyết định / lý do bị từ chối                                                                                                                                                                                                                                                                                                                          |
+| ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-11-04 | Spec    | Mở hồ sơ theo yêu cầu "làm hết" của chủ sản phẩm; đề xuất phương án A, chờ duyệt cổng spec                                                                                                                                                                                                                                                             |
+| 2026-11-04 | Spec    | Chủ sản phẩm duyệt cổng spec ("Đúng, qua cổng"), dùng đề xuất A cho cả bốn câu hỏi mở                                                                                                                                                                                                                                                                  |
+| 2026-11-04 | Plan    | Chủ sản phẩm duyệt plan và bốn giả định ("Ổn, bắt đầu làm"): migration nhỏ; **tiếng Anh gửi cả câu mic dạng văn bản (không âm thanh) lên server để có "Tôi"** (thay đổi dữ liệu quyền riêng tư, đã đồng ý); mô tả giọng chỉ trong RAM không tính là vân giọng; đổi tên không tự tạo lại debrief                                                        |
+| 2026-11-05 | Kết quả | Đo bằng Gemini thật: phương án A2 gắn nhầm 33-67% (ngưỡng 10%), nên cờ `labelsSpeakers` tắt ở mọi ngôn ngữ; AC2 và AC3 chưa đạt, chờ chủ sản phẩm chọn A3, B hay C (xem `03-review.md`). Review độc lập: sửa ô đổi tên mở rồi đóng ngay, dòng "Đang tạo lại" có thể kẹt, tên trùng nhãn hệ thống bị từ chối, test ranh giới tích hợp dùng nhãn chưa có |

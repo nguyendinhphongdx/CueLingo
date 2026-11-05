@@ -11,6 +11,7 @@ import { client } from '../../lib/client';
 import { debriefOutlook } from '@cuelingo/ui/lib/session-state';
 import { describeError, describeRegenerateError, describeRenameError } from '../../lib/errors';
 import { buildDebriefMarkdown } from './markdown';
+import { regeneratePromptState } from './rename-state';
 
 const POLL_INTERVAL_MS = 5_000;
 export const LONG_WAIT_MS = 90_000;
@@ -66,6 +67,8 @@ export function useDebrief(sessionId: string, onDeleted?: () => void) {
   // Id of the debrief that a rebuild is replacing; the page polls until a newer one arrives.
   const [replacingDebriefId, setReplacingDebriefId] = useState<string | null>(null);
   const replacingRef = useRef<{ id: string; at: number } | null>(null);
+  // The rebuild did not finish within LONG_WAIT_MS: let the person press the button again.
+  const [replaceExpired, setReplaceExpired] = useState(false);
 
   const session = useQuery({
     queryKey: ['sessions', sessionId],
@@ -108,6 +111,7 @@ export function useDebrief(sessionId: string, onDeleted?: () => void) {
       if (debrief.data) {
         replacingRef.current = { id: debrief.data.id, at: Date.now() };
         setReplacingDebriefId(debrief.data.id);
+        setReplaceExpired(false);
       }
       // A new wait: reset the timer and poll again.
       pollingStartedAt.current = Date.now();
@@ -148,6 +152,23 @@ export function useDebrief(sessionId: string, onDeleted?: () => void) {
     return () => clearInterval(timer);
   }, [debriefNotFound, processingElapsedMs]);
 
+  // Expire the wait for a rebuilt debrief; drop the flag once a newer debrief arrives.
+  useEffect(() => {
+    if (!replacingDebriefId) return;
+    if (debrief.data && debrief.data.id !== replacingDebriefId) {
+      replacingRef.current = null;
+      setReplacingDebriefId(null);
+      setReplaceExpired(false);
+      return;
+    }
+    const at = replacingRef.current?.at ?? Date.now();
+    const timer = setTimeout(
+      () => setReplaceExpired(true),
+      Math.max(0, at + LONG_WAIT_MS - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [replacingDebriefId, debrief.data]);
+
   useEffect(
     () => () => {
       if (copyTimer.current) clearTimeout(copyTimer.current);
@@ -177,11 +198,12 @@ export function useDebrief(sessionId: string, onDeleted?: () => void) {
     regenerateDebrief: () => regenerate.mutate(),
     renameSpeaker: (speakerId: string, displayName: string | null) =>
       rename.mutateAsync({ speakerId, displayName }).then(() => undefined),
-    regeneratePrompt: namesChanged
-      ? ('ask' as const)
-      : replacingDebriefId && debrief.data?.id === replacingDebriefId
-        ? ('waiting' as const)
-        : null,
+    regeneratePrompt: regeneratePromptState({
+      namesChanged,
+      replacingId: replacingDebriefId,
+      currentId: debrief.data?.id,
+      expired: replaceExpired,
+    }),
     error:
       (regenerate.error ? describeRegenerateError(regenerate.error) : null) ??
       (rename.error ? describeRenameError(rename.error) : null) ??

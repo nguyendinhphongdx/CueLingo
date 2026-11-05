@@ -54,7 +54,11 @@ describe('sessions on real Postgres (AC7)', () => {
     const repo = createPostgresSessionsRepository(sql);
     const speakers = createPostgresSpeakersRepository(sql);
     const session = await repo.create(alice, { assistLevel: 0, language: 'vi' });
-    const segment = (id: string, source: 'mic' | 'system', speaker?: 'me' | 'speaker_1') => ({
+    const segment = (
+      id: string,
+      source: 'mic' | 'system',
+      speaker?: 'me' | 'speaker_1' | 'speaker_2',
+    ) => ({
       sessionId: session.id,
       userId: alice,
       segmentId: id,
@@ -69,19 +73,28 @@ describe('sessions on real Postgres (AC7)', () => {
       '5a1b0c1e-0000-4000-8000-000000000002',
       '5a1b0c1e-0000-4000-8000-000000000003',
       '5a1b0c1e-0000-4000-8000-000000000004',
+      '5a1b0c1e-0000-4000-8000-000000000005',
     ] as const;
 
     expect(await repo.saveSegment(segment(ids[0], 'mic', 'me'))).toBe(true);
     expect(await repo.saveSegment(segment(ids[1], 'system', 'speaker_1'))).toBe(true);
     expect(await repo.saveSegment(segment(ids[2], 'system', 'speaker_1'))).toBe(true);
     expect(await repo.saveSegment(segment(ids[3], 'system'))).toBe(true);
-    // Bob cannot attach a label to Alice's meeting, and no speaker row appears for it.
-    expect(await repo.saveSegment({ ...segment(ids[3], 'system', 'speaker_1'), userId: bob })).toBe(
+    // Bob cannot attach a label to Alice's meeting: a brand new label and a brand new sentence id,
+    // so only the owner check can stop it, and no speaker row appears for the meeting.
+    expect(await repo.saveSegment({ ...segment(ids[4], 'system', 'speaker_2'), userId: bob })).toBe(
       false,
     );
 
     const detail = (await repo.findDetail(alice, session.id))!;
     expect(detail.speakers.map((speaker) => speaker.label)).toEqual(['me', 'speaker_1']);
+    // The database itself refuses a label outside me/speaker_1..8 and a name over 40 characters.
+    await expect(
+      sql`INSERT INTO speakers (session_id, label) VALUES (${session.id}, 'speaker_9')`,
+    ).rejects.toThrow();
+    await expect(
+      sql`UPDATE speakers SET display_name = ${'x'.repeat(41)} WHERE session_id = ${session.id}`,
+    ).rejects.toThrow();
     const other = detail.speakers.find((speaker) => speaker.label === 'speaker_1')!;
     expect(detail.segments.filter((item) => item.speakerId === other.id)).toHaveLength(2);
     expect(detail.segments.filter((item) => item.speakerId === null)).toHaveLength(1);

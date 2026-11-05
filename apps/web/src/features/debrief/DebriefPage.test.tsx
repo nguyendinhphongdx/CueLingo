@@ -390,6 +390,14 @@ describe('debrief interactions', () => {
     expect(defaultProps.onRegenerate).not.toHaveBeenCalled();
   });
 
+  it('shows the retry message with the rebuild button when the wait expired', () => {
+    const retry = renderToStaticMarkup(
+      <DebriefPageView {...defaultProps} regeneratePrompt="retry" />,
+    );
+    expect(retry).toContain('Chưa xong, thử lại');
+    expect(retry).toContain('Tạo lại debrief với tên mới');
+  });
+
   it('labels the rename field for assistive tech', () => {
     const markup = renderToStaticMarkup(
       <SpeakerRenameInput initial="Lan" fallback="Speaker 1" onSave={vi.fn()} onCancel={vi.fn()} />,

@@ -1,6 +1,6 @@
 # Review — speaker-labels
 
-**Trạng thái:** code xong; gắn nhãn "Speaker N" **tắt ở mọi ngôn ngữ** vì không đạt ngưỡng ở bước đo (AC2, AC3); phần còn lại (nhãn "Tôi", "Người khác", đổi tên, debrief theo tên) chạy. Chưa review độc lập, chưa push.
+**Trạng thái:** code xong và đã qua một vòng review độc lập; gắn nhãn "Speaker N" **tắt ở mọi ngôn ngữ** vì không đạt ngưỡng ở bước đo (AC2, AC3). Chạy được: nhãn "Tôi" và "Người khác" (kể cả họp tiếng Anh), debrief v4/v5. **Có code và test nhưng chưa dùng được với dữ liệu thật:** đổi tên và lọc theo người, vì chưa có dòng `speaker_N` nào được tạo (mục `me` không đổi tên được); chúng chỉ có tác dụng khi cờ bật lại. Chưa push.
 
 ## Thay đổi so với plan
 
@@ -45,6 +45,19 @@ Không có mẫu giọng hay vân giọng. Mô tả giọng (hint) chỉ trong R
 ## Còn lại
 
 - Chốt hướng A3, B hay C cho nhãn "Speaker N".
-- Review độc lập và `pnpm test:int` trên Postgres thật.
+- `pnpm test:int` trên Postgres thật đã xanh (15 file, 36 test; chạy bằng Node 23.8 vì Node 22.14 trong máy thấp hơn mức yêu cầu 22.19).
 - Thử tay trên web: bấm nhãn → đổi tên → Enter/Esc → nhắc tạo lại debrief (chưa có test bấm thật).
-- Dòng "Đang tạo lại…" không tự hết nếu quá 90 giây chưa có debrief mới.
+- Trước khi bật cờ: tải lên song song 3 câu làm số `speaker_N` cấp theo câu nào xong trước, cửa sổ gộp 5 giây chỉ giảm được việc một người bị tách hai nhãn.
+
+## Review độc lập (code-reviewer) và cách xử lý
+
+| Mức | Phát hiện                                                                                 | Xử lý                                                           |
+| --- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| 🔴  | Ô đổi tên mở ở mọi câu của cùng một người, ô sau cướp focus, ô trước đóng ngay            | Chỉ mở ở đúng câu được bấm                                      |
+| 🔴  | Hồ sơ nói "đổi tên chạy" trong khi không có người nói nào để đổi tên                      | Sửa hồ sơ (mục Trạng thái)                                      |
+| 🟡  | "Đang tạo lại debrief…" kẹt vĩnh viễn nếu worker lỗi; ô nhập kẹt sau khi lưu lỗi          | Hết hạn chờ thì cho tạo lại; giữ focus khi lưu                  |
+| 🟡  | Test ranh giới tích hợp dùng nhãn và id đã có, nên không thử được điều kiện chủ sở hữu    | Bob gửi nhãn mới với id mới; thêm kiểm CHECK của migration      |
+| 🟡  | Kiểu `debrief.generate` trong gateway còn là của v1                                       | Đổi sang `DebriefSpeakerInput`                                  |
+| 🟡  | Tên người dùng đặt trùng nhãn hệ thống ("Tôi", "Speaker 3") làm prompt debrief nhầm người | Schema từ chối các tên đó (không phân biệt hoa thường), có test |
+| 🟡  | Test bật cờ tạm gán cứng `false` khi dọn                                                  | Khôi phục giá trị gốc                                           |
+| 🟢  | Ký tự `\|` trong mô tả giọng giả được cột trong khối người nói                            | Đổi `\|` thành `/`                                              |

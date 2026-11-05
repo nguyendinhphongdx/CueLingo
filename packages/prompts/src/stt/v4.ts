@@ -60,6 +60,7 @@ const system = (language: string, hint: string) =>
 const oneLine = (text: string, max: number): string =>
   text
     .replace(/[\p{Cc}\u2028\u2029<>]/gu, ' ')
+    .replace(/\|/g, '/')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, max)

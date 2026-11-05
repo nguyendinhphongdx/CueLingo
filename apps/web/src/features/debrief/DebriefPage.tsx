@@ -38,6 +38,14 @@ import { SpeakButton } from '@cuelingo/ui/components/speak-button';
 import { client } from '../../lib/client';
 import { describeFollowupError } from '../../lib/errors';
 import { buildDebriefMarkdown } from './markdown';
+import {
+  decideRenameSubmit,
+  isRenameOpen,
+  shouldCancelOnBlur,
+  shouldCancelOnKey,
+  type RegeneratePrompt,
+  type RenameTarget,
+} from './rename-state';
 import { useDebrief, type ClipboardFeedback } from './use-debrief';
 
 type BlockName = DebriefFeedbackRequest['block'];
@@ -226,11 +234,11 @@ export function SpeakerRenameInput({
   const [saving, setSaving] = useState(false);
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (saving) return;
-    const name = value.trim();
-    if (name === initial.trim()) return onCancel();
+    const decision = decideRenameSubmit(value, initial, saving);
+    if (decision.kind === 'ignore') return;
+    if (decision.kind === 'cancel') return onCancel();
     setSaving(true);
-    onSave(name || null).catch(() => setSaving(false));
+    onSave(decision.name).catch(() => setSaving(false));
   };
   return (
     <form onSubmit={submit} className="inline-flex items-center gap-2">
@@ -238,16 +246,16 @@ export function SpeakerRenameInput({
         autoFocus
         value={value}
         maxLength={MAX_SPEAKER_NAME}
-        disabled={saving}
+        readOnly={saving}
         aria-label={`Tên người nói (${fallback}), 1 đến ${MAX_SPEAKER_NAME} ký tự, để trống để bỏ tên`}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === 'Escape') {
+          if (shouldCancelOnKey(event.key)) {
             event.preventDefault();
             onCancel();
           }
         }}
-        onBlur={() => !saving && onCancel()}
+        onBlur={() => shouldCancelOnBlur(saving) && onCancel()}
         className="bg-background focus-visible:ring-ring h-7 w-40 rounded-md border px-2 text-xs focus-visible:ring-2 focus-visible:outline-none"
       />
     </form>
@@ -263,15 +271,15 @@ function SegmentSpeaker({
 }: {
   segment: SessionDetail['segments'][number];
   speakers: SessionDetail['speakers'];
-  renaming: string | null;
-  onStartRename: (speakerId: string | null) => void;
+  renaming: RenameTarget | null;
+  onStartRename: (target: RenameTarget | null) => void;
   onRename?: (speakerId: string, displayName: string | null) => Promise<void>;
 }) {
   const who = segmentSpeaker(segment, speakers);
   const speaker = who.speaker;
   // "Tôi" and sentences nobody could place are not people of the meeting, so they cannot be renamed.
   const renamable = onRename && speaker && speaker.label !== 'me';
-  if (renamable && renaming === speaker.id)
+  if (renamable && isRenameOpen(renaming, segment.id, speaker.id))
     return (
       <SpeakerRenameInput
         initial={speaker.displayName ?? ''}
@@ -283,7 +291,16 @@ function SegmentSpeaker({
         onCancel={() => onStartRename(null)}
       />
     );
-  return <SpeakerTag {...who} onRename={renamable ? () => onStartRename(speaker.id) : undefined} />;
+  return (
+    <SpeakerTag
+      {...who}
+      onRename={
+        renamable
+          ? () => onStartRename({ speakerId: speaker.id, segmentId: segment.id })
+          : undefined
+      }
+    />
+  );
 }
 
 export interface DebriefPageViewProps {
@@ -309,8 +326,8 @@ export interface DebriefPageViewProps {
   regenerating?: boolean;
   /** Names a person of the meeting (`null` removes the name); resolves once saved, rejects on failure. */
   onRenameSpeaker?: (speakerId: string, displayName: string | null) => Promise<void>;
-  /** After a rename: `ask` offers to rebuild the debrief with the new names, `waiting` says it is on its way. */
-  regeneratePrompt?: 'ask' | 'waiting' | null;
+  /** After a rename: `ask` offers to rebuild the debrief with the new names, `waiting` says it is on its way, `retry` says it took too long and offers the button again. */
+  regeneratePrompt?: RegeneratePrompt;
   deleting: boolean;
   onDelete: () => void;
   /** Drafts a follow-up message for this meeting; the section is hidden without it. */
@@ -370,7 +387,7 @@ export function DebriefPageView({
   const [followupOpen, setFollowupOpen] = useState(false);
   const [includeTranscript, setIncludeTranscript] = useState(false);
   const [transcriptFilter, setTranscriptFilter] = useState<TranscriptFilter>('all');
-  const [renamingSpeakerId, setRenamingSpeakerId] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<RenameTarget | null>(null);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState(0);
   const [highlightedSegmentId, setHighlightedSegmentId] = useState<string | null>(null);
   const blockRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -793,12 +810,16 @@ export function DebriefPageView({
               onChange={setTranscriptFilter}
               options={filterOptions}
             />
-            {regeneratePrompt === 'ask' && (
+            {(regeneratePrompt === 'ask' || regeneratePrompt === 'retry') && (
               <div
                 role="status"
                 className="bg-accent flex flex-wrap items-center gap-3 rounded-md p-3 text-sm"
               >
-                <span>Bạn vừa đổi tên người nói. Debrief hiện tại vẫn dùng tên cũ.</span>
+                <span>
+                  {regeneratePrompt === 'retry'
+                    ? 'Chưa xong, thử lại.'
+                    : 'Bạn vừa đổi tên người nói. Debrief hiện tại vẫn dùng tên cũ.'}
+                </span>
                 <Button
                   variant="outline"
                   className="min-h-11"
@@ -830,8 +851,8 @@ export function DebriefPageView({
                     <SegmentSpeaker
                       segment={segment}
                       speakers={speakers}
-                      renaming={renamingSpeakerId}
-                      onStartRename={setRenamingSpeakerId}
+                      renaming={renaming}
+                      onStartRename={setRenaming}
                       onRename={onRenameSpeaker}
                     />
                     <p className="mt-1 text-sm">{segment.textEn}</p>

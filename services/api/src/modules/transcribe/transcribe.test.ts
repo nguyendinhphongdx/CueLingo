@@ -254,8 +254,9 @@ describe('POST /v1/sessions/:id/transcribe', () => {
     const flags = ['vi', 'ja', 'ko', 'zh'].map(
       (code) => SUPPORTED_LANGUAGES[code as 'vi'] as { labelsSpeakers: boolean },
     );
+    const originals = flags.map((f) => f.labelsSpeakers);
     beforeEach(() => flags.forEach((f) => (f.labelsSpeakers = true)));
-    afterEach(() => flags.forEach((f) => (f.labelsSpeakers = false)));
+    afterEach(() => flags.forEach((f, i) => (f.labelsSpeakers = originals[i]!)));
     const known = [{ label: 'speaker_1', hint: 'low voice', lastText: 'We ship Friday.' }];
     const guessing = (speaker?: { label: string; hint?: string }) => ({
       transcribe: vi.fn<Transcribe>((async () => ({

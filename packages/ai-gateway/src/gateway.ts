@@ -18,7 +18,7 @@ import {
   type KnownSpeaker,
   TRANSLATE_PROMPT_VERSION,
   type TranslateInput,
-  type DebriefPromptInput,
+  type DebriefSpeakerInput,
   type FollowupPromptInput,
 } from '@cuelingo/prompts';
 import type { ComposeRequest, LanguageCode, LookupRequest, RecapRequest } from '@cuelingo/shared';
@@ -66,7 +66,7 @@ export interface JsonTaskInputMap {
   'assist.recap': RecapRequest;
   'assist.compose': ComposeRequest;
   'assist.followup': FollowupPromptInput;
-  'debrief.generate': DebriefPromptInput;
+  'debrief.generate': DebriefSpeakerInput;
 }
 
 export type GenerateFn = (args: {
@@ -349,8 +349,8 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
           version: FOLLOWUP_PROMPT_VERSION,
         };
       case 'debrief.generate':
-        // v3 for meetings in a language nobody studies here, v1 otherwise (chosen by the language in the input).
-        return buildDebriefPromptFor(input as DebriefPromptInput);
+        // v5 for meetings in a language nobody studies here, v4 otherwise (chosen by the language in the input).
+        return buildDebriefPromptFor(input as DebriefSpeakerInput);
     }
   }
 
