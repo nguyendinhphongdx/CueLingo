@@ -20,3 +20,4 @@ Mỗi quyết định khó đảo ngược có một ADR: bối cảnh, quyết 
 | [0014](0014-cloud-stt-for-vietnamese.md)              | Nhận dạng đám mây cho ngôn ngữ chưa có model trên máy (tiếng Việt)       | Accepted   |
 | [0015](0015-email-provider-resend.md)                 | Email đăng nhập (magic link) gửi qua Resend                              | Accepted   |
 | [0016](0016-cloud-stt-for-japanese-korean-chinese.md) | Nhận dạng đám mây cho tiếng Nhật, Hàn, Trung                             | Accepted   |
+| [0017](0017-beta-distribution-adhoc-updater.md)       | Phát hành beta: ký ad-hoc, GitHub Releases, tự cập nhật Tauri            | Accepted   |

@@ -10,8 +10,9 @@ const installationSteps = [
     description: 'Mở tệp tải về, rồi kéo CueLingo vào thư mục Applications.',
   },
   {
-    title: 'Mở ứng dụng lần đầu',
-    description: 'Mở CueLingo từ Applications. Nếu macOS hỏi xác nhận, chọn Open để tiếp tục.',
+    title: 'Mở ứng dụng lần đầu (bản beta chưa được Apple công chứng)',
+    description:
+      'macOS sẽ chặn lần mở đầu. Trên macOS 15: bấm Done, vào Cài đặt hệ thống → Quyền riêng tư & Bảo mật, kéo xuống và bấm Open Anyway cho CueLingo. Trên macOS 14: bấm chuột phải vào CueLingo trong Applications, chọn Open, rồi chọn Open lần nữa.',
   },
   {
     title: 'Cho phép dùng micro',
@@ -83,6 +84,10 @@ export function DownloadPage({ downloadUrl }: { downloadUrl: string | null }) {
       <section className={styles.troubleshooting} aria-labelledby="troubleshooting-title">
         <h2 id="troubleshooting-title">Nếu caption chưa xuất hiện</h2>
         <div>
+          <p>
+            Sau mỗi lần CueLingo tự cập nhật, macOS có thể hỏi lại quyền micro và ghi âm hệ thống.
+            Hãy bật lại hai quyền đó rồi mở lại CueLingo.
+          </p>
           <p>
             Kiểm tra lại hai quyền trong Quyền riêng tư & Bảo mật, rồi thoát hẳn và mở lại CueLingo.
           </p>

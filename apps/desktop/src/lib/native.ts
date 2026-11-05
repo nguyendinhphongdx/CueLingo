@@ -5,7 +5,22 @@
 import { invoke } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
 import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { platform, version as osVersion } from '@tauri-apps/plugin-os';
+import { relaunch } from '@tauri-apps/plugin-process';
+import { check } from '@tauri-apps/plugin-updater';
 import { z } from 'zod';
+
+export interface UpdateOffer {
+  version: string;
+  notes: string | null;
+  /** Downloads, verifies the signature, installs and restarts. Rejects when the signature does not match. */
+  install(): Promise<void>;
+}
+
+function isMissingUpdater(error: unknown) {
+  const text = String(error);
+  return /not (found|allowed|registered)|plugin:updater/i.test(text) && !/signature/i.test(text);
+}
 
 export const AssistLevel = z.number().int().min(0).max(5);
 
@@ -163,10 +178,38 @@ export interface AppInfo {
 
 export const native = {
   /** The app's version and the OS it runs on; falls back to placeholders rather than failing a report. */
-  appInfo: async (): Promise<AppInfo> => ({
-    version: await getVersion().catch(() => 'unknown'),
-    os: 'macOS',
-  }),
+  appInfo: async (): Promise<AppInfo> => {
+    const [version, os] = await Promise.all([
+      getVersion().catch(() => 'unknown'),
+      // plugin-os is sync in v2; wrapped so a failure never blocks a report.
+      Promise.resolve()
+        .then(() => `${platform() === 'macos' ? 'macOS' : platform()} ${osVersion()}`)
+        .catch(() => 'macOS'),
+    ]);
+    return { version, os };
+  },
+  /**
+   * Asks the update endpoint for a newer build. `null` when up to date, and also when this build has
+   * no updater (dev and local builds): "plugin not found" is not an error for the person.
+   */
+  checkUpdate: async (): Promise<UpdateOffer | null> => {
+    let update;
+    try {
+      update = await check();
+    } catch (error) {
+      if (isMissingUpdater(error)) return null;
+      throw error;
+    }
+    if (!update) return null;
+    return {
+      version: update.version,
+      notes: update.body ?? null,
+      install: async () => {
+        await update.downloadAndInstall();
+        await relaunch();
+      },
+    };
+  },
   sessionStart: (opts: SessionStartInput) =>
     invoke('session_start', { opts: SessionStartInput.parse(opts) }).then((v) =>
       SessionStartResult.parse(v),

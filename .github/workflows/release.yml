@@ -1,0 +1,99 @@
+name: Release
+
+# Beta channel (ADR 0017): a `v*` tag builds an ad-hoc-signed Apple Silicon .dmg, signs the update
+# bundle with the Tauri updater key, and publishes both to the public releases repository.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  macos:
+    runs-on: macos-14
+    env:
+      VERSION: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: The tag must match the app version
+        run: |
+          app_version=$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")
+          if [ "v${app_version}" != "${VERSION}" ]; then
+            echo "tag ${VERSION} does not match tauri.conf.json version ${app_version}" >&2
+            exit 1
+          fi
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build the audio sidecar
+        working-directory: apps/desktop
+        run: node scripts/sidecar.mjs --rebuild
+
+      - name: Build the app
+        working-directory: apps/desktop
+        env:
+          # Baked into the web bundle: the production API, never a dev token.
+          VITE_API_URL: ${{ vars.CUELINGO_API_URL }}
+          VITE_WEB_URL: ${{ vars.CUELINGO_WEB_URL }}
+          VITE_REALTIME_TOKEN: ''
+          # Turns the updater plugin on (src-tauri/src/lib.rs); a plain build has none.
+          CUELINGO_UPDATER: '1'
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          UPDATER_PUBKEY: ${{ vars.CUELINGO_UPDATER_PUBKEY }}
+          RELEASES_REPO: ${{ vars.CUELINGO_RELEASES_REPO }}
+        run: |
+          test -n "$VITE_API_URL" && test -n "$UPDATER_PUBKEY" && test -n "$RELEASES_REPO"
+          config=$(node -e '
+            process.stdout.write(JSON.stringify({
+              bundle: { createUpdaterArtifacts: true },
+              plugins: { updater: {
+                pubkey: process.env.UPDATER_PUBKEY,
+                endpoints: [`https://github.com/${process.env.RELEASES_REPO}/releases/latest/download/latest.json`],
+              } },
+            }))')
+          pnpm tauri build --target aarch64-apple-darwin --config "$config"
+
+      - name: The bundle must not carry a development token
+        working-directory: apps/desktop
+        run: |
+          if grep -rIl "dev-token\|VITE_REALTIME_TOKEN=dev" dist; then
+            echo "development token found in the built frontend" >&2
+            exit 1
+          fi
+
+      - name: Collect the files
+        working-directory: apps/desktop
+        env:
+          RELEASES_REPO: ${{ vars.CUELINGO_RELEASES_REPO }}
+        run: |
+          out=release-files
+          mkdir -p "$out"
+          bundle_dir=src-tauri/target/aarch64-apple-darwin/release/bundle
+          cp "$bundle_dir"/dmg/*.dmg "$out/CueLingo-macOS-arm64.dmg"
+          cp "$bundle_dir"/macos/CueLingo.app.tar.gz "$out/CueLingo.app.tar.gz"
+          cp "$bundle_dir"/macos/CueLingo.app.tar.gz.sig "$out/CueLingo.app.tar.gz.sig"
+          node scripts/updater-manifest.mjs "${VERSION#v}" "$out/CueLingo.app.tar.gz" \
+            "https://github.com/${RELEASES_REPO}/releases/download/${VERSION}/CueLingo.app.tar.gz" \
+            > "$out/latest.json"
+
+      - name: Publish to the releases repository
+        working-directory: apps/desktop
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          RELEASES_REPO: ${{ vars.CUELINGO_RELEASES_REPO }}
+        run: |
+          gh release create "$VERSION" release-files/* \
+            --repo "$RELEASES_REPO" --title "CueLingo ${VERSION#v}" --notes "Bản beta ${VERSION#v}"

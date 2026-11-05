@@ -13,8 +13,25 @@ use tauri::tray::TrayIconBuilder;
 use tauri::{Emitter, Manager, RunEvent, WindowEvent};
 use tauri_plugin_deep_link::DeepLinkExt;
 
+/// The updater only exists in release builds: the workflow sets `CUELINGO_UPDATER=1` and passes the
+/// public key and endpoint as a `plugins.updater` config override. A dev or local build has neither
+/// (the plugin would refuse to start without a key), and the web side treats "plugin missing" as
+/// "no update". See updater.md.
+fn updater_plugin<R: tauri::Runtime>(
+) -> Option<tauri::plugin::TauriPlugin<R, tauri_plugin_updater::Config>> {
+    option_env!("CUELINGO_UPDATER")
+        .filter(|flag| *flag == "1")
+        .map(|_| tauri_plugin_updater::Builder::new().build())
+}
+
 pub fn run() {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+    if let Some(updater) = updater_plugin() {
+        builder = builder.plugin(updater);
+    }
+    builder
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_os::init())
         .plugin(hotkeys::plugin())
         .plugin(tauri_plugin_deep_link::init())
         .manage(commands::AppState::default())

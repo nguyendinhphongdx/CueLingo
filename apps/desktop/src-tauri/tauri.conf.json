@@ -51,7 +51,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["app"],
+    "targets": ["app", "dmg"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -65,7 +65,8 @@
     "copyright": "© 2026 CMC AI",
     "publisher": "CMC AI",
     "macOS": {
-      "minimumSystemVersion": "14.2"
+      "minimumSystemVersion": "14.2",
+      "signingIdentity": "-"
     },
     "externalBin": ["binaries/cuelingo-audio"]
   },

@@ -24,6 +24,9 @@ const controller = createSessionController({
 // The menu-bar icon follows the meeting even while the window is hidden.
 startTraySync(controller, native);
 
+/** The one controller, for code outside React that must know whether a meeting runs (the updater). */
+export const sessionController = controller;
+
 // A glossary edit on the Terms page reaches the running meeting's speech model.
 refreshOnGlossaryChange(controller);
 

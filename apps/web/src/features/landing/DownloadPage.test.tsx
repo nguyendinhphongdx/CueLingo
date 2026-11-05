@@ -24,4 +24,13 @@ describe('DownloadPage', () => {
     expect(markup).toContain('Tải cho macOS');
     expect(markup).not.toContain('Sắp có bản tải');
   });
+
+  it('explains how to open an app Apple has not notarized, and what to redo after an update', () => {
+    const markup = renderToStaticMarkup(<DownloadPage downloadUrl={null} />);
+
+    expect(markup).toContain('Open Anyway');
+    expect(markup).toContain('macOS 14');
+    expect(markup).toContain('macOS 15');
+    expect(markup).toContain('Sau mỗi lần CueLingo tự cập nhật');
+  });
 });

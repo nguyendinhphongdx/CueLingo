@@ -11,6 +11,7 @@ import {
   shouldShowOnboarding,
 } from '../onboarding';
 import { FeedbackPage } from '../feedback';
+import { UpdateBanner } from '../updater';
 import { PrivacyPanel } from '../privacy';
 import { useActivationTelemetry } from '../telemetry';
 import { RecentSessions, SessionPanel } from '../session';
@@ -126,6 +127,7 @@ function CurrentView({
     return (
       <>
         <PageHeader title="Phiên họp" />
+        <UpdateBanner />
         <AssistSuggestionBanner />
         <CalendarHintCard />
         <SessionPanel />
