@@ -1,5 +1,6 @@
 import {
   ErrorCode,
+  normalizePhrase,
   type LanguageCode,
   type Phrase,
   type SavePhraseRequest,
@@ -8,8 +9,6 @@ import { AppError } from '../../lib/errors';
 import type { PhrasesRepository } from './phrases.repository';
 
 export type PhrasesService = ReturnType<typeof createPhrasesService>;
-
-const normalizePhrase = (phrase: string): string => phrase.replace(/\s+/g, ' ').toLowerCase();
 
 export function createPhrasesService(repo: PhrasesRepository) {
   return {

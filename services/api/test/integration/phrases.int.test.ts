@@ -1,6 +1,9 @@
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createPostgresPhrasesRepository } from '../../src/modules/review';
+import {
+  createPostgresPhrasesRepository,
+  createPostgresStudyRepository,
+} from '../../src/modules/review';
 import { buildTestApp, TEST_USER_HEADER } from '../../src/testing';
 import { startMigratedPostgres, type TestDatabase } from './postgres';
 
@@ -106,5 +109,32 @@ describe('phrases on real Postgres (AC1-AC3)', () => {
     const [item] = await sql<{ count: string }[]>`
       SELECT count(*) FROM lexical_items WHERE id = ${created.json().id}`;
     expect(item?.count).toBe('1');
+  });
+
+  it('stores the chat sentence as context_text and shows it as the review context (AC11)', async () => {
+    const created = await save(alice, {
+      phrase: 'Touch Base',
+      context: 'Can we touch base on Friday?',
+    });
+    await save(alice, { phrase: ' touch   base ', context: 'A later sentence.' });
+    const [row] = await sql<{ context_text: string | null; in_review: boolean }[]>`
+      SELECT context_text, in_review FROM user_lexicon
+      WHERE user_id = ${alice} AND item_id = ${created.json().id}`;
+    expect(row).toEqual({ context_text: 'Can we touch base on Friday?', in_review: true });
+
+    const items = await createPostgresStudyRepository(sql).listItems(alice, 'en');
+    expect(items.find((item) => item.itemId === created.json().id)?.contextEn).toBe(
+      'Can we touch base on Friday?',
+    );
+    // A meeting segment still wins over the saved sentence.
+    const withSegment = await save(alice, {
+      phrase: 'Circle Back',
+      segmentId: aliceSegment,
+      context: 'ignored while the segment exists',
+    });
+    const again = await createPostgresStudyRepository(sql).listItems(alice, 'en');
+    expect(again.find((item) => item.itemId === withSegment.json().id)?.contextEn).toBe(
+      'Circle back',
+    );
   });
 });

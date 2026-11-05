@@ -1,15 +1,18 @@
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildTestApp, TEST_USER_HEADER } from '../../testing';
+import { createInMemoryPhrasesRepository } from './index';
 
 const ALICE = 'alice';
 const BOB = 'bob';
 
 describe('phrases module', () => {
   let app: FastifyInstance;
+  let repo: ReturnType<typeof createInMemoryPhrasesRepository>;
 
   beforeEach(async () => {
-    app = await buildTestApp();
+    repo = createInMemoryPhrasesRepository();
+    app = await buildTestApp({ repos: { phrases: repo } });
   });
   afterEach(() => app.close());
 
@@ -95,5 +98,38 @@ describe('phrases module', () => {
       headers: as(ALICE),
     });
     expect(bad.statusCode).toBe(400);
+  });
+
+  it('keeps the sentence a phrase was saved from and puts the phrase in review', async () => {
+    const created = await save(ALICE, {
+      phrase: 'Circle Back',
+      context: "Let's circle back on this after the demo.",
+    });
+    expect(created.statusCode).toBe(201);
+    expect(created.json().inReview).toBe(true);
+    expect(repo.contextOf(ALICE, created.json().id)).toBe(
+      "Let's circle back on this after the demo.",
+    );
+    // The sentence is the user's: nobody else sees it.
+    expect(repo.contextOf(BOB, created.json().id)).toBeNull();
+  });
+
+  it('keeps one row for the same phrase in other case and spacing, and keeps the first sentence', async () => {
+    const first = await save(ALICE, { phrase: 'Follow  Up', context: 'First sentence.' });
+    const again = await save(ALICE, { phrase: ' follow up ', context: 'Second sentence.' });
+    const other = await save(ALICE, { phrase: 'FOLLOW UP' });
+
+    expect(again.json().id).toBe(first.json().id);
+    expect(other.json().id).toBe(first.json().id);
+    expect(other.json().phrase).toBe('follow up');
+    expect(other.json().inReview).toBe(true);
+    expect(repo.contextOf(ALICE, first.json().id)).toBe('First sentence.');
+    const list = await app.inject({ method: 'GET', url: '/v1/phrases', headers: as(ALICE) });
+    expect(list.json().phrases).toHaveLength(1);
+  });
+
+  it('rejects a context longer than 500 characters', async () => {
+    const res = await save(ALICE, { phrase: 'circle back', context: 'x'.repeat(501) });
+    expect(res.statusCode).toBe(400);
   });
 });

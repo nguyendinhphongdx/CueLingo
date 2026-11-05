@@ -64,9 +64,10 @@ export function createPostgresPhrasesRepository(sql: Sql): PhrasesRepository {
             AND (${input.sessionId ?? null}::uuid IS NULL OR sessions.id = ${input.sessionId ?? null})
         ), saved AS (
           INSERT INTO user_lexicon (
-            user_id, item_id, first_context_segment_id, meaning_vi, in_review
+            user_id, item_id, first_context_segment_id, meaning_vi, in_review, context_text
           )
-          SELECT ${userId}, item.id, (SELECT id FROM owned_context), ${input.meaningVi ?? null}, true
+          SELECT ${userId}, item.id, (SELECT id FROM owned_context), ${input.meaningVi ?? null}, true,
+                 ${input.context ?? null}
           FROM item
           ON CONFLICT (user_id, item_id) DO UPDATE SET
             meaning_vi = CASE
@@ -77,6 +78,8 @@ export function createPostgresPhrasesRepository(sql: Sql): PhrasesRepository {
               user_lexicon.first_context_segment_id,
               EXCLUDED.first_context_segment_id
             ),
+            -- Like the first segment, the first sentence a phrase was read in is kept.
+            context_text = COALESCE(user_lexicon.context_text, EXCLUDED.context_text),
             in_review = true
           RETURNING item_id, meaning_vi, in_review
         )

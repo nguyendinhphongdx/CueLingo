@@ -3,14 +3,18 @@ import { DEFAULT_LANGUAGE, type Phrase } from '@cuelingo/shared';
 import type { PhrasesRepository } from './phrases.repository';
 
 /** In-memory implementation with the same user boundaries, for tests and local demos. */
-export function createInMemoryPhrasesRepository(): PhrasesRepository {
+export function createInMemoryPhrasesRepository(): PhrasesRepository & {
+  /** The sentence the phrase was saved with, or null; what review shows when no meeting segment exists. */
+  contextOf(userId: string, phraseId: string): string | null;
+} {
   const items = new Map<string, string>();
-  const rows: Array<Phrase & { userId: string; language: string }> = [];
+  const rows: Array<Phrase & { userId: string; language: string; contextText?: string }> = [];
   const strip = ({
     userId: _userId,
     language: _language,
+    contextText: _contextText,
     ...phrase
-  }: Phrase & { userId: string; language: string }): Phrase => phrase;
+  }: Phrase & { userId: string; language: string; contextText?: string }): Phrase => phrase;
 
   return {
     async list(userId, language) {
@@ -32,6 +36,7 @@ export function createInMemoryPhrasesRepository(): PhrasesRepository {
       if (existing) {
         if (input.meaningVi !== undefined) existing.meaningVi = input.meaningVi;
         existing.inReview = true;
+        existing.contextText ??= input.context;
         return strip(existing);
       }
       const row = {
@@ -41,9 +46,14 @@ export function createInMemoryPhrasesRepository(): PhrasesRepository {
         inReview: true,
         userId,
         language,
+        contextText: input.context,
       };
       rows.push(row);
       return strip(row);
+    },
+
+    contextOf(userId, phraseId) {
+      return rows.find((row) => row.userId === userId && row.id === phraseId)?.contextText ?? null;
     },
 
     async delete(userId, id) {

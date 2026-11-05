@@ -55,7 +55,7 @@ export function createPostgresStudyRepository(sql: Sql): StudyRepository {
     async listItems(userId, language) {
       const rows = await sql<ItemRow[]>`
         SELECT user_lexicon.item_id, lexical_items.lemma AS phrase, user_lexicon.meaning_vi,
-               segments.text_en AS context_en, user_lexicon.in_review, user_lexicon.receptive_fsrs
+               COALESCE(segments.text_en, user_lexicon.context_text) AS context_en, user_lexicon.in_review, user_lexicon.receptive_fsrs
         FROM user_lexicon
         JOIN lexical_items ON lexical_items.id = user_lexicon.item_id
         LEFT JOIN segments ON segments.id = user_lexicon.first_context_segment_id
