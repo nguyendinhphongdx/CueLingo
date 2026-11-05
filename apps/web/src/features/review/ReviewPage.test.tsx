@@ -45,11 +45,14 @@ describe('ReviewSession', () => {
       onChoose: () => {},
       onRate,
     });
-    const ratingSection = element.props.children[1].props.children[3];
-    const ratingButtons = ratingSection.props.children[1].props.children;
+    const content = element.props.children[1].props.children;
+    const ratingButtons = content[4].props.children[1].props.children;
     ratingButtons[2].props.onClick();
     expect(onRate).toHaveBeenCalledOnce();
     expect(onRate).toHaveBeenCalledWith(3);
+    // The explicit "Tiếp theo" button applies the suggested rating too.
+    content[3].props.onClick();
+    expect(onRate).toHaveBeenLastCalledWith(3);
   });
 
   it('shows correct and incorrect totals at the end', () => {

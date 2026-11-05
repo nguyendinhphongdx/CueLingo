@@ -152,8 +152,19 @@ export function ReviewSession({
         )}
 
         {answered && (
+          <Button
+            type="button"
+            className="min-h-11 w-full"
+            disabled={submitting}
+            onClick={() => onRate(correct ? 3 : 1)}
+          >
+            Tiếp theo
+          </Button>
+        )}
+
+        {answered && (
           <div>
-            <p className="mb-2 text-sm font-medium">Bạn nhớ cụm này thế nào?</p>
+            <p className="mb-2 text-sm font-medium">Hoặc chọn mức nhớ của bạn</p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {RATINGS.map((rating) => {
                 const suggested = rating.value === (correct ? 3 : 1);
