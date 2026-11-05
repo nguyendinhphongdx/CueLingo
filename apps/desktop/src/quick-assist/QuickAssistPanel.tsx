@@ -2,7 +2,7 @@ import { SUPPORTED_LANGUAGES } from '@cuelingo/shared';
 import { IconButton } from '@cuelingo/ui/components/icon-button';
 import { ChevronRight, X } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
-import { meetingLanguage } from './use-quick-assist';
+import { meetingLanguage, meetingLearnable } from './use-quick-assist';
 import type { QuickAssistActions, QuickAssistState } from './use-quick-assist';
 
 interface QuickAssistPanelProps {
@@ -86,6 +86,20 @@ export function QuickAssistPanel({
   // Slid away: nothing renders, but the hook keeps what was typed.
   if (collapsed) return null;
   if (state.view === 'closed') return null;
+
+  if ((state.view === 'lookup' || state.view === 'compose') && !meetingLearnable()) {
+    return (
+      <PanelFrame
+        title={state.view === 'lookup' ? `Tra từ: ${state.term}` : 'Nói giúp'}
+        close={actions.close}
+        {...frame}
+      >
+        <p>
+          Tính năng này chưa hỗ trợ họp bằng {languageName}. Bạn vẫn dùng được "Họ vừa nói gì?".
+        </p>
+      </PanelFrame>
+    );
+  }
 
   if (state.view === 'lookup') {
     return (

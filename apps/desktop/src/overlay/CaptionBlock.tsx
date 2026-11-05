@@ -53,6 +53,8 @@ export function CaptionBlock({ segment, level, faded, showSpeaker, onLookup }: C
   // A language that is not translated (Vietnamese) has only its own text: always show it, never wait for a translation.
   const code = segment.language ?? 'en';
   const translates = isLanguageCode(code) ? SUPPORTED_LANGUAGES[code].translates : true;
+  // Word lookup needs a learnable language: the lookup prompt has nothing to say about Vietnamese.
+  const learnable = isLanguageCode(code) ? SUPPORTED_LANGUAGES[code].learnable : true;
   const showEnglish = level !== 1 || !translates;
   const translation = segment.translation;
 
@@ -76,7 +78,7 @@ export function CaptionBlock({ segment, level, faded, showSpeaker, onLookup }: C
           <OriginalText
             text={segment.text}
             language={segment.language ?? 'en'}
-            lookup={!mine}
+            lookup={!mine && learnable}
             onLookup={onLookup}
           />
           {segment.partial ? (

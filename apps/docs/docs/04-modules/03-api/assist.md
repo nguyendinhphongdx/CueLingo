@@ -38,3 +38,7 @@ Mọi endpoint cần xác thực. Lỗi model hoặc đầu ra JSON sai sau mộ
 ## Câu hỏi mở
 
 - (chưa có)
+
+## Ngôn ngữ
+
+`lookup` và `compose` nhận `LearnableLanguageSchema` (en, ja); `vi` và các ngôn ngữ không học được bị từ chối 400. `recap` nhận mọi ngôn ngữ đã bật.

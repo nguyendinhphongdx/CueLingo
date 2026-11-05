@@ -29,3 +29,7 @@ Tra từ theo ngữ cảnh, "Họ vừa nói gì?", "Nói giúp tôi" + teleprom
 ## Câu hỏi mở
 
 - (chưa có)
+
+## Họp tiếng Việt
+
+Tra từ và "Nói giúp" chỉ có với ngôn ngữ `learnable`. Trong họp tiếng Việt, caption không có nút "Tra từ", và nếu bảng mở ở chế độ tra từ hay "Nói giúp" thì hiện "Tính năng này chưa hỗ trợ họp bằng tiếng việt"; "Họ vừa nói gì?" vẫn dùng được. DTO assist cũng từ chối `vi` ở lookup và compose (400), recap nhận mọi ngôn ngữ đã bật.

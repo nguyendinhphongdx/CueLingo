@@ -67,3 +67,7 @@ Khi debrief trong thẻ "Cuộc họp vừa xong" đã sẵn sàng, nút "Soạn
 ## Câu hỏi mở
 
 - (chưa có)
+
+## Đổi ngôn ngữ giữa phiên (Việt ↔ Anh)
+
+Khi chấp nhận gợi ý ngôn ngữ, controller gọi server, rồi socket, rồi sidecar. Sidecar giữ mô hình cũ cho tới khi mô hình mới báo `ready`, nên caption không đứt và transcript không bị xoá. Từ vựng tải lại ngay. Glossary cũng được hỏi lại mỗi 2 phút (`GLOSSARY_POLL_MS`) ngoài lúc đổi từ trang web.

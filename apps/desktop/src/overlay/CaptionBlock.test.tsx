@@ -36,6 +36,24 @@ describe('CaptionBlock without a translation', () => {
   });
 });
 
+describe('CaptionBlock word lookup', () => {
+  const lookupButtons = (language: string) =>
+    renderToStaticMarkup(
+      <CaptionBlock
+        segment={{ ...segment(language), text: 'Hello team' }}
+        level={3}
+        faded={false}
+        showSpeaker={false}
+        onLookup={() => {}}
+      />,
+    );
+
+  it('offers lookup on English and none on Vietnamese captions', () => {
+    expect(lookupButtons('en')).toContain('Tra từ Hello');
+    expect(lookupButtons('vi')).not.toContain('Tra từ');
+  });
+});
+
 describe('CaptionBlock speaker tag', () => {
   const tag = (event: Partial<ReturnType<typeof segment>> & { speaker?: string }) =>
     renderToStaticMarkup(

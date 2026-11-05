@@ -26,6 +26,33 @@ function renderPanel(state: QuickAssistState) {
   return renderToStaticMarkup(<QuickAssistPanel state={state} actions={actions()} />);
 }
 
+describe('Quick Assist in a Vietnamese meeting', () => {
+  it('says lookup and compose are not available, and leaves recap alone', async () => {
+    const { useTranscriptStore } = await import('../overlay/transcript-store');
+    useTranscriptStore.setState({
+      segments: [
+        {
+          segmentId: 'a',
+          stream: 'system',
+          text: 'Xin chào',
+          translation: null,
+          partial: false,
+          language: 'vi',
+        },
+      ] as never,
+    });
+    try {
+      const lookup = renderPanel({ view: 'lookup', status: 'error', term: 'x', context: '' });
+      expect(lookup).toContain('chưa hỗ trợ họp bằng tiếng việt');
+      const compose = renderPanel({ view: 'compose', status: 'idle', intent: '' });
+      expect(compose).toContain('chưa hỗ trợ họp bằng tiếng việt');
+      expect(renderPanel({ view: 'recap', status: 'loading' })).toContain('Đang tóm tắt');
+    } finally {
+      useTranscriptStore.setState({ segments: [] });
+    }
+  });
+});
+
 describe('Quick Assist UI', () => {
   it('renders each English word as a lookup target with its sentence retained by the caller', () => {
     const markup = renderToStaticMarkup(

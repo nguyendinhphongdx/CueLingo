@@ -57,3 +57,7 @@ Trang dùng hai cờ của registry độc lập: `translates` quyết định c
 ## Câu hỏi mở
 
 - (chưa có)
+
+## Sao chép cả debrief
+
+"Sao chép cả debrief" cho Markdown của cả cuộc họp (`buildDebriefMarkdown`): tóm tắt, quyết định, việc cần làm, và transcript khi ô "Kèm transcript" được chọn. Không có audio và không có link tới phiên.

@@ -30,3 +30,7 @@ pnpm verify
 
 | Lỗi | Tìm ở | Sửa |
 | --- | ----- | --- |
+
+## Spike: đổi Việt ↔ Anh giữa họp (Lô 5)
+
+Đọc `session-controller.ts`, `audio_bridge.rs`, `main.swift`: sidecar giữ mô hình cũ cho tới khi mô hình mới `ready` (comment trong `set_language`), controller không xoá transcript khi đổi ngôn ngữ. Khoảng trống caption chỉ bằng thời gian tải mô hình, không cần sửa Swift. Chưa đo bằng tay trên máy thật: việc của người (H7).

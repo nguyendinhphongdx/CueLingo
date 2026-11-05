@@ -1,4 +1,9 @@
-import { DEFAULT_LANGUAGE, isLanguageCode, type LanguageCode } from '@cuelingo/shared';
+import {
+  DEFAULT_LANGUAGE,
+  isLanguageCode,
+  SUPPORTED_LANGUAGES,
+  type LanguageCode,
+} from '@cuelingo/shared';
 import type { ComposeResponse, LookupResponse, RecapResponse } from '@cuelingo/shared';
 import { useCallback, useEffect, useState } from 'react';
 import { native, type HotkeyEvent } from '../lib/native';
@@ -41,6 +46,11 @@ export function meetingLanguage(): LanguageCode {
   return isLanguageCode(code) ? code : DEFAULT_LANGUAGE;
 }
 
+/** Lookup and "Nói giúp" only exist for languages the learner can study; recap works for every enabled one. */
+export function meetingLearnable(): boolean {
+  return SUPPORTED_LANGUAGES[meetingLanguage()].learnable;
+}
+
 function now() {
   return new Date().toISOString();
 }
@@ -56,6 +66,10 @@ export function useQuickAssist({
 
   const lookup = useCallback(
     async (term: string, context: string) => {
+      if (!meetingLearnable()) {
+        setState({ view: 'lookup', status: 'error', term, context });
+        return;
+      }
       setState({ view: 'lookup', status: 'loading', term, context });
       void api.record({ type: 'lookup', term, at: now() }).catch(() => undefined);
       try {
@@ -95,7 +109,7 @@ export function useQuickAssist({
   const submitCompose = useCallback(
     async (intent: string) => {
       const trimmedIntent = intent.trim();
-      if (!trimmedIntent) return;
+      if (!trimmedIntent || !meetingLearnable()) return;
       const context = selectRecentSystemSentences(useTranscriptStore.getState().segments, 10);
       setState({ view: 'compose', status: 'loading', intent: trimmedIntent });
       try {
