@@ -27,17 +27,18 @@ export type Http = ReturnType<typeof createHttp>;
 export function createHttp(options: ClientOptions) {
   const doFetch = options.fetch ?? fetch;
 
-  async function request<S extends z.ZodType>(
+  /** Sends one request with auth and maps any failure to ApiError; the caller reads the 2xx body. */
+  async function send(
     method: string,
     path: string,
-    schema: S | null,
-    body?: unknown,
-    init?: { signal?: AbortSignal },
-  ): Promise<z.output<S>> {
+    body: unknown,
+    init: { signal?: AbortSignal; accept?: string } | undefined,
+  ): Promise<Response> {
     const token = await options.getToken();
     const headers: Record<string, string> = {};
     if (token) headers.authorization = `Bearer ${token}`;
     if (body !== undefined) headers['content-type'] = 'application/json';
+    if (init?.accept) headers.accept = init.accept;
 
     // The token lookup is async: a request cancelled meanwhile must not be sent at all.
     if (init?.signal?.aborted) throw new ApiError(0, 'NETWORK_ERROR', 'Request aborted');
@@ -63,9 +64,33 @@ export function createHttp(options: ClientOptions) {
       }
       throw new ApiError(res.status, 'INTERNAL_ERROR', `HTTP ${res.status}`);
     }
+    return res;
+  }
+
+  async function request<S extends z.ZodType>(
+    method: string,
+    path: string,
+    schema: S | null,
+    body?: unknown,
+    init?: { signal?: AbortSignal },
+  ): Promise<z.output<S>> {
+    const res = await send(method, path, body, init);
     // Validate responses too: a contract drift fails loudly here instead of deep in the UI.
     return (schema ? schema.parse(await res.json()) : undefined) as z.output<S>;
   }
 
-  return { request };
+  /**
+   * Like `request`, but hands back the open response so the caller reads a long body (a server-sent
+   * event stream) itself. Errors that arrive before the body starts are the same JSON `ApiError`s.
+   */
+  function stream(
+    method: string,
+    path: string,
+    body?: unknown,
+    init?: { signal?: AbortSignal },
+  ): Promise<Response> {
+    return send(method, path, body, { ...init, accept: 'text/event-stream' });
+  }
+
+  return { request, stream };
 }
