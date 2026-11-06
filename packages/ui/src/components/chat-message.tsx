@@ -1,4 +1,4 @@
-import type { MouseEventHandler } from 'react';
+import type { MouseEventHandler, ReactNode } from 'react';
 import type { AgentCardLike } from '../lib/agent-card';
 import { cn } from '../lib/utils';
 import { AgentCardView } from './agent-card-view';
@@ -34,6 +34,7 @@ export function ChatMessage({
   parts,
   status = 'complete',
   loadAudio,
+  renderHtmlBlock,
   onDoubleClick,
   className,
 }: {
@@ -41,6 +42,8 @@ export function ChatMessage({
   parts: ChatMessagePart[];
   status?: ChatMessageStatus;
   loadAudio?: (text: string) => Promise<Blob>;
+  /** How to draw an `html_block` card (layer 2); without it such a card is not shown. */
+  renderHtmlBlock?: (data: { title?: string; html: string }) => ReactNode;
   onDoubleClick?: MouseEventHandler<HTMLElement>;
   className?: string;
 }) {
@@ -77,7 +80,12 @@ export function ChatMessage({
             summary={part.summary}
           />
         ) : (
-          <AgentCardView key={index} card={part.card} loadAudio={loadAudio} />
+          <AgentCardView
+            key={index}
+            card={part.card}
+            loadAudio={loadAudio}
+            renderHtmlBlock={renderHtmlBlock}
+          />
         ),
       )}
       {isAwaitingText(status, parts) ? <ThinkingIndicator /> : null}

@@ -80,6 +80,29 @@ describe('toolStepLabel', () => {
   });
 });
 
+describe('ChatMessage html_block', () => {
+  const parts = [
+    { type: 'card' as const, card: { kind: 'html_block' as const, data: { html: '<b>page</b>' } } },
+  ];
+
+  it('shows a placeholder, never the page, when the client gives no renderer', () => {
+    const out = renderToStaticMarkup(<ChatMessage role="assistant" parts={parts} />);
+    expect(out).toContain('chưa được bật');
+    expect(out).not.toContain('<b>page</b>');
+  });
+
+  it('lets the client draw the block', () => {
+    const out = renderToStaticMarkup(
+      <ChatMessage
+        role="assistant"
+        parts={parts}
+        renderHtmlBlock={(data) => <section>{data.html.length}</section>}
+      />,
+    );
+    expect(out).toContain('<section>11</section>');
+  });
+});
+
 describe('AgentCardView html_block without a renderer', () => {
   const card: AgentCardLike = {
     kind: 'html_block',

@@ -35,6 +35,7 @@ Component React dùng chung cho desktop và web.
 - Tailwind CSS 4
 - `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react`
 - `react-markdown`, `remark-gfm` (MIT; không bật `rehype-raw`) cho `MarkdownView`
+- `@cuelingo/shared`: **ngoại lệ có chủ ý, chỉ cho `lib/bridge-host`, `lib/sandbox-controller` và `SandboxFrame`**. Giao thức bridge là một contract nên schema Zod của nó (`agent-bridge.ts`) chỉ viết một lần và dùng cả hai phía; các thành phần còn lại vẫn dùng kiểu khớp cấu trúc.
 
 ## Dữ liệu & sự kiện
 
@@ -63,17 +64,19 @@ Nhãn người nói dùng chung cho overlay và web: `SpeakerTag({label, display
 
 ## Trợ lý AI (chat)
 
-Các thành phần chỉ trình bày và nhận callback; không gọi API, không import `@cuelingo/shared` (kiểu `AgentCardLike`, `ChatMessagePart` ở `lib/agent-card.ts`, `components/chat-message.tsx` khớp cấu trúc với contract). Web dùng ở `apps/web/src/features/assistant`; desktop chưa gắn.
+Các thành phần chỉ trình bày và nhận callback; không gọi API, không import `@cuelingo/shared` trừ nhóm sandbox bên dưới (kiểu `AgentCardLike`, `ChatMessagePart` ở `lib/agent-card.ts`, `components/chat-message.tsx` khớp cấu trúc với contract). Web dùng ở `apps/web/src/features/assistant`; desktop chưa gắn.
 
-| Import                            | Export                                                                                |
-| --------------------------------- | ------------------------------------------------------------------------------------- |
-| `components/markdown-view`        | `MarkdownView`, `safeUrl`                                                             |
-| `components/agent-card-view`      | `AgentCardView({card, loadAudio?})`                                                   |
-| `components/word-actions-menu`    | `WordActionsMenu`, `WordLookup`                                                       |
-| `components/chat-message`         | `ChatMessage`, `ChatMessagePart`, `isAwaitingText`                                    |
-| `components/tool-step`            | `ToolStep`, `toolStepLabel`                                                           |
-| `components/thinking-indicator`   | `ThinkingIndicator`                                                                   |
-| `lib/agent-card`, `lib/menu-keys` | `AgentCardLike`, `isClozeCorrect`, `splitCloze`; `menuKeyAction`, `clampMenuPosition` |
+| Import                             | Export                                                                                         |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `components/markdown-view`         | `MarkdownView`, `safeUrl`                                                                      |
+| `components/agent-card-view`       | `AgentCardView({card, loadAudio?})`                                                            |
+| `components/word-actions-menu`     | `WordActionsMenu`, `WordLookup`                                                                |
+| `components/chat-message`          | `ChatMessage`, `ChatMessagePart`, `isAwaitingText`                                             |
+| `components/tool-step`             | `ToolStep`, `toolStepLabel`                                                                    |
+| `components/thinking-indicator`    | `ThinkingIndicator`                                                                            |
+| `components/sandbox-frame`         | `SandboxFrame`, `SandboxFrameView` (lớp 2, sau cờ)                                             |
+| `lib/bridge-host`, `lib/sandbox-*` | `createBridgeHost`, `createSandboxController`, `createWatchdog`, `sandboxReducer`, `runnerUrl` |
+| `lib/agent-card`, `lib/menu-keys`  | `AgentCardLike`, `isClozeCorrect`, `splitCloze`; `menuKeyAction`, `clampMenuPosition`          |
 
 - **`MarkdownView`** (AC6): bỏ HTML thô (`skipHtml`, không `rehype-raw`), **không bao giờ tải ảnh** (kênh rò dữ liệu qua URL; chỉ hiện chữ `[alt]`), chỉ liên kết `http`, `https`, `mailto` (kiểm bằng `new URL`, nên `javascript:`, `data:`, `java\nscript:`, đường dẫn tương đối đều thành chữ thường), mở tab mới với `rel="noopener noreferrer"`. Có bảng, danh sách, mã nhờ GFM. Test XSS ở `markdown-view.test.tsx`.
 - **`AgentCardView`**: `flashcards` dùng lại `FlashcardDeck` (lật, chấm, xem lại), `cloze` (gõ, Enter hoặc "Kiểm tra", bỏ qua hoa thường và dấu chấm cuối), `quiz_choice` (chọn rồi hiện đáp án và giải thích), `compare_table`, `phrase_list` (nút nghe nếu có `loadAudio`). Mọi chữ là text thường, không HTML. Hạn chế đã biết: `FlashcardDeck` nghe phím trên `window`, nên nhiều bộ thẻ trên cùng một trang cùng phản ứng với phím.
@@ -82,3 +85,14 @@ Các thành phần chỉ trình bày và nhận callback; không gọi API, khô
 - **`ToolStep`**: nhãn tiếng Việt theo công cụ và trạng thái (`lookup_word`, `list_saved_phrases`, `save_phrase`, `show_card`); công cụ lạ (plugin) chỉ hiện nhãn chung, không lộ tên.
 - **`ThinkingIndicator`**: chấm nhảy chỉ khi người dùng không tắt chuyển động (`motion-safe:`); `role="status"`.
 - Roadmap có mục `assistant` ("Trợ lý AI", nhóm Học); trạng thái từng client ở `lib/roadmap.ts`.
+
+### Khối giao diện HTML/JS (lớp 2, [ADR 0019](../../08-adr/0019-ai-generated-ui.md), sau cờ `AGENT_HTML_BLOCKS`)
+
+`AgentCardView` nhận thêm `renderHtmlBlock?(data)` cho thẻ `html_block`; **không có hàm này thì thẻ không hiện** (chỉ một dòng "chưa được bật"), mã HTML không bao giờ nằm trong DOM của app. `ChatMessage` chuyển tiếp prop này.
+
+- **`SandboxFrame({html, title?, runnerOrigin, onListPhrases, onSavePhrase, onSpeak})`**: một `<iframe>` trỏ tới `{runnerOrigin}/runner.html` với `sandbox="allow-scripts"` (đúng một cờ, **không** `allow-same-origin`, `allow-forms`, `allow-popups`, `allow-modals`, `allow-top-navigation*`, `allow-downloads`), `allow=""` (tắt camera, mic, vị trí, clipboard), `referrerPolicy="no-referrer"`, `loading="lazy"`. Hằng số ở `lib/sandbox-attrs.ts` (không import gì, e2e dùng lại). `runnerOrigin` không phải http(s) thì không vẽ iframe. Khi iframe tải xong, host gửi `render {html}` rồi bật watchdog; `html` cố định suốt đời khối (HTML khác là khối khác, component remount theo `key`).
+- **Watchdog** (`lib/sandbox-watchdog`): trang phải gửi `ui.ready` trong 3 giây sau khi runner tải; sau đó host ping 2 giây một lần và pong của lần trước phải về trước lần ping kế tiếp. Quá hạn, hoặc trang gửi `ui.error` (cũng là cách báo `securitypolicyviolation`), thì **gỡ iframe**, hiện "Khối giao diện đã bị dừng", lý do, và nút "Xem mã nguồn" (hiện mã dạng chữ trong `<pre>`, không bao giờ chạy). Khối đã dừng thì mọi tin đến sau bị bỏ.
+- **Bridge** (`lib/bridge-host`), thứ tự kiểm cho mỗi tin: (1) `event.source === iframe.contentWindow`; (2) `event.origin` thuộc danh sách chấp nhận, mặc định **chỉ `"null"`**; (3) tối đa 300 tin/phút; (4) ≤ 16 KB tính theo byte, JSON hoá được; (5) `pong` hoặc request `{v:1,id,op,args}` hợp lệ theo Zod của `@cuelingo/shared`, `op` nằm trong allowlist sáu thao tác; (6) tần suất: 20 thao tác dữ liệu và 120 thao tác `ui.*` mỗi phút mỗi khối. Tin bị từ chối chỉ ghi `console.warn` lý do và tên thao tác nếu nằm trong allowlist, không ghi nội dung. Tin có `id` hợp lệ được trả lời `ok:false` với mã cố định (`op_not_allowed`, `invalid`, `too_large`, `rate_limited`, `declined`, `busy`, `failed`), không bao giờ là chữ của lỗi gốc.
+- **`phrases.save` luôn qua `ConfirmDialog`** do `SandboxFrame` vẽ trong DOM của host ("Lưu cụm từ này?"), không có đường nào gọi `onSavePhrase` mà bỏ qua nó; mỗi lúc chỉ một câu hỏi (`busy`), khối bị gỡ giữa chừng thì huỷ câu hỏi và không lưu. `phrases.list` chỉ trả `{phrase, meaningVi}` (tối đa 50). `tts.speak`: host tự phát, không trả âm thanh vào trang.
+- **Vì sao origin là `"null"`**: iframe không có `allow-same-origin` có origin mờ nên trình duyệt báo `event.origin === "null"` (không phải origin của runner), và `postMessage` vào nó phải dùng target `"*"`. Vì vậy ranh giới là **danh tính cửa sổ** (`source`), không phải chuỗi origin. Plan ghi `event.origin === RUNNER_ORIGIN`; cách đó sẽ từ chối mọi tin thật.
+- Test: `bridge-host.test.ts` (giả mạo nguồn/origin, thao tác lạ, tin quá cỡ, không serialise được, tần suất, xác nhận lưu), `sandbox-watchdog.test.ts` (đồng hồ giả), `sandbox-controller.test.ts` (dây nối), `sandbox-frame.test.tsx` (thuộc tính iframe, gỡ khối, xem mã nguồn dạng chữ).
