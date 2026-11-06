@@ -450,6 +450,37 @@ describe('agent module', () => {
     expect(stored.parts.filter((p: { type: string }) => p.type === 'card')).toHaveLength(1);
   });
 
+  it('creates an exercise card from the caller saved phrases only (AC16)', async () => {
+    const t = await setup([
+      call('create_exercise', { kind: 'cloze', source: 'saved_phrases' }),
+      text('Làm thử nhé.'),
+    ]);
+    await t.phrases.save(ALICE, {
+      phrase: 'circle back',
+      meaningVi: 'quay lại bàn sau',
+      language: 'en',
+    });
+    await t.phrases.save(BOB, {
+      phrase: 'secret bob phrase',
+      meaningVi: 'của Bob',
+      language: 'en',
+    });
+    const id = await t.create();
+    const events = parseSse((await t.send(id, 'Cho mình bài tập')).body).map((e) => e.data);
+
+    expect(t.seen[0]).toBeDefined();
+    const card = events.find((e) => e.type === 'card');
+    expect(card).toMatchObject({
+      card: { kind: 'cloze', data: { items: [{ answer: 'circle back' }] } },
+    });
+    expect(JSON.stringify(events)).not.toContain('secret bob phrase');
+    expect(events.find((e) => e.type === 'tool_result')).toMatchObject({
+      tool: 'create_exercise',
+      ok: true,
+      summary: 'Đã tạo bài tập',
+    });
+  });
+
   it('lets the second turn see the first (AC5)', async () => {
     const t = await setup([
       text('Circle back nghĩa là quay lại.'),

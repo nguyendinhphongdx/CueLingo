@@ -12,6 +12,7 @@ Một lượt trả lời của trợ lý AI mỗi request: dựng ngữ cảnh,
 - Khách ngắt kết nối → huỷ lượt → tin lưu `stopped`, giữ phần chữ đã sinh; khoá được nhả
 - Lỗi của nhà cung cấp không lộ ra: client chỉ thấy `error{AGENT_FAILED}` rồi `done{error}`
 - Công tắc toàn cục của admin (`service.admin`, trong bộ nhớ) cộng với env `AGENT_ENABLED`: tắt ở một trong hai thì `503 AGENT_DISABLED`
+- Plugin `exercise` (nội bộ, lô 2, quyền `phrases:read` + `cards`): công cụ `create_exercise` (loại `read`) dựng thẻ `cloze` hoặc `quiz_choice` từ cụm từ đã lưu của người dùng (chỉ cụm có nghĩa tiếng Việt; trắc nghiệm cần ≥ 3 cụm) hoặc từ đoạn văn người dùng đưa (ẩn từ dài nhất mỗi câu). Dựng tất định, không gọi AI, không ghi dữ liệu; thiếu nguyên liệu thì trả `created:false` kèm một câu nói thiếu gì. Được thêm chỉ bằng một dòng `plugins: [corePlugin, exercisePlugin]` ở `agent/index.ts`, không sửa `packages/agent` (AC16)
 - Plugin `core` (nội bộ) với 4 công cụ; `capabilities` là facade gắn `userId` của phiên, không đưa SQL hay `userId` thô cho công cụ
 
 ## Phạm vi MVP
