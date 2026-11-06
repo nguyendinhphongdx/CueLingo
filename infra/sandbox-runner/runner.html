@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>CueLingo sandbox runner</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: transparent;
+      }
+      iframe {
+        display: block;
+        width: 100%;
+        height: 100vh;
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      Runner (ADR 0019, layer 2). Embedded by the web app with sandbox="allow-scripts" (no allow-same-origin), so this
+      document has an opaque origin and cannot read cookies or storage. It does three things and nothing else:
+        1. draws the HTML the host sends, once, in a nested iframe (sandbox="allow-scripts") built from srcdoc, so the
+           code can neither touch this script nor the host;
+        2. relays the nested page's requests to the host and the host's answers back (the host decides everything);
+        3. passes the host's liveness ping to the nested page, so a page stuck in a loop stops answering.
+      The Content-Security-Policy header (connect-src 'none', form-action 'none', frame-src 'self' about:, ...) is
+      inherited by the nested page and is what stops network, navigation and form posts. Everything is inline
+      because the policy has no 'self' for scripts.
+    -->
+    <script>
+      (function () {
+        'use strict';
+
+        var V = 1;
+        var MAX_HTML_BYTES = 64 * 1024;
+        var MAX_MESSAGE_BYTES = 16 * 1024;
+        var OPS = {
+          'ui.resize': 1,
+          'ui.ready': 1,
+          'ui.error': 1,
+          'phrases.list': 1,
+          'phrases.save': 1,
+          'tts.speak': 1,
+        };
+        var host = window.parent;
+        var frame = null;
+
+        function toHost(message) {
+          // The host's origin is opaque to a sandboxed frame, so '*' is the only target that delivers.
+          host.postMessage(message, '*');
+        }
+        function toPage(message) {
+          if (frame && frame.contentWindow) frame.contentWindow.postMessage(message, '*');
+        }
+        function byteLength(text) {
+          return new TextEncoder().encode(text).length;
+        }
+        function sizeOk(value) {
+          try {
+            var text = JSON.stringify(value);
+            return typeof text === 'string' && byteLength(text) <= MAX_MESSAGE_BYTES;
+          } catch (error) {
+            return false;
+          }
+        }
+
+        // Runs inside the nested page, before the assistant's code. Serialised with toString(), so it must not
+        // refer to anything outside itself.
+        function bootstrap() {
+          var parentWindow = window.parent;
+          var pending = Object.create(null);
+          var counter = 0;
+          var REPLY_TIMEOUT_MS = 120000;
+
+          function send(message) {
+            parentWindow.postMessage(message, '*');
+          }
+          function call(op, args) {
+            return new Promise(function (resolve, reject) {
+              var id = 'c' + ++counter;
+              var timer = setTimeout(function () {
+                delete pending[id];
+                reject(new Error('timeout'));
+              }, REPLY_TIMEOUT_MS);
+              pending[id] = { resolve: resolve, reject: reject, timer: timer };
+              send({ v: 1, id: id, op: op, args: args });
+            });
+          }
+          window.addEventListener('message', function (event) {
+            if (event.source !== parentWindow) return;
+            var data = event.data;
+            if (!data || data.v !== 1) return;
+            if (data.kind === 'ping') {
+              send({ v: 1, kind: 'pong', n: data.n });
+            } else if (data.kind === 'reply' && data.response) {
+              var response = data.response;
+              var entry = pending[response.id];
+              if (!entry) return;
+              clearTimeout(entry.timer);
+              delete pending[response.id];
+              if (response.ok) entry.resolve(response.data || {});
+              else entry.reject(new Error(String(response.error)));
+            }
+          });
+
+          function quiet(promise) {
+            promise.catch(function () {});
+            return promise;
+          }
+          function clamp(height) {
+            return Math.max(40, Math.min(1200, Math.ceil(height)));
+          }
+          Object.defineProperty(window, 'cuelingo', {
+            value: Object.freeze({
+              listPhrases: function () {
+                return call('phrases.list').then(function (data) {
+                  return data.phrases || [];
+                });
+              },
+              savePhrase: function (input) {
+                var args = { phrase: String(input && input.phrase) };
+                if (input && input.meaningVi) args.meaningVi = String(input.meaningVi);
+                return call('phrases.save', args);
+              },
+              speak: function (text) {
+                return call('tts.speak', { text: String(text) });
+              },
+              resize: function (height) {
+                return call('ui.resize', { height: clamp(Number(height) || 0) });
+              },
+            }),
+          });
+
+          function report(message) {
+            quiet(call('ui.error', { message: String(message).slice(0, 200) }));
+          }
+          window.addEventListener('error', function (event) {
+            report(event.message || 'error');
+          });
+          document.addEventListener('securitypolicyviolation', function (event) {
+            report('blocked: ' + event.violatedDirective);
+          });
+
+          var lastHeight = 0;
+          var resizeTimer = 0;
+          function sendHeight() {
+            resizeTimer = 0;
+            var root = document.documentElement;
+            // Box of the root, not scrollHeight: scrollHeight never drops below the frame's own height.
+            var height = clamp(
+              Math.max(
+                root.getBoundingClientRect().height,
+                document.body ? document.body.scrollHeight : 0,
+              ),
+            );
+            if (height === lastHeight) return;
+            lastHeight = height;
+            quiet(call('ui.resize', { height: height }));
+          }
+          function scheduleHeight() {
+            if (!resizeTimer) resizeTimer = setTimeout(sendHeight, 150);
+          }
+          window.addEventListener('load', function () {
+            sendHeight();
+            quiet(call('ui.ready'));
+            if (typeof ResizeObserver === 'function') {
+              new ResizeObserver(scheduleHeight).observe(document.documentElement);
+            }
+          });
+        }
+
+        function render(html) {
+          if (frame || typeof html !== 'string' || html.length === 0) return;
+          if (byteLength(html) > MAX_HTML_BYTES) return;
+          frame = document.createElement('iframe');
+          frame.setAttribute('sandbox', 'allow-scripts');
+          frame.setAttribute('allow', '');
+          frame.setAttribute('referrerpolicy', 'no-referrer');
+          frame.setAttribute('title', 'Khối giao diện do trợ lý tạo');
+          frame.srcdoc =
+            '<!doctype html><meta charset="utf-8"><script>(' +
+            bootstrap.toString() +
+            ')();<\/script>' +
+            html;
+          document.body.appendChild(frame);
+        }
+
+        window.addEventListener('message', function (event) {
+          var data = event.data;
+          if (!data || data.v !== V) return;
+
+          if (event.source === host) {
+            if (data.kind === 'render') render(data.html);
+            else if (data.kind === 'ping' || data.kind === 'reply') {
+              if (sizeOk(data)) toPage(data);
+            }
+            return;
+          }
+
+          if (frame && event.source === frame.contentWindow) {
+            if (!sizeOk(data)) return;
+            if (data.kind === 'pong') toHost({ v: V, kind: 'pong', n: data.n });
+            else if (typeof data.op === 'string' && OPS[data.op] === 1) {
+              toHost({ v: V, id: data.id, op: data.op, args: data.args });
+            }
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

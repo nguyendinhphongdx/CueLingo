@@ -1,6 +1,6 @@
 # Infra
 
-Local development dependencies: Postgres 16 + pgvector (and Redis, unused so far).
+Local development dependencies: Postgres 16 + pgvector (and Redis, unused so far), plus the optional `sandbox-runner` ([README](sandbox-runner/README.md)).
 
 ```bash
 cp .env.example .env                              # DATABASE_URL, BETTER_AUTH_SECRET …

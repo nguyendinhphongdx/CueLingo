@@ -25,6 +25,7 @@
     "db:migrate": "dbmate --migrations-dir infra/db/migrations --no-dump-schema up",
     "db:rollback": "dbmate --migrations-dir infra/db/migrations --no-dump-schema rollback",
     "db:status": "dbmate --migrations-dir infra/db/migrations status",
+    "sandbox:dev": "RUNNER_FRAME_ANCESTORS=\"http://localhost:3000 http://localhost:3417\" PORT=3101 node infra/sandbox-runner/server.mjs",
     "test:int": "vitest run --config vitest.int.config.ts"
   },
   "devDependencies": {

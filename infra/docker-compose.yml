@@ -12,5 +12,20 @@ services:
   redis:
     image: redis:7
     ports: ['6379:6379']
+  # Runner of the HTML blocks the assistant writes (ADR 0019, layer 2). Its own origin on purpose: never serve it
+  # from the web app's origin. Only needed with AGENT_HTML_BLOCKS=true.
+  sandbox-runner:
+    image: node:22-alpine
+    working_dir: /app
+    command: ['node', 'server.mjs']
+    environment:
+      PORT: '3101'
+      HOST: 0.0.0.0
+      # Origins allowed to embed the runner (space separated): the web app in development.
+      RUNNER_FRAME_ANCESTORS: http://localhost:3000 http://localhost:3417
+    volumes:
+      - ./sandbox-runner:/app:ro
+    ports: ['3101:3101']
+    profiles: ['sandbox']
 volumes:
   pgdata:
