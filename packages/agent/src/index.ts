@@ -4,7 +4,7 @@
  */
 export { buildContext, estimateMessageTokens, estimateTokens } from './context';
 export type { BuiltContext, ContextOptions } from './context';
-export { DEFAULT_LIMITS, MAX_TOOL_OUTPUT_BYTES } from './limits';
+export { BREAKER, DEFAULT_LIMITS, MAX_TOOL_OUTPUT_BYTES } from './limits';
 export type { TurnLimits } from './limits';
 export { runTurn } from './loop';
 export type { TurnHooks, TurnInput } from './loop';
@@ -18,8 +18,15 @@ export type {
 } from './model';
 export { createPartsBuilder } from './parts';
 export type { PartsBuilder } from './parts';
-export { createToolRegistry } from './plugin';
-export type { AgentPlugin, PluginHost, PluginState, PluginStatus, ToolRegistry } from './plugin';
+export type {
+  AgentPlugin,
+  PluginDisabledBy,
+  PluginHost,
+  PluginState,
+  PluginStatus,
+} from './plugin';
+export { createToolRegistry } from './registry';
+export type { ToolRegistry, ToolRegistryOptions } from './registry';
 export { cutOutput, defineTool, failure, runTool, toDeclaration, TOOL_ERRORS_VI } from './tools';
 export type {
   AgentPermission,

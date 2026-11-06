@@ -8,18 +8,18 @@ Harness của trợ lý AI, **không I/O**: cổng mô hình, cắt ngữ cảnh
 
 Bốn phần tách riêng, mỗi phần một file và một file test (AC18):
 
-| Phần     | File                    | Việc                                                                                                       |
-| -------- | ----------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Mô hình  | `model.ts`              | `ModelPort.step(input)` stream một bước. API nối `ai-gateway.chat()` vào đây; thay mô hình chỉ đổi adapter |
-| Ngữ cảnh | `context.ts`            | `buildContext`: cắt theo ngân sách token bằng quy tắc cố định                                              |
-| Công cụ  | `tools.ts`, `plugin.ts` | `defineTool`, `runTool` (an toàn), `createToolRegistry`, `AgentPlugin`                                     |
-| Vòng lặp | `loop.ts`               | `runTurn`: async generator phát `AgentStreamEvent` của `@cuelingo/shared`                                  |
+| Phần     | File                                   | Việc                                                                                                       |
+| -------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Mô hình  | `model.ts`                             | `ModelPort.step(input)` stream một bước. API nối `ai-gateway.chat()` vào đây; thay mô hình chỉ đổi adapter |
+| Ngữ cảnh | `context.ts`                           | `buildContext`: cắt theo ngân sách token bằng quy tắc cố định                                              |
+| Công cụ  | `tools.ts`, `plugin.ts`, `registry.ts` | `defineTool`, `runTool` (an toàn), `AgentPlugin`, `createToolRegistry` (registry lúc chạy, cầu dao)        |
+| Vòng lặp | `loop.ts`                              | `runTurn`: async generator phát `AgentStreamEvent` của `@cuelingo/shared`                                  |
 
 Thêm: `parts.ts` (`createPartsBuilder`, gộp event thành `parts` để lưu tin nhắn), `limits.ts` (hằng số).
 
 ## Phạm vi MVP
 
-- Lô 1 của hồ sơ ai-agent. Runtime plugin đầy đủ (bật/tắt, cầu dao) là lô 2.
+- Lô 1 của hồ sơ ai-agent: vòng lặp, công cụ, đăng ký/gỡ plugin. Lô 2: registry lúc chạy đầy đủ (trạng thái `loaded/failed/disabled`, bật/tắt, kiểm quyền, cầu dao).
 
 ## Interface
 
@@ -42,7 +42,11 @@ function runTool(tool, rawInput, { capabilities, signal }, { timeoutMs?, maxOutp
 
 // plugin.ts
 interface AgentPlugin<C> { id; version; permissions: AgentPermission[]; tools: AgentTool<C>[]; cardKinds?; setup?(host) }
-function createToolRegistry<C>(): ToolRegistry<C>   // register · unregister · tools · get · list
+interface PluginStatus { id; version; state: 'loaded' | 'failed' | 'disabled'; permissions; tools: string[]; disabledBy?: 'admin' | 'breaker'; retryAt? }
+
+// registry.ts
+function createToolRegistry<C>({ scope?, clock?, breaker? }): ToolRegistry<C>
+// register · unregister · enable · disable · tools · get · list · execute
 ```
 
 **`runTurn`**
@@ -57,7 +61,13 @@ function createToolRegistry<C>(): ToolRegistry<C>   // register · unregister ·
 
 **`buildContext`**: gom tin thành lượt (mỗi lượt bắt đầu ở tin `user`); bỏ lượt **cũ nhất** nguyên vẹn đến khi vừa ngân sách; luôn giữ lượt cuối kể cả khi vượt; cặp call/result không bị tách, call không có result (hoặc ngược lại) bị loại. Ước lượng 4 ký tự ≈ 1 token. System prompt do gateway thêm nên truyền kích thước vào `reservedTokens`.
 
-**`AgentPlugin`**: `setup` lỗi thì plugin `failed`, tool của nó không đưa cho mô hình, plugin khác chạy bình thường. Tên tool trùng với tool đã nạp, hoặc trùng `id` plugin đã nạp, thì plugin mới bị `failed`. Plugin chỉ nhận `ctx.capabilities` do API dựng sẵn (đã gắn `userId`), không nhận `userId` hay SQL.
+**`ToolRegistry`** (`registry.ts`, runtime của plugin nội bộ, [ADR 0018](../../08-adr/0018-agent-harness.md)):
+
+- **Trạng thái.** `loaded` (đã nạp, đang bật), `failed` (`setup` ném lỗi, trùng tên tool hoặc trùng `id` plugin đã nạp; `enable` không cứu được), `disabled` (admin tắt, hoặc cầu dao tắt tạm; `disabledBy` cho biết, `retryAt` là lúc thử lại). `register` không bao giờ ném: plugin hỏng thành `failed`, plugin khác chạy bình thường (AC17).
+- **Danh sách gửi mô hình.** `tools()`/`get()` chỉ gồm plugin `loaded`, theo thứ tự đăng ký. `register`/`unregister`/`enable`/`disable` đổi danh sách ngay ở lượt sau, không chạm lõi (AC16). `list()` trả mọi plugin kèm quyền và tên tool cho màn admin.
+- **Quyền.** Plugin chỉ nhận `ctx.capabilities` đã dựng sẵn cho người dùng (không `userId`, không SQL). `execute` đưa capabilities qua `options.scope(capabilities, plugin.permissions)` nên một tool chỉ chạm được thứ plugin của nó khai báo trong `permissions`.
+- **Cầu dao.** `execute(name, input, ctx)` chạy `runTool` rồi ghi kết quả: `failed`/`timeout`/`invalid_output` tính là lỗi, input sai của mô hình hoặc người dùng dừng thì không. 3 lỗi liên tiếp của một tool (thành công thì đếm lại) tắt **cả plugin** 10 phút (`BREAKER` trong `limits.ts`). Hết hạn là nửa mở: lượt gọi kế tiếp là thử, thành công thì đóng, lỗi thì mở lại ngay 10 phút. `enable` của admin xoá cầu dao. Đồng hồ tiêm được (`clock`) để test.
+- `runTurn` gọi `registry.execute` nên cầu dao và kiểm quyền áp dụng cho mọi tool mà không cần plugin biết.
 
 ## Phụ thuộc
 
@@ -70,4 +80,4 @@ function createToolRegistry<C>(): ToolRegistry<C>   // register · unregister ·
 
 ## Câu hỏi mở
 
-- Lô 2: registry lúc chạy đầy đủ (`enable`/`disable`, cầu dao 3 lỗi liên tiếp tắt 10 phút, kiểm quyền qua facade) trong `registry.ts`.
+- Trạng thái bật/tắt và cầu dao nằm trong bộ nhớ, mất khi khởi động lại (chấp nhận với một container, ADR 0011).

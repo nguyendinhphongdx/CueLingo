@@ -25,3 +25,11 @@ export const DEFAULT_LIMITS: TurnLimits = {
 
 /** Tool output kept in the model context, in UTF-8 bytes. */
 export const MAX_TOOL_OUTPUT_BYTES = 2_048;
+
+/** Circuit breaker of a plugin's tools (plan ai-agent, "Cô lập lỗi"). */
+export const BREAKER = {
+  /** Consecutive failed runs of one tool that switch its plugin off. */
+  failureThreshold: 3,
+  /** How long the plugin stays off; after it, the next call is a trial (half-open). */
+  cooldownMs: 10 * 60_000,
+} as const;

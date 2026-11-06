@@ -44,3 +44,28 @@ export function buildCoreCapabilities(
       : denied('phrases:write'),
   };
 }
+
+const PERMISSION_OF: Record<keyof CoreCapabilities, AgentPermission> = {
+  lookup: 'lookup',
+  listPhrases: 'phrases:read',
+  savePhrase: 'phrases:write',
+};
+
+/**
+ * Narrows the turn's capabilities to what one plugin declared in `permissions` (the registry calls this per tool
+ * run), so a plugin cannot reach a service it did not ask for even though the turn carries all of them.
+ */
+export function scopeCapabilities(
+  capabilities: CoreCapabilities,
+  granted: readonly AgentPermission[],
+): CoreCapabilities {
+  const pick = <K extends keyof CoreCapabilities>(key: K): CoreCapabilities[K] =>
+    granted.includes(PERMISSION_OF[key])
+      ? capabilities[key]
+      : (denied(PERMISSION_OF[key]) as CoreCapabilities[K]);
+  return {
+    lookup: pick('lookup'),
+    listPhrases: pick('listPhrases'),
+    savePhrase: pick('savePhrase'),
+  };
+}

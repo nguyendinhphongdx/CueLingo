@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { runTurn, type TurnInput } from './loop';
 import type { ModelEvent, ModelPort } from './model';
-import { createToolRegistry } from './plugin';
+import { createToolRegistry } from './registry';
 import { call, finish, scriptedModel, text } from './test-helpers';
 import { defineTool, TOOL_ERRORS_VI, type AgentTool } from './tools';
 

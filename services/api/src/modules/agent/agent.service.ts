@@ -5,6 +5,7 @@ import {
   estimateTokens,
   runTurn,
   type ModelMessage,
+  type AgentPermission,
   type ModelPort,
   type TurnLimits,
 } from '@cuelingo/agent';
@@ -31,9 +32,19 @@ import {
 import {
   corePlugin,
   buildCoreCapabilities,
+  scopeCapabilities,
   type CoreCapabilities,
   type CoreServices,
 } from './plugins/core';
+
+/** The turn carries every capability; the registry narrows them per plugin by what it declared. */
+const ALL_PERMISSIONS: AgentPermission[] = [
+  'phrases:read',
+  'phrases:write',
+  'lookup',
+  'cards',
+  'html',
+];
 
 export type AgentService = ReturnType<typeof createAgentService>;
 
@@ -87,7 +98,7 @@ const settleParts = (parts: MessagePart[]): MessagePart[] =>
 export function createAgentService(deps: AgentServiceDeps) {
   const limits: AgentQuotaLimits = { ...DEFAULT_QUOTA_LIMITS, ...deps.quota };
   const clock = deps.clock ?? (() => new Date());
-  const registry = createToolRegistry<CoreCapabilities>();
+  const registry = createToolRegistry<CoreCapabilities>({ scope: scopeCapabilities });
   const ready = registry.register(corePlugin);
   // One running turn per user, whatever the conversation: the daily quota is checked before the user message is
   // stored, so parallel turns would all pass the same check. In memory is enough while the API is a single
@@ -202,12 +213,7 @@ export function createAgentService(deps: AgentServiceDeps) {
               history: toHistory(detail.messages),
               userMessage: request.content,
               language,
-              capabilities: buildCoreCapabilities(
-                deps.services,
-                userId,
-                language,
-                corePlugin.permissions,
-              ),
+              capabilities: buildCoreCapabilities(deps.services, userId, language, ALL_PERMISSIONS),
               signal: controller.signal,
               limits: deps.limits,
               reservedTokens: estimateTokens(buildAgentPrompt({ language }).system),

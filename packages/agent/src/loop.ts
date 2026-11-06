@@ -3,8 +3,8 @@ import { ErrorCode } from '@cuelingo/shared';
 import { buildContext } from './context';
 import { DEFAULT_LIMITS, type TurnLimits } from './limits';
 import type { ModelMessage, ModelPort, ModelToolCall } from './model';
-import type { ToolRegistry } from './plugin';
-import { failure, runTool, toDeclaration, type ToolRunResult } from './tools';
+import type { ToolRegistry } from './registry';
+import { failure, toDeclaration, type ToolRunResult } from './tools';
 
 export interface TurnHooks {
   /** Asked before every model step; `false` ends the turn as `limited` (the API checks the daily quota here). */
@@ -115,8 +115,9 @@ export async function* runTurn<C>(
         result = failure('limit');
       else {
         if (tool.kind === 'write') writeCalls += 1;
-        result = await runTool(
-          tool,
+        // The registry narrows the capabilities to the plugin's permissions and tracks its circuit breaker.
+        result = await input.registry.execute(
+          call.name,
           call.input,
           { capabilities: input.capabilities, signal },
           { timeoutMs: limits.toolTimeoutMs },

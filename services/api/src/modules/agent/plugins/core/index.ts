@@ -134,4 +134,4 @@ export const corePlugin: AgentPlugin<CoreCapabilities> = {
 };
 
 export type { CoreCapabilities, CoreServices } from './capabilities';
-export { buildCoreCapabilities } from './capabilities';
+export { buildCoreCapabilities, scopeCapabilities } from './capabilities';
