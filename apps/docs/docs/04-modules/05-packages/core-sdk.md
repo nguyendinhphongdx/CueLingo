@@ -17,6 +17,7 @@ SDK client dùng chung cho desktop và web: auth, REST, stream phiên, hàng đ�
 ## Interface
 
 - `createClient({baseUrl, getToken})` → `{sessions, assist, review, events, stream, glossary, feedback, conversations, agent}`
+- Màn admin (`/v1/admin/*`, gồm `admin.agent.get()` và `admin.agent.update({enabled} | {plugin:{id,enabled}})`) gọi qua client của app web (`apps/web/src/lib/client.ts`), không qua core-sdk: chỉ web admin dùng, schema ở `@cuelingo/shared`
 - `client.feedback.send(input)` → `POST /v1/feedback`, trả `{id, createdAt}`
 - `createRealtimeClient({url, token, sessionId, assistLevel, onMessage, onState, onError})`
   → `{connect, send, close, state}`

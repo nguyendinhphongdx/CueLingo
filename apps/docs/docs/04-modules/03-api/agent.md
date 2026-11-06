@@ -11,11 +11,12 @@ Một lượt trả lời của trợ lý AI mỗi request: dựng ngữ cảnh,
 - Quota theo ngày UTC, kiểm **trước khi stream** (429) và trước mỗi bước tiếp theo (`done{limited}`)
 - Khách ngắt kết nối → huỷ lượt → tin lưu `stopped`, giữ phần chữ đã sinh; khoá được nhả
 - Lỗi của nhà cung cấp không lộ ra: client chỉ thấy `error{AGENT_FAILED}` rồi `done{error}`
+- Công tắc toàn cục của admin (`service.admin`, trong bộ nhớ) cộng với env `AGENT_ENABLED`: tắt ở một trong hai thì `503 AGENT_DISABLED`
 - Plugin `core` (nội bộ) với 4 công cụ; `capabilities` là facade gắn `userId` của phiên, không đưa SQL hay `userId` thô cho công cụ
 
 ## Phạm vi MVP
 
-- Lô 1 của ai-agent (thử nghiệm, sau cờ `AGENT_ENABLED`). Admin bật/tắt lúc chạy và plugin thứ hai là lô 2.
+- Lô 1 của ai-agent (thử nghiệm, sau cờ `AGENT_ENABLED`). Lô 2: công tắc toàn cục và bật/tắt plugin cho admin ([admin](./admin.md)), plugin thứ hai `exercise`.
 
 ## Interface
 
@@ -30,7 +31,7 @@ Một lượt trả lời của trợ lý AI mỗi request: dựng ngữ cảnh,
 | 404    | `NOT_FOUND`            | hội thoại không tồn tại, đã xoá hoặc của người khác                                          |
 | 409    | `CONFLICT`             | người dùng đang có một lượt chạy (ở bất kỳ hội thoại nào)                                    |
 | 429    | `AGENT_QUOTA_EXCEEDED` | hết lượt/token/USD trong ngày; `error.details` là `AgentQuota` (`used`, `limit`, `resetsAt`) |
-| 503    | `AGENT_DISABLED`       | `AGENT_ENABLED=false` hoặc thiếu `GEMINI_API_KEY`                                            |
+| 503    | `AGENT_DISABLED`       | `AGENT_ENABLED=false`, thiếu `GEMINI_API_KEY` hoặc admin đã tắt công tắc                     |
 
 **Khi stream** (200): header `Content-Type: text/event-stream; charset=utf-8`, `Cache-Control: no-cache, no-transform`, `X-Accel-Buffering: no`; không nén. Qua `reply.send(stream)` (không `hijack`) nên CORS/`x-request-id` vẫn chạy. Mỗi event là một khối:
 

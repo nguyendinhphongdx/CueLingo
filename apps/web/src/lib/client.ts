@@ -27,6 +27,7 @@ import {
   type LearningEvent,
   TtsRequestSchema,
   DeleteMyDataRequestSchema,
+  AdminAgentStatusSchema,
   AdminMetricsSchema,
   CreateInviteRequestSchema,
   CreatedInviteSchema,
@@ -34,6 +35,7 @@ import {
   InviteListSchema,
   type CreateInviteInput,
   DeviceCodeResponseSchema,
+  UpdateAdminAgentRequestSchema,
   UpdateMeRequestSchema,
   UpdateUserSettingsSchema,
   UserSettingsSchema,
@@ -44,6 +46,7 @@ import {
   type ReviewAnswerRequest,
   type SavePhraseRequest,
   type SubmitPlacementRequest,
+  type UpdateAdminAgentRequest,
   type UpdateMeRequest,
   type UpdateUserSettings,
 } from '@cuelingo/shared';
@@ -202,6 +205,16 @@ export const client = {
     request('GET', `/v1/progress?language=${language}`, ProgressSchema),
   admin: {
     metrics: () => request('GET', '/v1/admin/metrics', AdminMetricsSchema),
+    agent: {
+      get: () => request('GET', '/v1/admin/agent', AdminAgentStatusSchema),
+      update: (input: UpdateAdminAgentRequest) =>
+        request(
+          'PATCH',
+          '/v1/admin/agent',
+          AdminAgentStatusSchema,
+          UpdateAdminAgentRequestSchema.parse(input),
+        ),
+    },
     invites: {
       list: () => request('GET', '/v1/admin/invites', InviteListSchema),
       create: (input: CreateInviteInput) =>

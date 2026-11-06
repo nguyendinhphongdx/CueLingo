@@ -31,7 +31,7 @@ import {
 } from './modules/review';
 import { createSpeakersModule, type SpeakersRepository } from './modules/speakers';
 import { createSessionsModule, type SessionsRepository } from './modules/sessions';
-import { createAdminModule, type AdminRepository } from './modules/admin';
+import { createAdminModule, type AdminRepository, type AgentAdminPort } from './modules/admin';
 import { createFeedbackModule, type FeedbackRepository } from './modules/feedback';
 import { createInvitesModule, type InvitesRepository } from './modules/invites';
 import { createTranscribeModule, type TranscribeDeps } from './modules/transcribe';
@@ -148,7 +148,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(createAccountModule(deps.repos.account).routes);
   await app.register(createDialModule(deps.repos.dial).routes);
   await app.register(createPlacementModule(deps.repos.placement).routes);
-  const admin = createAdminModule(deps.repos.admin, deps.adminEmails ?? []);
+  // The assistant is built further down; the admin screen reaches it through this slot.
+  let agentAdmin: AgentAdminPort | undefined;
+  const admin = createAdminModule(deps.repos.admin, deps.adminEmails ?? [], () => agentAdmin);
   await app.register(admin.routes, { prefix: '/v1/admin' });
   await app.register(
     createInvitesModule(deps.repos.invites, admin.service.isAdmin, {
@@ -193,6 +195,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       lookup: assist?.service.lookup,
       phrases: { list: review.phrases.list, save: review.phrases.save },
     });
+    agentAdmin = agent.service.admin;
     await app.register(agent.routes, { prefix: '/v1/conversations' });
   }
   if (deps.realtime) await app.register(createRealtimeModule(deps.realtime).routes);

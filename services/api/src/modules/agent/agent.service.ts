@@ -6,12 +6,14 @@ import {
   runTurn,
   type ModelMessage,
   type AgentPermission,
+  type AgentPlugin,
   type ModelPort,
   type TurnLimits,
 } from '@cuelingo/agent';
 import { AGENT_PROMPT_VERSION, buildAgentPrompt } from '@cuelingo/prompts';
 import {
   ErrorCode,
+  type AdminAgentStatus,
   type AgentStreamEvent,
   type Message,
   type MessagePart,
@@ -55,6 +57,8 @@ export interface AgentServiceDeps {
   model?: (userId: string) => ModelPort;
   conversations: ConversationsRepository;
   usage: AgentRepository;
+  /** Plugins to load, in order. Defaults to the built-in `core` plugin; the composition root adds the others. */
+  plugins?: Array<AgentPlugin<CoreCapabilities>>;
   /** What the `core` plugin reaches; bound to the signed-in user per turn. */
   services: CoreServices;
   quota?: Partial<AgentQuotaLimits>;
@@ -99,7 +103,11 @@ export function createAgentService(deps: AgentServiceDeps) {
   const limits: AgentQuotaLimits = { ...DEFAULT_QUOTA_LIMITS, ...deps.quota };
   const clock = deps.clock ?? (() => new Date());
   const registry = createToolRegistry<CoreCapabilities>({ scope: scopeCapabilities });
-  const ready = registry.register(corePlugin);
+  const ready = Promise.all(
+    (deps.plugins ?? [corePlugin]).map((plugin) => registry.register(plugin)),
+  );
+  // The admin's global switch, on top of the deploy gate `deps.enabled`. In memory: a restart turns it back on.
+  let switchedOn = true;
   // One running turn per user, whatever the conversation: the daily quota is checked before the user message is
   // stored, so parallel turns would all pass the same check. In memory is enough while the API is a single
   // container (ADR 0011).
@@ -114,7 +122,26 @@ export function createAgentService(deps: AgentServiceDeps) {
     return { usage: { turns, ...tokens }, resetsAt };
   }
 
+  const adminStatus = async (): Promise<AdminAgentStatus> => {
+    await ready;
+    return { enabled: switchedOn, available: deps.enabled, plugins: registry.list() };
+  };
+
   return {
+    /** What the admin screen reads and flips. Nothing here touches a turn that is already running. */
+    admin: {
+      status: adminStatus,
+      async setEnabled(enabled: boolean): Promise<AdminAgentStatus> {
+        switchedOn = enabled;
+        return adminStatus();
+      },
+      /** `undefined` when no plugin has that id. */
+      async setPlugin(id: string, enabled: boolean): Promise<AdminAgentStatus | undefined> {
+        await ready;
+        const status = enabled ? registry.enable(id) : registry.disable(id);
+        return status ? adminStatus() : undefined;
+      },
+    },
     /**
      * Starts a turn and returns the SSE body. Everything that can refuse the turn throws an `AppError` here,
      * before any byte is streamed, so the client gets a normal JSON error with the right status.
@@ -125,7 +152,7 @@ export function createAgentService(deps: AgentServiceDeps) {
       request: SendMessageRequest,
       log?: AgentLogger,
     ): Promise<Readable> {
-      if (!deps.enabled || !deps.model) {
+      if (!deps.enabled || !switchedOn || !deps.model) {
         throw new AppError(ErrorCode.AgentDisabled, 'The assistant is turned off');
       }
       // Keyed by user only, so probing someone else's conversation id never reveals that it is busy.

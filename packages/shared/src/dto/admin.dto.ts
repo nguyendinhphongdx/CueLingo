@@ -54,3 +54,56 @@ export const AdminMetricsSchema = z
   .strict();
 
 export type AdminMetrics = z.infer<typeof AdminMetricsSchema>;
+
+/** Permissions a plugin may declare (mirrors `AgentPermission` of `@cuelingo/agent`, which shared cannot import). */
+export const AgentPermissionSchema = z.enum([
+  'phrases:read',
+  'phrases:write',
+  'lookup',
+  'cards',
+  'html',
+]);
+
+/** One assistant plugin as the admin screen sees it. No user data. */
+export const AdminAgentPluginSchema = z
+  .object({
+    id: z.string().min(1).max(64),
+    version: z.string().min(1).max(32),
+    /** `failed`: setup threw or a name clashed. `disabled`: switched off by an admin or by the circuit breaker. */
+    state: z.enum(['loaded', 'failed', 'disabled']),
+    permissions: z.array(AgentPermissionSchema),
+    /** Tool names the plugin declares, whatever its state. */
+    tools: z.array(z.string().min(1).max(64)),
+    disabledBy: z.enum(['admin', 'breaker']).optional(),
+    /** When the circuit breaker lets the plugin try again. */
+    retryAt: z.iso.datetime().optional(),
+  })
+  .strict();
+
+export const AdminAgentStatusSchema = z
+  .object({
+    /** The admin's global switch (in memory, back to on after a restart). */
+    enabled: z.boolean(),
+    /** Whether the deploy allows the assistant at all (env `AGENT_ENABLED` and an AI key). Not changeable here. */
+    available: z.boolean(),
+    plugins: z.array(AdminAgentPluginSchema),
+  })
+  .strict();
+
+/** Either the global switch or one plugin's switch per request. */
+export const UpdateAdminAgentRequestSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    plugin: z
+      .object({ id: z.string().min(1).max(64), enabled: z.boolean() })
+      .strict()
+      .optional(),
+  })
+  .strict()
+  .refine((value) => (value.enabled === undefined) !== (value.plugin === undefined), {
+    message: 'Send either enabled or plugin',
+  });
+
+export type AdminAgentPlugin = z.infer<typeof AdminAgentPluginSchema>;
+export type AdminAgentStatus = z.infer<typeof AdminAgentStatusSchema>;
+export type UpdateAdminAgentRequest = z.infer<typeof UpdateAdminAgentRequestSchema>;
