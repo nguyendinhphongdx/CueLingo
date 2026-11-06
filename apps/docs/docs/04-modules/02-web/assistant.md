@@ -10,11 +10,13 @@ Trò chuyện với trợ lý AI về tiếng Anh công sở và chuẩn bị ch
 - Gửi tin qua `client.agent.sendMessage` (SSE), hiện tin của người dùng ngay, đổ câu trả lời vào bản nháp, **nút Dừng** huỷ request; sau `done` đọc lại hội thoại từ server để cái hiện ra là cái đã lưu
 - Trạng thái rỗng với bốn câu gợi ý bấm một lần
 - Nhấp đúp vào chữ của trợ lý mở `WordActionsMenu`: **Tra nghĩa** (`POST /v1/assist/lookup` kèm câu chứa từ), **Nghe** (`/v1/tts`), **Lưu** (`phrases.save` kèm `context` là câu đó; ghi event `phrase_saved`). "Đã lưu" hiện ngay và cũng hiện cho từ đã có sẵn: so bằng `normalizePhrase` với `phrases.list` (cùng khoá cache `['phrases', language]` với trang Cụm từ)
+- **Khối giao diện do AI sinh** (lô 3, sau cờ, mặc định tắt): thẻ `html_block` chỉ vẽ khi build có `NEXT_PUBLIC_AGENT_HTML_BLOCKS=true` **và** `NEXT_PUBLIC_SANDBOX_ORIGIN` là origin http(s) của sandbox runner (`lib/config.ts`: `HTML_BLOCKS_ENABLED`, `SANDBOX_ORIGIN`). Thiếu một trong hai thì `use-html-blocks` trả `undefined` và khung chat hiện "Khối giao diện tương tác chưa được bật", không có iframe và không có mã. Khi bật, `SandboxFrame` (xem [ui](../05-packages/ui.md)) nhận ba callback dùng `client` của chính app: đọc `phrases.list` (chỉ `phrase`, `meaningVi`), lưu `phrases.save` (chỉ sau khi người dùng xác nhận trong hộp thoại của host; ghi event `phrase_saved`), nghe qua `useSpeaker`. Khối không bao giờ thấy token, URL API hay cookie
+- Route `/assistant/**` gửi header `Content-Security-Policy: frame-src <origin runner | 'none'>; img-src 'self' data:` (`next.config.ts`, hàm `assistantCsp` ở `lib/csp.ts`): chỉ runner được nhúng làm frame và không tải ảnh từ origin khác (khoá thứ hai chống rò hội thoại qua URL ảnh, ngoài `MarkdownView` đã không vẽ ảnh). Chỉ hai directive nên không ảnh hưởng script/style của Next
 - Không mở desktop: mục roadmap `assistant` có `desktop: 'soon'`
 
 ## Phạm vi MVP
 
-- Lô 1 của ai-agent (thử nghiệm). Khối HTML/JS trong hộp cát (lô 3) chưa có.
+- Lô 1 của ai-agent (thử nghiệm). Lô 3 (khối HTML/JS trong hộp cát) đã có code nhưng **tắt mặc định**; chưa bật trên production khi chưa có domain runner và review bảo mật (xem [ADR 0019](../../08-adr/0019-ai-generated-ui.md)).
 
 ## Cấu trúc
 
@@ -25,6 +27,7 @@ Trò chuyện với trợ lý AI về tiếng Anh công sở và chuẩn bị ch
 | `use-chat.ts`                                            | Truy vấn hội thoại, gửi/dừng, tin tạm, tạo hội thoại ở tin đầu rồi chuyển địa chỉ, lỗi thân thiện                                                 |
 | `chat-state.ts`                                          | Hàm thuần: gấp `AgentStreamEvent` vào bản nháp, ghép tin đã lưu với tin tạm (khoá `seq-N` giữ nguyên để thẻ không dựng lại), `settleConversation` |
 | `use-conversations.ts`                                   | Danh sách, đổi tên, xoá                                                                                                                           |
+| `use-html-blocks.tsx`                                    | Hook trả `renderHtmlBlock` (vẽ `SandboxFrame` với ba callback) hoặc `undefined` khi cờ/origin thiếu                                               |
 | `use-word-actions.ts`, `word-selection.ts`               | Đọc từ và câu từ `getSelection`, tra/nghe/lưu, so "Đã lưu"                                                                                        |
 | `starter-prompts.ts`                                     | Câu gợi ý                                                                                                                                         |
 

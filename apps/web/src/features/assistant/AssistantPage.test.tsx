@@ -63,6 +63,32 @@ describe('ChatView', () => {
     expect(out).toContain('Đang suy nghĩ');
   });
 
+  describe('html blocks (AC7: behind a flag)', () => {
+    const block: DisplayMessage = {
+      key: 'seq-1',
+      role: 'assistant',
+      parts: [
+        { type: 'card', card: { kind: 'html_block', data: { html: '<script>steal()</script>' } } },
+      ],
+      status: 'complete',
+    };
+
+    it('draws no frame and none of the page while the feature is off', () => {
+      const out = view([block]);
+      expect(out).toContain('chưa được bật');
+      expect(out).not.toContain('<iframe');
+      expect(out).not.toContain('steal()');
+    });
+
+    it('hands the block to the renderer when the feature is on', () => {
+      const out = view([block], {
+        renderHtmlBlock: (data) => <div data-testid="block">{data.html.length}</div>,
+      });
+      expect(out).toContain('data-testid="block"');
+      expect(out).not.toContain('chưa được bật');
+    });
+  });
+
   it('shows a dismissable error', () => {
     const out = view([], { error: 'Trợ lý AI đang tạm tắt. Hãy quay lại sau.' });
     expect(out).toContain('role="alert"');

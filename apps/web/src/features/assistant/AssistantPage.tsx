@@ -17,6 +17,7 @@ import { ConversationList, UNTITLED } from './ConversationList';
 import { RenameForm } from './RenameForm';
 import { useChat } from './use-chat';
 import { useConversations } from './use-conversations';
+import { useHtmlBlocks } from './use-html-blocks';
 import { useWordActions } from './use-word-actions';
 
 const backLink =
@@ -36,7 +37,9 @@ export function AssistantPage({ conversationId }: { conversationId?: string }) {
     language,
     onCreated: (created) => router.replace(`/assistant/${created}`),
   });
-  const words = useWordActions(chat.conversation?.language ?? language);
+  const blockLanguage = chat.conversation?.language ?? language;
+  const words = useWordActions(blockLanguage);
+  const renderHtmlBlock = useHtmlBlocks(blockLanguage);
   const [renaming, setRenaming] = useState(false);
   const [toDelete, setToDelete] = useState<Conversation | null>(null);
 
@@ -121,6 +124,7 @@ export function AssistantPage({ conversationId }: { conversationId?: string }) {
           words.clearError();
         }}
         loadAudio={client.tts.speak}
+        renderHtmlBlock={renderHtmlBlock}
         onWordDoubleClick={words.onDoubleClick}
       />
 

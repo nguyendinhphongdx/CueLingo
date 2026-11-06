@@ -5,6 +5,7 @@ import { ChatMessage } from '@cuelingo/ui/components/chat-message';
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEventHandler } from 'react';
 import { MAX_AGENT_MESSAGE_CHARS } from '@cuelingo/shared';
 import type { DisplayMessage } from './chat-state';
+import type { RenderHtmlBlock } from './use-html-blocks';
 import { STARTER_PROMPTS } from './starter-prompts';
 
 /** Message box: Enter sends, Shift+Enter adds a line, and a key that finishes an IME word never sends. */
@@ -75,6 +76,7 @@ export function ChatView({
   onStop,
   onDismissError,
   loadAudio,
+  renderHtmlBlock,
   onWordDoubleClick,
 }: {
   messages: DisplayMessage[];
@@ -86,6 +88,8 @@ export function ChatView({
   onStop: () => void;
   onDismissError: () => void;
   loadAudio: (text: string) => Promise<Blob>;
+  /** Draws an `html_block`; absent when interactive blocks are off, and then none is shown. */
+  renderHtmlBlock?: RenderHtmlBlock;
   onWordDoubleClick: MouseEventHandler<HTMLElement>;
 }) {
   const end = useRef<HTMLDivElement>(null);
@@ -149,6 +153,7 @@ export function ChatView({
               parts={message.parts}
               status={message.status}
               loadAudio={loadAudio}
+              renderHtmlBlock={renderHtmlBlock}
               onDoubleClick={message.role === 'assistant' ? onWordDoubleClick : undefined}
             />
           ))}
