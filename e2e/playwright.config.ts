@@ -25,6 +25,26 @@ export default defineConfig({
   },
   webServer: [
     {
+      // Sandbox runner (ADR 0019): a static server on its own origin, embeddable by the web origin only.
+      command: 'node infra/sandbox-runner/server.mjs',
+      cwd: '..',
+      url: 'http://localhost:3101/healthz',
+      reuseExistingServer: false,
+      timeout: 30_000,
+      env: {
+        PORT: '3101',
+        RUNNER_FRAME_ANCESTORS: `http://localhost:${WEB_PORT} http://localhost:3418`,
+      },
+    },
+    {
+      // Bare host page for the escape attempts in assistant-sandbox.spec.ts.
+      command: 'node e2e/sandbox-host.mjs',
+      cwd: '..',
+      url: 'http://localhost:3418/healthz',
+      reuseExistingServer: false,
+      timeout: 30_000,
+    },
+    {
       command: 'node e2e/start-api.mjs',
       cwd: '..',
       url: `http://localhost:${API_PORT}/healthz`,

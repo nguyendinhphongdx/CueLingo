@@ -6,7 +6,8 @@
     "test": "playwright test",
     "typecheck": "tsc --noEmit",
     "e2e:db": "node e2e/setup-db.mjs",
-    "e2e": "playwright test --config e2e/playwright.config.ts"
+    "e2e": "playwright test --config e2e/playwright.config.ts",
+    "e2e:sandbox": "playwright test --config playwright.sandbox.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
