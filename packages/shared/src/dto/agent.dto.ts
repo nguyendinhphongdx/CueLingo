@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ErrorCode } from '../errors/error-code';
 import { LearnableLanguageSchema } from '../languages';
+import { HtmlBlockSchema } from './agent-bridge';
 
 /** AI assistant (agent): conversations, messages, the SSE stream of one turn, and the cards the model can show. */
 
@@ -78,6 +79,8 @@ export const AgentCardSchema = z.discriminatedUnion('kind', [
         message: 'every row needs one cell per column',
       }),
   }),
+  /** Layer 2 (ADR 0019): a page the plugin `html-ui` made. Only drawn in the sandbox runner, behind a flag. */
+  z.object({ kind: z.literal('html_block'), data: HtmlBlockSchema }),
   z.object({
     kind: z.literal('phrase_list'),
     data: z

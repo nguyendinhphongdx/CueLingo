@@ -1,5 +1,5 @@
 import { Check, X } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { isClozeCorrect, splitCloze, type AgentCardLike } from '../lib/agent-card';
 import { cn } from '../lib/utils';
 import { Button } from './button';
@@ -219,6 +219,15 @@ function PhraseList({ data, loadAudio }: { data: CardOf<'phrase_list'>; loadAudi
   );
 }
 
+/** Shown for an `html_block` when the client has not turned interactive pages on (flag off or no runner). */
+function HtmlBlockOff() {
+  return (
+    <p role="note" className={cn(frame, 'text-muted-foreground text-sm')}>
+      Khối giao diện tương tác chưa được bật nên không hiển thị.
+    </p>
+  );
+}
+
 /**
  * A card the assistant chose to show (ADR 0019, layer 1): fixed shapes drawn here, never code from the
  * model. All text is plain text. `loadAudio` is how the client fetches speech; without it no speaker shows.
@@ -226,10 +235,13 @@ function PhraseList({ data, loadAudio }: { data: CardOf<'phrase_list'>; loadAudi
 export function AgentCardView({
   card,
   loadAudio,
+  renderHtmlBlock,
   className,
 }: {
   card: AgentCardLike;
   loadAudio?: LoadAudio;
+  /** How the client draws an `html_block` (in a `SandboxFrame`). Without it the block is not shown at all. */
+  renderHtmlBlock?: (data: Extract<AgentCardLike, { kind: 'html_block' }>['data']) => ReactNode;
   className?: string;
 }) {
   return (
@@ -240,6 +252,8 @@ export function AgentCardView({
         <Cloze data={card.data} />
       ) : card.kind === 'quiz_choice' ? (
         <QuizChoice data={card.data} />
+      ) : card.kind === 'html_block' ? (
+        (renderHtmlBlock?.(card.data) ?? <HtmlBlockOff />)
       ) : card.kind === 'compare_table' ? (
         <CompareTable data={card.data} />
       ) : (

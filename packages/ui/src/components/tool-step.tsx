@@ -16,6 +16,11 @@ const LABELS: Record<string, Record<ToolStepState, string>> = {
     error: 'Chưa lưu được cụm từ',
   },
   show_card: { running: 'Đang tạo thẻ…', ok: 'Đã tạo thẻ', error: 'Chưa tạo được thẻ' },
+  render_html: {
+    running: 'Đang tạo khối giao diện…',
+    ok: 'Đã tạo khối giao diện',
+    error: 'Chưa tạo được khối giao diện',
+  },
 };
 
 const GENERIC: Record<ToolStepState, string> = {

@@ -76,6 +76,28 @@ describe('toolStepLabel', () => {
     expect(toolStepLabel('list_saved_phrases', 'ok')).toBe('Đã xem cụm từ đã lưu');
     expect(toolStepLabel('show_card', 'error')).toBe('Chưa tạo được thẻ');
     expect(toolStepLabel('secret_plugin_tool', 'ok')).toBe('Đã dùng công cụ');
+    expect(toolStepLabel('render_html', 'ok')).toBe('Đã tạo khối giao diện');
+  });
+});
+
+describe('AgentCardView html_block without a renderer', () => {
+  const card: AgentCardLike = {
+    kind: 'html_block',
+    data: { html: '<script>alert(1)</script><b>x</b>' },
+  };
+
+  it('never puts the page in the markup; it says the feature is off', () => {
+    const out = renderToStaticMarkup(<AgentCardView card={card} />);
+    expect(out).toContain('chưa được bật');
+    expect(out).not.toContain('alert(1)');
+    expect(out).not.toContain('<iframe');
+  });
+
+  it('hands the data to the client renderer when there is one', () => {
+    const out = renderToStaticMarkup(
+      <AgentCardView card={card} renderHtmlBlock={(data) => <i>{data.html.length}</i>} />,
+    );
+    expect(out).toContain('<i>33</i>');
   });
 });
 

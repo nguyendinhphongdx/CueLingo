@@ -22,7 +22,9 @@ export type AgentCardLike =
         title?: string;
         items: Array<{ phrase: string; meaningVi?: string; example?: string }>;
       };
-    };
+    }
+  /** Layer 2 (ADR 0019): a page for the sandbox runner. Drawn only through `renderHtmlBlock`, never inline. */
+  | { kind: 'html_block'; data: { title?: string; html: string } };
 
 const normalizeAnswer = (text: string) => text.trim().replace(/\s+/g, ' ').toLowerCase();
 
