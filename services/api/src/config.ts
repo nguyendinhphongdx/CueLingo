@@ -24,6 +24,12 @@ const ConfigSchema = z
     GEMINI_API_KEY: z.string().min(1).optional(),
     /** Turns the assistant on or off for everyone. Off (or no GEMINI_API_KEY) answers 503 AGENT_DISABLED. */
     AGENT_ENABLED: z.enum(['true', 'false']).default('true'),
+    /**
+     * Lets the assistant write small interactive pages (tool `render_html`, prompt agent/v2). They only run in the
+     * sandbox runner (infra/sandbox-runner, its own origin): turn this on together with the web app's
+     * NEXT_PUBLIC_AGENT_HTML_BLOCKS and NEXT_PUBLIC_SANDBOX_ORIGIN. Default off. See ADR 0019.
+     */
+    AGENT_HTML_BLOCKS: z.enum(['true', 'false']).default('false'),
     /** Model of the assistant (task `agent.chat`). The gateway reads it itself; listed here so it is documented and checked. */
     AI_AGENT_MODEL: z.string().min(1).optional(),
     /** Daily allowance per person (UTC day). */
@@ -63,9 +69,13 @@ const ConfigSchema = z
     path: ['GOOGLE_CLIENT_ID'],
   });
 
-export type Config = Omit<z.infer<typeof ConfigSchema>, 'INVITES_REQUIRED' | 'AGENT_ENABLED'> & {
+export type Config = Omit<
+  z.infer<typeof ConfigSchema>,
+  'INVITES_REQUIRED' | 'AGENT_ENABLED' | 'AGENT_HTML_BLOCKS'
+> & {
   INVITES_REQUIRED: boolean;
   AGENT_ENABLED: boolean;
+  AGENT_HTML_BLOCKS: boolean;
 };
 
 export class ConfigError extends Error {}
@@ -90,6 +100,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   return {
     ...data,
     AGENT_ENABLED: data.AGENT_ENABLED === 'true',
+    AGENT_HTML_BLOCKS: data.AGENT_HTML_BLOCKS === 'true',
     INVITES_REQUIRED: data.INVITES_REQUIRED
       ? data.INVITES_REQUIRED === 'true'
       : data.NODE_ENV === 'production',

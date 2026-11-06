@@ -14,11 +14,14 @@ import { agentRoutes } from './agent.routes';
 import { createAgentService } from './agent.service';
 import { corePlugin } from './plugins/core';
 import { exercisePlugin } from './plugins/exercise';
+import { htmlUiPlugin } from './plugins/html-ui';
 
 export interface AgentDeps {
   /** False answers every turn with 503 `AGENT_DISABLED` (env `AGENT_ENABLED`, or no AI key). */
   enabled: boolean;
   gateway?: Pick<AiGateway, 'chat'>;
+  /** Interactive pages in a sandbox (env `AGENT_HTML_BLOCKS`, default off): adds plugin `html-ui` and prompt agent/v2. */
+  htmlBlocks?: boolean;
   quota?: Partial<AgentQuotaLimits>;
   limits?: Partial<TurnLimits>;
   clock?: () => Date;
@@ -44,7 +47,8 @@ export function createAgentModule(deps: AgentDeps, wiring: AgentWiring) {
     enabled: deps.enabled && Boolean(gateway),
     model: gateway ? (userId) => createGatewayModel(gateway, userId) : undefined,
     // Composition root: a plugin is added here and nowhere else; `@cuelingo/agent` does not change.
-    plugins: [corePlugin, exercisePlugin],
+    plugins: [corePlugin, exercisePlugin, ...(deps.htmlBlocks ? [htmlUiPlugin] : [])],
+    htmlBlocks: deps.htmlBlocks,
     conversations: wiring.conversations,
     usage: wiring.usage,
     services: {

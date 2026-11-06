@@ -55,6 +55,7 @@ const appRef: { current?: FastifyInstance } = {};
 const gateway = config.GEMINI_API_KEY
   ? createAiGateway({
       googleApiKey: config.GEMINI_API_KEY,
+      agentHtmlBlocks: config.AGENT_HTML_BLOCKS,
       onCall: createAiCallHook(sql, (error, record) =>
         appRef.current?.log.error(
           { err: error, task: record.task, model: record.model },
@@ -118,6 +119,7 @@ const app = await buildApp({
   agent: {
     enabled: config.AGENT_ENABLED && Boolean(gateway),
     gateway,
+    htmlBlocks: config.AGENT_HTML_BLOCKS,
     quota: {
       turns: config.AGENT_QUOTA_TURNS_PER_DAY,
       tokens: config.AGENT_QUOTA_TOKENS_PER_DAY,

@@ -11,10 +11,15 @@ export const CORE_PERMISSIONS: AgentPermission[] = [
   'cards',
 ];
 
+/** `html_block` is not a layer-1 card: only the `html-ui` plugin (behind its flag) may make one. */
+type ShowCardKind = Exclude<AgentCardKind, 'html_block'>;
+
 /** Kinds of `AgentCardSchema`, in declaration order, for the `show_card` tool's `kind` enum. */
-const CARD_KINDS = AgentCardSchema.options.map((option) => option.shape.kind.value) as [
-  AgentCardKind,
-  ...AgentCardKind[],
+const CARD_KINDS = AgentCardSchema.options
+  .map((option) => option.shape.kind.value)
+  .filter((kind): kind is ShowCardKind => kind !== 'html_block') as [
+  ShowCardKind,
+  ...ShowCardKind[],
 ];
 
 /** Most phrases `list_saved_phrases` returns: the model needs a sample, not the whole Phrase Bank. */

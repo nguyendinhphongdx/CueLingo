@@ -37,6 +37,38 @@ const collect = async (stream: AsyncIterable<ChatStreamPart>) => {
 const make = (streamChat: StreamChatFn, calls: AiCallRecord[] = []) =>
   createAiGateway({ googleApiKey: 'test', streamChat, onCall: (c) => calls.push(c) });
 
+describe('ai-gateway agent.chat prompt version', () => {
+  const run = async (agentHtmlBlocks?: boolean) => {
+    const seen: Array<{ system: string }> = [];
+    const calls: AiCallRecord[] = [];
+    const gw = createAiGateway({
+      googleApiKey: 'test',
+      agentHtmlBlocks,
+      onCall: (c) => calls.push(c),
+      streamChat: async function* (request) {
+        seen.push({ system: request.system });
+        yield { type: 'text_delta', text: 'ok' };
+        yield finish;
+      },
+    });
+    await collect(gw.chat(input, { userId: 'u1' }));
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    return { system: seen[0]!.system, version: calls[0]!.promptVersion };
+  };
+
+  it('uses prompt v1 by default, so the flag off changes nothing', async () => {
+    const out = await run();
+    expect(out.version).toBe('agent.chat@v1');
+    expect(out.system).not.toContain('render_html');
+  });
+
+  it('uses prompt v2 and records it when interactive pages are on', async () => {
+    const out = await run(true);
+    expect(out.version).toBe('agent.chat@v2');
+    expect(out.system).toContain('render_html');
+  });
+});
+
 describe('ai-gateway agent.chat', () => {
   it('streams text and tool calls, then finish, and records one call per step', async () => {
     const calls: AiCallRecord[] = [];

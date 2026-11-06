@@ -13,11 +13,12 @@ Một lượt trả lời của trợ lý AI mỗi request: dựng ngữ cảnh,
 - Lỗi của nhà cung cấp không lộ ra: client chỉ thấy `error{AGENT_FAILED}` rồi `done{error}`
 - Công tắc toàn cục của admin (`service.admin`, trong bộ nhớ) cộng với env `AGENT_ENABLED`: tắt ở một trong hai thì `503 AGENT_DISABLED`
 - Plugin `exercise` (nội bộ, lô 2, quyền `phrases:read` + `cards`): công cụ `create_exercise` (loại `read`) dựng thẻ `cloze` hoặc `quiz_choice` từ cụm từ đã lưu của người dùng (chỉ cụm có nghĩa tiếng Việt; trắc nghiệm cần ≥ 3 cụm) hoặc từ đoạn văn người dùng đưa (ẩn từ dài nhất mỗi câu). Dựng tất định, không gọi AI, không ghi dữ liệu; thiếu nguyên liệu thì trả `created:false` kèm một câu nói thiếu gì. Được thêm chỉ bằng một dòng `plugins: [corePlugin, exercisePlugin]` ở `agent/index.ts`, không sửa `packages/agent` (AC16)
+- Plugin `html-ui` (lô 3, **chỉ đăng ký khi `AGENT_HTML_BLOCKS=true`**, quyền `html`, không có `capabilities`): công cụ `render_html` (loại `read`) nhận `{html, title?}`, kiểm tĩnh (`html-ui/check.ts`: ≤ 64 KB theo byte; từ chối `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `RTCPeerConnection`, `sendBeacon`, `importScripts`, `import()`, `@import`, `<base>`, `<meta http-equiv>`, iframe/object/embed, `src`/`url()` trỏ ra URL) rồi phát thẻ `html_block`. Kiểm tĩnh **chỉ là lớp phụ** để báo cho mô hình sửa sớm, có thể bị che mắt bằng chuỗi nối; ranh giới thật là sandbox runner (`infra/sandbox-runner`) và [`SandboxFrame`](../05-packages/ui.md). Cờ tắt thì công cụ không có trong danh sách gửi mô hình, prompt là v1, và `show_card` vẫn không nhận `html_block`. Thêm vào chỉ bằng một dòng ở `agent/index.ts`, không sửa `packages/agent`
 - Plugin `core` (nội bộ) với 4 công cụ; `capabilities` là facade gắn `userId` của phiên, không đưa SQL hay `userId` thô cho công cụ
 
 ## Phạm vi MVP
 
-- Lô 1 của ai-agent (thử nghiệm, sau cờ `AGENT_ENABLED`). Lô 2: công tắc toàn cục và bật/tắt plugin cho admin ([admin](./admin.md)), plugin thứ hai `exercise`.
+- Lô 1 của ai-agent (thử nghiệm, sau cờ `AGENT_ENABLED`). Lô 3: khối HTML/JS trong hộp cát, sau cờ `AGENT_HTML_BLOCKS` (mặc định tắt). Lô 2: công tắc toàn cục và bật/tắt plugin cho admin ([admin](./admin.md)), plugin thứ hai `exercise`.
 
 ## Interface
 
@@ -78,17 +79,18 @@ Thứ tự: `status{thinking}` (đầu mỗi bước) → `text_delta`\* → `to
 
 **Cấu hình** (`config.ts`, mẫu ở `.env.example`):
 
-| Biến                         | Mặc định  | Ý nghĩa                                                                  |
-| ---------------------------- | --------- | ------------------------------------------------------------------------ |
-| `AGENT_ENABLED`              | `true`    | Công tắc toàn cục; `false` thì 503                                       |
-| `AI_AGENT_MODEL`             | (gateway) | Model task `agent.chat`; gateway tự đọc, đã có `AI_AGENT_FALLBACK_MODEL` |
-| `AGENT_QUOTA_TURNS_PER_DAY`  | 60        | Số lượt mỗi người mỗi ngày UTC                                           |
-| `AGENT_QUOTA_TOKENS_PER_DAY` | 400000    | Token vào + ra                                                           |
-| `AGENT_QUOTA_USD_PER_DAY`    | 0.25      | Chi phí ước tính                                                         |
+| Biến                         | Mặc định  | Ý nghĩa                                                                                                                |
+| ---------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `AGENT_ENABLED`              | `true`    | Công tắc toàn cục; `false` thì 503                                                                                     |
+| `AGENT_HTML_BLOCKS`          | `false`   | Bật plugin `html-ui` và prompt `agent.chat@v2`; cần web `NEXT_PUBLIC_AGENT_HTML_BLOCKS` + `NEXT_PUBLIC_SANDBOX_ORIGIN` |
+| `AI_AGENT_MODEL`             | (gateway) | Model task `agent.chat`; gateway tự đọc, đã có `AI_AGENT_FALLBACK_MODEL`                                               |
+| `AGENT_QUOTA_TURNS_PER_DAY`  | 60        | Số lượt mỗi người mỗi ngày UTC                                                                                         |
+| `AGENT_QUOTA_TOKENS_PER_DAY` | 400000    | Token vào + ra                                                                                                         |
+| `AGENT_QUOTA_USD_PER_DAY`    | 0.25      | Chi phí ước tính                                                                                                       |
 
 ## Phụ thuộc
 
-- `@cuelingo/agent` (vòng lặp, registry, parts), `@cuelingo/ai-gateway` (`chat()`), `@cuelingo/prompts` (`agent.chat@v1`), `@cuelingo/shared`.
+- `@cuelingo/agent` (vòng lặp, registry, parts), `@cuelingo/ai-gateway` (`chat()`), `@cuelingo/prompts` (`agent.chat@v1`, `@v2` khi bật cờ), `@cuelingo/shared`.
 - `modules/conversations` (lưu tin), `modules/assist` (tra từ), `modules/review` (Phrase Bank); nối trong `app.ts`.
 
 ## Dữ liệu & sự kiện
@@ -107,4 +109,5 @@ Thứ tự: `status{thinking}` (đầu mỗi bước) → `text_delta`\* → `to
 
 - Endpoint đọc `AgentQuota` cho UI (hiện chỉ có trong `details` của 429).
 - Khoá theo hội thoại chỉ đúng với một instance (ghi ở ADR-0018); khi scale cần khoá trong DB hoặc Redis.
+- `render_html` có cùng giới hạn: mã HTML nằm trong output nên mô hình thấy lại một đoạn cắt 2 KB; prompt v2 dặn không lặp lại mã.
 - `show_card` trả lại thẻ trong output nên mô hình thấy nó một lần nữa (≤ 2 KB); có thể thêm cách tách "thứ cho mô hình" khỏi "thứ cho UI" vào `@cuelingo/agent`.

@@ -56,7 +56,7 @@ gateway.chat(
 - `ChatToolDeclaration`: `{name, description, inputSchema}` (JSON Schema). Không có `execute`, nên SDK chỉ báo lời gọi rồi dừng sau một bước.
 - `ChatStreamPart`: `text_delta {text}` · `tool_call {call: {id, name, input}}` · `finish {reason: stop | tool_calls | length | other, inputTokens?, outputTokens?}` (luôn là phần cuối).
 - Model theo `AI_AGENT_MODEL` (mặc định `gemini-3.5-flash-lite`), dự phòng `AI_AGENT_FALLBACK_MODEL` (mặc định `gemini-3.1-flash-lite`), hạn 30 giây mỗi bước, tối đa 2000 token ra, `thinkingLevel: minimal`. Cả hai model đều có trong `MODEL_PRICES` nên `estimateCostUsd` tính được chi phí cho quota.
-- Mỗi lần thử ghi một `AiCallRecord` (`task: 'agent.chat'`, `promptVersion: 'agent.chat@v1'`, token, `firstTokenMs` = thời gian tới chữ hoặc lời gọi tool đầu tiên). Không ghi nội dung tin nhắn.
+- Prompt: `agent.chat@v1`; với `createAiGateway({ agentHtmlBlocks: true })` (env `AGENT_HTML_BLOCKS`) dùng `agent.chat@v2` (thêm luật cho `render_html`). Mỗi lần thử ghi một `AiCallRecord` (`task: 'agent.chat'`, `promptVersion` là `agent.chat@v1` hoặc `@v2`, token, `firstTokenMs` = thời gian tới chữ hoặc lời gọi tool đầu tiên). Không ghi nội dung tin nhắn.
 - Model dự phòng chỉ được dùng khi model chính lỗi **trước khi** gửi bất cứ thứ gì; đã gửi rồi thì ném `AiGatewayError('agent.chat')`. Bước không có chữ lẫn lời gọi tool tính là lỗi. `signal` bị huỷ thì luồng kết thúc im lặng (không ném), bản ghi `ok: false`.
 - Test seam: `createAiGateway({ streamChat })` thay lời gọi `streamText`.
 

@@ -10,7 +10,7 @@ import {
   type ModelPort,
   type TurnLimits,
 } from '@cuelingo/agent';
-import { AGENT_PROMPT_VERSION, buildAgentPrompt } from '@cuelingo/prompts';
+import { agentPromptFor } from '@cuelingo/prompts';
 import {
   ErrorCode,
   type AdminAgentStatus,
@@ -61,6 +61,8 @@ export interface AgentServiceDeps {
   plugins?: Array<AgentPlugin<CoreCapabilities>>;
   /** What the `core` plugin reaches; bound to the signed-in user per turn. */
   services: CoreServices;
+  /** Interactive pages are on (`AGENT_HTML_BLOCKS`): the prompt is agent/v2 and the plugin list has `html-ui`. */
+  htmlBlocks?: boolean;
   quota?: Partial<AgentQuotaLimits>;
   limits?: Partial<TurnLimits>;
   clock?: () => Date;
@@ -209,7 +211,7 @@ export function createAgentService(deps: AgentServiceDeps) {
                 ...(status
                   ? {
                       status,
-                      promptVersion: AGENT_PROMPT_VERSION,
+                      promptVersion: agentPromptFor(Boolean(deps.htmlBlocks), { language }).version,
                       inputTokens: spent.input,
                       outputTokens: spent.output,
                     }
@@ -243,7 +245,9 @@ export function createAgentService(deps: AgentServiceDeps) {
               capabilities: buildCoreCapabilities(deps.services, userId, language, ALL_PERMISSIONS),
               signal: controller.signal,
               limits: deps.limits,
-              reservedTokens: estimateTokens(buildAgentPrompt({ language }).system),
+              reservedTokens: estimateTokens(
+                agentPromptFor(Boolean(deps.htmlBlocks), { language }).system,
+              ),
               hooks: {
                 async beforeStep(step) {
                   if (step === 0) return true; // checked above, before anything was stored

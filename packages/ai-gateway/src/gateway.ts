@@ -1,7 +1,6 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import {
-  AGENT_PROMPT_VERSION,
-  buildAgentPrompt,
+  agentPromptFor,
   buildComposePrompt,
   buildDebriefPromptFor,
   buildFollowupPrompt,
@@ -95,6 +94,8 @@ export interface AiGatewayOptions {
   generate?: GenerateFn;
   /** Test seam: replaces the real streaming call used by `chat`. */
   streamChat?: StreamChatFn;
+  /** The assistant may show interactive pages (`AGENT_HTML_BLOCKS`): `chat` then uses prompt agent/v2. */
+  agentHtmlBlocks?: boolean;
   /** Test seam: replaces the real text-to-speech call. */
   speak?: SpeakFn;
   /** Test seam: replaces the real speech-to-text call. */
@@ -440,7 +441,9 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
 
     async *chat({ language, messages, tools, signal }, context) {
       const config = TASKS['agent.chat'];
-      const { system } = buildAgentPrompt({ language });
+      const { system, version: promptVersion } = agentPromptFor(Boolean(options.agentHtmlBlocks), {
+        language,
+      });
       const models = [{ model: config.model, fallback: false }];
       if (config.fallbackModel !== config.model)
         models.push({ model: config.fallbackModel, fallback: true });
@@ -451,7 +454,7 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
         const record: AiCallRecord = {
           task: 'agent.chat',
           model,
-          promptVersion: AGENT_PROMPT_VERSION,
+          promptVersion,
           latencyMs: 0,
           fallback,
           ok: false,
