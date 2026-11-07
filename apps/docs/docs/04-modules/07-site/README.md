@@ -39,7 +39,7 @@ Chạy khi push lên `main` có đổi `apps/site`, `packages/ui`, `pnpm-lock.ya
 ## Việc chủ sản phẩm làm (H1)
 
 1. Tạo repo công khai chứa bản build, đặt biến `CUELINGO_RELEASES_REPO` (dạng `owner/name`) và các secret/biến ở ADR 0017 cho `release.yml`.
-2. Ở repo **chạy `pages.yml`**: Settings → Pages → Source: **GitHub Actions**. Workflow chạy trong repo chứa nó, nên Pages nằm ở repo mã nguồn, không phải repo bản build. Repo riêng tư cần gói GitHub cho phép Pages; nội dung trang vẫn công khai. Muốn Pages nằm ở repo bản build thì phải đưa `apps/site` và workflow sang đó (chưa làm).
+2. Ở repo **chạy `pages.yml`**: Settings → Pages → Source: **GitHub Actions**. Workflow chạy trong repo chứa nó, nên Pages nằm ở repo mã nguồn, không phải repo bản build. Repo riêng tư cần gói GitHub cho phép Pages; nội dung trang vẫn công khai. Đã chốt giữ Pages ở repo mã nguồn; chuyển sang repo bản build thì phải đưa `apps/site` và workflow sang đó (không làm).
 3. Gắn tag `v0.1.0` cho `release.yml` trước khi chia sẻ link, nếu không nút tải trả 404.
 4. Vào tab Actions chạy "Pages" một lần (hoặc push vào `main`). Địa chỉ: `https://<user>.github.io/<repo>/`.
 5. Đổi `CUELINGO_RELEASES_REPO` thì chạy lại workflow để link trong trang đổi theo.
@@ -54,5 +54,5 @@ Chạy khi push lên `main` có đổi `apps/site`, `packages/ui`, `pnpm-lock.ya
 
 ## Câu hỏi mở
 
-- Tên repo bản build và việc Pages nằm ở repo nào (xem H1 bước 2).
+- Đã chốt: Pages nằm ở repo mã nguồn (2026-11-07). Còn cần tên repo bản build thật để đặt `CUELINGO_RELEASES_REPO`.
 - HTML tĩnh chỉ chứa khung; nội dung do React dựng trong trình duyệt. Cần hiện chữ khi tắt JavaScript hoặc cho công cụ tìm kiếm thì thêm prerender.
