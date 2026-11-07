@@ -17,6 +17,8 @@ export interface SandboxControllerOptions {
   dispatch(event: SandboxEvent): void;
   /** Asks the person, in the host's own dialog. Must resolve false if they cancel or the block goes away. */
   askToSave(input: { phrase: string; meaningVi?: string }): Promise<boolean>;
+  /** Asks whether the block may read the saved phrases. Must resolve false if they cancel or the block goes away. */
+  askToList(): Promise<boolean>;
   listPhrases: BridgeHandlers['listPhrases'];
   savePhrase: BridgeHandlers['savePhrase'];
   speak: BridgeHandlers['speak'];
@@ -41,7 +43,16 @@ export function createSandboxController(options: SandboxControllerOptions): Sand
   let stopped = false;
   let rendered = false;
 
-  const stop = (reason: 'no_ready' | 'no_pong' | 'error') => {
+  /** A block that keeps asking after being refused is wearing the person down: it is removed at this many refusals. */
+  const MAX_REFUSALS = 2;
+  let refusals = 0;
+  let mayList = false;
+  const refused = () => {
+    refusals += 1;
+    if (refusals >= MAX_REFUSALS) stop('refused');
+  };
+
+  const stop = (reason: 'no_ready' | 'no_pong' | 'error' | 'refused') => {
     if (stopped) return;
     stopped = true;
     watchdog.stop();
@@ -67,8 +78,23 @@ export function createSandboxController(options: SandboxControllerOptions): Sand
       },
       error: () => stop('error'),
       pong: (n) => watchdog.pong(n),
-      listPhrases: options.listPhrases,
-      confirmSave: options.askToSave,
+      // Reading the saved phrases asks once per block: a page that can read them and also reach the network by a
+      // route the browser cannot close (a navigation resolves its target's host name) could carry them out.
+      listPhrases: async () => {
+        if (!mayList) {
+          if (stopped || !(await options.askToList())) {
+            if (!stopped) refused();
+            throw new Error('declined');
+          }
+          mayList = true;
+        }
+        return options.listPhrases();
+      },
+      confirmSave: async (input) => {
+        const agreed = await options.askToSave(input);
+        if (!agreed && !stopped) refused();
+        return agreed;
+      },
       savePhrase: options.savePhrase,
       speak: options.speak,
     },

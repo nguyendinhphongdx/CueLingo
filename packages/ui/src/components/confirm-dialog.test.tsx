@@ -29,4 +29,26 @@ describe('ConfirmDialog', () => {
     expect(markup).toContain('Đồng ý');
     expect(markup).toContain('Huỷ');
   });
+
+  it('can start on the cancel button with the confirm button disabled for a moment', () => {
+    const markup = renderToStaticMarkup(
+      <ConfirmDialog
+        open
+        title="t"
+        confirmLabel="Đồng ý"
+        cancelLabel="Huỷ"
+        initialFocus="cancel"
+        confirmDelayMs={600}
+        onConfirm={noop}
+        onCancel={noop}
+      >
+        x
+      </ConfirmDialog>,
+    );
+    expect(markup).toMatch(/<button[^>]*disabled=""[^>]*>Đồng ý/);
+    expect(markup).not.toContain('autofocus');
+    // The default stays as before: confirm is focused and enabled.
+    expect(render(true)).not.toContain('disabled=""');
+    expect(render(true)).toContain('autofocus=""');
+  });
 });

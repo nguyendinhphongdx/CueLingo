@@ -15,7 +15,12 @@ describe('sandbox controller (AC7, AC8, AC9 wiring)', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  function make(over: { askToSave?: (i: { phrase: string }) => Promise<boolean> } = {}) {
+  function make(
+    over: {
+      askToSave?: (i: { phrase: string }) => Promise<boolean>;
+      askToList?: () => Promise<boolean>;
+    } = {},
+  ) {
     const posted: BridgeHostMessage[] = [];
     const events: SandboxEvent[] = [];
     let stoppedCalls = 0;
@@ -26,6 +31,7 @@ describe('sandbox controller (AC7, AC8, AC9 wiring)', () => {
       post: (m) => posted.push(m),
       dispatch: (e) => events.push(e),
       askToSave: over.askToSave ?? (async () => true),
+      askToList: over.askToList ?? (async () => true),
       listPhrases: async () => [{ phrase: 'a', meaningVi: null }],
       savePhrase,
       speak: () => {},

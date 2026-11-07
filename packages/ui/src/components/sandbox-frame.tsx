@@ -107,9 +107,17 @@ export function SandboxFrameView({
   );
 }
 
-interface PendingSave {
-  phrase: string;
-  meaningVi?: string;
+type Pending = { kind: 'save'; phrase: string; meaningVi?: string } | { kind: 'list' };
+
+/** Milliseconds the "Lưu" button stays disabled after the dialog opens: a click aimed at the block cannot land on it. */
+export const CONFIRM_DELAY_MS = 600;
+const MAX_QUOTED_PHRASE = 80;
+const MAX_QUOTED_MEANING = 120;
+
+/** Text the assistant wrote, shown as a quote: one line, cut, so it cannot pose as a sentence of the dialog. */
+export function quoteAiText(text: string, max: number): string {
+  const flat = text.replace(/\s+/g, ' ').trim();
+  return `“${flat.length > max ? `${flat.slice(0, max)}…` : flat}”`;
 }
 
 function SandboxSession({
@@ -124,12 +132,22 @@ function SandboxSession({
   const src = runnerUrl(runnerOrigin);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [state, dispatch] = useReducer(sandboxReducer, src === null, initialSandboxState);
-  const [confirm, setConfirm] = useState<PendingSave | null>(null);
+  const [confirm, setConfirm] = useState<Pending | null>(null);
   // The callbacks change identity every render; the session reads the latest without restarting.
   const latest = useRef({ onListPhrases, onSavePhrase, onSpeak });
   const controller = useRef<SandboxController | null>(null);
   const loaded = useRef(false);
   const answer = useRef<((agreed: boolean) => void) | null>(null);
+
+  const ask = (pending: Pending) =>
+    new Promise<boolean>((resolve) => {
+      answer.current = (agreed) => {
+        answer.current = null;
+        setConfirm(null);
+        resolve(agreed);
+      };
+      setConfirm(pending);
+    });
 
   useEffect(() => {
     latest.current = { onListPhrases, onSavePhrase, onSpeak };
@@ -143,15 +161,8 @@ function SandboxSession({
       // The runner's origin is opaque under the sandbox flags, so "*" is the only target that delivers.
       post: (message) => iframeRef.current?.contentWindow?.postMessage(message, '*'),
       dispatch,
-      askToSave: (input) =>
-        new Promise<boolean>((resolve) => {
-          answer.current = (agreed) => {
-            answer.current = null;
-            setConfirm(null);
-            resolve(agreed);
-          };
-          setConfirm(input);
-        }),
+      askToSave: (input) => ask({ kind: 'save', ...input }),
+      askToList: () => ask({ kind: 'list' }),
       listPhrases: () => latest.current.onListPhrases(),
       savePhrase: (input) => latest.current.onSavePhrase(input),
       speak: (text) => latest.current.onSpeak(text),
@@ -187,15 +198,29 @@ function SandboxSession({
       />
       <ConfirmDialog
         open={confirm !== null}
-        title="Lưu cụm từ này?"
-        confirmLabel="Lưu"
+        title={confirm?.kind === 'list' ? 'Cho khối đọc cụm từ của bạn?' : 'Lưu cụm từ này?'}
+        confirmLabel={confirm?.kind === 'list' ? 'Cho phép' : 'Lưu'}
         cancelLabel="Huỷ"
+        // The question comes from content the person did not write: refusing is the default action.
+        initialFocus="cancel"
+        confirmDelayMs={CONFIRM_DELAY_MS}
         onCancel={() => answer.current?.(false)}
         onConfirm={() => answer.current?.(true)}
       >
-        Khối giao diện muốn lưu “{confirm?.phrase}”
-        {confirm?.meaningVi ? ` (${confirm.meaningVi})` : ''} vào Cụm từ của bạn. Chỉ lưu nếu bạn
-        đồng ý.
+        {confirm?.kind === 'list' ? (
+          <>
+            Khối giao diện do trợ lý viết muốn đọc danh sách cụm từ bạn đã lưu. Chỉ cho phép nếu bạn
+            tin khối này.
+          </>
+        ) : confirm ? (
+          <>
+            Khối giao diện do trợ lý viết muốn lưu {quoteAiText(confirm.phrase, MAX_QUOTED_PHRASE)}
+            {confirm.meaningVi
+              ? ` với nghĩa ${quoteAiText(confirm.meaningVi, MAX_QUOTED_MEANING)}`
+              : ''}{' '}
+            vào Cụm từ của bạn. Chỉ lưu nếu bạn đồng ý.
+          </>
+        ) : null}
       </ConfirmDialog>
     </>
   );

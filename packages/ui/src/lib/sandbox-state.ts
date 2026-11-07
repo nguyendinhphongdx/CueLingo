@@ -1,7 +1,7 @@
 import type { StallReason } from './sandbox-watchdog';
 
 /** Why a block is no longer shown: the watchdog, or the page itself reported an error / a blocked action. */
-export type StopReason = StallReason | 'error' | 'unavailable';
+export type StopReason = StallReason | 'error' | 'refused' | 'unavailable';
 
 export interface SandboxState {
   phase: 'loading' | 'running' | 'stopped';
@@ -42,6 +42,7 @@ const REASONS: Record<StopReason, string> = {
   no_ready: 'Khối không khởi động kịp.',
   no_pong: 'Khối ngừng phản hồi.',
   error: 'Khối báo lỗi hoặc cố làm điều không được phép.',
+  refused: 'Khối cứ xin lưu hoặc đọc dữ liệu dù bạn đã từ chối.',
   unavailable: 'Chưa có nơi chạy khối giao diện.',
 };
 

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Button } from './button';
 
 interface ConfirmDialogProps {
@@ -9,19 +9,41 @@ interface ConfirmDialogProps {
   cancelLabel: string;
   onConfirm(): void;
   onCancel(): void;
+  /**
+   * Where the focus starts. `confirm` (default) suits a person's own action; use `cancel` when the question comes
+   * from content the person did not write, so a stray Enter or Space refuses instead of agreeing.
+   */
+  initialFocus?: 'confirm' | 'cancel';
+  /** Keeps the confirm button disabled for this long after the dialog opens (a click made for something else). */
+  confirmDelayMs?: number;
 }
 
 /** A modal that asks the person to agree before something happens; Escape and the backdrop cancel. */
-export function ConfirmDialog({
-  open,
+export function ConfirmDialog(props: ConfirmDialogProps) {
+  // Mounted only while open, so the focus and the delay start over each time.
+  return props.open ? <OpenDialog {...props} /> : null;
+}
+
+function OpenDialog({
   title,
   children,
   confirmLabel,
   cancelLabel,
   onConfirm,
   onCancel,
+  initialFocus = 'confirm',
+  confirmDelayMs = 0,
 }: ConfirmDialogProps) {
-  if (!open) return null;
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const [armed, setArmed] = useState(confirmDelayMs <= 0);
+  useEffect(() => {
+    if (initialFocus === 'cancel') cancelRef.current?.focus();
+  }, [initialFocus]);
+  useEffect(() => {
+    if (confirmDelayMs <= 0) return;
+    const timer = setTimeout(() => setArmed(true), confirmDelayMs);
+    return () => clearTimeout(timer);
+  }, [confirmDelayMs]);
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -45,10 +67,10 @@ export function ConfirmDialog({
           {children}
         </p>
         <div className="mt-6 flex justify-end gap-2">
-          <Button variant="ghost" onClick={onCancel}>
+          <Button ref={cancelRef} variant="ghost" onClick={onCancel}>
             {cancelLabel}
           </Button>
-          <Button autoFocus onClick={onConfirm}>
+          <Button autoFocus={initialFocus === 'confirm'} disabled={!armed} onClick={onConfirm}>
             {confirmLabel}
           </Button>
         </div>
