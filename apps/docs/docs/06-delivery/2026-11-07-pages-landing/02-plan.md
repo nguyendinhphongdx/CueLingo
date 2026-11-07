@@ -49,6 +49,12 @@ Mặc định cho các câu hỏi mở (đổi được ở cổng này): Pages 
 
 ## Decision log
 
-| Ngày       | Pha  | Quyết định / lý do bị từ chối                                                            |
-| ---------- | ---- | ---------------------------------------------------------------------------------------- |
-| 2026-11-07 | Plan | Trình phương án B; câu hỏi mở dùng mặc định (cùng repo bản build, URL mặc định, 2 trang) |
+| Ngày       | Pha  | Quyết định / lý do bị từ chối                                                                                                                                         |
+| ---------- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-07 | Plan | Trình phương án B; câu hỏi mở dùng mặc định (cùng repo bản build, URL mặc định, 2 trang)                                                                              |
+| 2026-11-07 | Code | Rẽ nhánh từ `feat/ai-agent` vì code landing chỉ có ở đó, không có ở `main`                                                                                            |
+| 2026-11-07 | Code | Chọn SPA Vite, không prerender: đơn giản, đủ cho hai trang; ghi thành câu hỏi mở. Bị từ chối: prerender bằng plugin Vite (thêm máy móc, CSS module phải dựng hai lần) |
+| 2026-11-07 | Code | `pages.yml` ghim SHA dù `release.yml` hiện dùng thẻ `@v4`; base path lấy từ `configure-pages`; link tải chỉ tính khi biến đúng `owner/name`                           |
+| 2026-11-07 | Code | Quét bản build làm script có test (`scan-dist.mjs`) thay vì `grep` trong YAML                                                                                         |
+| 2026-11-07 | Code | Phát hiện: Pages nằm ở repo chạy workflow (repo mã nguồn), lệch với H1 "cùng repo bản build"; để chủ sản phẩm quyết, ghi ở `03-review.md`                             |
+| 2026-11-07 | Code | Không chạy được `vite preview` (sandbox chặn cổng cục bộ); thay bằng kiểm tham chiếu tài nguyên trên đĩa với base `/cuelingo-releases/`                               |

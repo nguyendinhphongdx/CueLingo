@@ -17,7 +17,7 @@
 
 Gắn tag `vX.Y.Z` đúng bằng `version` trong `tauri.conf.json`. Workflow dựng sidecar, `tauri build` (arm64, ký ad-hoc, `createUpdaterArtifacts`), kiểm tra bundle không chứa token dev, sinh `latest.json` và đăng `CueLingo-macOS-arm64.dmg`, `CueLingo.app.tar.gz(.sig)`, `latest.json` lên repo bản build.
 
-Biến cần có (do người đặt): secrets `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, `RELEASES_TOKEN`; variables `CUELINGO_UPDATER_PUBKEY`, `CUELINGO_RELEASES_REPO`, `CUELINGO_API_URL`, `CUELINGO_WEB_URL`. Web: `NEXT_PUBLIC_DOWNLOAD_URL` trỏ tới `https://github.com/<repo>/releases/latest/download/CueLingo-macOS-arm64.dmg`.
+Biến cần có (do người đặt): secrets `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, `RELEASES_TOKEN`; variables `CUELINGO_UPDATER_PUBKEY`, `CUELINGO_RELEASES_REPO`, `CUELINGO_API_URL`, `CUELINGO_WEB_URL`. Web: `NEXT_PUBLIC_DOWNLOAD_URL` trỏ tới `https://github.com/<repo>/releases/latest/download/CueLingo-macOS-arm64.dmg`. Trang tĩnh [Site công khai](../07-site/README.md) dùng cùng link qua `VITE_DOWNLOAD_URL`.
 
 ## Câu hỏi mở
 

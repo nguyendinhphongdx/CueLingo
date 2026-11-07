@@ -38,6 +38,7 @@ Người thử bên ngoài chưa có một đường dẫn công khai để vào
 
 ## Decision log
 
-| Ngày       | Pha  | Quyết định / lý do bị từ chối                                                       |
-| ---------- | ---- | ----------------------------------------------------------------------------------- |
-| 2026-11-07 | Spec | Mở hồ sơ theo yêu cầu "Làm đi" sau khi chủ sản phẩm hỏi về trang tải và tự cập nhật |
+| Ngày       | Pha    | Quyết định / lý do bị từ chối                                                                                                               |
+| ---------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-07 | Spec   | Mở hồ sơ theo yêu cầu "Làm đi" sau khi chủ sản phẩm hỏi về trang tải và tự cập nhật                                                         |
+| 2026-11-07 | Result | Chủ sản phẩm chọn đặt Pages ở **repo mã nguồn** (không chuyển `apps/site` sang repo bản build); repo riêng tư cần gói GitHub cho phép Pages |
