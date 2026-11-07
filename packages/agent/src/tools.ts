@@ -24,6 +24,8 @@ export interface AgentTool<C = unknown> {
   toCard?(output: unknown): AgentCard | undefined;
   /** One short Vietnamese line for the tool step; never raw output. */
   summarize?(output: unknown): string | undefined;
+  /** What the model reads back, when that must be less than the card needs (e.g. a page it wrote itself). */
+  forModel?(output: unknown): unknown;
 }
 
 /** Declares a tool with typed `run`/`toCard`/`summarize`; the types are erased for the registry. */
@@ -36,6 +38,7 @@ export function defineTool<C, I, O>(tool: {
   run(input: I, ctx: ToolContext<C>): Promise<O>;
   toCard?(output: O): AgentCard | undefined;
   summarize?(output: O): string | undefined;
+  forModel?(output: O): unknown;
 }): AgentTool<C> {
   return tool as unknown as AgentTool<C>;
 }
@@ -129,7 +132,9 @@ export async function runTool<C>(
 
     let card: AgentCard | undefined;
     let summary: string | undefined;
+    let modelView: unknown = output.data;
     try {
+      if (tool.forModel) modelView = tool.forModel(output.data);
       const candidate = tool.toCard?.(output.data);
       if (candidate) {
         const parsed = AgentCardSchema.safeParse(candidate);
@@ -142,7 +147,7 @@ export async function runTool<C>(
     return {
       ok: true,
       output: output.data,
-      content: cutOutput(output.data, maxOutputBytes),
+      content: cutOutput(modelView, maxOutputBytes),
       ...(summary ? { summary } : {}),
       ...(card ? { card } : {}),
     };

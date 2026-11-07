@@ -35,6 +35,21 @@ describe('runTool', () => {
     expect(out.content).toBe('{"echoed":"phi"}');
   });
 
+  it('lets a tool show the model less than the card gets (forModel)', async () => {
+    const tool = defineTool({
+      name: 'big',
+      description: 'd',
+      kind: 'read',
+      input: z.object({}),
+      output: z.object({ ok: z.boolean(), page: z.string() }),
+      run: async () => ({ ok: true, page: 'SECRET-PAGE' }),
+      forModel: ({ ok }) => ({ ok }),
+    });
+    const out = await runTool(tool, {}, ctx());
+    expect(out).toMatchObject({ ok: true, output: { ok: true, page: 'SECRET-PAGE' } });
+    expect(out.content).toBe('{"ok":true}');
+  });
+
   it('fails invalid input without running the tool', async () => {
     let ran = false;
     const tool = defineTool({

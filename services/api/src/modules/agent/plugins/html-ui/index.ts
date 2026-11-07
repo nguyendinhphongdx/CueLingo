@@ -43,6 +43,12 @@ const renderHtml = defineTool<NoCapabilities, { html: string; title?: string }, 
           data: { ...(output.title ? { title: output.title } : {}), html: output.html },
         }
       : undefined,
+  // The page goes to the card only. The model gets the verdict, never its own code back (no echo, no extra tokens).
+  forModel: ({ rendered, title, problem }) => ({
+    rendered,
+    ...(title ? { title } : {}),
+    ...(problem ? { problem } : {}),
+  }),
   summarize: (output) =>
     output.rendered ? 'Đã tạo khối giao diện' : 'Chưa tạo được khối giao diện',
 });

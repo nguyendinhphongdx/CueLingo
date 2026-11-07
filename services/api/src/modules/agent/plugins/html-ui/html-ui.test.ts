@@ -28,6 +28,19 @@ describe('html-ui plugin: render_html', () => {
     expect(result.summary).toBe('Đã tạo khối giao diện');
   });
 
+  it('does not echo the page back to the model: it reads only the verdict', async () => {
+    const result = await run({ html: PAGE, title: 'Luyện nghe' });
+    expect(result.ok && JSON.parse(result.content)).toEqual({
+      rendered: true,
+      title: 'Luyện nghe',
+    });
+    expect(result.content).not.toContain('button');
+    const refused = await run({ html: '<script>fetch("x")</script>' });
+    const body = JSON.parse(refused.content) as Record<string, unknown>;
+    expect(body.rendered).toBe(false);
+    expect(Object.keys(body).sort()).toEqual(['problem', 'rendered']);
+  });
+
   it('leaves the title out when there is none', async () => {
     const result = await run({ html: PAGE });
     expect(result.ok && result.card).toEqual({ kind: 'html_block', data: { html: PAGE } });
@@ -78,6 +91,19 @@ describe('checkHtml (secondary layer, the sandbox is the boundary)', () => {
     "<img src='//x.test/p.png'>",
     '<div style="background:url(https://x.test/a.png)"></div>',
     '<IFRAME></IFRAME>',
+    '<link rel="dns-prefetch" href="//x.test">',
+    '<link rel=preconnect href="https://x.test">',
+    '<link rel="prefetch" href="x">',
+    '<link rel=prerender href="x">',
+    '<link rel="modulepreload" href="a.js">',
+    'l.rel = "pre" + "connect"; l.rel = "preconnect"',
+    'new webkitRTCPeerConnection()',
+    'new RTCDataChannel()',
+    // The cheapest obfuscations are undone before checking (best effort, see check.ts).
+    'window["fe"+"tch"]("x")',
+    "window['fe'+'tch']('x')",
+    'window[`fe`+`tch`]("x")',
+    'fe/**/tch("x")',
   ];
   for (const snippet of rejected) {
     it(`rejects ${snippet}`, () => {

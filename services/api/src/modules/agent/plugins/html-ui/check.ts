@@ -13,7 +13,15 @@ const FORBIDDEN: ReadonlyArray<{ pattern: RegExp; label: string }> = [
   { pattern: /\bXMLHttpRequest\b/, label: 'XMLHttpRequest' },
   { pattern: /\bWebSocket\b/, label: 'WebSocket' },
   { pattern: /\bEventSource\b/, label: 'EventSource' },
-  { pattern: /\bRTCPeerConnection\b/, label: 'RTCPeerConnection' },
+  { pattern: /RTC(?:PeerConnection|DataChannel)/, label: 'WebRTC' },
+  {
+    pattern: /(?:dns-prefetch|preconnect|prefetch|prerender)/i,
+    label: 'a dns-prefetch/preconnect/prefetch/prerender hint',
+  },
+  {
+    pattern: /<\s*link\b[^>]*\brel\s*=\s*["']?\s*(?:modulepreload|preload)/i,
+    label: '<link rel=preload>',
+  },
   { pattern: /\bsendBeacon\b/, label: 'sendBeacon' },
   { pattern: /\bimportScripts\b/, label: 'importScripts' },
   { pattern: /\bimport\s*\(/, label: 'import()' },
@@ -29,13 +37,26 @@ const FORBIDDEN: ReadonlyArray<{ pattern: RegExp; label: string }> = [
 ];
 
 /** Whether the page is small enough and free of what the sandbox would stop anyway. */
+/**
+ * The text as the engine would see it after the cheapest obfuscations are undone: comments inside code
+ * (`fe/**\/tch`) and string concatenation (`'fe'+'tch'`, `"fe"+"tch"`, template pieces). Best effort: anything
+ * computed (`atob`, `String.fromCharCode`, `window[x]`) still gets through, which is why the sandbox is the boundary.
+ */
+function flatten(html: string): string {
+  return html
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(["'`])\s*\+\s*\1/g, '')
+    .replace(/(["'`])\s*\+\s*(["'`])/g, '');
+}
+
 export function checkHtml(html: string): HtmlCheck {
   const bytes = new TextEncoder().encode(html).length;
   if (bytes > MAX_HTML_BLOCK_BYTES) {
     return { ok: false, problem: `html is ${bytes} bytes; the limit is ${MAX_HTML_BLOCK_BYTES}.` };
   }
+  const flat = flatten(html);
   for (const { pattern, label } of FORBIDDEN) {
-    if (pattern.test(html)) {
+    if (pattern.test(html) || pattern.test(flat)) {
       return {
         ok: false,
         problem: `html uses ${label}, which is not allowed in the sandbox. Remove it and use only inline code.`,
