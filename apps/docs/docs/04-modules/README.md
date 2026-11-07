@@ -8,3 +8,4 @@ Mỗi phần có một thư mục. `README.md` của phần đó mô tả vai tr
 - [Workers](./04-workers/README.md): `services/workers`
 - [Shared packages](./05-packages/README.md): `packages/*`
 - [ML & evaluation](./06-ml/README.md): `ml/`
+- [Site công khai](./07-site/README.md): `apps/site`

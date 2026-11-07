@@ -53,6 +53,22 @@ Dropdown dựa trên `<select>` gốc (bàn phím và di động có sẵn): nh�
 
 Nhãn người nói dùng chung cho overlay và web: `SpeakerTag({label, displayName, source, onRename?})` (`components/speaker-tag`). `speakerDisplayName({label, displayName, source})` (`lib/speaker`) trả “Tôi” (`me`, hoặc không nhãn và `source = mic`), tên người dùng đặt, “Speaker N” (`speaker_N` chưa có tên), hoặc “Người khác”. Màu nhẹ cố định theo N (token `primary`/`accent`/`secondary`/`muted`; “Tôi” và “Người khác” có màu riêng); tên luôn hiện bằng chữ nên không chỉ dựa vào màu. Có `onRename` thì nhãn là nút (`aria-label` “<tên>, đổi tên người nói”), không thì là `span`. `label` là `string` vì `@cuelingo/ui` không phụ thuộc `shared`.
 
+## Trang giới thiệu và tải về
+
+Dùng chung cho web (`apps/web/src/features/landing`) và site tĩnh ([Site công khai](../07-site/README.md)). Thành phần chỉ trình bày: router link, đường dẫn và việc chuyển hướng người đã đăng nhập do app chủ quyết định qua props.
+
+| Import                               | Export                                                              |
+| ------------------------------------ | ------------------------------------------------------------------- |
+| `components/landing/landing-view`    | `LandingView({link?, paths?})`, `LandingSessionCheck`               |
+| `components/landing/download-page`   | `DownloadPage({downloadUrl, link?, paths?})`                        |
+| `components/landing/public-header`   | `PublicHeader({link?, paths?})`                                     |
+| `components/landing/caption-overlay` | `CaptionOverlay({compact?})`                                        |
+| `components/landing/landing-link`    | `LandingLink`, `LandingPaths`, `PlainLink`, `DEFAULT_LANDING_PATHS` |
+
+- `link` mặc định là thẻ `<a>`; web truyền `next/link`. `paths = {home, download, login}`; `login: null` ẩn mọi liên kết đăng nhập (site tĩnh).
+- `downloadUrl` null thì nút "Sắp có bản tải" bị khoá. Trang tải nêu macOS 14.2+, Apple Silicon, cách mở bản chưa công chứng, cấp quyền, và việc app tự kiểm tra bản mới rồi hỏi trước khi cài.
+- CSS nằm ở `landing/landing.module.css` (CSS module). Cần `src/css-modules.d.ts` để kiểm kiểu.
+
 ## Câu hỏi mở
 
 - Bảng màu thương hiệu cuối cùng sẽ thay neutral token ở giai đoạn nào?
