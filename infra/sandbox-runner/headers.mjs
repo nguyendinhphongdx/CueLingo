@@ -14,7 +14,12 @@ export const CSP_DIRECTIVES = [
   'media-src data: blob:',
   'font-src data:',
   "connect-src 'none'",
-  "frame-src 'self' about:",
+  "frame-src 'none'",
+  "child-src 'none'",
+  "prefetch-src 'none'",
+  "manifest-src 'none'",
+  "object-src 'none'",
+  "worker-src 'none'",
   "form-action 'none'",
   "base-uri 'none'",
 ];
@@ -30,6 +35,8 @@ export function runnerHeaders(options = {}) {
     'Cross-Origin-Opener-Policy': 'same-origin',
     'Cross-Origin-Resource-Policy': 'same-origin',
     'X-Content-Type-Options': 'nosniff',
+    // CSP does not cover DNS prefetch: this header switches it off for the whole document.
+    'X-DNS-Prefetch-Control': 'off',
     'Referrer-Policy': 'no-referrer',
     'Permissions-Policy':
       'camera=(), microphone=(), geolocation=(), payment=(), usb=(), clipboard-read=(), clipboard-write=(), fullscreen=()',

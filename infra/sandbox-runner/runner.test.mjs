@@ -14,7 +14,12 @@ describe('runner headers', () => {
     expect(csp).toContain("connect-src 'none'");
     expect(csp).toContain("form-action 'none'");
     expect(csp).toContain("base-uri 'none'");
-    expect(csp).toContain("frame-src 'self' about:");
+    // No frame of any kind: the nested page is built from srcdoc, which frame-src does not govern.
+    expect(csp).toContain("frame-src 'none'");
+    expect(csp).toContain("child-src 'none'");
+    expect(csp).toContain("prefetch-src 'none'");
+    expect(csp).toContain("worker-src 'none'");
+    expect(csp).toContain("object-src 'none'");
     expect(csp).toContain('img-src data: blob:');
     expect(csp).toContain("script-src 'unsafe-inline'");
     // No directive may allow a host or a wildcard.
@@ -28,6 +33,7 @@ describe('runner headers', () => {
     expect(headers['Cross-Origin-Resource-Policy']).toBe('same-origin');
     expect(headers['X-Content-Type-Options']).toBe('nosniff');
     expect(headers['Referrer-Policy']).toBe('no-referrer');
+    expect(headers['X-DNS-Prefetch-Control']).toBe('off');
     expect(headers['Permissions-Policy']).toContain('camera=()');
     expect(headers['Permissions-Policy']).toContain('microphone=()');
   });
@@ -92,6 +98,22 @@ describe('runner.html', () => {
     expect(html).toContain('event.source === frame.contentWindow');
     expect(html).toContain('MAX_HTML_BYTES = 64 * 1024');
     expect(html).toContain('MAX_MESSAGE_BYTES = 16 * 1024');
+  });
+
+  it('puts a meta policy and the DNS prefetch switch in front of the nested page, then the bootstrap', () => {
+    const at = (needle) => html.indexOf(needle);
+    expect(at('NESTED_CSP =')).toBeGreaterThan(-1);
+    expect(html).toContain(`var NESTED_CSP = "frame-src 'none'; child-src 'none'"`);
+    expect(at('http-equiv="Content-Security-Policy"')).toBeLessThan(at("<script>(' +"));
+    expect(html).toContain('http-equiv="x-dns-prefetch-control" content="off"');
+  });
+
+  it('locks the WebRTC constructors and refuses pages with a link element', () => {
+    for (const name of ['RTCPeerConnection', 'webkitRTCPeerConnection', 'RTCDataChannel'])
+      expect(html).toContain(`'${name}'`);
+    expect(html).toContain('configurable: false');
+    expect(html).toContain('hasLink(html)');
+    expect(html).toContain('DOMParser');
   });
 
   it('does not use the network or storage itself', () => {

@@ -27,7 +27,7 @@
            code can neither touch this script nor the host;
         2. relays the nested page's requests to the host and the host's answers back (the host decides everything);
         3. passes the host's liveness ping to the nested page, so a page stuck in a loop stops answering.
-      The Content-Security-Policy header (connect-src 'none', form-action 'none', frame-src 'self' about:, ...) is
+      The Content-Security-Policy header (connect-src 'none', form-action 'none', frame-src 'none', ...) is
       inherited by the nested page and is what stops network, navigation and form posts. Everything is inline
       because the policy has no 'self' for scripts.
     -->
@@ -46,6 +46,7 @@
           'phrases.save': 1,
           'tts.speak': 1,
         };
+        var NESTED_CSP = "frame-src 'none'; child-src 'none'";
         var host = window.parent;
         var frame = null;
 
@@ -71,6 +72,28 @@
         // Runs inside the nested page, before the assistant's code. Serialised with toString(), so it must not
         // refer to anything outside itself.
         function bootstrap() {
+          // WebRTC is the one channel connect-src does not cover (STUN/ICE packets leave the browser without a
+          // request the policy sees). Replace the constructors with ones that throw, and make the replacement unchangeable.
+          // Best effort: a fresh realm (an about:blank iframe the page creates) has its own pristine
+          // constructors; the e2e test measures whether that can still send anything.
+          [
+            'RTCPeerConnection',
+            'webkitRTCPeerConnection',
+            'mozRTCPeerConnection',
+            'RTCDataChannel',
+          ].forEach(function (name) {
+            try {
+              Object.defineProperty(window, name, {
+                value: function () {
+                  throw new DOMException('Not allowed in this sandbox', 'NotAllowedError');
+                },
+                writable: false,
+                configurable: false,
+              });
+            } catch (error) {
+              /* already locked */
+            }
+          });
           var parentWindow = window.parent;
           var pending = Object.create(null);
           var counter = 0;
@@ -145,6 +168,25 @@
             report('blocked: ' + event.violatedDirective);
           });
 
+          // Links added by script: removed as soon as they appear and reported, which stops the block.
+          if (typeof MutationObserver === 'function') {
+            new MutationObserver(function (records) {
+              records.forEach(function (record) {
+                record.addedNodes.forEach(function (node) {
+                  if (node.nodeType !== 1) return;
+                  var links = node.localName === 'link' ? [node] : node.querySelectorAll('link');
+                  if (links.length === 0 && node.localName !== 'link') return;
+                  if (node.localName === 'link') node.remove();
+                  else
+                    links.forEach(function (link) {
+                      link.remove();
+                    });
+                  report('blocked: link element');
+                });
+              });
+            }).observe(document, { childList: true, subtree: true });
+          }
+
           var lastHeight = 0;
           var resizeTimer = 0;
           function sendHeight() {
@@ -173,16 +215,49 @@
           });
         }
 
+        // Resource hints (prerender above all) are loaded by the browser without asking connect-src, so a link element in the
+        // page can carry data in its URL. The page is parsed here, by the runner, and refused if it has any link element,
+        // including inside <template>. The original text is what gets rendered (nothing is re-serialised), so a parser
+        // difference can only hide less here than in the frame, never more.
+        function hasLink(html) {
+          try {
+            var found = false;
+            (function scan(root) {
+              if (root.querySelector('link')) found = true;
+              root.querySelectorAll('template').forEach(function (t) {
+                scan(t.content);
+              });
+            })(new DOMParser().parseFromString(html, 'text/html'));
+            return found;
+          } catch (error) {
+            return true;
+          }
+        }
+
         function render(html) {
           if (frame || typeof html !== 'string' || html.length === 0) return;
           if (byteLength(html) > MAX_HTML_BYTES) return;
+          if (hasLink(html)) {
+            toHost({
+              v: V,
+              id: 'refused-link',
+              op: 'ui.error',
+              args: { message: 'blocked: link element' },
+            });
+            return;
+          }
           frame = document.createElement('iframe');
           frame.setAttribute('sandbox', 'allow-scripts');
           frame.setAttribute('allow', '');
           frame.setAttribute('referrerpolicy', 'no-referrer');
           frame.setAttribute('title', 'Khối giao diện do trợ lý tạo');
+          // The meta policy comes first, before the bootstrap and the page. It adds to the header policy the nested
+          // page already inherits: no frame of any kind can be created from inside it (a frame is a way to request
+          // a URL, or to get a realm that bootstrap did not patch).
           frame.srcdoc =
-            '<!doctype html><meta charset="utf-8"><script>(' +
+            '<!doctype html><meta http-equiv="Content-Security-Policy" content="' +
+            NESTED_CSP +
+            '"><meta http-equiv="x-dns-prefetch-control" content="off"><meta charset="utf-8"><script>(' +
             bootstrap.toString() +
             ')();<\/script>' +
             html;

@@ -2,6 +2,8 @@
 
 Trang tĩnh chạy khối HTML/JS do trợ lý AI viết ([ADR 0019](../../apps/docs/docs/08-adr/0019-ai-generated-ui.md), lớp 2). **Chỉ cần khi bật `AGENT_HTML_BLOCKS`** (mặc định tắt).
 
+**Production: runner cần registrable domain riêng** (ví dụ `cuelingo-sandbox.net`, không phải `sandbox.<domain-của-app>`): subdomain cùng site với app chia sẻ cookie `Domain=` và bị tính là same-site. Web từ chối `NEXT_PUBLIC_SANDBOX_ORIGIN` trùng origin API hoặc origin trang. **Giữ cờ tắt cho Tauri** tới khi kiểm WKWebView.
+
 Phải chạy ở **origin riêng** (dev `http://localhost:3101`, production ví dụ `https://sandbox.<domain>`), không bao giờ cùng origin với web. Web nhúng nó bằng `<iframe sandbox="allow-scripts">` (không `allow-same-origin`).
 
 | Việc                       | Lệnh                                                                                                |
@@ -16,11 +18,11 @@ Trong `.env`: API `AGENT_HTML_BLOCKS=true`; web `NEXT_PUBLIC_AGENT_HTML_BLOCKS=t
 ## Gồm gì
 
 - `runner.html`: một script nội tuyến. Nhận `render` từ host đúng một lần, dựng iframe con `sandbox="allow-scripts"` bằng `srcdoc` (CSP của runner được kế thừa), chuyển tiếp yêu cầu bridge của trang con lên host và câu trả lời xuống, chuyển ping/pong. Chỉ chuyển sáu thao tác trong allowlist; mọi quyết định do host đưa ra.
-- `headers.mjs`: CSP (`default-src 'none'`, `connect-src 'none'`, `form-action 'none'`, `base-uri 'none'`, `frame-src 'self' about:`, ảnh/media/font chỉ `data:`/`blob:`), COOP, CORP, `nosniff`, `Referrer-Policy: no-referrer`, `Permissions-Policy` tắt camera, mic, vị trí, clipboard. `_headers` lặp lại cho host tĩnh; test giữ hai bên khớp.
+- `headers.mjs`: CSP (`default-src 'none'`, `connect-src 'none'`, `form-action 'none'`, `base-uri 'none'`, `frame-src 'none'`, `child-src 'none'`, `prefetch-src 'none'`, `worker-src 'none'`, `object-src 'none'`, ảnh/media/font chỉ `data:`/`blob:`), COOP, CORP, `nosniff`, `Referrer-Policy: no-referrer`, `X-DNS-Prefetch-Control: off`, `Permissions-Policy` tắt camera, mic, vị trí, clipboard. `_headers` lặp lại cho host tĩnh; test giữ hai bên khớp.
 - `server.mjs`: server Node không phụ thuộc, chỉ GET/HEAD `/runner.html`, `/`, `/healthz`; không cookie, không lưu trữ.
 - `runner.test.mjs`: test header, nội dung `runner.html` và handler (chạy trong `pnpm test`).
 
 ## Còn phải làm bởi người
 
 - Domain/DNS và chỗ deploy tĩnh cho production; đặt `frame-ancestors` đúng origin web.
-- Spike trên Chrome và WKWebView (Tauri): `while(true)` có treo tab không, CSP `frame-src` có chặn điều hướng của iframe con không. Test e2e ở `e2e/tests/assistant-sandbox.spec.ts` kiểm trên Chrome; WebKit chưa được kiểm.
+- Spike trên Chrome và WKWebView (Tauri): `while(true)` có treo tab không, CSP có chặn điều hướng của iframe con không. Đã đo trên Chrome: điều hướng bị chặn nhưng vẫn mở kết nối TCP tới đích, và `<link rel=prerender>` do script thêm vẫn gửi một GET; xem ADR 0019 mục "Kết quả kiểm". Test e2e ở `e2e/tests/assistant-sandbox.spec.ts` kiểm trên Chrome; WebKit chưa được kiểm.
