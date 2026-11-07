@@ -39,7 +39,8 @@ export function useHtmlBlocks(language: LanguageCode): RenderHtmlBlock | undefin
 
   const render = useCallback<RenderHtmlBlock>(
     (data) =>
-      SANDBOX_ORIGIN ? (
+      // Never draw a runner that shares this page's origin: it would read this app's cookies and storage.
+      SANDBOX_ORIGIN && SANDBOX_ORIGIN !== window.location.origin ? (
         <SandboxFrame
           html={data.html}
           title={data.title}

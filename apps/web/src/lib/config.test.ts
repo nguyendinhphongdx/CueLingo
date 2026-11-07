@@ -50,4 +50,14 @@ describe('web config: interactive blocks', () => {
     expect(config.HTML_BLOCKS_ENABLED).toBe(false);
     expect(config.SANDBOX_ORIGIN).toBeNull();
   });
+
+  it('refuses a runner on the same origin as the API, and switches the feature off', async () => {
+    const config = await load({
+      NEXT_PUBLIC_AGENT_HTML_BLOCKS: 'true',
+      NEXT_PUBLIC_API_URL: 'http://localhost:3101/v1',
+      NEXT_PUBLIC_SANDBOX_ORIGIN: 'http://localhost:3101',
+    });
+    expect(config.SANDBOX_ORIGIN).toBeNull();
+    expect(config.HTML_BLOCKS_ENABLED).toBe(false);
+  });
 });

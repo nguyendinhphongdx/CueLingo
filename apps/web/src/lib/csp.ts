@@ -1,5 +1,5 @@
 /**
- * Content-Security-Policy of the assistant route (ADR 0019, layer 2). Two directives only, on purpose: the page
+ * Content-Security-Policy of the web app, on every route (ADR 0019, layer 2). Two directives only, on purpose: the page
  * keeps working as before and gains two limits.
  * - `frame-src`: the only frame this route may contain is the sandbox runner; nothing else can be embedded.
  * - `img-src 'self' data:`: no image from another origin, so a reply cannot leak the conversation in an image URL
@@ -16,6 +16,20 @@ export function originOf(value: string | null | undefined): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * The sandbox runner's origin, or null when it is unusable: not an http(s) origin, or the same origin as one of
+ * `forbidden` (this app, the API). A runner on the app's own origin would be a page that can read its cookies and
+ * storage, which defeats the sandbox. The app's own origin is only known in the browser, so callers pass what they know.
+ */
+export function sandboxOriginOf(
+  candidate: string | null | undefined,
+  forbidden: ReadonlyArray<string | null | undefined>,
+): string | null {
+  const origin = originOf(candidate);
+  if (!origin) return null;
+  return forbidden.some((other) => originOf(other) === origin) ? null : origin;
 }
 
 export function assistantCsp(sandboxOrigin: string | null | undefined): string {

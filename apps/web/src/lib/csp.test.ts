@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import config from '../../next.config';
-import { assistantCsp, originOf } from './csp';
+import { assistantCsp, originOf, sandboxOriginOf } from './csp';
 
 describe('assistantCsp', () => {
   it('allows exactly the runner origin as a frame, and only same-origin or data images', () => {
@@ -35,11 +35,22 @@ describe('assistantCsp', () => {
   });
 });
 
+describe('sandboxOriginOf', () => {
+  it('accepts a separate origin and refuses the API origin or an unusable value', () => {
+    const api = 'http://localhost:4000';
+    expect(sandboxOriginOf('http://localhost:3101', [api])).toBe('http://localhost:3101');
+    expect(sandboxOriginOf('http://localhost:4000/runner.html', [api])).toBeNull();
+    expect(sandboxOriginOf('https://API.example.com', ['https://api.example.com/v1'])).toBeNull();
+    expect(sandboxOriginOf('nonsense', [api])).toBeNull();
+    expect(sandboxOriginOf(undefined, [api])).toBeNull();
+  });
+});
+
 describe('next.config headers', () => {
-  it('sends the policy on the assistant route and no other', async () => {
+  it('sends the policy on every route, so a client-side navigation to /assistant keeps it', async () => {
     const rules = (await config.headers?.()) ?? [];
     expect(rules).toHaveLength(1);
-    expect(rules[0]?.source).toBe('/assistant/:path*');
+    expect(rules[0]?.source).toBe('/:path*');
     const header = rules[0]?.headers.find((h) => h.key === 'Content-Security-Policy');
     expect(header?.value).toContain("img-src 'self' data:");
     expect(header?.value).toContain('frame-src');
