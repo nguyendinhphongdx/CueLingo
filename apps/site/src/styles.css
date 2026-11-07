@@ -1,0 +1,10 @@
+@import 'tailwindcss';
+@import '@cuelingo/ui/globals.css';
+@import '@cuelingo/ui/brand.css';
+
+body {
+  margin: 0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
