@@ -47,8 +47,8 @@ export function DownloadPage({
         <div>
           <h1 id="download-title">Cài CueLingo trên máy Mac</h1>
           <p>
-            Dành cho macOS 14.2 trở lên. Hoàn tất bốn bước để CueLingo nghe được cả micro và âm
-            thanh cuộc họp.
+            Dành cho macOS 14.2 trở lên trên máy Mac chip Apple Silicon (M1 trở lên). Hoàn tất bốn
+            bước để CueLingo nghe được cả micro và âm thanh cuộc họp.
           </p>
           {downloadUrl ? (
             <a
@@ -69,10 +69,11 @@ export function DownloadPage({
       <section className={styles.requirements} aria-labelledby="requirements-title">
         <h2 id="requirements-title">Máy Mac cần gì?</h2>
         <div>
-          <strong>macOS 14.2 trở lên</strong>
+          <strong>macOS 14.2 trở lên, chip Apple Silicon</strong>
           <p>
-            CueLingo cần quyền micro và ghi âm hệ thống để tạo caption cho cả giọng của bạn lẫn
-            người trong cuộc họp.
+            Bản tải về dành cho máy Mac chip Apple Silicon (M1 trở lên), chưa có bản cho Mac chip
+            Intel. CueLingo cần quyền micro và ghi âm hệ thống để tạo caption cho cả giọng của bạn
+            lẫn người trong cuộc họp.
           </p>
         </div>
       </section>
@@ -92,6 +93,18 @@ export function DownloadPage({
             </li>
           ))}
         </ol>
+      </section>
+
+      <section className={styles.requirements} aria-labelledby="updates-title">
+        <h2 id="updates-title">Cập nhật</h2>
+        <div>
+          <strong>App tự kiểm tra bản mới</strong>
+          <p>
+            CueLingo tự kiểm tra bản mới mỗi khi mở và định kỳ trong lúc chạy, nên bạn không cần
+            quay lại trang này. Khi có bản mới, app hỏi bạn trước và chỉ cài khi bạn bấm Cập nhật;
+            đang họp thì app chờ đến khi họp xong.
+          </p>
+        </div>
       </section>
 
       <section className={styles.troubleshooting} aria-labelledby="troubleshooting-title">
