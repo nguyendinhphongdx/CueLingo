@@ -38,7 +38,8 @@ Người thử bên ngoài chưa có một đường dẫn công khai để vào
 
 ## Decision log
 
-| Ngày       | Pha    | Quyết định / lý do bị từ chối                                                                                                               |
-| ---------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-11-07 | Spec   | Mở hồ sơ theo yêu cầu "Làm đi" sau khi chủ sản phẩm hỏi về trang tải và tự cập nhật                                                         |
-| 2026-11-07 | Result | Chủ sản phẩm chọn đặt Pages ở **repo mã nguồn** (không chuyển `apps/site` sang repo bản build); repo riêng tư cần gói GitHub cho phép Pages |
+| Ngày       | Pha    | Quyết định / lý do bị từ chối                                                                                                                                                                                        |
+| ---------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-07 | Spec   | Mở hồ sơ theo yêu cầu "Làm đi" sau khi chủ sản phẩm hỏi về trang tải và tự cập nhật                                                                                                                                  |
+| 2026-11-07 | Result | Chủ sản phẩm chọn đặt Pages ở **repo mã nguồn** (không chuyển `apps/site` sang repo bản build); repo riêng tư cần gói GitHub cho phép Pages                                                                          |
+| 2026-11-07 | Result | GitHub từ chối bật Pages cho repo riêng tư (gói không hỗ trợ). Đổi: `pages.yml` ở repo mã nguồn đẩy bản build lên nhánh `gh-pages` của repo công khai `cuelingo-releases` bằng `RELEASES_TOKEN`; Pages bật ở repo đó |

@@ -77,3 +77,5 @@ pnpm docs:build  # xanh, không link hỏng
 | ----------------------------------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------- |
 | Biến `CUELINGO_RELEASES_REPO` trống sẽ ghép ra `https://github.com//releases/...`   | Soát workflow                | Chỉ tính link khi đúng `owner/name`, nếu không để trống và báo warning |
 | Lỗi kiểu `href` có thể `undefined` trong test; tôi đã commit khi `verify` chưa xanh | `pnpm verify` bước typecheck | Sửa test và gộp vào đúng commit của bước 3 (`--amend`, chưa push)      |
+
+> Cập nhật 2026-11-07: workflow không còn dùng `configure-pages`/`deploy-pages`; nó đẩy bản build lên `gh-pages` của repo bản build (xem decision log trong `01-specs.md`). Chưa chạy thật.

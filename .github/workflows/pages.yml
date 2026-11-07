@@ -1,7 +1,9 @@
 name: Pages
 
-# Public intro and install page (apps/site) on GitHub Pages. Static: no API, no sign-in, no secrets.
-# The download button points at the latest .dmg of the releases repository (ADR 0017).
+# Public intro and install page (apps/site). Static: no API, no sign-in, no secrets.
+# This repository is private and its plan has no Pages, so the built site is pushed to the `gh-pages`
+# branch of the public releases repository, where GitHub Pages serves it. The download button points at
+# the latest .dmg of that same repository (ADR 0017).
 on:
   push:
     branches: [main]
@@ -12,11 +14,9 @@ on:
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
-# Pages needs only these; nothing here can write to the code.
+# The job only reads this repository; it writes to the releases repository with RELEASES_TOKEN.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -33,29 +33,27 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      # base_path is "/<repository name>" for a project site and empty for a <user>.github.io repository.
-      - name: Read the Pages settings
-        id: pages
-        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-
       - run: pnpm install --frozen-lockfile
 
       # The URL is built only when the repository variable is set and looks like owner/name, so an unset
-      # variable gives a locked "Sắp có bản tải" button instead of a link to nowhere (AC3).
-      - name: Work out the download link
+      # variable stops the job instead of publishing a link to nowhere.
+      - name: Work out the download link and the base path
         env:
           RELEASES_REPO: ${{ vars.CUELINGO_RELEASES_REPO }}
         run: |
-          if printf '%s' "$RELEASES_REPO" | grep -Eq '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'; then
-            echo "VITE_DOWNLOAD_URL=https://github.com/${{ vars.CUELINGO_RELEASES_REPO }}/releases/latest/download/CueLingo-macOS-arm64.dmg" >> "$GITHUB_ENV"
-          else
-            echo "::warning::CUELINGO_RELEASES_REPO is not set (or not owner/name): the download button will be locked."
-            echo "VITE_DOWNLOAD_URL=" >> "$GITHUB_ENV"
+          if ! printf '%s' "$RELEASES_REPO" | grep -Eq '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'; then
+            echo "CUELINGO_RELEASES_REPO is not set (or not owner/name)" >&2
+            exit 1
           fi
+          echo "VITE_DOWNLOAD_URL=https://github.com/${RELEASES_REPO}/releases/latest/download/CueLingo-macOS-arm64.dmg" >> "$GITHUB_ENV"
+          # A project site lives at /<repository name>/ unless that repository is <user>.github.io.
+          name="${RELEASES_REPO#*/}"
+          case "$name" in
+            *.github.io) echo "SITE_BASE=/" >> "$GITHUB_ENV" ;;
+            *) echo "SITE_BASE=/${name}/" >> "$GITHUB_ENV" ;;
+          esac
 
       - name: Build the site
-        env:
-          SITE_BASE: ${{ steps.pages.outputs.base_path }}/
         run: pnpm --filter @cuelingo/site build
 
       - name: Both pages must exist
@@ -71,16 +69,21 @@ jobs:
             ${{ vars.CUELINGO_WEB_URL }}
         run: node apps/site/scripts/scan-dist.mjs apps/site/dist
 
-      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        with:
-          path: apps/site/dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+      # Replaces the whole branch with one commit, so the history does not grow with every build.
+      - name: Publish to the gh-pages branch of the releases repository
+        env:
+          RELEASES_REPO: ${{ vars.CUELINGO_RELEASES_REPO }}
+          RELEASES_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+        run: |
+          test -n "$RELEASES_TOKEN"
+          touch apps/site/dist/.nojekyll
+          cd apps/site/dist
+          git init -q -b gh-pages
+          git config user.name "cuelingo-pages"
+          git config user.email "pages@users.noreply.github.com"
+          git add -A
+          git commit -qm "Publish site from ${GITHUB_SHA}"
+          auth=$(printf 'x-access-token:%s' "$RELEASES_TOKEN" | base64 -w0)
+          echo "::add-mask::${auth}"
+          git -c "http.extraheader=Authorization: Basic ${auth}" \
+            push --force "https://github.com/${RELEASES_REPO}.git" gh-pages
