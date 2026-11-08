@@ -9,6 +9,7 @@ Next.js. Thiết kế: [apps/docs/docs/04-modules/02-web](../docs/docs/04-module
 - **Env** chỉ đọc ở `src/lib/config.ts`. **Lỗi API** hiện cho người dùng qua `describeError` (`src/lib/errors.ts`, tiếng Việt theo mã lỗi), không bao giờ hiện `error.message` của server.
 - **Chạy:** `pnpm --filter @cuelingo/web dev` (webpack, cần API ở `NEXT_PUBLIC_API_URL`). Dùng `dev:turbo` nếu terminal của bạn cho phép: Turbopack cần mở cổng cục bộ và bị chặn trong sandbox của agent.
 - **Style:** class Tailwind của component trong `@cuelingo/ui` chỉ có khi `globals.css` của UI khai `@source` tới thư mục đó (đã có, có test); component UI mới nằm trong `packages/ui/src/components`.
+- **Bản tĩnh (Cloudflare Pages):** `build:static` xuất `out/`. Không dùng tính năng máy chủ (middleware, route handler, `cookies()`); route động chỉ có một trang giữ chỗ nên **đọc id bằng `useRouteId`**, không từ `params`. Header bảo mật thêm ở `securityHeaders` (`src/lib/csp.ts`). Chi tiết: [Deploy Cloudflare](../docs/docs/04-modules/02-web/deploy-cloudflare.md).
 - Chữ trên UI tiếng Việt. Verify: chạy thật trong trình duyệt, không chỉ test.
 - **Scaffold:** [web-nextjs](../../apps/docs/docs/05-engineering/scaffold/04-web-nextjs.md) (không chạy `create-next-app` vào thư mục này). **Thêm feature:** [new-module](../../apps/docs/docs/05-engineering/workflows/new-module.md).
 

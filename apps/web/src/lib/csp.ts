@@ -36,3 +36,21 @@ export function assistantCsp(sandboxOrigin: string | null | undefined): string {
   const origin = originOf(sandboxOrigin);
   return [`frame-src ${origin ?? "'none'"}`, "img-src 'self' data:"].join('; ');
 }
+
+/** The build environment (`process.env`); the headers read NEXT_PUBLIC_SANDBOX_ORIGIN and NEXT_PUBLIC_API_URL. */
+export type HeaderEnv = Record<string, string | undefined>;
+
+/**
+ * Every security header the web app sends, from the build environment. One source for both hosts: `next.config.ts`
+ * (`next dev` / `next build`) and `scripts/write-headers.mjs` (the `_headers` file of the static export).
+ */
+export function securityHeaders(env: HeaderEnv): Array<[name: string, value: string]> {
+  const sandboxOrigin = sandboxOriginOf(env.NEXT_PUBLIC_SANDBOX_ORIGIN, [
+    env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000',
+  ]);
+  return [
+    ['Content-Security-Policy', assistantCsp(sandboxOrigin)],
+    ['X-Content-Type-Options', 'nosniff'],
+    ['Referrer-Policy', 'strict-origin-when-cross-origin'],
+  ];
+}

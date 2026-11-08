@@ -1,6 +1,11 @@
-import { DebriefPage } from '../../../../features/debrief';
+import { DebriefRoute } from '../../../../features/debrief';
+import { PLACEHOLDER_ID } from '../../../../lib/route-id';
 
-export default async function Page({ params }: PageProps<'/sessions/[id]'>) {
-  const { id } = await params;
-  return <DebriefPage sessionId={id} />;
+// One placeholder page: the static export cannot list the ids; the id is read from the URL in the browser.
+export function generateStaticParams() {
+  return [{ id: PLACEHOLDER_ID }];
+}
+
+export default function Page() {
+  return <DebriefRoute />;
 }

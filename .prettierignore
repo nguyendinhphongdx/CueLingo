@@ -10,3 +10,4 @@ apps/docs/build
 .worktrees
 .claude/skills
 .taste-skill
+apps/web/out

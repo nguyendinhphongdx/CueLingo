@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@cuelingo/ui/components/button';
 import { AppFrame } from '@cuelingo/ui/components/app-frame';
 import { AccountChip } from '@cuelingo/ui/components/account-chip';
 import { Logo } from '@cuelingo/ui/components/logo';
@@ -8,16 +9,34 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 import { authClient } from '../../lib/auth-client';
+import { CONNECTION_ERROR_MESSAGE } from '../../lib/errors';
+
+/** Full-page notice when the API cannot be reached, with a way to try again. */
+export function ConnectionProblem({ onRetry }: { onRetry: () => void }) {
+  return (
+    <main
+      role="alert"
+      className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center"
+    >
+      <p className="max-w-md text-sm">{CONNECTION_ERROR_MESSAGE}</p>
+      <Button onClick={onRetry}>Thử lại</Button>
+    </main>
+  );
+}
 
 /** Frame for every signed-in page: sends visitors without a session to /login, shows who is signed in. */
 export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { data: session, isPending } = authClient.useSession();
+  const { data: session, isPending, error, refetch } = authClient.useSession();
+  // The session request failed (API unreachable or erroring): that is not "signed out", so do not send them to /login.
+  const unreachable = !isPending && !session && Boolean(error);
 
   useEffect(() => {
-    if (!isPending && !session) router.replace('/login');
-  }, [isPending, session, router]);
+    if (!isPending && !session && !unreachable) router.replace('/login');
+  }, [isPending, session, unreachable, router]);
+
+  if (unreachable) return <ConnectionProblem onRetry={() => void refetch()} />;
 
   if (isPending || !session) {
     return (

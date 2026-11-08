@@ -12,6 +12,10 @@ const MESSAGES: Record<string, string> = {
   NETWORK_ERROR: 'Không kết nối được tới máy chủ',
 };
 
+/** Shown in place of a page that cannot load because the API cannot be reached (it may not be online yet). */
+export const CONNECTION_ERROR_MESSAGE =
+  'Không kết nối được tới máy chủ CueLingo. Hãy kiểm tra mạng rồi thử lại sau ít phút.';
+
 const FALLBACK = 'Đã có lỗi, vui lòng thử lại';
 
 /** Vietnamese message for an error thrown by core-sdk, or null when there is no error. */
