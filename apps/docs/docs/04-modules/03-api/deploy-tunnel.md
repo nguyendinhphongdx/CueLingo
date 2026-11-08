@@ -21,7 +21,7 @@ Không dịch vụ nào công bố cổng ra máy, nên `pnpm dev` (3000, 4000, 
 
 Việc **bạn** làm (không ai làm thay được, và đừng dán giá trị vào chat):
 
-1. **Tạo tunnel (H1).** Cloudflare → Zero Trust → Networks → Tunnels → Create → Cloudflared. Lấy token. Thêm Public Hostname: tên miền con của API (ví dụ `api-cuelingo.<tên-miền>`), Service `HTTP`, URL **`api:4000`** (tên dịch vụ trong Compose, không phải `localhost`).
+1. **Tạo tunnel (H1).** Cloudflare → Zero Trust → Networks → Tunnels → Create → Cloudflared. Lấy token. Thêm Public Hostname: tên miền con của API (ví dụ `api-cuelingo.<tên-miền>`), Service `HTTP`, URL **`http://api:4000`** (tên dịch vụ trong Compose, không phải `localhost`; giao diện mới yêu cầu có `http://`).
 2. **Tạo khoá (H2).** `BETTER_AUTH_SECRET` (`openssl rand -base64 32`), `POSTGRES_PASSWORD`, khoá Resend và Gemini **mới**; khoá cũ đã lộ phải thu hồi.
 3. **Chọn nơi lưu sao lưu (H3).** `BACKUP_DIR` trỏ tới ổ khác hoặc thư mục đồng bộ nếu có.
 
