@@ -20,4 +20,5 @@ Beta kín cho 30–50 người cần một bản `.dmg` tải được và tự 
 - Mỗi lần cập nhật đổi chữ ký ad-hoc nên macOS có thể hỏi lại quyền micro và ghi âm hệ thống; banner và `/download` báo trước.
 - Mất khoá riêng updater nghĩa là mọi người phải tải lại bản cài tay. Giữ bản sao ở nơi an toàn.
 - Khi có Apple Developer: thay `signingIdentity`, thêm công chứng, viết ADR mới thay mục này.
+- Địa chỉ máy chủ lúc build chỉ là mặc định: người thử đổi được máy chủ trong app (đăng xuất, lưu trên máy, khởi động lại), nên đổi nơi đặt máy chủ không cần phát hành lại `.dmg`. Chữ ký bản cập nhật không phụ thuộc máy chủ API đã chọn. Xem [Máy chủ](../04-modules/01-desktop/server.md).
 - Người thử bên ngoài vào một trang tĩnh trên GitHub Pages (`apps/site`, workflow `pages.yml`) để đọc giới thiệu và tải `.dmg`; trang không cần API và không chứa khoá. Xem [Site công khai](../04-modules/07-site/README.md).

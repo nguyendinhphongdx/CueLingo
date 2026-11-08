@@ -10,6 +10,7 @@ Cài đặt trong app và bản đồng bộ theo tài khoản: Assist mặc đ�
 - Chỉnh mức Assist và cách hiển thị overlay
 - Đồng bộ thay đổi lên API sau 800 ms không có thao tác mới
 - Mở trang quản lý dữ liệu trên web
+- Mục **Nâng cao → Máy chủ**: hiện máy chủ đang dùng và mở hộp thoại đổi (`<ServerSettings />`, chi tiết ở [Máy chủ](./server.md)); không gửi lên API, chỉ lưu trên máy
 
 ## Phạm vi MVP
 
@@ -35,6 +36,7 @@ Cài đặt trong app và bản đồng bộ theo tài khoản: Assist mặc đ�
 
 - Cửa sổ `main` giữ Assist level trong bộ nhớ và phát event `settings` để overlay đổi ngay
 - Các khoá `cuelingo.overlay.{fontSize,opacity,theme}` nằm trong `localStorage` chung origin
+- Khoá `cuelingo.server.v1` (máy chủ đã chọn) cũng nằm trong `localStorage`, thuộc module [Máy chủ](./server.md)
 - Nguồn lưu bền là `UserSettings` ở API; mặc định Assist 4, chữ 18 px, nền 88%, giao diện tối, không lưu audio
 
 ## Quyền riêng tư

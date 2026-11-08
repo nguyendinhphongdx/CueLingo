@@ -100,6 +100,7 @@ Các thành phần chỉ trình bày và nhận callback; không gọi API, khô
 - **`ChatMessage`**: tin người dùng là chữ thường (không Markdown); tin trợ lý gồm `MarkdownView`, `ToolStep`, `AgentCardView`, dấu "đang suy nghĩ" khi đang stream mà chưa có chữ, và dòng ghi chú khi kết thúc `stopped`/`error`/`limited`. `onDoubleClick` gắn vào khối trợ lý để trang bật `WordActionsMenu`.
 - **`ToolStep`**: nhãn tiếng Việt theo công cụ và trạng thái (`lookup_word`, `list_saved_phrases`, `save_phrase`, `show_card`); công cụ lạ (plugin) chỉ hiện nhãn chung, không lộ tên.
 - **`ThinkingIndicator`**: chấm nhảy chỉ khi người dùng không tắt chuyển động (`motion-safe:`); `role="status"`.
+- **`ServerDialog({open, current, defaultChoice, devMode, signedIn, validate, onCheck, onSave, onClose, saveError?})`**: hộp thoại chọn máy chủ cho desktop, thuần hiển thị (không gọi mạng, không biết `localStorage`; app truyền hàm). Danh sách "CueLingo Beta (mặc định)", "Tuỳ chỉnh…" (ô địa chỉ API và địa chỉ web, lỗi từ `validate`) và mục `localhost` chỉ khi `devMode`; "Kiểm tra kết nối" gọi `onCheck(api)`; kết quả gắn với địa chỉ đã kiểm và bị bỏ khi địa chỉ đổi; cảnh báo nêu tên miền đích; kiểm tra thất bại thì "Lưu" chỉ hỏi lại, phải bấm "Vẫn lưu". Xem [Máy chủ](../01-desktop/server.md).
 - Roadmap có mục `assistant` ("Trợ lý AI", nhóm Học); trạng thái từng client ở `lib/roadmap.ts`.
 
 ### Khối giao diện HTML/JS (lớp 2, [ADR 0019](../../08-adr/0019-ai-generated-ui.md), sau cờ `AGENT_HTML_BLOCKS`)

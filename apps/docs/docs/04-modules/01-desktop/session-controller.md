@@ -27,7 +27,7 @@ Máy trạng thái của một cuộc họp phía client: nhận segment từ ST
 - `useSession()`: snapshot `{status, error}` và action `start()`, `stop()`, `runDemo()`
 - `<RecentSessions />`: mở debrief hoặc xoá mềm cuộc họp sau bước xác nhận
 - Trang Cài đặt: tải JSON hoặc xoá toàn bộ dữ liệu sau khi gõ `XOA DU LIEU`
-- Cấu hình: `VITE_API_URL` (mặc định `ws://localhost:4000`) và `VITE_REALTIME_TOKEN` (mặc định `dev-token`)
+- Cấu hình: địa chỉ WebSocket lấy từ `serverConfig().wsUrl` (xem [Máy chủ](./server.md); mặc định lúc build `ws://localhost:4000`) và `VITE_REALTIME_TOKEN` (mặc định `dev-token`)
 
 ## Phụ thuộc
 
