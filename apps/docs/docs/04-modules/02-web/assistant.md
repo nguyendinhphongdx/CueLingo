@@ -11,7 +11,7 @@ Trò chuyện với trợ lý AI về tiếng Anh công sở và chuẩn bị ch
 - Trạng thái rỗng với bốn câu gợi ý bấm một lần
 - Nhấp đúp vào chữ của trợ lý mở `WordActionsMenu`: **Tra nghĩa** (`POST /v1/assist/lookup` kèm câu chứa từ), **Nghe** (`/v1/tts`), **Lưu** (`phrases.save` kèm `context` là câu đó; ghi event `phrase_saved`). "Đã lưu" hiện ngay và cũng hiện cho từ đã có sẵn: so bằng `normalizePhrase` với `phrases.list` (cùng khoá cache `['phrases', language]` với trang Cụm từ)
 - **Khối giao diện do AI sinh** (lô 3, sau cờ, mặc định tắt): thẻ `html_block` chỉ vẽ khi build có `NEXT_PUBLIC_AGENT_HTML_BLOCKS=true` **và** `NEXT_PUBLIC_SANDBOX_ORIGIN` là origin http(s) của sandbox runner (`lib/config.ts`: `HTML_BLOCKS_ENABLED`, `SANDBOX_ORIGIN`). Thiếu một trong hai thì `use-html-blocks` trả `undefined` và khung chat hiện "Khối giao diện tương tác chưa được bật", không có iframe và không có mã. Khi bật, `SandboxFrame` (xem [ui](../05-packages/ui.md)) nhận ba callback dùng `client` của chính app: đọc `phrases.list` (chỉ `phrase`, `meaningVi`), lưu `phrases.save` (chỉ sau khi người dùng xác nhận trong hộp thoại của host; ghi event `phrase_saved`), nghe qua `useSpeaker`. Khối không bao giờ thấy token, URL API hay cookie
-- Route `/assistant/**` gửi header `Content-Security-Policy: frame-src <origin runner | 'none'>; img-src 'self' data:` (`next.config.ts`, hàm `assistantCsp` ở `lib/csp.ts`): chỉ runner được nhúng làm frame và không tải ảnh từ origin khác (khoá thứ hai chống rò hội thoại qua URL ảnh, ngoài `MarkdownView` đã không vẽ ảnh). Chỉ hai directive nên không ảnh hưởng script/style của Next
+- Mọi route gửi header `Content-Security-Policy: frame-src <origin runner | 'none'>; img-src 'self' data:` (`next.config.ts` khi chạy Next; `out/_headers` trên Cloudflare Pages, cùng nguồn `securityHeaders` ở `lib/csp.ts`, xem [Deploy Cloudflare](./deploy-cloudflare.md)): chỉ runner được nhúng làm frame và không tải ảnh từ origin khác (khoá thứ hai chống rò hội thoại qua URL ảnh, ngoài `MarkdownView` đã không vẽ ảnh). Chỉ hai directive nên không ảnh hưởng script/style của Next
 - Không mở desktop: mục roadmap `assistant` có `desktop: 'soon'`
 
 ## Phạm vi MVP
@@ -31,7 +31,7 @@ Trò chuyện với trợ lý AI về tiếng Anh công sở và chuẩn bị ch
 | `use-word-actions.ts`, `word-selection.ts`               | Đọc từ và câu từ `getSelection`, tra/nghe/lưu, so "Đã lưu"                                                                                        |
 | `starter-prompts.ts`                                     | Câu gợi ý                                                                                                                                         |
 
-Route: `src/app/(app)/assistant/[[...id]]/page.tsx` chỉ render `AssistantPage`.
+Route: `src/app/(app)/assistant/[[...id]]/page.tsx` chỉ render `AssistantRoute`, đọc `id` từ địa chỉ trình duyệt rồi gọi `AssistantPage` (bản xuất tĩnh chỉ có một trang giữ chỗ cho `/assistant/<id>`).
 
 ## Lỗi hiện cho người dùng
 

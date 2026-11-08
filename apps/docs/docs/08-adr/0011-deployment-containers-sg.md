@@ -18,3 +18,4 @@ Người dùng ở Việt Nam, cần độ trễ mạng thấp cho dịch realti
 
 - Viết Dockerfile cho api/workers ở giai đoạn Nền móng (dùng `turbo prune`).
 - Doanh nghiệp cần on-premise/VPC (giai đoạn Scale) dùng lại cùng image.
+- Web (2026-11-08) lên **Cloudflare Pages** dưới dạng site tĩnh (`next build` xuất file, không cần runtime Node), deploy bằng GitHub Actions; API/workers/Postgres vẫn theo quyết định trên. Xem [Deploy Cloudflare](../04-modules/02-web/deploy-cloudflare.md).
