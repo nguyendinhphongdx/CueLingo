@@ -68,6 +68,18 @@ type Relayed = {
 const messages = (page: Page) =>
   page.evaluate(() => (window as unknown as { __messages: Relayed[] }).__messages);
 
+/** The host page's own report of its main thread (see `sandbox-host.mjs`), read over HTTP, not through the browser. */
+async function hostState(): Promise<{
+  at: number;
+  now: number;
+  count: number;
+  maxGap: number;
+  ready: boolean;
+}> {
+  const response = await fetch(`${HOST_URL}state`);
+  return (await response.json()) as Awaited<ReturnType<typeof hostState>>;
+}
+
 async function results(page: Page, names: string[]): Promise<Record<string, string>> {
   await expect
     .poll(
@@ -317,16 +329,20 @@ test.describe('sandbox runner', () => {
 
   test('a page stuck in a loop does not freeze the chat page (AC8)', async ({ page }) => {
     const watch: Watch = { leaks: [], blocked: [] };
+    const startedAt = Date.now();
     await open(page, `<script>while (true) {}</script>`, watch);
     // Let the runner load and hand over the page, then watch the host's own main thread for a few seconds.
-    await page.waitForTimeout(5000);
-    // A page that froze would show one long gap between two ticks. (The automation round trip itself can be
-    // slow while a frame spins, so the page measures itself.)
-    const maxGap = await page.evaluate(() => (window as unknown as { __maxGap: number }).__maxGap);
-    expect(maxGap).toBeLessThan(1000);
-    await expect(page.locator('#alive')).toHaveText('host page');
-    // It never said it was ready, which is what makes the host's watchdog remove the block after 3 seconds.
-    expect((await messages(page)).some((m) => m.data.op === 'ui.ready')).toBe(false);
+    // While the frame spins, any round trip into the browser can take very long on a small CI runner (it timed out
+    // at 90 s there), so nothing here asks the browser: the host page reports its own heartbeat to its server and
+    // the test reads it from there. A page that froze could not report, and would show one long gap between ticks.
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+    const state = await hostState();
+    // The host did report after the block started, and was still reporting at the end of the wait.
+    expect(state.at).toBeGreaterThan(startedAt);
+    expect(state.now - state.at).toBeLessThan(1000);
+    expect(state.maxGap).toBeLessThan(1000);
+    // The block never said it was ready, which is what makes the host's watchdog remove it after 3 seconds.
+    expect(state.ready).toBe(false);
   });
 
   test('cannot reach the network through WebRTC (STUN), directly or from a fresh realm', async ({

@@ -29,15 +29,13 @@ test('sign in, read a debrief, save a phrase, review it and see the progress', a
   await expect(page.getByText('circle back')).toBeVisible();
   await page.goto('/review');
   await expect(page.getByText('1/1')).toBeVisible();
-  // Which exercise a phrase gets depends on its id, so answer whichever card comes up.
-  const typing = page.getByRole('textbox', { name: 'Gõ cụm từ bạn nghe được' });
-  if (await typing.isVisible()) {
-    await typing.fill('circle back');
-    await page.getByRole('button', { name: 'Kiểm tra' }).click();
-  } else {
-    await page.getByRole('button', { name: 'quay lại bàn sau' }).click();
-  }
-  await page.getByRole('button', { name: 'Được' }).click();
+  // Review opens on flashcards: the buttons stay off until the card is turned over, whichever exercise the phrase
+  // got (that depends on its id). Tap the card away from its listen button, then rate it.
+  const rating = page.getByRole('button', { name: 'Được' });
+  await expect(rating).toBeDisabled();
+  await page.getByTestId('flashcard').click({ position: { x: 24, y: 24 } });
+  await expect(rating).toBeEnabled();
+  await rating.click();
 
   // The session and the review show in the progress.
   await page.goto('/progress');
