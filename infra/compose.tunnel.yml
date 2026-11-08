@@ -1,0 +1,136 @@
+# CueLingo behind a Cloudflare Tunnel: Postgres, migrations, API, workers, the tunnel and daily backups.
+# One file for a Mac now and a Linux VPS later. Operation guide: apps/docs/docs/04-modules/03-api/deploy-tunnel.md
+#
+#   cp infra/.env.tunnel.example infra/.env.tunnel   # then fill it in
+#   infra/tunnel/tunnel.sh up
+#
+# No service publishes a port: the API is reachable only inside this Compose network, and `cloudflared` is the only
+# way out. That also leaves 3000, 4000 and 5432 free for `pnpm dev`. For a look from the Mac itself, add
+# infra/compose.tunnel.debug.yml (127.0.0.1 only, unusual ports).
+name: cuelingo-tunnel
+
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+  postgres:
+    <<: *restart
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: cuelingo
+      POSTGRES_DB: cuelingo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in infra/.env.tunnel}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U cuelingo -d cuelingo']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Runs once per `up`, applies pending migrations and exits. The API and workers start only after it succeeded.
+  migrate:
+    image: amacneil/dbmate:2
+    restart: 'no'
+    command: ['--migrations-dir', '/db/migrations', '--no-dump-schema', 'up']
+    environment:
+      DATABASE_URL: postgres://cuelingo:${POSTGRES_PASSWORD}@postgres:5432/cuelingo?sslmode=disable
+    volumes:
+      - ./db/migrations:/db/migrations:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    <<: *restart
+    build:
+      context: ..
+      dockerfile: services/api/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: '4000'
+      DATABASE_URL: postgres://cuelingo:${POSTGRES_PASSWORD}@postgres:5432/cuelingo?sslmode=disable
+      WEB_ORIGIN: ${WEB_ORIGIN:?set WEB_ORIGIN in infra/.env.tunnel}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?set BETTER_AUTH_URL in infra/.env.tunnel}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in infra/.env.tunnel}
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-resend}
+      MAIL_FROM: ${MAIL_FROM:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      SMTP_URL: ${SMTP_URL:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      AGENT_ENABLED: ${AGENT_ENABLED:-false}
+      AGENT_HTML_BLOCKS: 'false'
+      AI_AGENT_MODEL: ${AI_AGENT_MODEL:-}
+      TTS_CACHE_DIR: /var/cache/cuelingo-tts
+    volumes:
+      - tts-cache:/var/cache/cuelingo-tts
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:4000/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  workers:
+    <<: *restart
+    build:
+      context: ..
+      dockerfile: services/workers/Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://cuelingo:${POSTGRES_PASSWORD}@postgres:5432/cuelingo?sslmode=disable
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      TTS_CACHE_DIR: /var/cache/cuelingo-tts
+    volumes:
+      - tts-cache:/var/cache/cuelingo-tts
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # The only way out. In Cloudflare (Zero Trust > Networks > Tunnels) the public hostname points at http://api:4000.
+  cloudflared:
+    <<: *restart
+    image: cloudflare/cloudflared:2025.11.1
+    command: ['tunnel', '--no-autoupdate', 'run']
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?set TUNNEL_TOKEN in infra/.env.tunnel}
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # Daily pg_dump into ./backups (kept outside the database volume), newest 7 copies. See infra/tunnel/backup.sh.
+  backup:
+    <<: *restart
+    image: postgres:16-alpine
+    entrypoint: ['/bin/sh', '/tunnel/backup.sh']
+    environment:
+      PGHOST: postgres
+      PGUSER: cuelingo
+      PGDATABASE: cuelingo
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_KEEP: ${BACKUP_KEEP:-7}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    volumes:
+      - ./tunnel:/tunnel:ro
+      - ${BACKUP_DIR:-./backups}:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+    name: cuelingo-tunnel-pgdata
+  tts-cache:
+    name: cuelingo-tunnel-tts-cache

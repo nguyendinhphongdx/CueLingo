@@ -78,6 +78,8 @@ describe('INVITES_REQUIRED', () => {
       loadConfig({
         ...valid,
         NODE_ENV: 'production',
+        WEB_ORIGIN: 'https://app.example.com',
+        BETTER_AUTH_URL: 'https://api.example.com',
         MAIL_PROVIDER: 'smtp',
         SMTP_URL: 'smtp://localhost',
         MAIL_FROM: 'CueLingo <a@b.co>',
@@ -91,6 +93,8 @@ describe('INVITES_REQUIRED', () => {
       loadConfig({
         ...valid,
         NODE_ENV: 'production',
+        WEB_ORIGIN: 'https://app.example.com',
+        BETTER_AUTH_URL: 'https://api.example.com',
         MAIL_PROVIDER: 'smtp',
         SMTP_URL: 'smtp://localhost',
         MAIL_FROM: 'CueLingo <a@b.co>',
@@ -119,5 +123,35 @@ describe('INVITES_REQUIRED', () => {
     expect(custom.AGENT_QUOTA_TURNS_PER_DAY).toBe(10);
     expect(custom.AGENT_QUOTA_USD_PER_DAY).toBe(1.5);
     expect(() => loadConfig({ ...valid, AGENT_ENABLED: 'maybe' })).toThrow(/AGENT_ENABLED/);
+  });
+
+  describe('production', () => {
+    const production = {
+      ...valid,
+      NODE_ENV: 'production',
+      MAIL_PROVIDER: 'resend',
+      RESEND_API_KEY: 're_test',
+      MAIL_FROM: 'CueLingo <login@example.com>',
+      WEB_ORIGIN: 'https://app.example.com',
+      BETTER_AUTH_URL: 'https://api.example.com',
+    };
+
+    it('accepts https addresses', () => {
+      expect(loadConfig(production).BETTER_AUTH_URL).toBe('https://api.example.com');
+    });
+
+    it('does not fall back to localhost when an address is missing', () => {
+      const { WEB_ORIGIN: _web, ...withoutWeb } = production;
+      expect(() => loadConfig(withoutWeb)).toThrow(/WEB_ORIGIN/);
+      const { BETTER_AUTH_URL: _api, ...withoutApi } = production;
+      expect(() => loadConfig(withoutApi)).toThrow(/BETTER_AUTH_URL/);
+    });
+
+    it('rejects http and localhost addresses', () => {
+      expect(() =>
+        loadConfig({ ...production, BETTER_AUTH_URL: 'http://api.example.com' }),
+      ).toThrow(/https/);
+      expect(() => loadConfig({ ...production, WEB_ORIGIN: 'https://localhost' })).toThrow(/https/);
+    });
   });
 });

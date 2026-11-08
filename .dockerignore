@@ -14,3 +14,7 @@ node_modules
 apps/docs/build
 ml
 .claude
+**/target
+apps/desktop/src-tauri/gen
+infra/backups
+backups

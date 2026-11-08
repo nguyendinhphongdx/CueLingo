@@ -64,6 +64,20 @@ const ConfigSchema = z
       'production needs a real MAIL_PROVIDER (resend or smtp): sign-in links must be emailed',
     path: ['MAIL_PROVIDER'],
   })
+  .refine(
+    (c) =>
+      c.NODE_ENV !== 'production' ||
+      [c.WEB_ORIGIN, c.BETTER_AUTH_URL].every((value) => {
+        const url = new URL(value);
+        return (
+          url.protocol === 'https:' && !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+        );
+      }),
+    {
+      message: 'production needs https addresses that are not localhost',
+      path: ['WEB_ORIGIN'],
+    },
+  )
   .refine((c) => Boolean(c.GOOGLE_CLIENT_ID) === Boolean(c.GOOGLE_CLIENT_SECRET), {
     message: 'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set together',
     path: ['GOOGLE_CLIENT_ID'],
@@ -89,6 +103,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const present = Object.fromEntries(
     Object.entries(env).filter(([, v]) => v !== undefined && v !== ''),
   );
+  // production must say where it lives: the localhost defaults would build wrong sign-in links and CORS.
+  const missing =
+    present.NODE_ENV === 'production'
+      ? (['WEB_ORIGIN', 'BETTER_AUTH_URL'] as const).filter((name) => !present[name])
+      : [];
+  if (missing.length > 0) {
+    throw new ConfigError(
+      `Invalid environment: production needs ${missing.join(' and ')} (no localhost default is used)`,
+    );
+  }
   const result = ConfigSchema.safeParse(present);
   if (!result.success) {
     const problems = result.error.issues.map(

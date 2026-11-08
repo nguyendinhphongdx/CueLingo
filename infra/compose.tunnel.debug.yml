@@ -1,0 +1,10 @@
+# Optional: look at the tunnel stack from this machine. Loopback only, unusual ports, so `pnpm dev` is unaffected.
+#   docker compose -f infra/compose.tunnel.yml -f infra/compose.tunnel.debug.yml --env-file infra/.env.tunnel up -d
+#   curl http://127.0.0.1:14000/healthz      psql "postgres://cuelingo:<password>@127.0.0.1:15432/cuelingo"
+services:
+  api:
+    ports:
+      - '127.0.0.1:14000:4000'
+  postgres:
+    ports:
+      - '127.0.0.1:15432:5432'

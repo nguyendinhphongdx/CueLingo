@@ -114,10 +114,17 @@ describe('mail config', () => {
   });
 
   it('refuses to start production with the console provider', () => {
-    expect(() => loadConfig({ ...env, NODE_ENV: 'production' })).toThrow('MAIL_PROVIDER');
+    const addresses = {
+      WEB_ORIGIN: 'https://app.example.com',
+      BETTER_AUTH_URL: 'https://api.example.com',
+    };
+    expect(() => loadConfig({ ...env, ...addresses, NODE_ENV: 'production' })).toThrow(
+      'MAIL_PROVIDER',
+    );
     expect(
       loadConfig({
         ...env,
+        ...addresses,
         NODE_ENV: 'production',
         MAIL_PROVIDER: 'resend',
         RESEND_API_KEY: 're_x',

@@ -115,6 +115,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         : false;
   const app = Fastify({
     logger,
+    // Behind the Cloudflare Tunnel every request arrives from cloudflared. Nothing else can reach the API
+    // (no published port), so X-Forwarded-* is trusted and request.ip is the real client.
+    trustProxy: deps.secureCookies === true,
     // Not `requestIdHeader`: Fastify would take the client's value as is. `genReqId` checks it first.
     requestIdHeader: false,
     genReqId: (request) => {

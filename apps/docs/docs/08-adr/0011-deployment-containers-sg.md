@@ -19,3 +19,4 @@ Người dùng ở Việt Nam, cần độ trễ mạng thấp cho dịch realti
 - Viết Dockerfile cho api/workers ở giai đoạn Nền móng (dùng `turbo prune`).
 - Doanh nghiệp cần on-premise/VPC (giai đoạn Scale) dùng lại cùng image.
 - Web (2026-11-08) lên **Cloudflare Pages** dưới dạng site tĩnh (`next build` xuất file, không cần runtime Node), deploy bằng GitHub Actions; API/workers/Postgres vẫn theo quyết định trên. Xem [Deploy Cloudflare](../04-modules/02-web/deploy-cloudflare.md).
+- API/workers/Postgres giai đoạn beta (2026-11-08) chạy bằng **một Docker Compose** (`infra/compose.tunnel.yml`) trên máy Mac của chủ sản phẩm, ra Internet qua **Cloudflare Tunnel** (không mở cổng). Địa chỉ API gắn với tên miền chứ không gắn với máy, nên khi chuyển sang VPS chỉ chạy lại cùng tệp Compose, web và app không đổi. Xem [Vận hành API sau Cloudflare Tunnel](../04-modules/03-api/deploy-tunnel.md).
