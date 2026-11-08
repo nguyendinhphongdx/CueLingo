@@ -2,17 +2,12 @@ import { createClient } from '@cuelingo/core-sdk';
 import type { FeedbackFormKind } from '@cuelingo/ui/components/feedback-form';
 import { currentToken } from '../auth';
 import { native } from '../lib/native';
-
-const apiUrl = () =>
-  (import.meta.env.VITE_API_URL || 'http://localhost:4000')
-    .replace(/^ws:/, 'http:')
-    .replace(/^wss:/, 'https:')
-    .replace(/\/$/, '');
+import { serverConfig } from '../server';
 
 /** Sends feedback with the app and OS version. Nothing from a meeting can reach this function. */
 export async function sendFeedback(
   input: { kind: FeedbackFormKind; message: string },
-  client = createClient({ baseUrl: apiUrl(), getToken: currentToken }),
+  client = createClient({ baseUrl: serverConfig().apiUrl, getToken: currentToken }),
   info = native.appInfo,
 ): Promise<void> {
   const { version, os } = await info();

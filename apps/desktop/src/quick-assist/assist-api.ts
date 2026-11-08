@@ -1,3 +1,4 @@
+import { serverConfig } from '../server';
 import {
   ComposeRequestSchema,
   ComposeResponseSchema,
@@ -73,6 +74,6 @@ export function createAssistApi({ apiUrl, token, fetch: request = fetch }: Assis
 }
 
 export const assistApi = createAssistApi({
-  apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:4000',
+  apiUrl: serverConfig().apiUrl,
   token: currentToken,
 });

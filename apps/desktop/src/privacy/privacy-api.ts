@@ -1,3 +1,4 @@
+import { serverConfig } from '../server';
 import { currentToken, resolveToken, type TokenSource } from '../auth';
 import {
   DeleteMyDataRequestSchema,
@@ -46,6 +47,6 @@ export function createPrivacyApi({
 }
 
 export const privacyApi = createPrivacyApi({
-  apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:4000',
+  apiUrl: serverConfig().apiUrl,
   token: currentToken,
 });

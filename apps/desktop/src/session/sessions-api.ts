@@ -1,3 +1,4 @@
+import { serverConfig } from '../server';
 import { ApiError, createHttp, transcribeApi } from '@cuelingo/core-sdk';
 import { currentToken, resolveToken, type TokenSource } from '../auth';
 import {
@@ -118,6 +119,6 @@ export function createSessionsApi({ apiUrl, token, fetch: request = fetch }: Ses
 }
 
 export const sessionsApi = createSessionsApi({
-  apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:4000',
+  apiUrl: serverConfig().apiUrl,
   token: currentToken,
 });

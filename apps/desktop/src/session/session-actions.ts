@@ -1,3 +1,4 @@
+import { serverConfig } from '../server';
 import { native } from '../lib/native';
 import { nativeErrorCode } from './session-errors';
 
@@ -8,7 +9,7 @@ export const startSession = (assistLevel: SelectableAssistLevel) =>
   native.sessionStart({ assistLevel });
 export const stopSession = () => native.sessionStop();
 export const openDebrief = (sessionId: string) => {
-  const webUrl = (import.meta.env.VITE_WEB_URL || 'http://localhost:3000').replace(/\/$/, '');
+  const webUrl = serverConfig().webUrl;
   return native.openUrl(`${webUrl}/sessions/${sessionId}`);
 };
 

@@ -1,3 +1,4 @@
+import { serverConfig } from '../server';
 import { currentToken, resolveToken, type TokenSource } from '../auth';
 import {
   DebriefSchema,
@@ -104,6 +105,6 @@ export function createDebriefApi({
 }
 
 export const debriefApi = createDebriefApi({
-  apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:4000',
+  apiUrl: serverConfig().apiUrl,
   token: currentToken,
 });

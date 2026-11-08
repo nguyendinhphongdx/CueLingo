@@ -1,3 +1,4 @@
+import { serverConfig } from '../server';
 import { createRealtimeClient } from '@cuelingo/core-sdk';
 import { useSyncExternalStore } from 'react';
 import { currentToken } from '../auth';
@@ -17,7 +18,7 @@ const controller = createSessionController({
   glossary: { list: insightsApi.listGlossary },
   createRealtime: createRealtimeClient,
   onFirstCaption: (sessionId) => void activation.captionShown(sessionId),
-  apiUrl: import.meta.env.VITE_API_URL || 'ws://localhost:4000',
+  apiUrl: serverConfig().wsUrl,
   token: currentToken,
 });
 

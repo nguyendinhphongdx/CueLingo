@@ -1,3 +1,4 @@
+import { serverConfig } from '../server';
 import {
   AssistSuggestionSchema,
   DEFAULT_LANGUAGE,
@@ -32,6 +33,6 @@ export function createDialApi({
 }
 
 export const dialApi = createDialApi({
-  apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:4000',
+  apiUrl: serverConfig().apiUrl,
   token: currentToken,
 });

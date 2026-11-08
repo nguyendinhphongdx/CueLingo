@@ -1,3 +1,4 @@
+import { serverConfig } from '../server';
 import { ApiError } from '@cuelingo/core-sdk';
 import { ErrorResponseSchema, MeSchema, type Me } from '@cuelingo/shared';
 import { currentToken } from './auth-store';
@@ -56,6 +57,6 @@ export function createMeApi({ apiUrl, token, fetch: request = fetch }: MeApiOpti
 }
 
 export const meApi = createMeApi({
-  apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:4000',
+  apiUrl: serverConfig().apiUrl,
   token: currentToken,
 });

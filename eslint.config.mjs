@@ -32,6 +32,21 @@ export default tseslint.config(
     },
   },
   {
+    // The desktop reads the API and web address in one place, so a saved server choice applies everywhere.
+    files: ['apps/desktop/src/**/*.{ts,tsx}'],
+    ignores: ['apps/desktop/src/server/**'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'MemberExpression[property.name=/^VITE_(API|WEB)_URL$/]',
+          message:
+            'Đọc địa chỉ máy chủ qua serverConfig() trong src/server, không đọc VITE_API_URL/VITE_WEB_URL.',
+        },
+      ],
+    },
+  },
+  {
     // Every AI call goes through @cuelingo/ai-gateway (docs/05-engineering/ai-calls.md).
     files: ['**/*.{ts,tsx}'],
     ignores: ['packages/ai-gateway/**'],

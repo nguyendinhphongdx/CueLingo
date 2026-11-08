@@ -1,3 +1,4 @@
+import { serverConfig } from '../server';
 import { ApiError } from '@cuelingo/core-sdk';
 import { currentToken, resolveToken, type TokenSource } from '../auth';
 import {
@@ -118,6 +119,6 @@ export function createInsightsApi({ apiUrl, token, fetch: request = fetch }: Ins
 }
 
 export const insightsApi = createInsightsApi({
-  apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:4000',
+  apiUrl: serverConfig().apiUrl,
   token: currentToken,
 });
