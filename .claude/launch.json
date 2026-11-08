@@ -24,6 +24,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@cuelingo/desktop", "dev"],
       "port": 1420
+    },
+    {
+      "name": "site",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@cuelingo/site", "dev", "--port", "5180"],
+      "port": 5180
     }
   ]
 }

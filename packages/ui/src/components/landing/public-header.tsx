@@ -21,8 +21,10 @@ export function PublicHeader({
         <span>CueLingo</span>
       </Link>
       <nav className={styles.headerNav} aria-label="Điều hướng công khai">
-        <Link href={paths.download}>Tải ứng dụng</Link>
         {paths.login ? <Link href={paths.login}>Đăng nhập</Link> : null}
+        <Link className={styles.headerAction} href={paths.download}>
+          Tải ứng dụng
+        </Link>
       </nav>
     </header>
   );

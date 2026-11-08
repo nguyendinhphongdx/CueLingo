@@ -17,7 +17,7 @@ describe('site pages', () => {
     const markup = home();
 
     expect(markup).toContain('<h1');
-    expect(markup).toContain('Nghe hiểu cuộc họp đa ngôn ngữ');
+    expect(markup).toContain('Nghe họp, hiểu ngay');
     expect(markup).toContain('Tải cho macOS');
     expect(markup).toContain('href="/cuelingo-releases/download/"');
     expect(markup).not.toContain('Đăng nhập');

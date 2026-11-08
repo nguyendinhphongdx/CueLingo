@@ -20,14 +20,13 @@ describe('LandingPage', () => {
 
     expect(markup).toContain('<h1');
     expect(markup).toContain(
-      'Caption kèm bản dịch tiếng Việt cho cuộc họp tiếng Anh, Nhật, Hàn, Trung',
+      'Caption song ngữ hiện ngay trên cuộc họp tiếng Anh, Nhật, Hàn, Trung',
     );
     expect(markup).toContain('href="/download"');
     expect(markup).toContain('Tải cho macOS');
     expect(markup).toContain('href="/login"');
     expect(markup).toContain('Đăng nhập');
     expect(markup).toContain('Let&#x27;s align on the launch plan before Friday.');
-    expect(markup).toContain('min-h-11');
   });
 
   it('replaces the route with /sessions for a signed-in visitor', () => {

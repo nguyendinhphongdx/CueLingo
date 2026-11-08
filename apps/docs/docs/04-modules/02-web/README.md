@@ -19,6 +19,7 @@ Nơi xem lại cuộc họp, đọc debrief, ôn tập, xem tiến bộ và qu�
 | [Preferences](./preferences.md)             | `src/features/preferences`      | Assist và cách hiển thị overlay dùng chung theo tài khoản.       |
 | [Assistant](./assistant.md)                 | `src/features/assistant`        | Chat với trợ lý AI (stream, dừng), nhấp đúp từ để tra/nghe/lưu.  |
 | [Deploy Cloudflare](./deploy-cloudflare.md) | `scripts/`, `public/_redirects` | Xuất web thành file tĩnh và deploy lên Cloudflare Pages.         |
+| [Landing và trang tải về](./landing.md)     | `packages/ui/.../landing/`      | Trang công khai dùng chung cho web và site GitHub Pages.         |
 
 ## Quan hệ với phần khác
 

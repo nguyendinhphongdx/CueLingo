@@ -48,3 +48,4 @@ e2e/playwright-report/
 
 # Static export (pnpm --filter @cuelingo/web build:static)
 apps/web/out/
+.taste-skill/

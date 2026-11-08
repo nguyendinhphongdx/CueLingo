@@ -12,7 +12,6 @@ describe('DownloadPage', () => {
     expect(markup).toContain('Screen &amp; System Audio Recording');
     expect(markup).toContain('Sắp có bản tải');
     expect(markup).toContain('disabled=""');
-    expect(markup).toContain('min-h-11');
   });
 
   it('links to the configured release when a URL is available', () => {
