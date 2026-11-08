@@ -4,3 +4,4 @@
  * Design: apps/docs/docs/04-modules/02-web/assistant.md
  */
 export { AssistantPage } from './AssistantPage';
+export { AssistantRoute } from './AssistantRoute';
