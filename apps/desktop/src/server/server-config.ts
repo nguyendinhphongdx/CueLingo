@@ -141,6 +141,9 @@ export function saveServer(choice: ServerChoice, overrides: Partial<ServerEnv> =
   storage.setItem(SERVER_STORAGE_KEY, JSON.stringify({ api: api.url, web: web.url }));
 }
 
+/** True in a development build, where `http://localhost` is allowed as a server. */
+export const isDevBuild = (): boolean => import.meta.env.DEV === true;
+
 /** Back to the server built into the app. */
 export function resetServer(overrides: Partial<ServerEnv> = {}): void {
   const storage = storageOf({ ...currentEnv(), ...overrides });

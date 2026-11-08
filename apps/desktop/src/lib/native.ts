@@ -273,6 +273,8 @@ export const native = {
   publishTranscript: (e: TranscriptEvent) => emit('transcript', TranscriptEvent.parse(e)),
   /** Tells the other windows (the overlay has its own JS context) that the signed-in person changed. */
   publishAuthChanged: () => emit('auth-changed'),
+  /** Restarts the app (the updater uses the same plugin); rejects where it cannot, e.g. an unsigned dev build. */
+  relaunchApp: () => relaunch(),
   onAuthChanged: (cb: () => void): Promise<UnlistenFn> => listen('auth-changed', () => cb()),
   publishSettings: (e: SettingsEvent) => emit('settings', SettingsEvent.parse(e)),
   onSettings: (cb: (e: SettingsEvent) => void): Promise<UnlistenFn> =>

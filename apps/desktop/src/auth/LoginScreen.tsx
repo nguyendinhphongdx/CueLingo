@@ -1,6 +1,7 @@
 import { Button } from '@cuelingo/ui/components/button';
 import { Logo } from '@cuelingo/ui/components/logo';
 import { Loader2 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import type { SignInPhase } from './use-auth';
 
 const messages: Record<SignInPhase, string> = {
@@ -11,7 +12,16 @@ const messages: Record<SignInPhase, string> = {
 };
 
 /** Shown instead of the app until someone is signed in. */
-export function LoginScreen({ phase, onSignIn }: { phase: SignInPhase; onSignIn(): void }) {
+export function LoginScreen({
+  phase,
+  onSignIn,
+  serverSlot,
+}: {
+  phase: SignInPhase;
+  onSignIn(): void;
+  /** Where the small "Máy chủ" link goes; the app passes it so this module does not depend on the picker. */
+  serverSlot?: ReactNode;
+}) {
   const busy = phase === 'exchanging';
   return (
     <main className="bg-background text-foreground flex h-screen items-center justify-center px-6">
@@ -31,6 +41,7 @@ export function LoginScreen({ phase, onSignIn }: { phase: SignInPhase; onSignIn(
           {busy ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : null}
           {phase === 'waiting' ? 'Mở lại trang đăng nhập' : 'Đăng nhập bằng email'}
         </Button>
+        {serverSlot ? <div className="mt-4">{serverSlot}</div> : null}
       </div>
     </main>
   );

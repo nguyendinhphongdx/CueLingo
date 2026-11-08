@@ -5,6 +5,7 @@
 export { checkServer, type ServerCheck } from './check-server';
 export {
   defaultServer,
+  isDevBuild,
   resetServer,
   saveServer,
   serverConfig,

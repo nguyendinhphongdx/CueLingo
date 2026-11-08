@@ -1,4 +1,5 @@
 export { AccountCard } from './AccountCard';
+export { revokeThisDevice } from './auth-api';
 export { currentToken, isDevToken, useAuthStore } from './auth-store';
 export { LoginScreen } from './LoginScreen';
 export { resolveToken, type TokenSource } from './token';

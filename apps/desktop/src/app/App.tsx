@@ -13,6 +13,7 @@ import {
 import { FeedbackPage } from '../feedback';
 import { UpdateBanner } from '../updater';
 import { PrivacyPanel } from '../privacy';
+import { ServerLink, ServerSettings } from '../server-picker';
 import { useActivationTelemetry } from '../telemetry';
 import { RecentSessions, SessionPanel } from '../session';
 import { PlacementSection } from '../study';
@@ -54,7 +55,13 @@ export function App() {
   if (auth.status === 'loading') return <div className="bg-background h-screen" />;
   // A development token in the environment lets the app run without an account.
   if (auth.status === 'signedOut' && !isDevToken()) {
-    return <LoginScreen phase={auth.phase} onSignIn={() => void auth.signIn()} />;
+    return (
+      <LoginScreen
+        phase={auth.phase}
+        onSignIn={() => void auth.signIn()}
+        serverSlot={<ServerLink />}
+      />
+    );
   }
   if (auth.status === 'signedIn' && account.loading)
     return <div className="bg-background h-screen" />;
@@ -172,6 +179,7 @@ function CurrentView({
           </div>
         </Section>
         <PrivacyPanel />
+        <ServerSettings />
         <AboutCard />
         <Section title="Đang trên lộ trình">
           <ListCard>
