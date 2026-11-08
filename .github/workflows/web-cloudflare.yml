@@ -92,5 +92,11 @@ jobs:
             echo "CUELINGO_WEB_PROJECT is not set (or not a Pages project name)" >&2
             exit 1
           fi
+          # `pages deploy` does not create a missing project, so create it first. An existing project is fine.
+          if pnpm dlx wrangler@4.158.0 pages project list 2>/dev/null | grep -Fq " ${PROJECT} "; then
+            echo "Pages project ${PROJECT} exists"
+          else
+            pnpm dlx wrangler@4.158.0 pages project create "$PROJECT" --production-branch main
+          fi
           pnpm dlx wrangler@4.158.0 pages deploy apps/web/out \
             --project-name "$PROJECT" --branch main --commit-hash "$GITHUB_SHA" --commit-dirty=true
