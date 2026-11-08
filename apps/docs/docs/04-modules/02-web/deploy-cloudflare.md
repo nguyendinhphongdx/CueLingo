@@ -45,8 +45,8 @@ Không có. Site tĩnh không giữ dữ liệu; token Cloudflare chỉ nằm tr
 
 | Chủ đề                       | Ghi chú                                                                                                                                                                                                                                                                                                            |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Đăng nhập                    | Better Auth đặt cookie trên **origin của API**. Web (`cuelingo.tutorial-aws.com`) và API (đề xuất `api-cuelingo.tutorial-aws.com`) cùng site, nên cookie `SameSite=Lax` gửi được; API cần CORS cho đúng origin web kèm credentials. Chưa làm ở hạng mục này                                                        |
-| Runner hộp cát               | Phải ở **site khác** web ([ADR 0019](../../08-adr/0019-ai-generated-ui.md)). Tên miền con của `tutorial-aws.com` là cùng site nên không dùng được; cờ `AGENT_HTML_BLOCKS` giữ tắt cho đến khi có tên miền khác                                                                                                     |
+| Đăng nhập                    | Better Auth đặt cookie trên **origin của API**. Web và API (đề xuất đặt hai tên miền con của cùng một tên miền gốc) cùng site, nên cookie `SameSite=Lax` gửi được; API cần CORS cho đúng origin web kèm credentials. Chưa làm ở hạng mục này                                                                       |
+| Runner hộp cát               | Phải ở **site khác** web ([ADR 0019](../../08-adr/0019-ai-generated-ui.md)). Tên miền con của tên miền gốc đang dùng cho web là cùng site nên không dùng được; cờ `AGENT_HTML_BLOCKS` giữ tắt cho đến khi có tên miền khác                                                                                         |
 | Chuyển trang                 | Điều hướng client tới `/sessions/<id>` mới (chưa có trong bản xuất) làm Next xin payload RSC không có trong bản xuất, `_redirects` trả trang HTML, nên Next sẽ chuyển sang tải lại cả trang. Dự kiến đúng nhưng có một lần tải lại; **chưa quan sát** (bản kiểm cục bộ chỉ mở thẳng địa chỉ, chưa bấm link nội bộ) |
 | `_redirects` và tệp thật     | Cách Pages ưu tiên: tệp tĩnh có thật thắng rewrite 200 (như cách chạy SPA `/* /index.html 200`). Dựa vào tài liệu, **chưa thử trên Cloudflare thật**                                                                                                                                                               |
 | Cần tính năng máy chủ về sau | Chuyển sang OpenNext trên Workers (phương án B trong plan)                                                                                                                                                                                                                                                         |
@@ -54,14 +54,14 @@ Không có. Site tĩnh không giữ dữ liệu; token Cloudflare chỉ nằm tr
 ## Câu hỏi mở
 
 - Tên dự án Pages chính thức (đề xuất `cuelingo-web`) và tài khoản Cloudflare — chủ sản phẩm.
-- Cookie đăng nhập: `Domain=.tutorial-aws.com` hay cookie của API — quyết ở hạng mục API.
+- Cookie đăng nhập: `Domain=.<tên miền gốc>` hay cookie của API — quyết ở hạng mục API.
 - Tên miền khác cho runner hộp cát nếu muốn bật khối HTML.
 
 ---
 
 # H1 · Việc của chủ sản phẩm (làm một lần)
 
-Làm theo thứ tự. Mục tiêu: push vào `main` thì web tự lên `https://<tên-dự-án>.pages.dev`, rồi gắn `cuelingo.tutorial-aws.com`.
+Làm theo thứ tự. Mục tiêu: push vào `main` thì web tự lên `https://<tên-dự-án>.pages.dev`, rồi gắn tên miền riêng.
 
 ## 1. Tạo dự án Pages
 
@@ -93,13 +93,13 @@ Repo → **Settings** → **Secrets and variables** → **Actions**.
 
 Tuỳ chọn: `CUELINGO_DOWNLOAD_URL`, `CUELINGO_GOOGLE_ENABLED` (`true`/`false`). Để trống `CUELINGO_SANDBOX_ORIGIN` và `CUELINGO_AGENT_HTML_BLOCKS` (xem Giới hạn).
 
-## 5. Gắn tên miền `cuelingo.tutorial-aws.com`
+## 5. Gắn tên miền (ví dụ `cuelingo.<tên miền của bạn>`)
 
-DNS của `tutorial-aws.com` đã ở Cloudflare nên gắn thẳng được:
+Cách gắn dưới đây dùng khi DNS của tên miền đã ở Cloudflare. Tên miền hiện đang dùng ghi ở mục “Tên miền đang dùng” cuối trang; code không ghi cứng tên miền nào.
 
 1. Dự án Pages → **Custom domains** → **Set up a custom domain**.
-2. Nhập `cuelingo.tutorial-aws.com` → **Continue** → **Activate domain**. Cloudflare tự thêm bản ghi CNAME và cấp chứng chỉ.
-3. Đợi trạng thái **Active** (vài phút), rồi mở `https://cuelingo.tutorial-aws.com`.
+2. Nhập tên miền con muốn dùng cho web → **Continue** → **Activate domain**. Cloudflare tự thêm bản ghi CNAME và cấp chứng chỉ.
+3. Đợi trạng thái **Active** (vài phút), rồi mở địa chỉ vừa gắn.
 
 ## 6. Chạy lần đầu và kiểm
 
@@ -118,3 +118,21 @@ DNS của `tutorial-aws.com` đã ở Cloudflare nên gắn thẳng được:
 | Wrangler `Authentication error`      | Token thiếu quyền Pages · Edit, hoặc Account ID sai                |
 | Quét báo `development address`       | Có `http://localhost:…` trong bản build: kiểm biến `NEXT_PUBLIC_*` |
 | Đăng nhập không giữ phiên            | API chưa cho CORS/cookie đúng origin web (hạng mục API)            |
+
+## Đổi tên miền
+
+Code không ghi cứng tên miền; mọi địa chỉ đi qua biến cấu hình. Khi đổi tên miền, sửa đúng các chỗ sau, mỗi chỗ một giá trị, rồi chạy lại workflow:
+
+| Chỗ                                            | Đổi gì                                                             | Dùng cho                                              |
+| ---------------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------- |
+| GitHub → Variables                             | `CUELINGO_WEB_URL`, `CUELINGO_API_URL`                             | Bản `.dmg` (lúc build), web, bước quét chuỗi nhạy cảm |
+| GitHub → Variables                             | `CUELINGO_API_URL` (web đọc thành `NEXT_PUBLIC_API_URL` lúc build) | Web gọi API                                           |
+| Máy chủ API (biến môi trường)                  | `WEB_ORIGIN`                                                       | CORS và địa chỉ web phía API                          |
+| Cloudflare → dự án Pages → **Custom domains**  | Thêm tên miền mới, gỡ tên miền cũ                                  | Địa chỉ web                                           |
+| App desktop → Cài đặt → Nâng cao → **Máy chủ** | Tester chọn máy chủ mới (không cần build lại `.dmg`)               | Tester đã cài                                         |
+
+Sau khi đổi biến, chạy lại workflow **Web (Cloudflare Pages)** vì biến được ghi vào file lúc build. Bản `.dmg` đã phát hành giữ địa chỉ build cũ cho tới khi phát hành bản mới hoặc tester đổi bằng ô Máy chủ.
+
+## Tên miền đang dùng
+
+Ghi một chỗ này để tra cứu, không dùng trong code: web `cuelingo.tutorial-aws.com`, API (dự kiến) `api-cuelingo.tutorial-aws.com`. Ghi chú ngày 2026-11-08.
