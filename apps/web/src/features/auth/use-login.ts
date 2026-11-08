@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import { INVITE_INVALID_AUTH_ERROR } from '@cuelingo/shared';
 import { authClient } from '../../lib/auth-client';
 import { client } from '../../lib/client';
+import { CONNECTION_ERROR_MESSAGE } from '../../lib/errors';
 import { INVITE_ERROR_MESSAGE } from './invite-error';
+import { loginErrorMessage } from './login-error';
 
 /** `/login?app=1` is how the desktop app sends people here: after signing in they go to the hand-off page. */
 export const APP_SIGN_IN_PATH = '/app-auth';
@@ -21,6 +23,9 @@ async function rememberInvite(code: string): Promise<void> {
   try {
     await client.invites.intent(code.trim());
   } catch (error) {
+    if (error instanceof ApiError && error.code === 'NETWORK_ERROR') {
+      throw new Error(CONNECTION_ERROR_MESSAGE, { cause: error });
+    }
     if (error instanceof ApiError && error.status === 429) {
       throw new Error('Bạn thử quá nhiều lần, vui lòng đợi ít phút rồi thử lại', { cause: error });
     }
@@ -143,6 +148,6 @@ export function useLogin() {
     sent: magicLink.isSuccess,
     signInWithGoogle: google.mutate,
     googleWaiting: popupOpen,
-    error: magicLink.error?.message ?? google.error?.message ?? popupError,
+    error: loginErrorMessage(magicLink.error) ?? loginErrorMessage(google.error) ?? popupError,
   };
 }

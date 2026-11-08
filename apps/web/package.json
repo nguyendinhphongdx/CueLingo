@@ -7,7 +7,8 @@
     "dev": "next dev --webpack --port 3000",
     "dev:turbo": "next dev --port 3000",
     "build": "next build --webpack",
-    "build:static": "NEXT_STATIC_EXPORT=true next build --webpack && node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/write-headers.mjs",
+    "build:static": "node scripts/check-env.mjs --production && NEXT_STATIC_EXPORT=true next build --webpack && node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/write-headers.mjs",
+    "scan:static": "node scripts/scan-out.mjs",
     "start": "next start --port 3000",
     "typecheck": "next typegen && tsc --noEmit"
   },

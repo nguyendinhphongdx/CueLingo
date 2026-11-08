@@ -16,6 +16,7 @@ export default tseslint.config(
       '.claude/skills/**',
       '.taste-skill/**',
       'apps/docs/build/**',
+      'apps/web/out/**',
     ],
   },
   js.configs.recommended,
