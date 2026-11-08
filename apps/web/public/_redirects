@@ -1,0 +1,3 @@
+# Cloudflare Pages: the dynamic routes are one placeholder page each (see src/lib/route-id.ts); the id is read in the browser.
+/sessions/*  /sessions/_  200
+/assistant/*  /assistant/_  200
