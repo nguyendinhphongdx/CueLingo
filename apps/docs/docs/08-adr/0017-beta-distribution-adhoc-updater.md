@@ -1,6 +1,6 @@
 # 0017 · Phát hành beta: ký ad-hoc, GitHub Releases, tự cập nhật Tauri
 
-**Trạng thái:** Accepted · 2026-11-05 (chủ sản phẩm chốt kênh GitHub Releases và chưa dùng Apple Developer trong hồ sơ [beta-readiness](../06-delivery/2026-11-05-beta-readiness/01-specs.md))
+**Trạng thái:** Accepted · 2026-11-05 · Bổ sung bởi [0021](0021-windows-release-inno.md) (bản Windows, release chung hai nền tảng) (chủ sản phẩm chốt kênh GitHub Releases và chưa dùng Apple Developer trong hồ sơ [beta-readiness](../06-delivery/2026-11-05-beta-readiness/01-specs.md))
 
 ## Bối cảnh
 

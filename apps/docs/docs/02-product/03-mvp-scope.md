@@ -46,7 +46,9 @@ MVP là **app desktop macOS + web app nhỏ**. Nó giúp người Việt hiểu 
 
 ## Ngoài phạm vi MVP
 
-Windows, mobile, extension, meeting bot · voice mode, virtual mic · gợi ý trả lời tự động · chấm phát âm, roleplay, Planner · ngôn ngữ khác tiếng Anh · quản trị doanh nghiệp, SSO, billing tự động.
+> Windows rời danh sách này ngày 2026-11-13 theo yêu cầu chủ sản phẩm (hồ sơ [windows-desktop](../06-delivery/2026-11-13-windows-desktop/01-specs.md)).
+
+Mobile, extension, meeting bot · voice mode, virtual mic · gợi ý trả lời tự động · chấm phát âm, roleplay, Planner · ngôn ngữ khác tiếng Anh · quản trị doanh nghiệp, SSO, billing tự động.
 
 ## Yêu cầu phi chức năng chính
 
