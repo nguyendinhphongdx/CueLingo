@@ -5,7 +5,7 @@ name: Web (Cloudflare Pages)
 # Needs, in the repository settings:
 #   secrets   CLOUDFLARE_API_TOKEN (permission: Cloudflare Pages - Edit), CLOUDFLARE_ACCOUNT_ID
 #   variables CUELINGO_WEB_PROJECT (the Pages project name), CUELINGO_API_URL (public https API address)
-#   optional  CUELINGO_DOWNLOAD_URL, CUELINGO_GOOGLE_ENABLED, CUELINGO_SANDBOX_ORIGIN, CUELINGO_AGENT_HTML_BLOCKS
+#   optional  CUELINGO_RELEASES_REPO (owner/name; the download link is derived from it), CUELINGO_GOOGLE_ENABLED, CUELINGO_SANDBOX_ORIGIN, CUELINGO_AGENT_HTML_BLOCKS
 # Setup steps: apps/docs/docs/04-modules/02-web/deploy-cloudflare.md
 on:
   push:
@@ -42,7 +42,9 @@ jobs:
       # Written into the files at build time (NEXT_PUBLIC_*). Until the API is online the variable may be unset:
       # the placeholder is a name that never resolves, so every screen that needs the API says it cannot connect.
       NEXT_PUBLIC_API_URL: ${{ vars.CUELINGO_API_URL || 'https://api.invalid' }}
-      NEXT_PUBLIC_DOWNLOAD_URL: ${{ vars.CUELINGO_DOWNLOAD_URL }}
+      # Same link as the public site (pages.yml): the newest release of the releases repository. Unset, the
+      # download button stays locked instead of pointing at nothing.
+      NEXT_PUBLIC_DOWNLOAD_URL: ${{ vars.CUELINGO_RELEASES_REPO && format('https://github.com/{0}/releases/latest/download/CueLingo-macOS-arm64.dmg', vars.CUELINGO_RELEASES_REPO) || '' }}
       NEXT_PUBLIC_GOOGLE_ENABLED: ${{ vars.CUELINGO_GOOGLE_ENABLED }}
       NEXT_PUBLIC_SANDBOX_ORIGIN: ${{ vars.CUELINGO_SANDBOX_ORIGIN }}
       NEXT_PUBLIC_AGENT_HTML_BLOCKS: ${{ vars.CUELINGO_AGENT_HTML_BLOCKS }}
