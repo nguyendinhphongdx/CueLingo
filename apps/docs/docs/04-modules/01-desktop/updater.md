@@ -15,9 +15,18 @@
 
 ## Phát hành
 
-Gắn tag `vX.Y.Z` đúng bằng `version` trong `tauri.conf.json`. Workflow dựng sidecar, `tauri build` (arm64, ký ad-hoc, `createUpdaterArtifacts`), kiểm tra bundle không chứa token dev, sinh `latest.json` và đăng `CueLingo-macOS-arm64.dmg`, `CueLingo.app.tar.gz(.sig)`, `latest.json` lên repo bản build.
+Gắn tag `vX.Y.Z` đúng bằng `version` trong `tauri.conf.json`. Workflow `release.yml` có hai loại job:
 
-Biến cần có (do người đặt): secrets `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, `RELEASES_TOKEN`; variables `CUELINGO_UPDATER_PUBKEY`, `CUELINGO_RELEASES_REPO`, `CUELINGO_API_URL`, `CUELINGO_WEB_URL`. Web: `NEXT_PUBLIC_DOWNLOAD_URL` trỏ tới `https://github.com/<repo>/releases/latest/download/CueLingo-macOS-arm64.dmg`. Trang tĩnh [Site công khai](../07-site/README.md) dùng cùng link qua `VITE_DOWNLOAD_URL`.
+| Job       | Máy            | Việc                                                                                                                                                                                             |
+| --------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `macos`   | `macos-15`     | Dựng sidecar, `tauri build` (arm64, ký ad-hoc, `createUpdaterArtifacts`), kiểm bundle không chứa token dev, gửi `CueLingo-macOS-arm64.dmg`, `CueLingo.app.tar.gz(.sig)` lên artifact             |
+| `publish` | `ubuntu-24.04` | Chỉ chạy khi mọi job dựng xong. Sinh **một** `latest.json` cho mọi nền tảng (`updater-manifest.mjs <version> <platform> <bundle> <url> …`), tạo release dạng draft, gắn đủ tệp rồi mới công khai |
+
+Bản Windows: workflow `desktop-windows.yml` (máy `windows-2025`, có sẵn Inno Setup 6.7.1) dựng `tauri build --no-bundle`, sidecar Rust và `CueLingo-Windows-x64-setup.exe` (`scripts/windows-installer.mjs`, `installer/windows/CueLingo.iss`), lưu thành artifact của lần chạy. Chưa đưa vào `release.yml` và `latest.json` cho tới khi có thu âm, nhận dạng và đã thử cập nhật trên máy thật ([ADR 0021](../../08-adr/0021-windows-release-inno.md)).
+
+Release luôn tạo ở dạng draft trước, nên link `releases/latest/download/…` không bao giờ trỏ vào một release thiếu tệp. Job Windows sẽ thêm vào `needs` của `publish` ([windows-desktop](../../06-delivery/2026-11-13-windows-desktop/02-plan.md)).
+
+Biến cần có (do người đặt): secrets `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`; variables `CUELINGO_UPDATER_PUBKEY`, `CUELINGO_API_URL`, `CUELINGO_WEB_URL`. Link tải không cần biến riêng: web (`web-cloudflare.yml` → `NEXT_PUBLIC_DOWNLOAD_URL`) và [Site công khai](../07-site/README.md) (`pages.yml` → `VITE_DOWNLOAD_URL`) cùng tự tính `https://github.com/<owner>/<repo>/releases/latest/download/CueLingo-macOS-arm64.dmg` từ chính repo này. Release đăng bằng `GITHUB_TOKEN`, không cần token riêng.
 
 ## Câu hỏi mở
 

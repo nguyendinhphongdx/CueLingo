@@ -141,7 +141,10 @@ pub fn session_stop(app: AppHandle, state: State<AppState>) -> Result<(), String
 /// Runs the sidecar in a one-shot mode and returns the JSON line whose `type` is `kind`.
 fn probe_sidecar(flag: &str, kind: &str) -> Option<serde_json::Value> {
     let path = crate::audio_bridge::sidecar_path()?;
-    let output = std::process::Command::new(path).arg(flag).output().ok()?;
+    let output = crate::audio_bridge::hidden_command(path)
+        .arg(flag)
+        .output()
+        .ok()?;
     String::from_utf8_lossy(&output.stdout)
         .lines()
         .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
@@ -199,7 +202,7 @@ pub async fn check_system_audio() -> String {
     probe_field(&probe, "state")
 }
 
-/// Which URLs the app may open outside itself: web pages and the macOS privacy panes it points people to.
+/// Which URLs the app may open outside itself: web pages and the system privacy panes it points people to.
 fn is_openable(url: &str) -> bool {
     url.starts_with("https://")
         || url.starts_with("http://")
@@ -209,7 +212,18 @@ fn is_openable(url: &str) -> bool {
                 | "x-apple.systempreferences:com.apple.preference.security?Privacy_AudioCapture"
                 | "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
                 | "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars"
+                | "ms-settings:privacy-microphone"
+                | "ms-settings:sound"
         )
+}
+
+/// The system opener: `open` on macOS; on Windows `explorer.exe` with the URL as one argument (no shell).
+fn opener() -> std::process::Command {
+    if cfg!(windows) {
+        std::process::Command::new("explorer.exe")
+    } else {
+        std::process::Command::new("/usr/bin/open")
+    }
 }
 
 /// Opens a web page or a privacy settings pane with the system handler.
@@ -218,7 +232,7 @@ pub fn open_external(url: String) -> Result<(), String> {
     if !is_openable(&url) {
         return Err("url_not_allowed".into());
     }
-    std::process::Command::new("/usr/bin/open")
+    opener()
         .arg(&url)
         .spawn()
         .map(|_| ())
@@ -326,6 +340,9 @@ mod tests {
             "x-apple.systempreferences:com.apple.preference.general"
         ));
         assert!(!is_openable("javascript:alert(1)"));
+        assert!(is_openable("ms-settings:privacy-microphone"));
+        assert!(is_openable("ms-settings:sound"));
+        assert!(!is_openable("ms-settings:windowsupdate"));
     }
 
     #[test]

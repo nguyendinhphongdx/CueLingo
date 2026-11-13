@@ -23,14 +23,34 @@ pub(crate) fn sidecar_path() -> Option<PathBuf> {
     if let Ok(path) = std::env::var("CUELINGO_AUDIO_BIN") {
         return Some(PathBuf::from(path));
     }
+    let name = format!("cuelingo-audio{}", std::env::consts::EXE_SUFFIX);
     let exe = std::env::current_exe().ok()?;
-    let bundled = exe.parent()?.join("cuelingo-audio");
+    let bundled = exe.parent()?.join(&name);
     if bundled.exists() {
         return Some(bundled);
     }
+    let dev_dir = if cfg!(windows) {
+        "../native/windows-audio/target/debug"
+    } else {
+        "../native/macos-audio/.build/debug"
+    };
     let dev = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../native/macos-audio/.build/debug/cuelingo-audio");
+        .join(dev_dir)
+        .join(name);
     dev.exists().then_some(dev)
+}
+
+/// A sidecar process; on Windows it gets no console window of its own.
+pub(crate) fn hidden_command(path: impl AsRef<std::ffi::OsStr>) -> Command {
+    #[allow(unused_mut)]
+    let mut command = Command::new(path);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+    command
 }
 
 /// Maps one sidecar line to `(event name, payload)`. Unknown or malformed lines are ignored.
@@ -56,7 +76,7 @@ pub(crate) fn sidecar_command(
     detect: &[String],
     vocabulary: &[String],
 ) -> Result<Command, String> {
-    let mut command = Command::new(path);
+    let mut command = hidden_command(path);
     command
         .env("CUELINGO_LANGUAGE", language)
         .env("CUELINGO_DETECT", detect.join(","));

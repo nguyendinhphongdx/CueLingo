@@ -9,6 +9,7 @@ pub fn prepare_overlay(app: &AppHandle) -> tauri::Result<()> {
         overlay.set_content_protected(true)?;
         overlay.set_ignore_cursor_events(false)?;
         // Follow the person across Spaces, so a meeting in its own Space or full-screen window keeps its captions.
+        #[cfg(target_os = "macos")]
         overlay.set_visible_on_all_workspaces(true)?;
         overlay.center()?;
     }
