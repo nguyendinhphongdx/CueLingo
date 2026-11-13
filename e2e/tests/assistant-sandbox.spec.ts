@@ -15,7 +15,11 @@ import {
  * comes from `sandbox-host.mjs`.
  */
 
-const RUNNER = process.env.E2E_RUNNER ?? 'http://localhost:3101';
+/**
+ * On another site than the host page (127.0.0.1 vs localhost), as in production where the runner has its own
+ * registrable domain: only a cross-site frame gets its own process, so a block stuck in a loop cannot freeze the host.
+ */
+const RUNNER = process.env.E2E_RUNNER ?? 'http://127.0.0.1:3101';
 /** A tiny page served by `sandbox-host.mjs`: a real local server, because Chrome blocks a mocked page from framing localhost. */
 const HOST_URL = 'http://localhost:3418/';
 

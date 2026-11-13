@@ -15,6 +15,9 @@ export default defineConfig({
   reporter: 'list',
   use: {
     channel: process.env.E2E_CHROME === '0' ? undefined : 'chrome',
+    // Site isolation as in desktop Chrome; Playwright's Chromium starts without it, which puts the sandbox frame in
+    // the host's process and lets a looping block freeze the host page (assistant-sandbox.spec.ts, AC8).
+    launchOptions: { args: ['--site-per-process'] },
     trace: 'retain-on-failure',
   },
   webServer: [
