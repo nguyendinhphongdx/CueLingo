@@ -24,7 +24,7 @@ Gắn tag `vX.Y.Z` đúng bằng `version` trong `tauri.conf.json`. Workflow `re
 
 Release luôn tạo ở dạng draft trước, nên link `releases/latest/download/…` không bao giờ trỏ vào một release thiếu tệp. Job Windows sẽ thêm vào `needs` của `publish` ([windows-desktop](../../06-delivery/2026-11-13-windows-desktop/02-plan.md)).
 
-Biến cần có (do người đặt): secrets `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, `RELEASES_TOKEN`; variables `CUELINGO_UPDATER_PUBKEY`, `CUELINGO_RELEASES_REPO`, `CUELINGO_API_URL`, `CUELINGO_WEB_URL`. Link tải không cần biến riêng: web (`web-cloudflare.yml` → `NEXT_PUBLIC_DOWNLOAD_URL`) và [Site công khai](../07-site/README.md) (`pages.yml` → `VITE_DOWNLOAD_URL`) cùng tự tính `https://github.com/<CUELINGO_RELEASES_REPO>/releases/latest/download/CueLingo-macOS-arm64.dmg`.
+Biến cần có (do người đặt): secrets `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`; variables `CUELINGO_UPDATER_PUBKEY`, `CUELINGO_API_URL`, `CUELINGO_WEB_URL`. Link tải không cần biến riêng: web (`web-cloudflare.yml` → `NEXT_PUBLIC_DOWNLOAD_URL`) và [Site công khai](../07-site/README.md) (`pages.yml` → `VITE_DOWNLOAD_URL`) cùng tự tính `https://github.com/<owner>/<repo>/releases/latest/download/CueLingo-macOS-arm64.dmg` từ chính repo này. Release đăng bằng `GITHUB_TOKEN`, không cần token riêng.
 
 ## Câu hỏi mở
 

@@ -1,7 +1,7 @@
 name: Release
 
 # Beta channel (ADR 0017): a `v*` tag builds an ad-hoc-signed Apple Silicon .dmg, signs the update
-# bundle with the Tauri updater key, and publishes both to the public releases repository.
+# bundle with the Tauri updater key, and publishes both as a release of this (public) repository.
 on:
   push:
     tags: ['v*']
@@ -54,9 +54,9 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           UPDATER_PUBKEY: ${{ vars.CUELINGO_UPDATER_PUBKEY }}
-          RELEASES_REPO: ${{ vars.CUELINGO_RELEASES_REPO }}
+          RELEASES_REPO: ${{ github.repository }}
         run: |
-          test -n "$VITE_API_URL" && test -n "$UPDATER_PUBKEY" && test -n "$RELEASES_REPO"
+          test -n "$VITE_API_URL" && test -n "$UPDATER_PUBKEY"
           config=$(node -e '
             process.stdout.write(JSON.stringify({
               bundle: { createUpdaterArtifacts: true },
@@ -96,6 +96,8 @@ jobs:
   publish:
     needs: [macos]
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     env:
       VERSION: ${{ github.ref_name }}
     steps:
@@ -111,7 +113,7 @@ jobs:
 
       - name: Write the updater manifest
         env:
-          RELEASES_REPO: ${{ vars.CUELINGO_RELEASES_REPO }}
+          RELEASES_REPO: ${{ github.repository }}
         run: |
           base="https://github.com/${RELEASES_REPO}/releases/download/${VERSION}"
           node apps/desktop/scripts/updater-manifest.mjs "${VERSION#v}" \
@@ -120,8 +122,8 @@ jobs:
 
       - name: Publish to the releases repository
         env:
-          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
-          RELEASES_REPO: ${{ vars.CUELINGO_RELEASES_REPO }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASES_REPO: ${{ github.repository }}
         run: |
           gh release create "$VERSION" release-files/* --draft \
             --repo "$RELEASES_REPO" --title "CueLingo ${VERSION#v}" --notes "Bản beta ${VERSION#v}"

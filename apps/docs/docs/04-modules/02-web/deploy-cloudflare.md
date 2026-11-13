@@ -22,7 +22,7 @@ Web được xuất thành file tĩnh (HTML/JS/CSS) và đưa lên Cloudflare Pa
 | Thành phần              | Nội dung                                                                                                                                                                                                                                               |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Lệnh                    | `pnpm --filter @cuelingo/web build:static` (kiểm biến, build, `_headers`) · `scan:static` (quét `out/`)                                                                                                                                                |
-| Biến build (GitHub)     | `CUELINGO_API_URL` → `NEXT_PUBLIC_API_URL` (**bắt buộc**, https, không phải máy cục bộ) · tuỳ chọn: `CUELINGO_RELEASES_REPO` (link tải tự tính từ đây), `CUELINGO_GOOGLE_ENABLED`, `CUELINGO_SANDBOX_ORIGIN`, `CUELINGO_AGENT_HTML_BLOCKS`             |
+| Biến build (GitHub)     | `CUELINGO_API_URL` → `NEXT_PUBLIC_API_URL` (**bắt buộc**, https, không phải máy cục bộ) · tuỳ chọn: `CUELINGO_GOOGLE_ENABLED`, `CUELINGO_SANDBOX_ORIGIN`, `CUELINGO_AGENT_HTML_BLOCKS`                                                                 |
 | Biến deploy (GitHub)    | `CUELINGO_WEB_PROJECT` (tên dự án Pages)                                                                                                                                                                                                               |
 | Secret (GitHub)         | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`                                                                                                                                                                                                        |
 | `scripts/check-env.mjs` | Hỏng build nếu thiếu `NEXT_PUBLIC_API_URL`, không phải https hay trỏ về `localhost`; kiểm `SANDBOX_ORIGIN`, cờ `true/false`, `DOWNLOAD_URL`                                                                                                            |
@@ -91,7 +91,7 @@ Repo → **Settings** → **Secrets and variables** → **Actions**.
 | Variable | `CUELINGO_WEB_PROJECT`  | tên dự án bước 1                                                                               |
 | Variable | `CUELINGO_API_URL`      | địa chỉ https công khai của API; **bỏ trống** nếu chưa có API (web vẫn lên, báo không kết nối) |
 
-Tuỳ chọn: `CUELINGO_RELEASES_REPO` (dùng chung với `release.yml` và `pages.yml`; link tải `releases/latest/download/CueLingo-macOS-arm64.dmg` tự tính từ đây, để trống thì nút tải bị khoá), `CUELINGO_GOOGLE_ENABLED` (`true`/`false`). Để trống `CUELINGO_SANDBOX_ORIGIN` và `CUELINGO_AGENT_HTML_BLOCKS` (xem Giới hạn).
+Tuỳ chọn: `CUELINGO_GOOGLE_ENABLED` (`true`/`false`). Link tải không cần biến: workflow tự ghép `releases/latest/download/CueLingo-macOS-arm64.dmg` của chính repo này. Để trống `CUELINGO_SANDBOX_ORIGIN` và `CUELINGO_AGENT_HTML_BLOCKS` (xem Giới hạn).
 
 ## 5. Gắn tên miền (ví dụ `cuelingo.<tên miền của bạn>`)
 
