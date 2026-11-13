@@ -15,7 +15,14 @@
 
 ## Phát hành
 
-Gắn tag `vX.Y.Z` đúng bằng `version` trong `tauri.conf.json`. Workflow dựng sidecar, `tauri build` (arm64, ký ad-hoc, `createUpdaterArtifacts`), kiểm tra bundle không chứa token dev, sinh `latest.json` và đăng `CueLingo-macOS-arm64.dmg`, `CueLingo.app.tar.gz(.sig)`, `latest.json` lên repo bản build.
+Gắn tag `vX.Y.Z` đúng bằng `version` trong `tauri.conf.json`. Workflow `release.yml` có hai loại job:
+
+| Job       | Máy            | Việc                                                                                                                                                                                             |
+| --------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `macos`   | `macos-15`     | Dựng sidecar, `tauri build` (arm64, ký ad-hoc, `createUpdaterArtifacts`), kiểm bundle không chứa token dev, gửi `CueLingo-macOS-arm64.dmg`, `CueLingo.app.tar.gz(.sig)` lên artifact             |
+| `publish` | `ubuntu-24.04` | Chỉ chạy khi mọi job dựng xong. Sinh **một** `latest.json` cho mọi nền tảng (`updater-manifest.mjs <version> <platform> <bundle> <url> …`), tạo release dạng draft, gắn đủ tệp rồi mới công khai |
+
+Release luôn tạo ở dạng draft trước, nên link `releases/latest/download/…` không bao giờ trỏ vào một release thiếu tệp. Job Windows sẽ thêm vào `needs` của `publish` ([windows-desktop](../../06-delivery/2026-11-13-windows-desktop/02-plan.md)).
 
 Biến cần có (do người đặt): secrets `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, `RELEASES_TOKEN`; variables `CUELINGO_UPDATER_PUBKEY`, `CUELINGO_RELEASES_REPO`, `CUELINGO_API_URL`, `CUELINGO_WEB_URL`. Web: `NEXT_PUBLIC_DOWNLOAD_URL` trỏ tới `https://github.com/<repo>/releases/latest/download/CueLingo-macOS-arm64.dmg`. Trang tĩnh [Site công khai](../07-site/README.md) dùng cùng link qua `VITE_DOWNLOAD_URL`.
 
