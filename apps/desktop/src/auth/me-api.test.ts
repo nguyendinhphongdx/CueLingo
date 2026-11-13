@@ -49,3 +49,14 @@ describe('desktop me api', () => {
     }
   });
 });
+
+describe('rejected token', () => {
+  it('counts only UNAUTHORIZED as a rejected token', async () => {
+    const { ApiError } = await import('@cuelingo/core-sdk');
+    const { isUnauthorized } = await import('./me-api');
+    expect(isUnauthorized(new ApiError(401, 'UNAUTHORIZED', 'no'))).toBe(true);
+    expect(isUnauthorized(new ApiError(0, 'NETWORK_ERROR', 'offline'))).toBe(false);
+    expect(isUnauthorized(new Error('boom'))).toBe(false);
+    expect(isUnauthorized(null)).toBe(false);
+  });
+});

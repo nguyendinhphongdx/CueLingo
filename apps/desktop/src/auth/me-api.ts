@@ -16,6 +16,10 @@ interface MeApiOptions {
   fetch?: Fetch;
 }
 
+/** The server no longer accepts this device's token (revoked, expired, or issued by another server). */
+export const isUnauthorized = (error: unknown): boolean =>
+  error instanceof ApiError && error.code === 'UNAUTHORIZED';
+
 export function describeMeError(error: unknown) {
   if (error instanceof ApiError) {
     if (error.code === 'UNAUTHORIZED') return 'Phiên đăng nhập đã hết hạn.';

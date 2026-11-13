@@ -52,6 +52,12 @@ export function App() {
   const userId = account.me?.id ?? 'dev';
   useEffect(() => setOnboardingMode('auto'), [userId]);
 
+  // A token the server rejects (revoked, expired, or from another server) signs this device out.
+  const { signOut } = auth;
+  useEffect(() => {
+    if (auth.status === 'signedIn' && account.unauthorized) void signOut();
+  }, [auth.status, account.unauthorized, signOut]);
+
   if (auth.status === 'loading') return <div className="bg-background h-screen" />;
   // A development token in the environment lets the app run without an account.
   if (auth.status === 'signedOut' && !isDevToken()) {
