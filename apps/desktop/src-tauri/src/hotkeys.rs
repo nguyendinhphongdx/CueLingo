@@ -1,4 +1,4 @@
-//! Global shortcuts: ⌘⇧L overlay, ⌘⇧W recap, ⌘⇧S say-for-me.
+//! Global shortcuts: ⌘⇧L overlay, ⌘⇧W recap, ⌘⇧S say-for-me (Ctrl+Shift on Windows).
 use serde::Serialize;
 use tauri::plugin::TauriPlugin;
 use tauri::{AppHandle, Emitter, Wry};
@@ -11,8 +11,22 @@ struct HotkeyPayload {
     action: &'static str,
 }
 
+/// ⌘ on macOS. On Windows the Win key is taken (Win+Shift+S is the Snipping Tool), so Ctrl.
 fn mods() -> Modifiers {
-    Modifiers::SUPER | Modifiers::SHIFT
+    if cfg!(windows) {
+        Modifiers::CONTROL | Modifiers::SHIFT
+    } else {
+        Modifiers::SUPER | Modifiers::SHIFT
+    }
+}
+
+/// Tray menu text with the overlay shortcut as the person types it on this system.
+pub fn overlay_menu_label() -> &'static str {
+    if cfg!(windows) {
+        "Hiện/ẩn overlay (Ctrl+Shift+L)"
+    } else {
+        "Hiện/ẩn overlay (⌘⇧L)"
+    }
 }
 
 fn action_for(shortcut: &Shortcut) -> Option<&'static str> {

@@ -1,0 +1,93 @@
+name: Desktop (Windows)
+
+# Builds the desktop app for Windows x64 and packs it with Inno Setup into CueLingo-Windows-x64-setup.exe
+# (ADR 0021), kept as a workflow artifact. Also lints and tests both Rust crates on Windows.
+# Capture and captions on Windows are not in this build yet (ADR 0020): the app installs and opens, a meeting
+# reports that it is not available. Not part of release.yml until then.
+on:
+  pull_request:
+    paths:
+      - 'apps/desktop/**'
+      - 'packages/ui/**'
+      - 'packages/shared/**'
+      - 'packages/core-sdk/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/desktop-windows.yml'
+  push:
+    paths:
+      - 'apps/desktop/**'
+      - 'packages/ui/**'
+      - 'packages/shared/**'
+      - 'packages/core-sdk/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/desktop-windows.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    # windows-2025 ships Inno Setup 6.7.1, the version installer/windows/Vietnamese.isl was taken from.
+    runs-on: windows-2025
+    defaults:
+      run:
+        shell: bash
+        working-directory: apps/desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Lint and test the Windows sidecar
+        working-directory: apps/desktop/native/windows-audio
+        run: |
+          cargo fmt --check
+          cargo clippy --locked --all-targets -- -D warnings
+          cargo test --locked
+
+      - name: Build the audio sidecar
+        run: node scripts/sidecar.mjs --rebuild
+
+      - name: Build the app
+        env:
+          VITE_API_URL: ${{ vars.CUELINGO_API_URL }}
+          VITE_WEB_URL: ${{ vars.CUELINGO_WEB_URL }}
+          VITE_REALTIME_TOKEN: ''
+        run: pnpm tauri build --no-bundle
+
+      # After the build: the Rust crate embeds dist/, which the build step makes.
+      - name: Lint and test the app core
+        working-directory: apps/desktop/src-tauri
+        run: |
+          cargo fmt --check
+          cargo clippy --locked -- -D warnings
+          cargo test --locked
+
+      - name: The bundle must not carry a development token
+        run: |
+          if grep -rIl "dev-token\|VITE_REALTIME_TOKEN=dev" dist; then
+            echo "development token found in the built frontend" >&2
+            exit 1
+          fi
+
+      - name: Pack the installer
+        run: node scripts/windows-installer.mjs --out release-files
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CueLingo-Windows-x64-setup
+          path: apps/desktop/release-files/CueLingo-Windows-x64-setup.exe
+          if-no-files-found: error

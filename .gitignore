@@ -49,3 +49,6 @@ e2e/playwright-report/
 # Static export (pnpm --filter @cuelingo/web build:static)
 apps/web/out/
 .taste-skill/
+
+# Release and installer output of scripts/windows-installer.mjs and release.yml
+apps/desktop/release-files/

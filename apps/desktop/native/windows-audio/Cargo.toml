@@ -1,0 +1,19 @@
+[package]
+name = "cuelingo-audio"
+version = "0.0.0"
+description = "CueLingo audio sidecar for Windows (same line protocol as native/macos-audio)"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "cuelingo-audio"
+path = "src/main.rs"
+
+[dependencies]
+serde_json = "1"
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.55"
+
+[profile.release]
+strip = true

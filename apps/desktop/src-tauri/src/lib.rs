@@ -26,6 +26,13 @@ fn updater_plugin<R: tauri::Runtime>(
 
 pub fn run() {
     let mut builder = tauri::Builder::default();
+    // Must be the first plugin: a second launch (or a cuelingo:// link) goes to the running app instead.
+    #[cfg(windows)]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            windows::show_main(app);
+        }));
+    }
     if let Some(updater) = updater_plugin() {
         builder = builder.plugin(updater);
     }
@@ -75,7 +82,7 @@ pub fn run() {
                 .enabled(false)
                 .build(app)?;
             let overlay =
-                MenuItemBuilder::with_id("overlay", "Hiện/ẩn overlay (⌘⇧L)").build(app)?;
+                MenuItemBuilder::with_id("overlay", hotkeys::overlay_menu_label()).build(app)?;
             let quit = MenuItemBuilder::with_id("quit", "Thoát").build(app)?;
             let menu = MenuBuilder::new(app)
                 .items(&[&show, &stop, &overlay, &quit])
