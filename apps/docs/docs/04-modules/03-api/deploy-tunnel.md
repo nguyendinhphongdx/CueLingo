@@ -38,14 +38,15 @@ Kiểm: `curl https://<địa-chỉ-API>/healthz` trả `{"ok":true}`. Sau đó 
 
 ## Lệnh hằng ngày
 
-| Việc                     | Lệnh                                               |
-| ------------------------ | -------------------------------------------------- |
-| Chạy / cập nhật cấu hình | `infra/tunnel/tunnel.sh up`                        |
-| Dừng                     | `infra/tunnel/tunnel.sh down` (dữ liệu giữ nguyên) |
-| Xem trạng thái / log     | `infra/tunnel/tunnel.sh status` / `logs [dịch-vụ]` |
-| Sao lưu ngay             | `infra/tunnel/tunnel.sh backup`                    |
-| Cập nhật bản mới         | `infra/tunnel/tunnel.sh update`                    |
-| Khôi phục từ bản sao lưu | `infra/tunnel/tunnel.sh restore <tệp.dump>`        |
+| Việc                                             | Lệnh                                                                                |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| Chạy (build lại image khi code đổi)              | `infra/tunnel/tunnel.sh up`                                                         |
+| Chỉ đổi `infra/.env.tunnel` (khoá, `MAIL_FROM`…) | `infra/tunnel/tunnel.sh reload`: không build, chỉ tạo lại container có cấu hình đổi |
+| Dừng                                             | `infra/tunnel/tunnel.sh down` (dữ liệu giữ nguyên)                                  |
+| Xem trạng thái / log                             | `infra/tunnel/tunnel.sh status` / `logs [dịch-vụ]`                                  |
+| Sao lưu ngay                                     | `infra/tunnel/tunnel.sh backup`                                                     |
+| Cập nhật bản mới                                 | `infra/tunnel/tunnel.sh update`                                                     |
+| Khôi phục từ bản sao lưu                         | `infra/tunnel/tunnel.sh restore <tệp.dump>`                                         |
 
 `update` sao lưu, kéo mã (`git pull --ff-only`), build lại, chạy migration rồi khởi động lại. Để quay lại bản trước: `git checkout <mã-in-ra-lúc-update>` rồi `up`; nếu migration đã đổi cấu trúc dữ liệu thì khôi phục bản sao lưu vừa tạo.
 
@@ -66,7 +67,7 @@ Kiểm: `curl https://<địa-chỉ-API>/healthz` trả `{"ok":true}`. Sau đó 
 
 ## Đổi tên miền
 
-Sửa `WEB_ORIGIN`, `BETTER_AUTH_URL` trong `infra/.env.tunnel`, đổi Public Hostname ở Cloudflare, rồi `tunnel.sh up`. Phía web: biến GitHub `CUELINGO_API_URL`. Danh sách đầy đủ: [Deploy Cloudflare](../02-web/deploy-cloudflare.md).
+Sửa `WEB_ORIGIN`, `BETTER_AUTH_URL` trong `infra/.env.tunnel`, đổi Public Hostname ở Cloudflare, rồi `tunnel.sh reload`. Phía web: biến GitHub `CUELINGO_API_URL`. Danh sách đầy đủ: [Deploy Cloudflare](../02-web/deploy-cloudflare.md).
 
 ## Khôi phục thử
 

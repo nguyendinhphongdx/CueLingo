@@ -61,6 +61,8 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      # New accounts need an invite code unless this is false (anyone can sign up with an email link).
+      INVITES_REQUIRED: ${INVITES_REQUIRED:-true}
       AGENT_ENABLED: ${AGENT_ENABLED:-false}
       AGENT_HTML_BLOCKS: 'false'
       AI_AGENT_MODEL: ${AI_AGENT_MODEL:-}

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Operate the CueLingo tunnel stack (infra/compose.tunnel.yml). Same on a Mac and on a Linux VPS.
-#   infra/tunnel/tunnel.sh up | down | status | logs [service] | update | backup | restore <file> | awake
+#   infra/tunnel/tunnel.sh up | reload | down | status | logs [service] | update | backup | restore <file> | awake
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -31,6 +31,13 @@ case "$cmd" in
     need_env
     mkdir -p "$(backup_dir)"
     "${COMPOSE[@]}" up -d --build --remove-orphans
+    "${COMPOSE[@]}" ps
+    ;;
+  reload)
+    # Only .env.tunnel changed: recreate the containers whose settings changed, without building images.
+    need_env
+    mkdir -p "$(backup_dir)"
+    "${COMPOSE[@]}" up -d --no-build --remove-orphans
     "${COMPOSE[@]}" ps
     ;;
   down)
