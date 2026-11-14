@@ -17,9 +17,10 @@ Kiểu domain, schema API/WebSocket (zod), catalog event.
 ## Interface
 
 - `ClientMessageSchema` / `ClientMessage`: union strict theo `type` gồm `hello`, `segment.final`, `event`
-- `ServerMessageSchema` / `ServerMessage`: union strict theo `type` gồm `ready`, `translation`, `error`
+- `ServerMessageSchema` / `ServerMessage`: union strict theo `type` gồm `ready`, `translation`, `error`, `usage`
 - `segment.final`: `{segmentId, stream, startMs, endMs, text, words, speaker?}` (`speaker` là `SpeakerLabel`, tuỳ chọn; server luôn coi câu `mic` là `me`)
 - `translation`: `{segmentId, textVi, hardWords}`
+- `usage`: `{metric, state: low | exhausted, item: UsageItem}`; chỉ gửi cho client khai `?features=usage` (`REALTIME_FEATURES`) trên URL socket, không nằm trong `hello` vì `hello` là strict
 - Mã lỗi WebSocket: `ws_unauthorized`, `ws_bad_message`, `ws_translation_failed`
 
 ## Phụ thuộc
@@ -50,7 +51,7 @@ Hợp đồng `FollowupRequestSchema` (channel, tone), `FollowupResponseSchema` 
 | `SendMessageRequestSchema`                                                 | `{content 1–4000 sau trim, language?}` (`.strict()`, không có `userId`)                                                                                                                                           |
 | `AgentStreamEventSchema`                                                   | Một sự kiện SSE của một lượt: `status{thinking}`, `text_delta`, `tool_call`, `tool_result{ok, summary?}`, `card`, `done{status: complete \| stopped \| limited \| error}`, `error{code}`                          |
 | `AgentCardSchema`                                                          | Union theo `kind`, mỗi thẻ là `{kind, data}`: `flashcards`, `cloze` (câu có `___`), `quiz_choice` (`answerIndex` thuộc `options`), `compare_table` (mỗi hàng đủ số cột), `phrase_list`. Không có HTML hay URL ảnh |
-| `AgentQuotaSchema`                                                         | `{turns, tokens, costUsd}` mỗi mục `{used, limit}` cộng `resetsAt`                                                                                                                                                |
+| `AgentQuotaSchema`                                                         | `{turns, tokens, costUsd}` mỗi mục `{used, limit}` cộng `resetsAt`; tuỳ chọn `plan` và `monthly {used, limit}` (trần tháng của Pro/Ultra)                                                                         |
 
 **Lớp 2: khối giao diện do AI sinh** (`dto/agent-bridge.ts`, sau cờ `AGENT_HTML_BLOCKS`, mặc định tắt). `html_block` là **một kiểu thẻ** của `AgentCardSchema` (`{kind:'html_block', data: HtmlBlockSchema}`), nên đi qua đường `card` sẵn có (stream, lưu `parts`, `cardKinds` của plugin) mà không sửa `@cuelingo/agent`; plan ghi là "part", thực tế là một card (xem Decision log). `show_card` không nhận kiểu này.
 
@@ -84,3 +85,18 @@ Hợp đồng `FollowupRequestSchema` (channel, tone), `FollowupResponseSchema` 
 ## Câu hỏi mở
 
 - (chưa có)
+
+## Gói và hạn mức
+
+`plans.ts` (logic thuần, API và worker dùng chung) và `dto/usage.dto.ts`. Thiết kế: [usage](../03-api/usage.md), [ADR 0022](../../08-adr/0022-usage-survives-data-delete.md).
+
+| Thành phần                                                             | Nội dung                                                                                                                                           |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PlanSchema`, `USAGE_METRICS`, `UsageMetricSchema`                     | `free \| pro \| ultra`; `translation_ms`, `cloud_stt_ms` (mili giây), `debriefs`, `assist_daily`, `agent_messages` (số lần)                        |
+| `DEFAULT_PLAN_LIMITS`, `PlanLimitsOverrideSchema`, `resolvePlanLimits` | Bảng mặc định theo [bảng gói](../../02-product/05-business-model.md); `null` = không giới hạn. `PLAN_LIMITS` là JSON ghi đè từng phần, `.strict()` |
+| `periodStart`, `periodEnd`, `isDailyMetric`                            | Mốc kỳ theo UTC+7: ngày 1 hằng tháng; `assist_daily` theo ngày VN                                                                                  |
+| `quotaState`                                                           | `ok \| low \| exhausted`: `low` khi còn ≤ 10 phút dịch hoặc ≤ 10% hạn mức khác                                                                     |
+| `translationCostMs`                                                    | Giờ dịch của một câu: `max(clamp(endMs−startMs, 0, 60 s), độ dài chữ × 40 ms)`                                                                     |
+| `UsageItemSchema`, `UsageResponseSchema`                               | `{used, limit \| null, resetsAt, state}`; `{plan, usage: {<metric>: UsageItem}}`                                                                   |
+| `QuotaExceededDetailsSchema`, `DebriefSkippedDetailsSchema`            | `details` của `QUOTA_EXCEEDED` (`{metric, plan, used, limit, resetsAt}`, 429) và `DEBRIEF_SKIPPED` (`{reason:'quota'}`, 404)                       |
+| `SetPlanRequestSchema`, `SetPlanResponseSchema`                        | `{email, plan}` (`.strict()`), admin only                                                                                                          |

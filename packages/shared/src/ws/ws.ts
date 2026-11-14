@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { SpeakerLabelSchema } from '../dto/speaker.dto';
+import { UsageItemSchema } from '../dto/usage.dto';
 import { ErrorCode } from '../errors/error-code';
+import { UsageMetricSchema } from '../plans';
 
 export const WordSchema = z
   .object({
@@ -86,9 +88,28 @@ export const ErrorMessageSchema = z
   .strict();
 export type ErrorMessage = z.infer<typeof ErrorMessageSchema>;
 
+/**
+ * Optional server messages a client opts into with `?features=...` on the socket URL (not in `hello`,
+ * which is strict, so an older server keeps accepting the new client).
+ */
+export const REALTIME_FEATURES = ['usage'] as const;
+export type RealtimeFeature = (typeof REALTIME_FEATURES)[number];
+
+/** An allowance is running low or is used up. At most once per state and metric per connection. */
+export const UsageMessageSchema = z
+  .object({
+    type: z.literal('usage'),
+    metric: UsageMetricSchema,
+    state: z.enum(['low', 'exhausted']),
+    item: UsageItemSchema,
+  })
+  .strict();
+export type UsageMessage = z.infer<typeof UsageMessageSchema>;
+
 export const ServerMessageSchema = z.discriminatedUnion('type', [
   ReadyMessageSchema,
   TranslationMessageSchema,
   ErrorMessageSchema,
+  UsageMessageSchema,
 ]);
 export type ServerMessage = z.infer<typeof ServerMessageSchema>;

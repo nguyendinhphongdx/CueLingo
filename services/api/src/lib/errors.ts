@@ -14,6 +14,8 @@ const STATUS: Record<ErrorCode, number> = {
   [ErrorCode.FollowupFailed]: 502,
   [ErrorCode.AudioTooLarge]: 413,
   [ErrorCode.LanguageNotCloud]: 400,
+  [ErrorCode.QuotaExceeded]: 429,
+  [ErrorCode.DebriefSkipped]: 404,
   [ErrorCode.AgentQuotaExceeded]: 429,
   [ErrorCode.AgentDisabled]: 503,
   [ErrorCode.AgentFailed]: 502,

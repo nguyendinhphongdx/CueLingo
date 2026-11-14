@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ErrorCode } from '../errors/error-code';
 import { LearnableLanguageSchema } from '../languages';
+import { PlanSchema } from '../plans';
 import { HtmlBlockSchema } from './agent-bridge';
 
 /** AI assistant (agent): conversations, messages, the SSE stream of one turn, and the cards the model can show. */
@@ -215,6 +216,13 @@ export const AgentQuotaSchema = z
     tokens: z.object({ used: z.number().int().min(0), limit: z.number().int().min(0) }).strict(),
     costUsd: z.object({ used: z.number().min(0), limit: z.number().min(0) }).strict(),
     resetsAt: z.iso.datetime(),
+    /** Present once plans exist. Free has no assistant messages at all. */
+    plan: PlanSchema.optional(),
+    /** Monthly allowance of Pro/Ultra; absent on Free or when unlimited. */
+    monthly: z
+      .object({ used: z.number().int().min(0), limit: z.number().int().min(0) })
+      .strict()
+      .optional(),
   })
   .strict();
 export type AgentQuota = z.infer<typeof AgentQuotaSchema>;
