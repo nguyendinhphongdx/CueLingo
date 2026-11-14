@@ -135,6 +135,7 @@ const app = await buildApp({
   logger: true,
   adminEmails: config.ADMIN_EMAILS,
   secureCookies: config.NODE_ENV === 'production',
+  invitesRequired: config.INVITES_REQUIRED,
 });
 
 appRef.current = app;

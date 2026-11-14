@@ -16,12 +16,13 @@ Cổng vào cho beta kín: người **chưa có tài khoản** phải có mã m�
 
 ## Interface
 
-| Method | Path                    | Ai gọi    | Kết quả                                                                                                      |
-| ------ | ----------------------- | --------- | ------------------------------------------------------------------------------------------------------------ |
-| POST   | `/v1/invites/intent`    | công khai | `204` + cookie `cl_invite`; `400 INVITE_INVALID` (cùng một thông báo mọi lý do); `429` sau 10 lần/10 phút/IP |
-| POST   | `/v1/admin/invites`     | admin     | `201` `CreatedInviteSchema` (có `code`, **chỉ lần này**); mặc định 1 lần dùng, 30 ngày                       |
-| GET    | `/v1/admin/invites`     | admin     | `InviteListSchema`, không có mã                                                                              |
-| DELETE | `/v1/admin/invites/:id` | admin     | `204`; `404` nếu không có hoặc đã thu hồi                                                                    |
+| Method | Path                    | Ai gọi    | Kết quả                                                                                                                    |
+| ------ | ----------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/v1/invites/status`    | công khai | `200` `InviteStatusSchema` `{ required }`: trang đăng nhập (web) chỉ hiện ô mã mời khi `true`; không lấy được thì vẫn hiện |
+| POST   | `/v1/invites/intent`    | công khai | `204` + cookie `cl_invite`; `400 INVITE_INVALID` (cùng một thông báo mọi lý do); `429` sau 10 lần/10 phút/IP               |
+| POST   | `/v1/admin/invites`     | admin     | `201` `CreatedInviteSchema` (có `code`, **chỉ lần này**); mặc định 1 lần dùng, 30 ngày                                     |
+| GET    | `/v1/admin/invites`     | admin     | `InviteListSchema`, không có mã                                                                                            |
+| DELETE | `/v1/admin/invites/:id` | admin     | `204`; `404` nếu không có hoặc đã thu hồi                                                                                  |
 
 Quyền admin hỏi `admin.service.isAdmin(userId)` (một nguồn sự thật cho `ADMIN_EMAILS`).
 
@@ -37,7 +38,7 @@ Mã: 12 ký tự Crockford base32 (~60 bit), lưu SHA-256, gõ không phân bi�
 
 ## Cấu hình
 
-`INVITES_REQUIRED` (`true`/`false`): mặc định **bật ở production, tắt ở development và test**.
+`INVITES_REQUIRED` (`true`/`false`): mặc định **bật ở production, tắt ở development và test**. `false` = đăng ký mở: ai có email cũng tạo được tài khoản bằng liên kết trong mail (email được xác minh khi bấm liên kết). Môi trường tunnel đặt trong `infra/.env.tunnel` (Compose mặc định `true`), đổi xong chạy `tunnel.sh reload`.
 
 Mã đầu tiên (khi chưa có admin nào): `pnpm --filter @cuelingo/api invite:create [lần dùng] [ngày] [ghi chú]` in mã rõ một lần ra stdout.
 

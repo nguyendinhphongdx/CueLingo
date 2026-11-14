@@ -12,6 +12,9 @@ vi.mock('./use-login', () => ({
   }),
 }));
 
+const invites = vi.hoisted(() => ({ required: true }));
+vi.mock('./use-invite-status', () => ({ useInvitesRequired: () => invites.required }));
+
 import { LoginPage } from './LoginPage';
 
 describe('LoginPage', () => {
@@ -22,5 +25,13 @@ describe('LoginPage', () => {
     expect(markup).toContain('min-h-screen');
     expect(markup).not.toContain('Điều hướng chính');
     expect(markup).not.toContain('Đăng xuất');
+  });
+
+  it('asks for an invite code only while new accounts need one', () => {
+    invites.required = true;
+    expect(renderToStaticMarkup(<LoginPage />)).toContain('aria-label="Mã mời"');
+    invites.required = false;
+    expect(renderToStaticMarkup(<LoginPage />)).not.toContain('aria-label="Mã mời"');
+    invites.required = true;
   });
 });

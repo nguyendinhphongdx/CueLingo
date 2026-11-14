@@ -32,6 +32,7 @@ import {
   CreateInviteRequestSchema,
   CreatedInviteSchema,
   InviteIntentRequestSchema,
+  InviteStatusSchema,
   InviteListSchema,
   type CreateInviteInput,
   DeviceCodeResponseSchema,
@@ -229,6 +230,8 @@ export const client = {
   },
   /** Asks the API to remember a typed invite code for the sign-in that follows (sets an httpOnly cookie). */
   invites: {
+    /** Whether a new account needs a code; public. */
+    status: () => request('GET', '/v1/invites/status', InviteStatusSchema),
     intent: (code: string) =>
       request('POST', '/v1/invites/intent', null, InviteIntentRequestSchema.parse({ code })),
   },

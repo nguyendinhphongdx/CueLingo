@@ -10,7 +10,7 @@ import type { InvitesRepository } from './invites.repository';
 export function createInvitesModule(
   repo: InvitesRepository,
   isAdmin: (userId: string) => Promise<boolean>,
-  options: { secureCookie: boolean },
+  options: { secureCookie: boolean; required: boolean },
 ) {
   const service = createInvitesService(repo, isAdmin);
   return { service, routes: invitesRoutes(service, options) };

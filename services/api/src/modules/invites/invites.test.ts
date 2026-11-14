@@ -155,6 +155,20 @@ describe('invites module', () => {
   });
 });
 
+describe('invite status', () => {
+  it.each([true, false])(
+    'tells anyone, signed in or not, whether a code is required (%s)',
+    async (required) => {
+      const app = await buildTestApp({ invitesRequired: required });
+      const response = await app.inject({ method: 'GET', url: '/v1/invites/status' });
+      await app.close();
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({ required });
+    },
+  );
+});
+
 describe('invite gate', () => {
   it('lets exactly one of two people take the last use', async () => {
     const repo = createInMemoryInvitesRepository();

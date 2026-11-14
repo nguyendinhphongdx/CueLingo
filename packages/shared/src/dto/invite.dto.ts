@@ -14,6 +14,10 @@ export const InviteCodeSchema = z
   .transform(normalizeInviteCode)
   .pipe(z.string().regex(INVITE_CODE_PATTERN));
 
+/** Whether a new account needs an invite code; the login page hides the code field when it does not. */
+export const InviteStatusSchema = z.object({ required: z.boolean() });
+export type InviteStatus = z.infer<typeof InviteStatusSchema>;
+
 /** Asks the API to remember a code for the sign-in that follows (it sets the `cl_invite` cookie). */
 export const InviteIntentRequestSchema = z.object({ code: InviteCodeSchema }).strict();
 export type InviteIntentRequest = z.infer<typeof InviteIntentRequestSchema>;

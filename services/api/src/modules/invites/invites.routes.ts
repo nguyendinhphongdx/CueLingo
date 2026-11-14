@@ -3,6 +3,7 @@ import {
   ErrorCode,
   INVITE_COOKIE,
   InviteIntentRequestSchema,
+  type InviteStatus,
   type CreatedInvite,
   type InviteList,
 } from '@cuelingo/shared';
@@ -32,6 +33,8 @@ function createAttemptLimiter(limit: number, windowMs: number, now: () => number
 export interface InviteRouteOptions {
   /** Add `Secure` to the cookie (production). */
   secureCookie: boolean;
+  /** Whether new accounts need a code (`INVITES_REQUIRED`). */
+  required: boolean;
   now?: () => number;
 }
 
@@ -41,6 +44,11 @@ export function invitesRoutes(
 ): FastifyPluginAsync {
   return async (app) => {
     const allow = createAttemptLimiter(INTENT_LIMIT, INTENT_WINDOW_MS, options.now ?? Date.now);
+
+    // Public: the login page asks whether to show the invite code field at all.
+    app.get('/v1/invites/status', async (): Promise<InviteStatus> => ({
+      required: options.required,
+    }));
 
     // Public: the login page sends the typed code here before it starts a sign-in.
     app.post('/v1/invites/intent', async (request, reply) => {

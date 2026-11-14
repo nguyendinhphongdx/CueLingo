@@ -23,6 +23,7 @@ const isPublic = (url: string) =>
   url.startsWith('/api/auth/') ||
   url === '/v1/device/exchange' ||
   url === '/v1/invites/intent' ||
+  url === '/v1/invites/status' ||
   /^\/v1\/sessions\/[^/]+\/stream(?:\?|$)/.test(url);
 
 const acceptsDevToken = (url: string) =>

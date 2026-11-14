@@ -102,6 +102,8 @@ export interface AppDeps {
   adminEmails?: readonly string[];
   /** Adds `Secure` to the invite cookie. True in production. */
   secureCookies?: boolean;
+  /** New accounts need an invite code (`INVITES_REQUIRED`); reported to the login page. */
+  invitesRequired?: boolean;
 }
 
 /** Composition root: the only place that wires repositories, services and routes together. */
@@ -158,6 +160,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(
     createInvitesModule(deps.repos.invites, admin.service.isAdmin, {
       secureCookie: deps.secureCookies ?? false,
+      required: deps.invitesRequired ?? false,
     }).routes,
   );
   app.get('/healthz', async () => ({ ok: true }));
