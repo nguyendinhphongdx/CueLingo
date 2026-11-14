@@ -12,11 +12,11 @@ title: Mô hình kinh doanh & chỉ số
 | --------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Free**              | Dùng thử           | Caption tiếng Anh không giới hạn, vài giờ dịch/tháng, Phrase Bank, SRS cơ bản, debrief rút gọn                                                     |
 | **Pro**               | Cá nhân            | Copilot nhiều giờ hơn, debrief đầy đủ, briefing và follow-up, Daily Mix, Speech Coach                                                              |
-| **Pro+**              | Cá nhân dùng nhiều | Roleplay persona, voice mode, podcast cá nhân, nhiều ngôn ngữ, tutor                                                                               |
+| **Ultra**             | Cá nhân dùng nhiều | Roleplay persona, voice mode, podcast cá nhân, nhiều ngôn ngữ, tutor                                                                               |
 | **Team / Enterprise** | Doanh nghiệp       | **Sau cổng B2C** (xem [lộ trình](./04-roadmap.md#điều-kiện-mở-các-hướng-ở-đợt-4)): theo seat, glossary công ty, dashboard L&D, SSO, on-premise/VPC |
 | **Add-on**            | Tuỳ chọn           | Human coach review, luyện thi chứng chỉ                                                                                                            |
 
-Hướng đi hiện tại là **B2C trước** (2026-11-02): Free và Pro là hai gói cần có ở Đợt 2; Pro+ và Team chỉ làm khi có số liệu. Phần chia tính năng giữa Free và Pro ở trên là **giả định**, chưa chốt; đề xuất cụ thể ở [Phân tích gói](#phân-tích-gói-đề-xuất-chưa-chốt).
+Hướng đi hiện tại là **B2C trước** (2026-11-02): Free và Pro là hai gói cần có ở Đợt 2; Ultra và Team chỉ làm khi có số liệu. Phần chia tính năng giữa Free và Pro ở trên là **giả định**, chưa chốt; đề xuất cụ thể ở [Phân tích gói](#phân-tích-gói-đề-xuất-chưa-chốt).
 
 Giá và giới hạn Free chốt sau khi đo chi phí AI thực tế/giờ họp trong beta (giả thuyết H5 ở [Phạm vi MVP](./03-mvp-scope.md)). Beta kín miễn phí hoặc thu tay. Nhà cung cấp thanh toán cần ADR và hỏi người trước khi chọn.
 
@@ -39,7 +39,7 @@ Giá và giới hạn Free chốt sau khi đo chi phí AI thực tế/giờ họ
 
 **Nguyên tắc:** chỉ đặt hạn mức cho thứ **tốn tiền phía server**: dịch, STT đám mây, debrief, trợ lý, lưu trữ. Caption tiếng Anh chạy trên máy, không tốn gì, nên **không giới hạn ở mọi gói**. Đây là mồi cho Free và là điểm khác đối thủ (họ tính phút cho cả phần nhận dạng).
 
-| Hạng mục                         | Free                      | Pro                                 | Pro+ (để sau)  |
+| Hạng mục                         | Free                      | Pro                                 | Ultra (để sau) |
 | -------------------------------- | ------------------------- | ----------------------------------- | -------------- |
 | Caption tiếng Anh (trên máy)     | Không giới hạn            | Không giới hạn                      | Không giới hạn |
 | Dịch Anh → Việt                  | **2 giờ/tháng**           | 20 giờ/tháng (chống lạm dụng)       | 60 giờ/tháng   |
