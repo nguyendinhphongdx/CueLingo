@@ -3,6 +3,7 @@
  * Design: apps/docs/docs/04-modules/05-packages/core-sdk.md
  */
 import { agentApi } from './agent';
+import { billingApi } from './billing';
 import { conversationsApi } from './conversations';
 import { feedbackApi } from './feedback';
 import { followupApi } from './followup';
@@ -21,6 +22,7 @@ export function createClient(options: ClientOptions) {
     conversations: conversationsApi(http),
     agent: agentApi(http),
     usage: usageApi(http),
+    billing: billingApi(http),
     ...transcribeApi(http),
     ...followupApi(http),
     ...sessionsApi(http),
