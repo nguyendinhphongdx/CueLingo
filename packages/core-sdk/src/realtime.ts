@@ -7,8 +7,15 @@ import {
 } from '@cuelingo/shared';
 
 const BUFFER_TTL_MS = 60_000;
-/** `type` values this client understands. Others come from a newer server and are skipped, not treated as errors. */
-const KNOWN_SERVER_TYPES = new Set(['ready', 'translation', 'error', 'usage']);
+/** `type` values this client understands, read from the shared schema so the two cannot drift. */
+const KNOWN_SERVER_TYPES = new Set<string>(
+  ServerMessageSchema.options.map((option) => option.shape.type.value),
+);
+/**
+ * Messages the client asked for with `features`. A newer server may add a metric or state this build cannot
+ * parse; that must not fail the meeting, so an unparsable one is dropped instead of reported.
+ */
+const OPTIONAL_SERVER_TYPES = new Set<string>(['usage']);
 
 const RECONNECT_DELAYS_MS = [500, 1_000, 2_000, 4_000, 8_000] as const;
 
@@ -130,6 +137,7 @@ export function createRealtimeClient(options: RealtimeClientOptions): RealtimeCl
     if (typeof type === 'string' && !KNOWN_SERVER_TYPES.has(type)) return;
 
     const parsed = ServerMessageSchema.safeParse(decoded);
+    if (!parsed.success && typeof type === 'string' && OPTIONAL_SERVER_TYPES.has(type)) return;
     if (!parsed.success) {
       options.onError(parsed.error);
       return;

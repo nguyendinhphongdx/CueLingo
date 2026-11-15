@@ -195,6 +195,19 @@ describe('createRealtimeClient', () => {
     expect(onMessage).toHaveBeenCalledWith(usage);
   });
 
+  it('ignores a usage message it cannot parse (a newer server added a metric or a state)', () => {
+    const { client, sockets, onMessage, onError } = setup(['usage']);
+    client.connect();
+    sockets[0]?.open();
+    const item = { used: 1, limit: 2, resetsAt: '2026-12-01T00:00:00.000Z', state: 'low' };
+
+    sockets[0]?.receive({ type: 'usage', metric: 'brand_new_metric', state: 'low', item });
+    sockets[0]?.receive({ type: 'usage', metric: 'translation_ms', state: 'critical', item });
+
+    expect(onError).not.toHaveBeenCalled();
+    expect(onMessage).not.toHaveBeenCalled();
+  });
+
   it('ignores malformed server messages and reports parsing errors', () => {
     const { client, sockets, onMessage, onError } = setup();
     client.connect();

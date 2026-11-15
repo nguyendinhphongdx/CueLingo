@@ -21,7 +21,7 @@ SDK client dùng chung cho desktop và web: auth, REST, stream phiên, hàng đ�
 - Màn admin (`/v1/admin/*`, gồm `admin.agent.get()` và `admin.agent.update({enabled} | {plugin:{id,enabled}})`) gọi qua client của app web (`apps/web/src/lib/client.ts`), không qua core-sdk: chỉ web admin dùng, schema ở `@cuelingo/shared`
 - `client.feedback.send(input)` → `POST /v1/feedback`, trả `{id, createdAt}`
 - `createRealtimeClient({url, token, sessionId, assistLevel, features?, onMessage, onState, onError})`
-  → `{connect, send, close, state}`. `features: ['usage']` thêm `?features=usage` vào URL để nhận message `usage`; server cũ bỏ qua tham số này. Client bỏ qua message có `type` lạ (từ server mới hơn) thay vì gọi `onError`, nhưng message đúng `type` mà sai nội dung vẫn là lỗi
+  → `{connect, send, close, state}`. `features: ['usage']` thêm `?features=usage` vào URL để nhận message `usage`; server cũ bỏ qua tham số này. Client bỏ qua message có `type` lạ (từ server mới hơn) thay vì gọi `onError`; `usage` không parse được (metric hoặc state mới) cũng bị bỏ qua. Các `type` khác mà sai nội dung vẫn là lỗi
 - Trạng thái realtime: `idle | connecting | open | reconnecting | closed`; chỉ `open` sau message
   `ready`
 - Mất kết nối: đệm message tối đa 60 giây và reconnect với backoff 0,5–8 giây
