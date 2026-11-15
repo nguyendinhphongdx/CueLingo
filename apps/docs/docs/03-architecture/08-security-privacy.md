@@ -22,6 +22,11 @@ Dữ liệu họp là dữ liệu nhạy cảm của doanh nghiệp người dù
 - **Mã do AI sinh ra** ([ADR 0019](../08-adr/0019-ai-generated-ui.md), sau cờ `AGENT_HTML_BLOCKS`, mặc định tắt): chạy trong sandbox runner ở origin riêng (`infra/sandbox-runner`), iframe `sandbox="allow-scripts"` không `allow-same-origin`, CSP bằng header HTTP (`connect-src 'none'`, `form-action 'none'`, `frame-src 'self' about:`), cầu nối `postMessage` chỉ sáu thao tác, ghi dữ liệu luôn cần người dùng xác nhận. Khối không nhận token, cookie hay URL API; đọc cụm từ chỉ trả `phrase` và `meaningVi`. Kiểm tĩnh phía API chỉ là lớp phụ. Runner phải ở **domain khác site** với web khi lên production nếu muốn chắc về cô lập tiến trình (đã kiểm trên Chrome: cả cùng site lẫn khác site đều không làm treo trang chat, WKWebView chưa kiểm).
 - Chính sách quyền riêng tư (khi viết, xem mục Pháp lý) phải nêu: có lưu hội thoại, gửi nội dung tới Gemini, thời hạn lưu và cách xoá. Repo chưa có trang chính sách nên chưa sửa được ở đây.
 
+## Lượng dùng và gói
+
+- `usage_counters` chỉ lưu con số (giây, số lần) gắn với `user_id`; không log nội dung câu hay âm thanh khi đếm.
+- `DELETE /v1/me/data` **không** xoá counter và gói (để hạn mức tháng không bị đặt lại), xoá tài khoản thì xoá ([ADR 0022](../08-adr/0022-usage-survives-data-delete.md)). Chính sách quyền riêng tư phải nêu điều này.
+
 ## Phân quyền
 
 | Vai trò                            | Thấy gì                                                                      |

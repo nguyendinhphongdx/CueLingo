@@ -9,6 +9,7 @@ import { refreshOnGlossaryChange } from './glossary-refresh';
 import { createSessionController } from './session-controller';
 import { sessionsApi } from './sessions-api';
 import { startTraySync } from './tray-sync';
+import { usageApi } from '../usage';
 import { activation } from '../telemetry/instance';
 
 const controller = createSessionController({
@@ -16,6 +17,7 @@ const controller = createSessionController({
   sessions: sessionsApi,
   hasCloudConsent: () => hasCloudConsent(),
   glossary: { list: insightsApi.listGlossary },
+  usage: usageApi,
   createRealtime: createRealtimeClient,
   onFirstCaption: (sessionId) => void activation.captionShown(sessionId),
   apiUrl: serverConfig().wsUrl,

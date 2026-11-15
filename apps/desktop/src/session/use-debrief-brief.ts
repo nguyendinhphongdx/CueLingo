@@ -7,7 +7,8 @@ export type BriefState =
   | { status: 'pending' }
   | { status: 'ready'; debrief: Debrief }
   | { status: 'timeout' }
-  | { status: 'denied' };
+  | { status: 'denied' }
+  | { status: 'skipped' };
 
 /** Polls the finished meeting's debrief; stops on unmount or when the meeting id changes. */
 export function useDebriefBrief(sessionId: string | null): BriefState {
@@ -18,6 +19,7 @@ export function useDebriefBrief(sessionId: string | null): BriefState {
       onReady: (debrief) => setResult({ sessionId, state: { status: 'ready', debrief } }),
       onTimeout: () => setResult({ sessionId, state: { status: 'timeout' } }),
       onDenied: () => setResult({ sessionId, state: { status: 'denied' } }),
+      onSkipped: () => setResult({ sessionId, state: { status: 'skipped' } }),
     });
   }, [sessionId]);
   return result && result.sessionId === sessionId ? result.state : { status: 'pending' };

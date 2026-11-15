@@ -14,6 +14,8 @@ export const ErrorCode = {
   FollowupFailed: 'FOLLOWUP_FAILED',
   AudioTooLarge: 'AUDIO_TOO_LARGE',
   LanguageNotCloud: 'LANGUAGE_NOT_CLOUD',
+  QuotaExceeded: 'QUOTA_EXCEEDED',
+  DebriefSkipped: 'DEBRIEF_SKIPPED',
   AgentQuotaExceeded: 'AGENT_QUOTA_EXCEEDED',
   AgentDisabled: 'AGENT_DISABLED',
   AgentFailed: 'AGENT_FAILED',

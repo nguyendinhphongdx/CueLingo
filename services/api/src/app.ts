@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { resolvePlanLimits, type PlanLimitTable } from '@cuelingo/shared';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
 import Fastify, {
@@ -34,6 +35,7 @@ import { createSessionsModule, type SessionsRepository } from './modules/session
 import { createAdminModule, type AdminRepository, type AgentAdminPort } from './modules/admin';
 import { createFeedbackModule, type FeedbackRepository } from './modules/feedback';
 import { createInvitesModule, type InvitesRepository } from './modules/invites';
+import { createUsageModule, type UsageRepository } from './modules/usage';
 import { createTranscribeModule, type TranscribeDeps } from './modules/transcribe';
 import { createSettingsModule, type SettingsRepository } from './modules/settings';
 
@@ -76,7 +78,10 @@ export interface AppDeps {
     invites: InvitesRepository;
     feedback: FeedbackRepository;
     settings: SettingsRepository;
+    usage: UsageRepository;
   };
+  /** Plan limits (`PLAN_LIMITS`); defaults to the table in `@cuelingo/shared`. */
+  planLimits?: PlanLimitTable;
   queue: JobQueue;
   resolveUserId: AuthOptions['resolveUserId'];
   /** Origin of apps/web, allowed by CORS (cookies included). */
@@ -157,6 +162,11 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   let agentAdmin: AgentAdminPort | undefined;
   const admin = createAdminModule(deps.repos.admin, deps.adminEmails ?? [], () => agentAdmin);
   await app.register(admin.routes, { prefix: '/v1/admin' });
+  const usage = createUsageModule(deps.repos.usage, {
+    limits: deps.planLimits ?? resolvePlanLimits(),
+    isAdmin: admin.service.isAdmin,
+  });
+  await app.register(usage.routes);
   await app.register(
     createInvitesModule(deps.repos.invites, admin.service.isAdmin, {
       secureCookie: deps.secureCookies ?? false,
@@ -165,7 +175,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   );
   app.get('/healthz', async () => ({ ok: true }));
   if (deps.authRoutes) await app.register(deps.authRoutes);
-  await app.register(createDebriefModule(deps.repos.debrief).routes);
+  await app.register(createDebriefModule(deps.repos.debrief, deps.repos.sessions).routes);
   await app.register(createEventsModule(deps.repos.events).routes, { prefix: '/v1/events' });
   await app.register(createFeedbackModule(deps.repos.feedback).routes);
   await app.register(createConversationsModule(deps.repos.conversations).routes, {
@@ -174,7 +184,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(createGlossaryModule(deps.repos.glossary).routes, { prefix: '/v1/glossary' });
   await app.register(createPrivacyModule(deps.repos.privacy).routes);
   await app.register(createSettingsModule(deps.repos.settings).routes);
-  await app.register(createSessionsModule(deps.repos.sessions, deps.queue).routes, {
+  await app.register(createSessionsModule(deps.repos.sessions, deps.queue, usage.service).routes, {
     prefix: '/v1/sessions',
   });
   await app.register(createSpeakersModule(deps.repos.speakers).routes);
@@ -184,7 +194,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(study.reviewRoutes, { prefix: '/v1/review' });
   await app.register(study.progressRoutes, { prefix: '/v1/progress' });
   if (deps.transcribe) {
-    await app.register(createTranscribeModule(deps.repos.sessions, deps.transcribe).routes);
+    await app.register(
+      createTranscribeModule(deps.repos.sessions, usage.service, deps.transcribe).routes,
+    );
   }
   if (deps.followup) {
     await app.register(
@@ -192,19 +204,20 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     );
   }
   if (deps.tts) await app.register(createTtsModule(deps.tts).routes, { prefix: '/v1/tts' });
-  const assist = deps.assist ? createAssistModule(deps.assist) : undefined;
+  const assist = deps.assist ? createAssistModule(deps.assist, usage.service) : undefined;
   if (assist) await app.register(assist.routes, { prefix: '/v1/assist' });
   if (deps.agent) {
     const agent = createAgentModule(deps.agent, {
       conversations: deps.repos.conversations,
       usage: deps.repos.agent,
+      plan: usage.service,
       lookup: assist?.service.lookup,
       phrases: { list: review.phrases.list, save: review.phrases.save },
     });
     agentAdmin = agent.service.admin;
     await app.register(agent.routes, { prefix: '/v1/conversations' });
   }
-  if (deps.realtime) await app.register(createRealtimeModule(deps.realtime).routes);
+  if (deps.realtime) await app.register(createRealtimeModule(deps.realtime, usage.service).routes);
 
   return app;
 }

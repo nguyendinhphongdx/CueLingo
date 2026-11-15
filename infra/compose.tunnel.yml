@@ -61,6 +61,7 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      PLAN_LIMITS: ${PLAN_LIMITS:-}
       # New accounts need an invite code unless this is false (anyone can sign up with an email link).
       INVITES_REQUIRED: ${INVITES_REQUIRED:-true}
       AGENT_ENABLED: ${AGENT_ENABLED:-false}
@@ -94,6 +95,8 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgres://cuelingo:${POSTGRES_PASSWORD}@postgres:5432/cuelingo?sslmode=disable
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      PLAN_LIMITS: ${PLAN_LIMITS:-}
       TTS_CACHE_DIR: /var/cache/cuelingo-tts
     volumes:
       - tts-cache:/var/cache/cuelingo-tts

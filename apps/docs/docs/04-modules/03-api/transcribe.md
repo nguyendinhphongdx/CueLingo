@@ -9,6 +9,7 @@ Nhận dạng giọng nói bằng đám mây cho ngôn ngữ chưa có model tr�
 - Chỉ nhận âm thanh cho phiên của chính người dùng (`userId` từ auth; phiên của người khác hoặc không có là 404)
 - Chỉ cho ngôn ngữ có `recognition: 'cloud'` trong registry; ngôn ngữ khác trả `LANGUAGE_NOT_CLOUD` (400)
 - Giới hạn: câu tối đa 25,5 giây (`AUDIO_TOO_LARGE`, 413; sidecar cắt ở 25 giây nhưng có thể dư một khung), số byte phải chẵn (PCM 16-bit, lẻ là 400), thân yêu cầu tối đa 2 MB, khoảng 10 yêu cầu/giây/người dùng (429, giới hạn trong bộ nhớ của tiến trình)
+- Hạn mức giờ STT đám mây (`cloud_stt_ms`, xem [usage](./usage.md)): giữ chỗ nguyên tử theo **số byte âm thanh thật** (không tin `startMs`/`endMs`) sau khi kiểm phiên và độ dài, trước khi gọi AI. Hết hạn mức: `429 QUOTA_EXCEEDED`, `details` là mục hạn mức, không gọi AI. Lần gọi lỗi nhà cung cấp không được hoàn lại
 - Bọc PCM thành WAV rồi gọi task `stt.transcribe` của `@cuelingo/ai-gateway`; lỗi nhà cung cấp trả `TRANSCRIBE_FAILED` (502)
 - Không ghi đĩa, không log âm thanh hay văn bản (chỉ id và độ dài); `ai_call` không chứa nội dung
 

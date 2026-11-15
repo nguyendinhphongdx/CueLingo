@@ -7,6 +7,7 @@ import type { AiGateway } from '@cuelingo/ai-gateway';
 import type { TurnLimits } from '@cuelingo/agent';
 import type { LanguageCode, LookupRequest, LookupResponse, Phrase } from '@cuelingo/shared';
 import type { ConversationsRepository } from '../conversations';
+import type { UsageService } from '../usage';
 import type { AgentRepository } from './agent.repository';
 import { createGatewayModel } from './agent.model';
 import type { AgentQuotaLimits } from './agent.quota';
@@ -31,6 +32,7 @@ export interface AgentDeps {
 export interface AgentWiring {
   conversations: ConversationsRepository;
   usage: AgentRepository;
+  plan: Pick<UsageService, 'tryReserve'>;
   lookup?: (userId: string, input: LookupRequest) => Promise<LookupResponse>;
   phrases: {
     list(userId: string, language: LanguageCode): Promise<Phrase[]>;
@@ -51,6 +53,7 @@ export function createAgentModule(deps: AgentDeps, wiring: AgentWiring) {
     htmlBlocks: deps.htmlBlocks,
     conversations: wiring.conversations,
     usage: wiring.usage,
+    plan: wiring.plan,
     services: {
       lookup: (userId, input) => {
         if (!wiring.lookup) throw new Error('lookup unavailable');

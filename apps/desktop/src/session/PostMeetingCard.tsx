@@ -11,6 +11,8 @@ import { summariseDebrief, type BriefList } from './debrief-brief';
 
 export const BRIEF_EMPTY_TEXT = EMPTY_MEETING_TEXT;
 export const BRIEF_DENIED_TEXT = 'Không xem được debrief, hãy đăng nhập lại.';
+export const BRIEF_SKIPPED_TEXT =
+  'Đã hết lượt debrief tháng này nên cuộc họp này không có debrief.';
 export const BRIEF_TIMEOUT_TEXT = 'Debrief chưa sẵn sàng, xem sau ở Cuộc họp gần đây.';
 
 function Bullets({ title, items }: { title: string; items: BriefList }) {
@@ -76,6 +78,11 @@ export function PostMeetingCard({
       {brief.status === 'denied' ? (
         <p role="status" className="text-muted-foreground text-sm">
           {BRIEF_DENIED_TEXT}
+        </p>
+      ) : null}
+      {brief.status === 'skipped' ? (
+        <p role="status" className="text-muted-foreground text-sm">
+          {BRIEF_SKIPPED_TEXT}
         </p>
       ) : null}
       {brief.status === 'timeout' ? (

@@ -85,6 +85,17 @@ describe('ServerMessageSchema', () => {
       hardWords: ['walk through'],
     },
     { type: 'error', code: 'ws_translation_failed', retryable: true },
+    {
+      type: 'usage',
+      metric: 'translation_ms',
+      state: 'exhausted',
+      item: {
+        used: 7_200_000,
+        limit: 7_200_000,
+        resetsAt: '2026-12-01T00:00:00.000Z',
+        state: 'exhausted',
+      },
+    },
   ])('accepts $type', (message) => {
     expect(ServerMessageSchema.safeParse(message).success).toBe(true);
   });
@@ -93,6 +104,7 @@ describe('ServerMessageSchema', () => {
     ['ready without a valid session', { type: 'ready', sessionId: 'bad' }],
     ['translation without hardWords', { type: 'translation', segmentId, textVi: 'Xin chào' }],
     ['unknown error code', { type: 'error', code: 'ws_unknown', retryable: false }],
+    ['usage with an unknown metric', { type: 'usage', metric: 'x', state: 'low' }],
     ['invalid retryable flag', { type: 'error', code: 'ws_bad_message', retryable: 'yes' }],
   ])('rejects %s', (_case, message) => {
     expect(ServerMessageSchema.safeParse(message).success).toBe(false);

@@ -1,12 +1,18 @@
 import {
   ClientMessageSchema,
   ErrorCode,
+  REALTIME_FEATURES,
   ServerMessageSchema,
+  type RealtimeFeature,
   type ServerMessage,
 } from '@cuelingo/shared';
 import type { FastifyPluginAsync } from 'fastify';
 import type { RawData, WebSocket } from 'ws';
-import { createRealtimeConnection, type RealtimeDeps } from './realtime.service';
+import {
+  createRealtimeConnection,
+  type RealtimeDeps,
+  type RealtimeUsage,
+} from './realtime.service';
 
 const send = (socket: WebSocket, message: ServerMessage) => {
   socket.send(JSON.stringify(ServerMessageSchema.parse(message)));
@@ -20,14 +26,22 @@ const parseMessage = (data: RawData) => {
   }
 };
 
+/** `?features=usage,...` — unknown names are ignored so a newer client works against this server. */
+const featuresOf = (query: unknown): RealtimeFeature[] => {
+  const raw = (query as { features?: unknown } | undefined)?.features;
+  const names = typeof raw === 'string' ? raw.split(',') : [];
+  return REALTIME_FEATURES.filter((feature) => names.includes(feature));
+};
+
 /** WebSocket transport only: validate shared messages and delegate connection state to the service. */
-export function realtimeRoutes(deps: RealtimeDeps): FastifyPluginAsync {
+export function realtimeRoutes(deps: RealtimeDeps, usage: RealtimeUsage): FastifyPluginAsync {
   return async (app) => {
     app.get('/v1/sessions/:id/stream', { websocket: true }, (socket, request) => {
       const connection = createRealtimeConnection(
         deps,
         (message) => send(socket, message),
         (error) => request.log.error({ err: error }, 'Realtime segment persistence failed'),
+        { usage, features: featuresOf(request.query) },
       );
       let messageQueue = Promise.resolve();
 

@@ -16,11 +16,12 @@ SDK client dùng chung cho desktop và web: auth, REST, stream phiên, hàng đ�
 
 ## Interface
 
-- `createClient({baseUrl, getToken})` → `{sessions, assist, review, events, stream, glossary, feedback, conversations, agent}`
+- `createClient({baseUrl, getToken})` → `{sessions, assist, review, events, stream, glossary, feedback, conversations, agent, usage}`
+- `client.usage.get()` → `GET /v1/me/usage` (`UsageResponse`); `client.usage.setPlan({email, plan})` → `PUT /v1/admin/plan` (admin; `403` với người khác). Hết hạn mức thì mọi lời gọi liên quan ném `ApiError` mã `QUOTA_EXCEEDED` (429) với `details` là `QuotaExceededDetails`; gọi lại không giúp ích nên không thử lại. Xem [usage](../03-api/usage.md)
 - Màn admin (`/v1/admin/*`, gồm `admin.agent.get()` và `admin.agent.update({enabled} | {plugin:{id,enabled}})`) gọi qua client của app web (`apps/web/src/lib/client.ts`), không qua core-sdk: chỉ web admin dùng, schema ở `@cuelingo/shared`
 - `client.feedback.send(input)` → `POST /v1/feedback`, trả `{id, createdAt}`
-- `createRealtimeClient({url, token, sessionId, assistLevel, onMessage, onState, onError})`
-  → `{connect, send, close, state}`
+- `createRealtimeClient({url, token, sessionId, assistLevel, features?, onMessage, onState, onError})`
+  → `{connect, send, close, state}`. `features: ['usage']` thêm `?features=usage` vào URL để nhận message `usage`; server cũ bỏ qua tham số này. Client bỏ qua message có `type` lạ (từ server mới hơn) thay vì gọi `onError`; `usage` không parse được (metric hoặc state mới) cũng bị bỏ qua. Các `type` khác mà sai nội dung vẫn là lỗi
 - Trạng thái realtime: `idle | connecting | open | reconnecting | closed`; chỉ `open` sau message
   `ready`
 - Mất kết nối: đệm message tối đa 60 giây và reconnect với backoff 0,5–8 giây

@@ -96,6 +96,18 @@ describe('privacy on real Postgres (AC3, AC4)', () => {
     expect(JSON.stringify(exported)).not.toContain('Bob');
   });
 
+  it('keeps billing counters and the plan after the data is deleted (AC13)', async () => {
+    const start = new Date('2026-10-31T17:00:00Z');
+    await sql`INSERT INTO usage_counters (user_id, period_start, metric, amount)
+      VALUES (${alice}, ${start}, 'debriefs', 3)`;
+    await sql`INSERT INTO user_plans (user_id, plan) VALUES (${alice}, 'pro')`;
+    await createPostgresPrivacyRepository(sql).deleteMyData(alice);
+    const [counter] = await sql<{ amount: string }[]>`
+      SELECT amount FROM usage_counters WHERE user_id = ${alice}`;
+    expect(Number(counter?.amount)).toBe(3);
+    expect(await sql`SELECT 1 FROM user_plans WHERE user_id = ${alice}`).toHaveLength(1);
+  });
+
   it('hard-deletes every owned data table in one user scope and preserves accounts and other users', async () => {
     const repo = createPostgresPrivacyRepository(sql);
     await repo.deleteMyData(alice);

@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { resolvePlanLimits } from '@cuelingo/shared';
 import { buildTestApp, TEST_USER_HEADER } from '../../testing';
+import { createInMemoryAdminRepository } from '../admin';
 import { createInMemorySessionsRepository, type SessionsRepository } from './index';
 
 const ALICE = 'alice';
@@ -233,6 +235,144 @@ describe('sessions module', () => {
       const bobId = await make(BOB);
       expect((await regenerate(BOB, bobId)).statusCode).toBe(202);
     });
+  });
+});
+
+describe('debrief quota (AC7)', () => {
+  const OWNER = 'owner';
+  const EMAILS = { [OWNER]: 'owner@example.com' };
+  let repo: SessionsRepository;
+  let qapp: Awaited<ReturnType<typeof buildTestApp>>;
+
+  beforeEach(async () => {
+    repo = createInMemorySessionsRepository();
+    qapp = await buildTestApp({
+      repos: { sessions: repo, admin: createInMemoryAdminRepository(EMAILS) },
+      adminEmails: ['owner@example.com'],
+      planLimits: resolvePlanLimits({ free: { debriefs: 1 } }),
+    });
+  });
+  afterEach(() => qapp.close());
+
+  const as = (user: string) => ({ [TEST_USER_HEADER]: user });
+  const meeting = async (user: string, withText = true) => {
+    const session = await repo.create(user, { assistLevel: 3, language: 'en' });
+    if (withText) {
+      await repo.saveSegment({
+        sessionId: session.id,
+        userId: user,
+        segmentId: randomUUID(),
+        source: 'system',
+        startMs: 0,
+        endMs: 1000,
+        textEn: 'hello',
+      });
+    }
+    return session.id;
+  };
+  const end = (user: string, id: string) =>
+    qapp.inject({ method: 'POST', url: `/v1/sessions/${id}/end`, headers: as(user) });
+  const debrief = (user: string, id: string) =>
+    qapp.inject({ method: 'GET', url: `/v1/sessions/${id}/debrief`, headers: as(user) });
+
+  it('ends the meeting without a job once the month is used up, and says why', async () => {
+    const first = await meeting(ALICE);
+    const second = await meeting(ALICE);
+    expect((await end(ALICE, first)).statusCode).toBe(200);
+    const res = await end(ALICE, second);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().status).toBe('ended');
+    expect(qapp.queue.jobs).toEqual([{ name: 'debrief.generate', payload: { sessionId: first } }]);
+
+    const skipped = await debrief(ALICE, second);
+    expect(skipped.statusCode).toBe(404);
+    expect(skipped.json().error.code).toBe('DEBRIEF_SKIPPED');
+    expect(skipped.json().error.details).toEqual({ reason: 'quota' });
+    // A meeting whose debrief is merely not ready keeps the plain 404.
+    expect((await debrief(ALICE, first)).json().error.code).toBe('NOT_FOUND');
+  });
+
+  it('does not charge a meeting without a transcript', async () => {
+    const empty = await meeting(ALICE, false);
+    const full = await meeting(ALICE);
+    await end(ALICE, empty);
+    await end(ALICE, full);
+    expect(qapp.queue.jobs.map((job) => (job.payload as { sessionId: string }).sessionId)).toEqual([
+      empty,
+      full,
+    ]);
+  });
+
+  it('answers 429 QUOTA_EXCEEDED to a regenerate without allowance and keeps the skip flag', async () => {
+    const first = await meeting(ALICE);
+    const second = await meeting(ALICE);
+    await end(ALICE, first);
+    await end(ALICE, second);
+    const res = await qapp.inject({
+      method: 'POST',
+      url: `/v1/sessions/${second}/debrief`,
+      headers: as(ALICE),
+    });
+    expect(res.statusCode).toBe(429);
+    expect(res.json().error.code).toBe('QUOTA_EXCEEDED');
+    expect(res.json().error.details).toMatchObject({ metric: 'debriefs', limit: 1, used: 1 });
+    expect((await debrief(ALICE, second)).json().error.code).toBe('DEBRIEF_SKIPPED');
+  });
+
+  it('counts per user and never skips an admin', async () => {
+    await end(ALICE, await meeting(ALICE));
+    expect((await end(BOB, await meeting(BOB))).statusCode).toBe(200);
+    expect(qapp.queue.jobs).toHaveLength(2);
+
+    for (let i = 0; i < 3; i += 1) await end(OWNER, await meeting(OWNER));
+    expect(qapp.queue.jobs).toHaveLength(5);
+  });
+
+  it("does not show the skip of one user's meeting to another", async () => {
+    await end(ALICE, await meeting(ALICE));
+    const skipped = await meeting(ALICE);
+    await end(ALICE, skipped);
+    const res = await debrief(BOB, skipped);
+    expect(res.json().error.code).toBe('NOT_FOUND');
+  });
+});
+
+describe('end when the debrief step fails', () => {
+  it('keeps the meeting ended, logs only the session id, and answers 500', async () => {
+    const lines: string[] = [];
+    const repo = createInMemorySessionsRepository();
+    const app = await buildTestApp({
+      repos: { sessions: repo },
+      logger: { level: 'error', stream: { write: (line: string) => void lines.push(line) } },
+    });
+    const session = await repo.create(ALICE, { assistLevel: 3, language: 'en' });
+    await repo.saveSegment({
+      sessionId: session.id,
+      userId: ALICE,
+      segmentId: randomUUID(),
+      source: 'system',
+      startMs: 0,
+      endMs: 1000,
+      textEn: 'secret words',
+    });
+    app.queue.enqueue = async () => {
+      throw new Error('queue down');
+    };
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/v1/sessions/${session.id}/end`,
+      headers: { [TEST_USER_HEADER]: ALICE },
+    });
+
+    expect(res.statusCode).toBe(500);
+    expect((await repo.findById(ALICE, session.id))?.status).toBe('ended');
+    const log = lines.join('');
+    expect(log).toContain('Session ended but its debrief was not queued');
+    expect(log).toContain(session.id);
+    expect(log).not.toContain('secret words');
+    await app.close();
   });
 });
 

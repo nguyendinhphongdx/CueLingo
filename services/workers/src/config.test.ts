@@ -19,4 +19,21 @@ describe('worker loadConfig', () => {
         .GEMINI_API_KEY,
     ).toBe('key');
   });
+
+  it('reads PLAN_LIMITS and ADMIN_EMAILS the way the API does', () => {
+    const config = loadConfig({
+      DATABASE_URL: 'postgres://u:p@localhost:5432/d',
+      PLAN_LIMITS: '{"free":{"debriefs":2}}',
+      ADMIN_EMAILS: ' Owner@Example.com ',
+    });
+    expect(config.PLAN_LIMITS.free.debriefs).toBe(2);
+    expect(config.PLAN_LIMITS.free.assist_daily).toBe(20);
+    expect(config.ADMIN_EMAILS).toEqual(['owner@example.com']);
+    expect(() =>
+      loadConfig({
+        DATABASE_URL: 'postgres://u:p@localhost:5432/d',
+        PLAN_LIMITS: '{"free":{"debriefs":-1}}',
+      }),
+    ).toThrow(/PLAN_LIMITS is not valid \(free\.debriefs/);
+  });
 });

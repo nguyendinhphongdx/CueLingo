@@ -11,6 +11,7 @@ import { createHttp, type ClientOptions } from './http';
 import { sessionsApi } from './sessions';
 import { speakersApi } from './speakers';
 import { transcribeApi } from './transcribe';
+import { usageApi } from './usage';
 
 export function createClient(options: ClientOptions) {
   const http = createHttp(options);
@@ -19,6 +20,7 @@ export function createClient(options: ClientOptions) {
     feedback: feedbackApi(http),
     conversations: conversationsApi(http),
     agent: agentApi(http),
+    usage: usageApi(http),
     ...transcribeApi(http),
     ...followupApi(http),
     ...sessionsApi(http),

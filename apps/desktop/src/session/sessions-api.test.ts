@@ -123,6 +123,17 @@ describe('sessions api', () => {
       expect((error as TranscribeError).status).toBe(500);
     });
 
+    it('keeps the API error code, so a used-up allowance can be told from a rate limit', async () => {
+      const body = { error: { code: 'QUOTA_EXCEEDED', message: 'x' } };
+      const request = vi.fn<typeof fetch>().mockResolvedValue(Response.json(body, { status: 429 }));
+      const api = createSessionsApi({ apiUrl: 'http://api.test', token: 't', fetch: request });
+
+      const error = await api.transcribe(session.id, input).catch((e: Error) => e);
+      expect(error).toBeInstanceOf(TranscribeError);
+      expect((error as TranscribeError).status).toBe(429);
+      expect((error as TranscribeError).code).toBe('QUOTA_EXCEEDED');
+    });
+
     it('does not time out before 16 seconds', async () => {
       vi.useFakeTimers();
       try {

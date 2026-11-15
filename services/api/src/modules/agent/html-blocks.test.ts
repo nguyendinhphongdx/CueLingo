@@ -2,6 +2,7 @@ import type { AiGateway, ChatStreamPart } from '@cuelingo/ai-gateway';
 import type { AgentStreamEvent } from '@cuelingo/shared';
 import type { FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
+import { resolvePlanLimits } from '@cuelingo/shared';
 import { buildTestApp, TEST_USER_HEADER } from '../../testing';
 import { createInMemoryConversationsRepository } from '../conversations';
 import { createInMemoryPhrasesRepository } from '../review';
@@ -58,6 +59,8 @@ describe('agent module: AGENT_HTML_BLOCKS', () => {
       },
     };
     const built = await buildTestApp({
+      // These tests are about the assistant, not the plan: let Free send messages.
+      planLimits: resolvePlanLimits({ free: { agent_messages: null } }),
       repos: {
         conversations: createInMemoryConversationsRepository(),
         agent: createInMemoryAgentRepository(),

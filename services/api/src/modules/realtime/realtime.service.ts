@@ -3,13 +3,18 @@ import {
   ErrorCode,
   SUPPORTED_LANGUAGES,
   SpeakerLabelSchema,
+  quotaState,
+  translationCostMs,
   type GlossaryTerm,
   type LanguageCode,
+  type RealtimeFeature,
   type SegmentFinalMessage,
   type ServerMessage,
+  type UsageItem,
 } from '@cuelingo/shared';
 import type { AiGateway } from '@cuelingo/ai-gateway';
 import type { SessionsRepository } from '../sessions';
+import type { UsageService } from '../usage';
 
 export interface RealtimeDeps {
   gateway: Pick<AiGateway, 'llm'>;
@@ -21,6 +26,8 @@ export interface RealtimeDeps {
   store?: Pick<SessionsRepository, 'saveSegment' | 'saveTranslation' | 'findById'>;
 }
 
+export type RealtimeUsage = Pick<UsageService, 'status' | 'add' | 'isAdmin'>;
+
 export type RealtimeConnection = ReturnType<typeof createRealtimeConnection>;
 
 /** Per-socket state and business rules for authentication, context and ordered translation. */
@@ -28,7 +35,15 @@ export function createRealtimeConnection(
   deps: RealtimeDeps,
   send: (message: ServerMessage) => void,
   logStoreError: (error: unknown) => void = () => undefined,
+  options: {
+    /** Translation time allowance, wired in `app.ts`. Absent means no limit (unit tests of the pipeline). */
+    usage?: RealtimeUsage;
+    /** Optional messages the client asked for in the socket URL (`?features=usage`). */
+    features?: readonly RealtimeFeature[];
+  } = {},
 ) {
+  const { usage } = options;
+  const features = options.features ?? [];
   let userId: string | null = null;
   let sessionId: string | null = null;
   // The language is the meeting's own; the socket does not get to choose it.
@@ -36,6 +51,19 @@ export function createRealtimeConnection(
   let translationQueue = Promise.resolve();
   const previousSystem: string[] = [];
   const storedSegments = new Map<string, Promise<boolean>>();
+  // Each notice goes out once per connection: a socket that reconnects is told again, the client filters repeats.
+  // Whether this user has no limits: asked once at hello, not per sentence (ADMIN_EMAILS only changes on deploy).
+  let admin = false;
+  // Time already translated on this socket whose write to the counter has not finished: the next gate adds it,
+  // so counting off the translation path does not let a burst of sentences slip past the limit.
+  let unsettledMs = 0;
+  const noticesSent = new Set<'low' | 'exhausted'>();
+
+  function notify(item: UsageItem) {
+    if (item.state === 'ok' || !features.includes('usage') || noticesSent.has(item.state)) return;
+    noticesSent.add(item.state);
+    send({ type: 'usage', metric: 'translation_ms', state: item.state, item });
+  }
 
   // Mic is always the user. A system sentence may carry a label of someone else; anything unusable is dropped
   // so one bad label never costs the sentence itself.
@@ -58,6 +86,7 @@ export function createRealtimeConnection(
       }
       // Ownership is checked by saveSegment. Missing/foreign sessions remain usable but are not stored.
       sessionId = requestedSessionId;
+      admin = usage ? await usage.isAdmin(userId) : false;
       language =
         (await deps.store?.findById(userId, requestedSessionId))?.language ?? DEFAULT_LANGUAGE;
       send({ type: 'ready', sessionId: requestedSessionId });
@@ -107,8 +136,25 @@ export function createRealtimeConnection(
       const context = previousSystem.slice(-3);
       previousSystem.push(message.text);
       translationQueue = translationQueue.then(async () => {
+        let limit: number | null | undefined;
         try {
-          const glossary = await deps.glossary(authenticatedUserId, meetingLanguage);
+          // The allowance is read while the glossary is, so the gate adds no round trip to a sentence.
+          const [glossary, read] = await Promise.all([
+            deps.glossary(authenticatedUserId, meetingLanguage),
+            usage?.status(authenticatedUserId, 'translation_ms', { admin }),
+          ]);
+          const allowance =
+            read && unsettledMs > 0
+              ? {
+                  ...read,
+                  used: read.used + unsettledMs,
+                  state: quotaState('translation_ms', read.used + unsettledMs, read.limit),
+                }
+              : read;
+          limit = allowance?.limit ?? null;
+          if (allowance) notify(allowance);
+          // Out of time: the sentence is already stored and the captions go on; only the AI call is skipped.
+          if (allowance?.state === 'exhausted') return;
           const result = await deps.gateway.llm(
             'translate.realtime',
             {
@@ -141,7 +187,20 @@ export function createRealtimeConnection(
           }
         } catch {
           send({ type: 'error', code: ErrorCode.WsTranslationFailed, retryable: true });
+          return;
         }
+        // Counted after the translation is on its way, and off the translation path: the next sentence does not
+        // wait for the write. `unsettledMs` covers the gap. A failure here is never a translation error.
+        if (!usage) return;
+        const cost = translationCostMs(message.startMs, message.endMs, message.text);
+        unsettledMs += cost;
+        void usage
+          .add(authenticatedUserId, 'translation_ms', cost, limit ?? null)
+          .then(notify)
+          .catch((error: unknown) => logStoreError(error))
+          .finally(() => {
+            unsettledMs -= cost;
+          });
       });
       return true;
     },

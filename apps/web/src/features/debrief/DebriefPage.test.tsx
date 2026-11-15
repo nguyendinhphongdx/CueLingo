@@ -19,6 +19,8 @@ import {
 import { buildDebriefMarkdown } from './markdown';
 import {
   COPY_CONFIRMATION_MS,
+  isDebriefNotFound,
+  isDebriefSkipped,
   getProcessingStatus,
   LONG_WAIT_MS,
   scheduleClipboardFeedbackClear,
@@ -131,6 +133,15 @@ describe('DebriefPageView', () => {
     );
     expect(markup).toContain('Đang tạo… 0 s');
     expect(markup).toContain('tự kiểm tra lại');
+  });
+
+  it('says the debrief was skipped by the monthly allowance instead of waiting forever', () => {
+    const markup = renderToStaticMarkup(
+      <DebriefPageView {...defaultProps} debrief={undefined} skippedByQuota />,
+    );
+    expect(markup).toContain('Đã hết lượt debrief tháng này');
+    expect(markup).not.toContain('Đang tạo…');
+    expect(markup).not.toContain('Tạo lại debrief');
   });
 
   it('shows the long-wait message and retry action after 90 seconds', () => {
@@ -533,5 +544,15 @@ describe('buildDebriefMarkdown', () => {
     expect(markdown).not.toContain('song ngữ');
     expect(markdown).not.toContain('VI:');
     expect(markdown).toContain('- Let us circle back tomorrow.');
+  });
+});
+
+describe('skipped debrief', () => {
+  it('is a 404 that must not be polled as "not ready yet"', () => {
+    const skipped = new ApiError(404, 'DEBRIEF_SKIPPED', 'x', { reason: 'quota' });
+    expect(isDebriefSkipped(skipped)).toBe(true);
+    expect(isDebriefNotFound(skipped)).toBe(false);
+    expect(shouldPollDebrief(skipped, 0)).toBe(false);
+    expect(shouldPollDebrief(new ApiError(404, 'NOT_FOUND', 'x'), 0)).toBe(true);
   });
 });

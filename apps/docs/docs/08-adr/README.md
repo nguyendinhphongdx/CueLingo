@@ -25,3 +25,4 @@ Mỗi quyết định khó đảo ngược có một ADR: bối cảnh, quyết 
 | [0019](0019-ai-generated-ui.md)                       | Giao diện do AI sinh ra: thẻ JSON trước, HTML/JS trong hộp cát sau               | Accepted   |
 | [0020](0020-windows-capture-stt.md)                   | Windows: sidecar Rust, WASAPI loopback, Parakeet ONNX trên CPU                   | Proposed   |
 | [0021](0021-windows-release-inno.md)                  | Phát hành Windows: Inno Setup per-user, chưa ký mã, một release cho hai nền tảng | Proposed   |
+| [0022](0022-usage-survives-data-delete.md)            | Lượng dùng tính theo gói còn lại sau khi xoá dữ liệu                             | Accepted   |

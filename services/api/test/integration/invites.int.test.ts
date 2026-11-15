@@ -20,6 +20,7 @@ import {
   hashInviteCode,
 } from '../../src/modules/invites';
 import { createPostgresFeedbackRepository } from '../../src/modules/feedback';
+import { createPostgresUsageRepository } from '../../src/modules/usage';
 import { createPostgresPlacementRepository } from '../../src/modules/placement';
 import { createPostgresPrivacyRepository } from '../../src/modules/privacy';
 import {
@@ -80,6 +81,7 @@ describe('invite codes on real Postgres (AC1-AC5)', () => {
         settings: createPostgresSettingsRepository(sql),
         invites,
         feedback: createPostgresFeedbackRepository(sql),
+        usage: createPostgresUsageRepository(sql),
       },
       queue: createInMemoryQueue(),
       resolveUserId: authModule.resolveUserId,

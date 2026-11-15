@@ -18,6 +18,7 @@ import { createInMemoryPhrasesRepository, createInMemoryStudyRepository } from '
 import { createInMemoryAdminRepository } from './modules/admin';
 import { createInMemoryFeedbackRepository } from './modules/feedback';
 import { createInMemoryInvitesRepository } from './modules/invites';
+import { createInMemoryUsageRepository } from './modules/usage';
 
 /** Header the test resolver reads in place of a real session. */
 export const TEST_USER_HEADER = 'x-test-user-id';
@@ -69,6 +70,7 @@ export async function buildTestApp(
       admin: createInMemoryAdminRepository(),
       invites: createInMemoryInvitesRepository(),
       feedback: createInMemoryFeedbackRepository(),
+      usage: createInMemoryUsageRepository(),
       ...repos,
     },
     queue,

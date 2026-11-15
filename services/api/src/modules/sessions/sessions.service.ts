@@ -8,7 +8,13 @@ import {
 } from '@cuelingo/shared';
 import { AppError } from '../../lib/errors';
 import type { JobQueue } from '../../lib/queue';
+import type { UsageService } from '../usage';
 import type { SessionsRepository } from './sessions.repository';
+
+/** Only ids and counts are logged, never content. */
+export interface DebriefLogger {
+  error(fields: Record<string, unknown>, message: string): void;
+}
 
 export type SessionsService = ReturnType<typeof createSessionsService>;
 
@@ -22,6 +28,7 @@ export interface SessionsServiceOptions {
 export function createSessionsService(
   repo: SessionsRepository,
   queue: JobQueue,
+  usage: Pick<UsageService, 'tryReserve'>,
   { maxDebriefRequests = 3, windowMs = 60_000, clock = Date.now }: SessionsServiceOptions = {},
 ) {
   // In memory and per process: it only stops one account from hammering the button.
@@ -56,11 +63,25 @@ export function createSessionsService(
       if (!detail) throw new AppError(ErrorCode.NotFound, 'Session not found');
       return detail;
     },
-    async end(userId: string, id: string): Promise<Session> {
+    async end(userId: string, id: string, log?: DebriefLogger): Promise<Session> {
       const result = await repo.end(userId, id);
       if (!result) throw new AppError(ErrorCode.NotFound, 'Session not found');
       if (result.endedNow) {
-        await queue.enqueue(JobName.DebriefGenerate, { sessionId: id }, debriefJobOptions(id));
+        try {
+          // Only a meeting with a transcript costs a debrief. Out of allowance: the meeting still ends, and the
+          // flag lets the debrief screen say why there is none (AC7). Empty meetings keep their old path.
+          const state = await repo.findDebriefState(userId, id);
+          if (state && state.segmentCount > 0 && !(await usage.tryReserve(userId, 'debriefs')).ok) {
+            await repo.markDebriefSkipped(userId, id);
+            return result.session;
+          }
+          await queue.enqueue(JobName.DebriefGenerate, { sessionId: id }, debriefJobOptions(id));
+        } catch (error) {
+          // The meeting is already ended and cannot be ended again, so nothing retries this. The id (no content)
+          // lets someone find it; the user can press "regenerate debrief".
+          log?.error({ sessionId: id, err: error }, 'Session ended but its debrief was not queued');
+          throw error;
+        }
       }
       return result.session;
     },
@@ -75,6 +96,12 @@ export function createSessionsService(
         throw new AppError(ErrorCode.Conflict, 'The meeting has no transcript to summarise');
       }
       takeSlot(userId);
+      // Throws 429 QUOTA_EXCEEDED when the month's debriefs are used up; the old skip flag then stays.
+      const slot = await usage.tryReserve(userId, 'debriefs');
+      if (!slot.ok) {
+        throw new AppError(ErrorCode.QuotaExceeded, 'Usage allowance used up', slot.details);
+      }
+      await repo.clearDebriefSkipped(userId, id);
       await queue.enqueue(JobName.DebriefGenerate, { sessionId: id }, debriefJobOptions(id));
       return { queued: true };
     },

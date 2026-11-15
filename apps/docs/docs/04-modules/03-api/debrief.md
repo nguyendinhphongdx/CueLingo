@@ -15,10 +15,10 @@
 
 ## Interface
 
-| Endpoint                         | Kết quả                                                            |
-| -------------------------------- | ------------------------------------------------------------------ |
-| `GET /v1/sessions/:id/debrief`   | `Debrief` có `version` cao nhất; chưa có hoặc không sở hữu → `404` |
-| `POST /v1/debriefs/:id/feedback` | Nhận `DebriefFeedbackRequest`, ghi event và trả `204`              |
+| Endpoint                         | Kết quả                                                                                                                                                                                                                    |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /v1/sessions/:id/debrief`   | `Debrief` có `version` cao nhất; chưa có hoặc không sở hữu → `404 NOT_FOUND`; phiên kết thúc mà debrief bị bỏ vì hết hạn mức → `404 DEBRIEF_SKIPPED`, `details: {reason:'quota'}` (client cũ chỉ thấy 404 "chưa sẵn sàng") |
+| `POST /v1/debriefs/:id/feedback` | Nhận `DebriefFeedbackRequest`, ghi event và trả `204`                                                                                                                                                                      |
 
 ## Phụ thuộc
 

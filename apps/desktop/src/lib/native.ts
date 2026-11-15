@@ -165,6 +165,14 @@ export type CalendarResult = z.infer<typeof CalendarResult>;
 export const SettingsEvent = z.object({ assistLevel: AssistLevel });
 export type SettingsEvent = z.infer<typeof SettingsEvent>;
 
+/** A short message for the person while a meeting runs (allowance running low or used up). Never holds meeting text. */
+export const NoticeEvent = z.object({
+  id: z.string(),
+  tone: z.enum(['warning', 'error']),
+  text: z.string(),
+});
+export type NoticeEvent = z.infer<typeof NoticeEvent>;
+
 export const HotkeyEvent = z.object({
   action: z.enum(['toggle_overlay', 'recap', 'say_for_me']),
 });
@@ -276,6 +284,10 @@ export const native = {
   /** Restarts the app (the updater uses the same plugin); rejects where it cannot, e.g. an unsigned dev build. */
   relaunchApp: () => relaunch(),
   onAuthChanged: (cb: () => void): Promise<UnlistenFn> => listen('auth-changed', () => cb()),
+  /** Windows share events through the JS layer: the main window publishes, the overlay shows. */
+  publishNotice: (e: NoticeEvent) => emit('notice', NoticeEvent.parse(e)),
+  onNotice: (cb: (e: NoticeEvent) => void): Promise<UnlistenFn> =>
+    listen('notice', (e) => cb(NoticeEvent.parse(e.payload))),
   publishSettings: (e: SettingsEvent) => emit('settings', SettingsEvent.parse(e)),
   onSettings: (cb: (e: SettingsEvent) => void): Promise<UnlistenFn> =>
     listen('settings', (e) => cb(SettingsEvent.parse(e.payload))),

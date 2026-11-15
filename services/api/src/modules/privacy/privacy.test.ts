@@ -1,7 +1,9 @@
 import type { Export } from '@cuelingo/shared';
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { periodStart } from '@cuelingo/shared';
 import { buildTestApp, TEST_USER_HEADER } from '../../testing';
+import { createInMemoryUsageRepository } from '../usage';
 import type { PrivacyRepository } from './privacy.repository';
 
 const ALICE = 'alice';
@@ -66,5 +68,23 @@ describe('privacy module', () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual(exported);
     expect(repo.exportMyData).toHaveBeenCalledWith(BOB, expect.any(Date));
+  });
+
+  it('leaves the usage of the month as it was after a data delete (AC13)', async () => {
+    const usage = createInMemoryUsageRepository();
+    await app.close();
+    app = await buildTestApp({ repos: { privacy: repo, usage } });
+    await usage.add(ALICE, 'debriefs', periodStart('debriefs', new Date()), 4);
+
+    const del = await app.inject({
+      method: 'DELETE',
+      url: '/v1/me/data',
+      headers: as(ALICE),
+      payload: { confirm: 'XOA DU LIEU' },
+    });
+    expect(del.statusCode).toBe(204);
+
+    const after = await app.inject({ method: 'GET', url: '/v1/me/usage', headers: as(ALICE) });
+    expect(after.json().usage.debriefs.used).toBe(4);
   });
 });

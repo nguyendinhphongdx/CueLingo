@@ -11,18 +11,28 @@ import { parse } from '../../lib/http';
 import type { AssistService } from './assist.service';
 
 /** HTTP surface only: validate shared request DTOs and delegate to the assist service. */
-export function assistRoutes(service: AssistService): FastifyPluginAsync {
+export function assistRoutes(
+  service: AssistService,
+  /** Takes one use of the daily allowance, or throws 429 `QUOTA_EXCEEDED`. Runs before any AI call. */
+  gate: (userId: string) => Promise<void>,
+): FastifyPluginAsync {
   return async (app) => {
     app.post('/lookup', async (request): Promise<LookupResponse> => {
-      return service.lookup(request.userId, parse(LookupRequestSchema, request.body));
+      const input = parse(LookupRequestSchema, request.body);
+      await gate(request.userId);
+      return service.lookup(request.userId, input);
     });
 
     app.post('/recap', async (request): Promise<RecapResponse> => {
-      return service.recap(request.userId, parse(RecapRequestSchema, request.body));
+      const input = parse(RecapRequestSchema, request.body);
+      await gate(request.userId);
+      return service.recap(request.userId, input);
     });
 
     app.post('/compose', async (request): Promise<ComposeResponse> => {
-      return service.compose(request.userId, parse(ComposeRequestSchema, request.body));
+      const input = parse(ComposeRequestSchema, request.body);
+      await gate(request.userId);
+      return service.compose(request.userId, input);
     });
   };
 }

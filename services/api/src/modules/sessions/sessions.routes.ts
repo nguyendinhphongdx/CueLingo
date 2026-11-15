@@ -30,7 +30,7 @@ export function sessionsRoutes(service: SessionsService): FastifyPluginAsync {
     });
     app.post('/:id/end', async (request): Promise<Session> => {
       const { id } = parse(IdParamsSchema, request.params);
-      return service.end(request.userId, id);
+      return service.end(request.userId, id, request.log);
     });
     app.post('/:id/debrief', async (request, reply) => {
       const { id } = parse(IdParamsSchema, request.params);

@@ -13,6 +13,7 @@ export type InMemorySessionsRepository = SessionsRepository & {
 export function createInMemorySessionsRepository(): InMemorySessionsRepository {
   const sessions: Array<Session & { userId: string }> = [];
   const segments: Array<StoredSegment & { sessionId: string }> = [];
+  const skipped = new Set<string>();
   const speakerRows: Array<Speaker & { sessionId: string }> = [];
   const startedEvents: InMemorySessionsRepository['startedEvents'] = [];
   const strip = ({ userId: _userId, ...session }: Session & { userId: string }): Session => session;
@@ -61,7 +62,14 @@ export function createInMemorySessionsRepository(): InMemorySessionsRepository {
       return {
         status: row.status,
         segmentCount: segments.filter((segment) => segment.sessionId === id).length,
+        debriefSkipped: skipped.has(id) ? 'quota' : null,
       };
+    },
+    async markDebriefSkipped(userId, id) {
+      if (sessions.some((item) => item.userId === userId && item.id === id)) skipped.add(id);
+    },
+    async clearDebriefSkipped(userId, id) {
+      if (sessions.some((item) => item.userId === userId && item.id === id)) skipped.delete(id);
     },
     async create(userId, input) {
       const row: Session & { userId: string } = {

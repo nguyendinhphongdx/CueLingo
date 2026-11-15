@@ -52,6 +52,7 @@ Trang dùng hai cờ của registry độc lập: `translates` quyết định c
 - Cuộc họp **đang chạy**: "Cuộc họp này chưa kết thúc. Debrief sẽ có sau khi cuộc họp dừng." (không quay, không đếm giây).
 - Cuộc họp **đã kết thúc nhưng không có câu nào**: "Cuộc họp này không có câu nào được ghi nên không có debrief." (worker bỏ qua phiên trống).
 - Đã kết thúc và có câu: "Đang tạo… N s" tối đa 90 giây; quá hạn thì "Debrief chưa tạo được." kèm nút **Tạo lại debrief** gọi `regenerateDebrief` rồi chờ lại. Lỗi 409 và 429 có thông báo riêng.
+- Debrief bị bỏ vì hết lượt tháng (`GET …/debrief` trả `404` mã `DEBRIEF_SKIPPED`, `details.reason = 'quota'`): trang hiện "Đã hết lượt debrief tháng này", không hỏi lại và không hiện nút Tạo lại. Bấm Tạo lại khi vẫn hết lượt nhận `QUOTA_EXCEEDED` và hiện hạn mức cùng ngày làm mới.
 - Danh sách cuộc họp (web và desktop) dùng cùng nhãn: "Chưa kết thúc", "Không có nội dung", "Đang tạo debrief", "Đã có debrief" (`sessionListLabel` trong `@cuelingo/ui`). Danh sách chưa có số câu nên phiên kết thúc trong dưới 10 giây được coi là trống.
 
 ## Câu hỏi mở

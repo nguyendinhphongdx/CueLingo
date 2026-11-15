@@ -19,6 +19,8 @@ export class DebriefError extends Error {
   constructor(
     message: string,
     readonly status?: number,
+    /** `DEBRIEF_SKIPPED`: no debrief will come because the monthly allowance was used up. */
+    readonly code?: string,
   ) {
     super(message);
     this.name = 'DebriefError';
@@ -34,8 +36,20 @@ export function describeFollowupError(error: unknown): string {
   return 'Không soạn được bản nháp. Hãy thử lại.';
 }
 
+export const DEBRIEF_SKIPPED = 'DEBRIEF_SKIPPED';
+
+/** Reads the error code of a 404 body; anything unexpected is simply "no code". */
+async function errorCodeOf(response: Response): Promise<string | undefined> {
+  try {
+    const body = (await response.json()) as { error?: { code?: unknown } };
+    return typeof body.error?.code === 'string' ? body.error.code : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export interface DebriefApi {
-  /** The meeting's debrief, or null while it does not exist yet (404). */
+  /** The meeting's debrief, or null while it does not exist yet (404). Throws a `DebriefError` with code `DEBRIEF_SKIPPED` when it was skipped for lack of allowance. */
   get(sessionId: string, signal?: AbortSignal): Promise<Debrief | null>;
   /** A drafted follow-up message for the meeting; gives up after 20 s. Errors never carry the draft. */
   followup(sessionId: string, input: FollowupRequest): Promise<FollowupResponse>;
@@ -59,7 +73,11 @@ export function createDebriefApi({
         `${baseUrl}/v1/sessions/${encodeURIComponent(sessionId)}/debrief`,
         { headers: { Authorization: `Bearer ${resolveToken(token)}` }, signal },
       );
-      if (response.status === 404) return null;
+      if (response.status === 404) {
+        if ((await errorCodeOf(response)) === DEBRIEF_SKIPPED)
+          throw new DebriefError('Debrief skipped by quota', 404, DEBRIEF_SKIPPED);
+        return null;
+      }
       if (!response.ok) {
         throw new DebriefError(
           `Debrief request failed with status ${response.status}`,

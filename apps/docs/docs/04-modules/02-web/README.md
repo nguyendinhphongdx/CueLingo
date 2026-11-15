@@ -16,6 +16,7 @@ Nơi xem lại cuộc họp, đọc debrief, ôn tập, xem tiến bộ và qu�
 | [Glossary](./glossary.md)                   | `src/features/glossary`         | Quản lý thuật ngữ và tên riêng dùng cho STT và dịch.             |
 | [Account & privacy](./account-privacy.md)   | `src/features/account`          | Cài đặt tài khoản, quyền riêng tư, xoá dữ liệu.                  |
 | [Số liệu nội bộ](./admin-metrics.md)        | `src/features/admin`            | Chỉ số vận hành tổng hợp cho admin trong allowlist.              |
+| [Usage](./usage.md)                         | `src/features/usage`            | Gói hiện tại và lượng dùng từng hạn mức trong Cài đặt.           |
 | [Preferences](./preferences.md)             | `src/features/preferences`      | Assist và cách hiển thị overlay dùng chung theo tài khoản.       |
 | [Assistant](./assistant.md)                 | `src/features/assistant`        | Chat với trợ lý AI (stream, dừng), nhấp đúp từ để tra/nghe/lưu.  |
 | [Deploy Cloudflare](./deploy-cloudflare.md) | `scripts/`, `public/_redirects` | Xuất web thành file tĩnh và deploy lên Cloudflare Pages.         |

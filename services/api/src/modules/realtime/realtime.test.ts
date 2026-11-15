@@ -1,6 +1,7 @@
 import type { AiGateway, LlmResult } from '@cuelingo/ai-gateway';
 import {
   ServerMessageSchema,
+  resolvePlanLimits,
   type SegmentFinalMessage,
   type ServerMessage,
 } from '@cuelingo/shared';
@@ -9,7 +10,9 @@ import type { WebSocket } from 'ws';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RealtimeDeps } from './realtime.service';
 import { buildTestApp, TEST_USER_HEADER } from '../../testing';
+import { createInMemoryAdminRepository } from '../admin';
 import { createInMemorySessionsRepository } from '../sessions';
+import { createInMemoryUsageRepository } from '../usage';
 
 const SESSION_ID = '9ee72a14-8cd4-4f2e-8131-4ed638e2d875';
 const SEGMENT_IDS = [
@@ -473,5 +476,199 @@ describe('realtime module', () => {
       headers: { [TEST_USER_HEADER]: USER_ID },
     });
     expect(glossary.statusCode).toBe(200);
+  });
+});
+
+describe('realtime usage (AC4, AC5, AC12)', () => {
+  const OWNER = 'owner';
+  let app: FastifyInstance;
+  let socket: WebSocket;
+  let llm: ReturnType<typeof vi.fn<AiGateway['llm']>>;
+  let sessions: ReturnType<typeof createInMemorySessionsRepository>;
+
+  async function setup(options: { translationMs?: number; token?: string; stored?: boolean } = {}) {
+    llm = vi.fn(async (_task, input) => result(`vi:${input.text}`));
+    sessions = createInMemorySessionsRepository();
+    const emails = { [OWNER]: 'owner@example.com' };
+    const deps: RealtimeDeps = {
+      gateway: { llm },
+      verifyToken: vi.fn(async (token) => (token === 'owner-token' ? OWNER : USER_ID)),
+      glossary: vi.fn(async () => []),
+      store: sessions,
+    };
+    app = await buildTestApp({
+      realtime: deps,
+      repos: {
+        sessions,
+        admin: createInMemoryAdminRepository(emails),
+        usage: createInMemoryUsageRepository(emails),
+      },
+      adminEmails: ['owner@example.com'],
+      planLimits: resolvePlanLimits({
+        free: { translation_ms: options.translationMs ?? 7_200_000 },
+      }),
+    });
+    await app.ready();
+  }
+
+  afterEach(async () => {
+    socket?.terminate();
+    await app.close();
+  });
+
+  async function open(sessionId: string, features?: string, token = VALID_TOKEN) {
+    socket = await app.injectWS(
+      `/v1/sessions/${sessionId}/stream${features ? `?features=${features}` : ''}`,
+    );
+    const messages: ServerMessage[] = [];
+    socket.on('message', (data) =>
+      messages.push(ServerMessageSchema.parse(JSON.parse(data.toString()))),
+    );
+    socket.send(
+      JSON.stringify({ type: 'hello', sessionId, token, sttSource: 'local', assistLevel: 3 }),
+    );
+    await vi.waitFor(() => expect(messages[0]).toMatchObject({ type: 'ready' }));
+    return messages;
+  }
+
+  const send = (message: SegmentFinalMessage) => socket.send(JSON.stringify(message));
+  const used = async (user = USER_ID) =>
+    (
+      await app.inject({
+        method: 'GET',
+        url: '/v1/me/usage',
+        headers: { [TEST_USER_HEADER]: user },
+      })
+    ).json().usage.translation_ms;
+
+  it('counts the time of a translated system sentence, not mic or Vietnamese ones', async () => {
+    await setup();
+    const english = await sessions.create(USER_ID, { assistLevel: 3, language: 'en' });
+    const messages = await open(english.id);
+
+    send(segment('hello there', 0, 'mic'));
+    send(segment('one', 1)); // 900 ms span beats 3 chars x 40 ms
+    await vi.waitFor(async () => expect((await used()).used).toBe(900));
+    expect(messages.filter((m) => m.type === 'translation')).toHaveLength(1);
+    expect(llm).toHaveBeenCalledTimes(1);
+
+    const vietnamese = await sessions.create(USER_ID, { assistLevel: 3, language: 'vi' });
+    await open(vietnamese.id);
+    send(segment('xin chào', 2));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect((await used()).used).toBe(900);
+  });
+
+  it('floors the cost by text length so a client cannot claim zero time', async () => {
+    await setup();
+    const english = await sessions.create(USER_ID, { assistLevel: 3, language: 'en' });
+    await open(english.id);
+    send({ ...segment('x'.repeat(100), 0), startMs: 5_000, endMs: 5_000 });
+    await vi.waitFor(async () => expect((await used()).used).toBe(4_000));
+  });
+
+  it('keeps the captions when time runs out: stores, skips the AI, tells the client once, stays open', async () => {
+    await setup({ translationMs: 1_000 });
+    const english = await sessions.create(USER_ID, { assistLevel: 3, language: 'en' });
+    const messages = await open(english.id, 'usage');
+
+    send(segment('first', 0));
+    send(segment('second', 1)); // the allowance is crossed by this one; it was past the gate, so it is translated (Q5)
+    await vi.waitFor(() => expect(messages.filter((m) => m.type === 'usage')).toHaveLength(2));
+    expect(llm).toHaveBeenCalledTimes(2);
+
+    send(segment('third', 2));
+    send(segment('fourth', 3));
+    await vi.waitFor(async () =>
+      expect((await sessions.findDetail(USER_ID, english.id))?.segments).toHaveLength(4),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(llm).toHaveBeenCalledTimes(2);
+    expect(socket.readyState).toBe(socket.OPEN);
+    const notices = messages.filter((m) => m.type === 'usage');
+    expect(notices.map((m) => m.type === 'usage' && m.state)).toEqual(['low', 'exhausted']);
+    expect(notices[1]).toMatchObject({
+      metric: 'translation_ms',
+      item: { limit: 1_000, state: 'exhausted' },
+    });
+    expect(messages.filter((m) => m.type === 'error')).toEqual([]);
+  });
+
+  it('sends no usage message unless the client asked for the feature', async () => {
+    await setup({ translationMs: 1_000 });
+    const english = await sessions.create(USER_ID, { assistLevel: 3, language: 'en' });
+    const messages = await open(english.id);
+    send(segment('first', 0));
+    send(segment('second', 1));
+    send(segment('third', 2));
+    await vi.waitFor(() =>
+      expect(messages.filter((m) => m.type === 'translation')).toHaveLength(2),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(messages.map((m) => m.type)).toEqual(['ready', 'translation', 'translation']);
+  });
+
+  it('ignores unknown feature names', async () => {
+    await setup({ translationMs: 1_000 });
+    const english = await sessions.create(USER_ID, { assistLevel: 3, language: 'en' });
+    const messages = await open(english.id, 'nope,usage');
+    send(segment('first', 0));
+    await vi.waitFor(() => expect(messages.some((m) => m.type === 'usage')).toBe(true));
+  });
+
+  it('never blocks an admin, who is still counted', async () => {
+    await setup({ translationMs: 1 });
+    const english = await sessions.create(OWNER, { assistLevel: 3, language: 'en' });
+    const messages = await open(english.id, 'usage', 'owner-token');
+    for (const index of [0, 1, 2]) send(segment(`line ${index}`, index));
+    await vi.waitFor(() => expect(llm).toHaveBeenCalledTimes(3));
+    await vi.waitFor(async () => expect((await used(OWNER)).used).toBeGreaterThan(0));
+    expect(messages.some((m) => m.type === 'usage')).toBe(false);
+  });
+
+  it("does not spend another person's time: each user has their own allowance", async () => {
+    await setup({ translationMs: 1_000 });
+    const mine = await sessions.create(USER_ID, { assistLevel: 3, language: 'en' });
+    await open(mine.id);
+    send(segment('a', 0));
+    send(segment('b', 1));
+    await vi.waitFor(async () => expect((await used()).state).toBe('exhausted'));
+    expect((await used('bob')).used).toBe(0);
+  });
+
+  it('costs one read and one write per translated sentence, and asks who is an admin only once', async () => {
+    await setup();
+    const repo = createInMemoryUsageRepository();
+    const calls = { gate: 0, snapshot: 0, add: 0, reserve: 0, userIdByEmail: 0 };
+    const counted = Object.fromEntries(
+      Object.entries(repo).map(([name, fn]) => [
+        name,
+        (...args: unknown[]) => {
+          if (name in calls) calls[name as keyof typeof calls] += 1;
+          return (fn as (...a: unknown[]) => unknown)(...args);
+        },
+      ]),
+    ) as unknown as typeof repo;
+    const isAdmin = vi.fn(async () => null);
+    await app.close();
+    llm = vi.fn(async (_task, input) => result(`vi:${input.text}`));
+    app = await buildTestApp({
+      realtime: { gateway: { llm }, verifyToken: async () => USER_ID, glossary: async () => [] },
+      repos: { usage: counted, admin: { emailForUser: isAdmin, metrics: vi.fn() } },
+    });
+    await app.ready();
+
+    const messages = await open('9ee72a14-8cd4-4f2e-8131-4ed638e2d875');
+    for (const index of [0, 1, 2]) send(segment(`line ${index}`, index));
+    await vi.waitFor(() =>
+      expect(messages.filter((m) => m.type === 'translation')).toHaveLength(3),
+    );
+    await vi.waitFor(() => expect(calls.add).toBe(3));
+
+    // Per sentence: one read by primary key (plan + counter together) and one write. Never the full snapshot.
+    expect(calls).toMatchObject({ gate: 3, snapshot: 0, add: 3 });
+    // The admin check happened at hello (the allowlist is empty here, so it is a cheap no-op lookup).
+    expect(isAdmin.mock.calls.length).toBeLessThanOrEqual(1);
   });
 });

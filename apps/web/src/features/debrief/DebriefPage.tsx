@@ -50,6 +50,9 @@ import { useDebrief, type ClipboardFeedback } from './use-debrief';
 
 type BlockName = DebriefFeedbackRequest['block'];
 
+const DEBRIEF_SKIPPED_TEXT =
+  'Cuộc họp vẫn được lưu nhưng debrief không được tạo vì bạn đã dùng hết lượt debrief tháng này. Lượt được làm mới vào đầu tháng sau.';
+
 const BLOCK_ORDER: BlockName[] = [
   'summary',
   'actionItems',
@@ -310,6 +313,8 @@ export interface DebriefPageViewProps {
   debrief?: Debrief;
   loading: boolean;
   processing: boolean;
+  /** The monthly debrief allowance ran out, so none will be made (not "still processing"). */
+  skippedByQuota?: boolean;
   processingSeconds: number;
   processingTimedOut: boolean;
   error: string | null;
@@ -364,6 +369,7 @@ export function DebriefPageView({
   debrief,
   loading,
   processing,
+  skippedByQuota = false,
   processingSeconds,
   processingTimedOut,
   error,
@@ -471,11 +477,13 @@ export function DebriefPageView({
                 ? 'Chưa có debrief'
                 : outlook === 'empty'
                   ? 'Không có debrief'
-                  : processing
-                    ? processingTimedOut
-                      ? 'Debrief chưa tạo được.'
-                      : `Đang tạo… ${processingSeconds} s`
-                    : 'Chưa thể mở debrief'}
+                  : skippedByQuota
+                    ? 'Đã hết lượt debrief tháng này'
+                    : processing
+                      ? processingTimedOut
+                        ? 'Debrief chưa tạo được.'
+                        : `Đang tạo… ${processingSeconds} s`
+                      : 'Chưa thể mở debrief'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -484,6 +492,9 @@ export function DebriefPageView({
             )}
             {outlook === 'empty' && (
               <p className="text-muted-foreground text-sm">{EMPTY_MEETING_TEXT}</p>
+            )}
+            {outlook === 'pending' && skippedByQuota && (
+              <p className="text-muted-foreground text-sm">{DEBRIEF_SKIPPED_TEXT}</p>
             )}
             {outlook === 'pending' && processing && !processingTimedOut && (
               <p className="text-muted-foreground text-sm">
@@ -900,6 +911,7 @@ export function DebriefPage({ sessionId }: { sessionId: string }) {
       debrief={state.debrief}
       loading={state.loading}
       processing={state.processing}
+      skippedByQuota={state.skippedByQuota}
       processingSeconds={state.processingSeconds}
       processingTimedOut={state.processingTimedOut}
       error={state.error}

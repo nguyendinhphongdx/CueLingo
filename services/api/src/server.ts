@@ -25,6 +25,7 @@ import { createDeviceService, createPostgresDeviceRepository } from './modules/d
 import { createPostgresPhrasesRepository, createPostgresStudyRepository } from './modules/review';
 import { createPostgresAdminRepository } from './modules/admin';
 import { createPostgresFeedbackRepository } from './modules/feedback';
+import { createPostgresUsageRepository } from './modules/usage';
 import { createInviteGate, createPostgresInvitesRepository } from './modules/invites';
 import type { LanguageCode } from '@cuelingo/shared';
 
@@ -109,6 +110,7 @@ const app = await buildApp({
     admin: adminRepository,
     invites: invitesRepository,
     feedback: createPostgresFeedbackRepository(sql),
+    usage: createPostgresUsageRepository(sql),
   },
   queue,
   resolveUserId: authModule.resolveUserId,
@@ -134,6 +136,7 @@ const app = await buildApp({
   verifyDevToken: config.NODE_ENV === 'production' ? undefined : verifyDevToken,
   logger: true,
   adminEmails: config.ADMIN_EMAILS,
+  planLimits: config.PLAN_LIMITS,
   secureCookies: config.NODE_ENV === 'production',
   invitesRequired: config.INVITES_REQUIRED,
 });

@@ -1,4 +1,5 @@
 import { ApiError } from '@cuelingo/core-sdk';
+import { ErrorCode } from '@cuelingo/shared';
 import type {
   DebriefFeedbackRequest,
   SavePhraseRequest,
@@ -22,8 +23,14 @@ export interface ClipboardFeedback {
   status: 'copied' | 'error';
 }
 
+/** The server skipped this debrief because the monthly allowance was used up (also a 404). */
+export function isDebriefSkipped(error: unknown) {
+  return error instanceof ApiError && error.code === ErrorCode.DebriefSkipped;
+}
+
+/** A plain "not ready yet" 404; a skipped debrief will never arrive, so it is not this. */
 export function isDebriefNotFound(error: unknown) {
-  return error instanceof ApiError && error.status === 404;
+  return error instanceof ApiError && error.status === 404 && !isDebriefSkipped(error);
 }
 
 export function shouldPollDebrief(error: unknown, elapsedMs: number) {
@@ -143,6 +150,7 @@ export function useDebrief(sessionId: string, onDeleted?: () => void) {
   const outlook = session.data ? debriefOutlook(session.data) : 'pending';
   canWaitRef.current = outlook === 'pending';
   const debriefNotFound = isDebriefNotFound(debrief.error) && outlook === 'pending';
+  const skippedByQuota = isDebriefSkipped(debrief.error) && outlook === 'pending';
   const processingStatus = getProcessingStatus(pollingStartedAt.current, now);
   const processingElapsedMs = debriefNotFound ? processingStatus.elapsedMs : 0;
 
@@ -191,6 +199,7 @@ export function useDebrief(sessionId: string, onDeleted?: () => void) {
     session: session.data,
     debrief: debrief.data,
     loading: session.isPending || debrief.isPending,
+    skippedByQuota,
     processing: debriefNotFound,
     processingSeconds: debriefNotFound ? processingStatus.seconds : 0,
     processingTimedOut: debriefNotFound && processingStatus.timedOut,
@@ -208,7 +217,7 @@ export function useDebrief(sessionId: string, onDeleted?: () => void) {
       (regenerate.error ? describeRegenerateError(regenerate.error) : null) ??
       (rename.error ? describeRenameError(rename.error) : null) ??
       describeError(session.error) ??
-      (debriefNotFound ? null : describeError(debrief.error)) ??
+      (debriefNotFound || skippedByQuota ? null : describeError(debrief.error)) ??
       describeError(feedback.error) ??
       describeError(save.error) ??
       describeError(remove.error),

@@ -20,6 +20,7 @@ Cửa sổ caption song ngữ nổi trên app họp.
 
 - `<CaptionOverlay level={level} />`: hiện dữ liệu mẫu trước transcript đầu tiên; level prop dùng cho test, khi chạy thật nhận level từ event `settings`
 - `useTranscript()`: đăng ký và dọn listener qua `native.onTranscript`
+- `useNotices()` và `<NoticeBar />`: nghe `native.onNotice`, hiện thông báo hạn mức (cam khi sắp hết, đỏ khi đã hết) phía trên caption, mỗi thông báo đóng được; caption vẫn chạy bên dưới
 - `useOverlayAssistLevel()`: đăng ký và dọn listener qua `native.onSettings`
 - `useTranscriptStore`: `push(event)` thay segment cùng `segmentId`, giữ tối đa 6 segment
 
@@ -32,6 +33,7 @@ Cửa sổ caption song ngữ nổi trên app họp.
 ## Dữ liệu & sự kiện
 
 - Nhận `transcript`: `{segmentId, text, translation, partial, speaker?}` từ Tauri core; `speaker` là `speaker_1`..`speaker_8` khi câu của người khác đã được gắn nhãn
+- Nhận `notice`: `{id, tone: 'warning' | 'error', text}` từ cửa sổ chính (cùng cơ chế `emit`/`listen` của `transcript`, cửa sổ chính là bên phát nên không cần lệnh Rust mới). Overlay chỉ giữ thông báo trong RAM; thông báo phát trước khi overlay nghe sẽ không được phát lại
 - Nhận `settings`: `{assistLevel}` từ cửa sổ chính
 - Lắng nghe `storage` để áp dụng các khoá overlay do cửa sổ chính tải từ tài khoản
 - Thay đổi Assist hoặc hiển thị được đưa vào hàng đợi PATCH cài đặt 800 ms

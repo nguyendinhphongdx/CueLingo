@@ -1,6 +1,7 @@
 import type { AiGateway } from '@cuelingo/ai-gateway';
 import type { AdminAgentStatus } from '@cuelingo/shared';
 import { afterEach, describe, expect, it } from 'vitest';
+import { resolvePlanLimits } from '@cuelingo/shared';
 import { buildTestApp, TEST_USER_HEADER } from '../../testing';
 import { createInMemoryConversationsRepository } from '../conversations';
 import { createInMemoryAdminRepository } from './admin.repository.memory';
@@ -28,6 +29,8 @@ describe('/v1/admin/agent', () => {
       },
     };
     const built = await buildTestApp({
+      // These tests are about the assistant, not the plan: let Free send messages.
+      planLimits: resolvePlanLimits({ free: { agent_messages: null } }),
       repos: {
         admin: createInMemoryAdminRepository({
           [ADMIN]: 'owner@example.com',

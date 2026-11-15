@@ -20,6 +20,8 @@ export class TranscribeError extends Error {
   constructor(
     message: string,
     readonly status?: number,
+    /** API error code such as `QUOTA_EXCEEDED`; a fixed identifier, never request content. */
+    readonly code?: string,
   ) {
     super(message);
     this.name = 'TranscribeError';
@@ -100,6 +102,7 @@ export function createSessionsApi({ apiUrl, token, fetch: request = fetch }: Ses
             ? error.message
             : `Transcribe request failed with status ${error.status}`,
           error.status === 0 ? undefined : error.status,
+          error.status === 0 ? undefined : error.code,
         );
       }
     },

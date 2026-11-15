@@ -1,5 +1,5 @@
 import type { Debrief } from '@cuelingo/shared';
-import type { DebriefApi, DebriefError } from './debrief-api';
+import { DEBRIEF_SKIPPED, type DebriefApi, type DebriefError } from './debrief-api';
 
 export const POLL_INTERVAL_MS = 3_000;
 export const POLL_TIMEOUT_MS = 120_000;
@@ -13,12 +13,14 @@ export interface PollHandlers {
   onTimeout(): void;
   /** The person is not allowed to read it (401/403): asking again cannot help. */
   onDenied(): void;
+  /** The monthly debrief allowance was used up, so none will be made: stop waiting. */
+  onSkipped?(): void;
 }
 
 export function pollDebrief(
   api: Pick<DebriefApi, 'get'>,
   sessionId: string,
-  { onReady, onTimeout, onDenied }: PollHandlers,
+  { onReady, onTimeout, onDenied, onSkipped }: PollHandlers,
 ): () => void {
   let cancelled = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -28,12 +30,18 @@ export function pollDebrief(
   async function attempt() {
     timer = null;
     let denied = false;
+    let skipped = false;
     const found = await api.get(sessionId, abort.signal).catch((error: unknown) => {
-      const status = (error as Partial<DebriefError> | null)?.status;
+      const { status, code } = (error as Partial<DebriefError> | null) ?? {};
       denied = status === 401 || status === 403;
+      skipped = code === DEBRIEF_SKIPPED;
       return null;
     });
     if (cancelled) return;
+    if (skipped) {
+      onSkipped?.();
+      return;
+    }
     if (denied) {
       onDenied();
       return;
