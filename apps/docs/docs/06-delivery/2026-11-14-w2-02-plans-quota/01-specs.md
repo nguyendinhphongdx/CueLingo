@@ -2,7 +2,7 @@
 
 | Trạng thái | Loại    | Nhánh / PR                      | Ước lượng → thực tế |
 | ---------- | ------- | ------------------------------- | ------------------- |
-| Làm        | feature | `feat/w2-02-plans-quota` / _PR_ | L → ?               |
+| Xong       | feature | `feat/w2-02-plans-quota` / _PR_ | L → ?               |
 
 **Phạm vi:**
 
@@ -63,9 +63,10 @@ Không log nội dung câu hay âm thanh khi đếm. Chỉ lưu con số (giây,
 
 ## Decision log
 
-| Ngày       | Pha  | Quyết định / lý do bị từ chối                                                                                                                                                                                       |
-| ---------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-11-14 | Spec | Mở hồ sơ. Làm hạn mức trước thanh toán: W2-02 trong backlog phụ thuộc W2-01 (ADR thanh toán), nhưng đăng ký đã mở nên cần trần chi phí ngay. Gói gán tay, chưa thu tiền.                                            |
-| 2026-11-14 | Spec | Caption tiếng Anh (STT trên máy) không giới hạn ở mọi gói, vì nó không tốn chi phí server.                                                                                                                          |
-| 2026-11-14 | Spec | **Duyệt spec**, theo các đề xuất: Q1 chỉ API admin; Q2 ngày 1 giờ Việt Nam; Q3 đúng bảng gói, đặt bằng biến môi trường; Q4 người dùng hiện có ở `free` (theo AC1, admin nâng tay khi cần); Q5 dịch nốt câu đang dở. |
-| 2026-11-14 | Plan | **Duyệt plan** (02-plan.md), gồm ADR 0022 và giả định G1–G8.                                                                                                                                                        |
+| Ngày       | Pha    | Quyết định / lý do bị từ chối                                                                                                                                                                                       |
+| ---------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-14 | Spec   | Mở hồ sơ. Làm hạn mức trước thanh toán: W2-02 trong backlog phụ thuộc W2-01 (ADR thanh toán), nhưng đăng ký đã mở nên cần trần chi phí ngay. Gói gán tay, chưa thu tiền.                                            |
+| 2026-11-14 | Spec   | Caption tiếng Anh (STT trên máy) không giới hạn ở mọi gói, vì nó không tốn chi phí server.                                                                                                                          |
+| 2026-11-14 | Spec   | **Duyệt spec**, theo các đề xuất: Q1 chỉ API admin; Q2 ngày 1 giờ Việt Nam; Q3 đúng bảng gói, đặt bằng biến môi trường; Q4 người dùng hiện có ở `free` (theo AC1, admin nâng tay khi cần); Q5 dịch nốt câu đang dở. |
+| 2026-11-14 | Plan   | **Duyệt plan** (02-plan.md), gồm ADR 0022 và giả định G1–G8.                                                                                                                                                        |
+| 2026-11-15 | Result | **Duyệt kết quả.** Chưa chạy thật: desktop/overlay, web, admin đổi gói, STT đám mây, p95 đầu-cuối.                                                                                                                  |
