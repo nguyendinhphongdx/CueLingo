@@ -192,7 +192,8 @@ export function createPayosProvider(config: PayosConfig): PaymentProvider {
       if (!sameSignature(hmacHex(config.checksumKey, webhookSigningString(data)), signature)) {
         return { kind: 'invalid' };
       }
-      if (code !== '00') return { kind: 'ignored' };
+      // Only `data.code` is covered by the signature; the outer `code` can be changed by anyone.
+      if (code !== '00' || data.code !== '00') return { kind: 'ignored' };
       const fields = WebhookDataSchema.safeParse(data);
       if (!fields.success) return { kind: 'invalid' };
       return {

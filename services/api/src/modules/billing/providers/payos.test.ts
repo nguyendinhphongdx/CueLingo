@@ -110,6 +110,17 @@ describe('signature vectors', () => {
     const signature = signWith(KEY, webhookSigningString(data));
     expect(provider().verifyWebhook({ code: '01', data, signature })).toEqual({ kind: 'ignored' });
   });
+
+  it('trusts the signed data.code, not the outer code', () => {
+    const data = { ...WEBHOOK_DATA, code: '01' };
+    const signature = signWith(KEY, webhookSigningString(data));
+    expect(provider().verifyWebhook({ code: '00', data, signature })).toEqual({ kind: 'ignored' });
+    const { code: _omit, ...noCode } = WEBHOOK_DATA;
+    const bare = signWith(KEY, webhookSigningString(noCode));
+    expect(provider().verifyWebhook({ code: '00', data: noCode, signature: bare })).toEqual({
+      kind: 'ignored',
+    });
+  });
 });
 
 function signWith(key: string, text: string) {
