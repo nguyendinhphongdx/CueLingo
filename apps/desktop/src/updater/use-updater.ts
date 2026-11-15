@@ -15,6 +15,12 @@ export function useUpdater() {
     const timer = window.setInterval(() => void updater.check(), UPDATE_CHECK_MS);
     return () => window.clearInterval(timer);
   }, []);
+  return useUpdateStatus();
+}
+
+/** The shared update state, without starting the periodic check (Settings uses this). */
+export function useUpdateStatus() {
+  const manual = useSyncExternalStore(updater.subscribe, updater.getManual, updater.getManual);
   const state = useSyncExternalStore(updater.subscribe, updater.getState, updater.getState);
   const meetingStatus = useSyncExternalStore(
     sessionController.subscribe,
@@ -22,7 +28,9 @@ export function useUpdater() {
   );
   return {
     state,
+    manual,
     locked: meetingStatus !== 'idle',
+    checkNow: updater.checkNow,
     install: updater.install,
     dismiss: updater.dismiss,
   };

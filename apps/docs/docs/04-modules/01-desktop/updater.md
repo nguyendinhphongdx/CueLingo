@@ -6,12 +6,18 @@
 
 - Hỏi endpoint cập nhật khi mở app và mỗi 6 giờ (`UPDATE_CHECK_MS`).
 - Hiện banner "Có bản mới" ở trang Phiên họp; chỉ cài khi người dùng bấm "Cập nhật".
+- Trang Cài đặt có mục `UpdateSection`: phiên bản đang chạy, nút "Kiểm tra cập nhật" báo đủ kết quả (đang kiểm tra · bản mới nhất kèm giờ · có bản mới kèm nút Cập nhật · không kiểm tra được · bản này không tự cập nhật). Dùng chung trạng thái với banner.
 - Khoá nút trong lúc có cuộc họp (trạng thái phiên khác `idle`), vì cập nhật khởi động lại app.
 - Gói có chữ ký không khớp bị từ chối; banner nói rõ và chỉ về trang tải về.
 
 ## Interface
 
-`createUpdateController({check, meetingActive})` trả về `getState`, `subscribe`, `check`, `install`, `dismiss`. Trạng thái: `none`, `available`, `installing`, `failed (signature | other)`. `native.checkUpdate()` trả `null` khi đã mới nhất và cả khi build không có updater. Lỗi khi hỏi bản mới bị nuốt: lần sau thử lại, không có gì hỏng.
+`createUpdateController({check, meetingActive})` trả về `getState`, `getManual`, `subscribe`, `check`, `checkNow`, `install`, `dismiss`. Trạng thái: `none`, `available`, `installing`, `failed (signature | other)`. `native.checkUpdate()` trả `null` khi đã mới nhất, `'unsupported'` khi build không có updater (bản dev, bản tự dựng).
+
+- `check()` chạy nền (khi mở, mỗi 6 giờ): lỗi bị nuốt, lần sau thử lại.
+- `checkNow()` khi người dùng bấm: ghi kết quả vào `getManual()` (`idle` · `checking` · `upToDate{at}` · `unsupported` · `error`).
+- Mỗi lúc chỉ một yêu cầu tới endpoint: bấm trong lúc kiểm tra nền đang chạy thì chờ chính lần đó.
+- `useUpdater()` (gắn một lần ở App) chạy kiểm tra định kỳ; `useUpdateStatus()` chỉ đọc trạng thái chung.
 
 ## Phát hành
 

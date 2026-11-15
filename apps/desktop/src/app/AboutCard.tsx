@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from '@cuelingo/ui/components/card';
 import { Logo } from '@cuelingo/ui/components/logo';
+import { UpdateSection } from '../updater';
 import { APP_NAME, APP_TAGLINE, APP_VERSION } from './brand';
 
 const shortcuts = [
@@ -42,6 +43,7 @@ export function AboutCard() {
         </div>
       </CardHeader>
       <CardContent className="text-muted-foreground space-y-2 text-sm">
+        <UpdateSection version={APP_VERSION} />
         <p>
           Caption kèm bản dịch tiếng Việt cho cuộc họp tiếng Anh, Nhật, Hàn và Trung; cuộc họp tiếng
           Việt có transcript. Tiếng Anh được nhận dạng ngay trên máy, chỉ văn bản được gửi đi dịch.

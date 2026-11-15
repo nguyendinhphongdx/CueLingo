@@ -73,3 +73,69 @@ describe('update controller', () => {
     expect(controller.getState()).toEqual({ phase: 'none' });
   });
 });
+
+describe('manual update check', () => {
+  it('says the build is up to date when nothing newer exists', async () => {
+    const controller = createUpdateController({
+      check: async () => null,
+      meetingActive: () => false,
+    });
+    await controller.checkNow();
+    expect(controller.getManual()).toMatchObject({ status: 'upToDate' });
+  });
+
+  it('reports a failed check instead of staying silent', async () => {
+    const controller = createUpdateController({
+      check: async () => {
+        throw new Error('offline');
+      },
+      meetingActive: () => false,
+    });
+    await controller.checkNow();
+    expect(controller.getManual()).toEqual({ status: 'error' });
+    expect(controller.getState()).toEqual({ phase: 'none' });
+  });
+
+  it('says a build without an updater cannot update itself', async () => {
+    const controller = createUpdateController({
+      check: async () => 'unsupported',
+      meetingActive: () => false,
+    });
+    await controller.checkNow();
+    expect(controller.getManual()).toEqual({ status: 'unsupported' });
+  });
+
+  it('shows the offer and shares it with the banner state', async () => {
+    const found = offer();
+    const controller = createUpdateController({
+      check: async () => found,
+      meetingActive: () => false,
+    });
+    await controller.checkNow();
+    expect(controller.getState()).toMatchObject({ phase: 'available', version: '0.2.0' });
+    expect(controller.getManual()).toEqual({ status: 'idle' });
+  });
+
+  it('asks the endpoint once when a click lands during a background check', async () => {
+    let release: (value: null) => void = () => {};
+    const check = vi.fn(() => new Promise<null>((resolve) => (release = resolve)));
+    const controller = createUpdateController({ check, meetingActive: () => false });
+    const background = controller.check();
+    const manual = controller.checkNow();
+    release(null);
+    await Promise.all([background, manual]);
+    expect(check).toHaveBeenCalledOnce();
+    expect(controller.getManual()).toMatchObject({ status: 'upToDate' });
+  });
+
+  it('keeps background failures silent', async () => {
+    const controller = createUpdateController({
+      check: async () => {
+        throw new Error('offline');
+      },
+      meetingActive: () => false,
+    });
+    await controller.check();
+    expect(controller.getManual()).toEqual({ status: 'idle' });
+  });
+});
