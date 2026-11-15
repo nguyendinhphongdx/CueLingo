@@ -13,7 +13,7 @@ Trang cho admin (`ADMIN_EMAILS`) xem ai đang ở gói nào, doanh thu và gói 
 - Dashboard: tổng người dùng, số người theo gói Free/Pro/Ultra (chỉ gói còn hạn), đăng ký mới 7 ngày, doanh thu tháng này (VND), số gói trả phí hết hạn trong 7 ngày tới.
 - Danh sách người dùng, mới đăng ký trước, 50 dòng một lần, nút "Xem thêm" (`useInfiniteQuery`, cursor của API).
 - Ô tìm theo email hoặc tên (chờ 300 ms sau khi ngừng gõ rồi mới gửi) và một nút chọn lọc: Tất cả · Free · Pro · Ultra · Sắp hết hạn.
-- Trang chi tiết một người và đổi gói: xem phần cuối trang này.
+- Trang chi tiết `/admin/users/<id>` và đổi gói: xem phần "Chi tiết và đổi gói".
 
 ## Interface
 
@@ -36,3 +36,18 @@ Cột: email (liên kết tới chi tiết) và tên, ngày đăng ký, gói, ng
 
 - Không lưu gì ở client ngoài cache của React Query. Có email và tên của người khác: xem [bảo mật & riêng tư](../../03-architecture/08-security-privacy.md#admin-xem-danh-sách-người-dùng).
 - Không hiện tiêu đề phiên, transcript, cụm từ, mã QR hay link thanh toán.
+
+## Chi tiết và đổi gói
+
+Route `/admin/users/<id>` là một trang giữ chỗ `_` (như `/sessions/<id>`): `generateStaticParams`, một dòng `/admin/users/*  /admin/users/_  200` trong `public/_redirects`, id đọc bằng `useRouteId('/admin/users')`. Dấu `*` chỉ khớp khi có `/…` phía sau nên `/admin/users` vẫn là trang danh sách.
+
+| Thành phần            | Nội dung                                                                                                                                                                                                |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AdminUserDetailView` | Email, tên, ngày đăng ký; nguồn và hạn gói; `UsageSummary` của `@cuelingo/ui` (5 hạn mức như `/v1/me/usage`); form đổi gói; `AdminOrderList` (gói, kỳ, số tiền, trạng thái, ngày; không QR, không link) |
+| `PlanForm`            | Chọn Free/Pro/Ultra, ngày hết hạn tuỳ chọn. Ngày hiểu là hết ngày đó giờ Việt Nam (`expiresAtFor`); Free bỏ hạn; ngày đã qua chặn nút Lưu. Bấm Lưu mở hộp xác nhận, không lưu ngay                      |
+| `PlanChangeConfirm`   | `ConfirmDialog` hỏi "Đổi gói?" (nút Huỷ được focus trước). Khi hạ một gói **thanh toán** còn hạn, thêm dòng "Người này đã trả tiền đến dd/mm/yyyy" (`planChangeWarning`)                                |
+| `use-admin-user.ts`   | `GET` chi tiết; `PUT` đổi gói rồi làm mới danh sách, chi tiết và dashboard. `401/403` → `notFound()`; `404` → "Không tìm thấy người dùng này"                                                           |
+
+Cảnh báo chỉ cho việc **hạ hạng** gói đã trả (Ultra → Pro, → Free); lên hạng, cùng hạng, gói gán tay hoặc gói đã hết hạn thì không cảnh báo. Vẫn cho làm: hoàn tiền (nếu cần) làm tay ngoài hệ thống.
+
+Test: `AdminUsersPage.test.tsx`, `AdminUserDetail.test.tsx`, `lib/client.test.ts`.
