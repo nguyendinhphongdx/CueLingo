@@ -13,6 +13,8 @@ const id = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
 
 type Row = {
   id: string;
+  userId?: string;
+  debriefSkipped?: boolean;
   status: string;
   startedMinAgo: number;
   lastSegmentEndMs: number | null;
@@ -20,11 +22,11 @@ type Row = {
   endedAt?: Date;
 };
 
-function setup(rows: Row[]) {
+function setup(rows: Row[], allowed: (userId: string) => boolean = () => true) {
   const enqueued: Array<{ name: string; payload: unknown; options: unknown }> = [];
   const staleSessions: StaleSessionsRepository = {
     async closeStaleLive(cutoff, limit) {
-      const closed: Array<{ id: string; segmentCount: number }> = [];
+      const closed: Array<{ id: string; userId: string; segmentCount: number }> = [];
       for (const row of rows) {
         if (row.status !== 'live' || closed.length >= limit) continue;
         const started = NOW.getTime() - row.startedMinAgo * MIN;
@@ -32,9 +34,20 @@ function setup(rows: Row[]) {
         if (last >= cutoff.getTime()) continue;
         row.status = 'ended';
         row.endedAt = new Date(Math.min(last, NOW.getTime()));
-        closed.push({ id: row.id, segmentCount: row.segments });
+        closed.push({ id: row.id, userId: row.userId ?? 'user-1', segmentCount: row.segments });
       }
       return closed;
+    },
+    async markDebriefSkipped(sessionId) {
+      const row = rows.find((item) => item.id === sessionId);
+      if (row) row.debriefSkipped = true;
+    },
+  };
+  const reserved: string[] = [];
+  const usage = {
+    async reserveDebrief(userId: string) {
+      reserved.push(userId);
+      return allowed(userId);
     },
   };
   const queue = {
@@ -42,7 +55,11 @@ function setup(rows: Row[]) {
       enqueued.push({ name, payload, options });
     },
   };
-  return { enqueued, deps: { staleSessions, queue: queue as never, now: () => NOW } };
+  return {
+    enqueued,
+    reserved,
+    deps: { staleSessions, usage, queue: queue as never, now: () => NOW },
+  };
 }
 
 describe('closeStaleSessions', () => {
@@ -58,7 +75,7 @@ describe('closeStaleSessions', () => {
     ];
     const { enqueued, deps } = setup(rows);
 
-    expect(await closeStaleSessions(deps)).toEqual({ closed: 1, queued: 1 });
+    expect(await closeStaleSessions(deps)).toEqual({ closed: 1, queued: 1, skipped: 0 });
     expect(rows[0]?.status).toBe('ended');
     expect(rows[0]?.endedAt?.getTime()).toBe(NOW.getTime() - 110 * MIN);
     expect(enqueued).toEqual([
@@ -76,7 +93,7 @@ describe('closeStaleSessions', () => {
     ];
     const { enqueued, deps } = setup(rows);
 
-    expect(await closeStaleSessions(deps)).toEqual({ closed: 1, queued: 0 });
+    expect(await closeStaleSessions(deps)).toEqual({ closed: 1, queued: 0, skipped: 0 });
     expect(rows[0]?.endedAt?.getTime()).toBe(NOW.getTime() - 90 * MIN);
     expect(enqueued).toEqual([]);
   });
@@ -91,7 +108,7 @@ describe('closeStaleSessions', () => {
     ];
     const { enqueued, deps } = setup(rows);
 
-    expect(await closeStaleSessions(deps)).toEqual({ closed: 0, queued: 0 });
+    expect(await closeStaleSessions(deps)).toEqual({ closed: 0, queued: 0, skipped: 0 });
     expect(rows.map((row) => row.status)).toEqual([
       'live',
       'live',
@@ -109,8 +126,46 @@ describe('closeStaleSessions', () => {
     const { enqueued, deps } = setup(rows);
 
     await closeStaleSessions(deps);
-    expect(await closeStaleSessions(deps)).toEqual({ closed: 0, queued: 0 });
+    expect(await closeStaleSessions(deps)).toEqual({ closed: 0, queued: 0, skipped: 0 });
     expect(enqueued).toHaveLength(1);
+  });
+
+  it('skips the debrief by quota: the session still ends, nothing is queued, the flag is set (AC7)', async () => {
+    const rows: Row[] = [
+      {
+        id: id(1),
+        userId: 'broke',
+        status: 'live',
+        startedMinAgo: 120,
+        lastSegmentEndMs: 0,
+        segments: 4,
+      },
+      {
+        id: id(2),
+        userId: 'fine',
+        status: 'live',
+        startedMinAgo: 120,
+        lastSegmentEndMs: 0,
+        segments: 4,
+      },
+    ];
+    const { enqueued, deps } = setup(rows, (userId) => userId !== 'broke');
+
+    expect(await closeStaleSessions(deps)).toEqual({ closed: 2, queued: 1, skipped: 1 });
+    expect(rows.map((row) => row.status)).toEqual(['ended', 'ended']);
+    expect(rows.map((row) => row.debriefSkipped ?? false)).toEqual([true, false]);
+    expect(enqueued.map((job) => (job.payload as { sessionId: string }).sessionId)).toEqual([
+      id(2),
+    ]);
+  });
+
+  it('does not spend allowance on an empty session', async () => {
+    const rows: Row[] = [
+      { id: id(1), status: 'live', startedMinAgo: 120, lastSegmentEndMs: null, segments: 0 },
+    ];
+    const { reserved, deps } = setup(rows);
+    await closeStaleSessions(deps);
+    expect(reserved).toEqual([]);
   });
 
   it('keeps the thresholds in one place', () => {

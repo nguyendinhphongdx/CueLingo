@@ -5,6 +5,7 @@ import {
   type JobPayload,
 } from '@cuelingo/shared';
 import type { ObjectStorage } from '../lib/storage';
+import type { DebriefAllowance } from '../lib/usage';
 import type { DebriefHandlerDeps } from './debrief/debrief.handler';
 import type { StaleSessionsRepository } from './stale-sessions/stale-sessions.repository';
 import type { RetentionRepository } from './retention/retention.repository';
@@ -22,6 +23,8 @@ export interface JobQueue {
 export interface JobDeps extends DebriefHandlerDeps {
   retention: RetentionRepository;
   staleSessions: StaleSessionsRepository;
+  /** Monthly debrief allowance, for debriefs the worker queues itself. */
+  usage: DebriefAllowance;
   queue: JobQueue;
   storage: ObjectStorage;
   now: () => Date;

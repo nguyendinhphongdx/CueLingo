@@ -10,6 +10,7 @@ import type { JobDeps } from './jobs/types';
 import { createSql } from './lib/db';
 import { createUnconfiguredStorage } from './lib/storage';
 import { createAiCallHook } from './lib/ai-calls';
+import { createPostgresDebriefAllowance } from './lib/usage';
 
 const config = loadConfig();
 const sql = createSql(config.DATABASE_URL);
@@ -35,6 +36,11 @@ const deps: JobDeps = {
   log: { warn: (message, context) => console.warn(message, context) },
   retention: createPostgresRetentionRepository(sql),
   staleSessions: createPostgresStaleSessionsRepository(sql),
+  usage: createPostgresDebriefAllowance(sql, {
+    limits: config.PLAN_LIMITS,
+    adminEmails: config.ADMIN_EMAILS,
+    now: () => new Date(),
+  }),
   queue: {
     async enqueue(name, payload, options) {
       await boss.send(name, JobPayloads[name].parse(payload), { ...options });
