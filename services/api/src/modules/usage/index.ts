@@ -15,3 +15,4 @@ export type { UsageRepository } from './usage.repository';
 export type { ReserveResult, UsageService } from './usage.service';
 export { createPostgresUsageRepository } from './usage.repository';
 export { createInMemoryUsageRepository } from './usage.repository.memory';
+export type { InMemoryPlanRows } from './usage.repository.memory';

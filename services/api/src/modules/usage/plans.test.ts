@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
 import { buildTestApp, TEST_USER_HEADER } from '../../testing';
 import { createInMemoryAdminRepository } from '../admin';
-import { createInMemoryUsageRepository, createUsageModule } from './index';
+import { createInMemoryUsageRepository, createUsageModule, type InMemoryPlanRows } from './index';
 
 const ALICE = 'alice';
 const OWNER = 'owner';
@@ -63,10 +63,94 @@ describe('plans', () => {
     expect((await setPlan(OWNER, { email: 'alice@example.com', plan: 'gold' })).statusCode).toBe(
       400,
     );
+    // An end date in the past is refused.
+    expect(
+      (
+        await setPlan(OWNER, {
+          email: 'alice@example.com',
+          plan: 'pro',
+          expiresAt: '2020-01-01T00:00:00.000Z',
+        })
+      ).statusCode,
+    ).toBe(400);
     // The target is never taken from a user id in the body.
     expect(
       (await setPlan(OWNER, { email: 'alice@example.com', plan: 'pro', userId: ALICE })).statusCode,
     ).toBe(400);
+  });
+});
+
+describe('plan expiry', () => {
+  const OWNER_EMAILS = { [ALICE]: 'alice@example.com', [OWNER]: 'owner@example.com' };
+  let now = new Date('2026-11-14T05:00:00Z');
+  let app: FastifyInstance;
+  afterEach(() => app.close());
+
+  it('applies Free limits after a paid plan expires, keeping the usage (AC7)', async () => {
+    const plans: InMemoryPlanRows = new Map();
+    plans.set(ALICE, {
+      plan: 'pro',
+      expiresAt: new Date('2026-11-20T00:00:00Z'),
+      source: 'payment',
+    });
+    app = await buildTestApp({
+      repos: { usage: createInMemoryUsageRepository(OWNER_EMAILS, plans) },
+      now: () => now,
+    });
+    const get = async () =>
+      (await app.inject({ method: 'GET', url: '/v1/me/usage', headers: as(ALICE) })).json();
+    expect((await get()).plan).toBe('pro');
+    now = new Date('2026-11-20T00:00:00Z'); // exactly at the end date: already free
+    const after = await get();
+    expect(after.plan).toBe('free');
+    expect(after.usage.debriefs.limit).toBe(8);
+    expect(plans.has(ALICE)).toBe(true); // nothing deleted
+  });
+
+  it('keeps an admin-set plan without an end date forever (AC10)', async () => {
+    const plans: InMemoryPlanRows = new Map();
+    app = await buildTestApp({
+      adminEmails: ['owner@example.com'],
+      repos: {
+        admin: createInMemoryAdminRepository(OWNER_EMAILS),
+        usage: createInMemoryUsageRepository(OWNER_EMAILS, plans),
+      },
+      now: () => new Date('2030-01-01T00:00:00Z'),
+    });
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/v1/admin/plan',
+      headers: as(OWNER),
+      payload: { email: 'alice@example.com', plan: 'pro' },
+    });
+    expect(res.json()).toEqual({ email: 'alice@example.com', plan: 'pro' });
+    expect(plans.get(ALICE)).toMatchObject({ plan: 'pro', expiresAt: null, source: 'manual' });
+    const usage = await app.inject({ method: 'GET', url: '/v1/me/usage', headers: as(ALICE) });
+    expect(usage.json().plan).toBe('pro');
+  });
+
+  it('records an end date the admin gives', async () => {
+    const plans: InMemoryPlanRows = new Map();
+    app = await buildTestApp({
+      adminEmails: ['owner@example.com'],
+      repos: {
+        admin: createInMemoryAdminRepository(OWNER_EMAILS),
+        usage: createInMemoryUsageRepository(OWNER_EMAILS, plans),
+      },
+      now: () => now,
+    });
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/v1/admin/plan',
+      headers: as(OWNER),
+      payload: { email: 'alice@example.com', plan: 'ultra', expiresAt: '2026-12-01T00:00:00.000Z' },
+    });
+    expect(res.json()).toEqual({
+      email: 'alice@example.com',
+      plan: 'ultra',
+      expiresAt: '2026-12-01T00:00:00.000Z',
+    });
+    expect(plans.get(ALICE)?.expiresAt?.toISOString()).toBe('2026-12-01T00:00:00.000Z');
   });
 });
 

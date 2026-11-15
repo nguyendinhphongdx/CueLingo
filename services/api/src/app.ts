@@ -82,6 +82,8 @@ export interface AppDeps {
   };
   /** Plan limits (`PLAN_LIMITS`); defaults to the table in `@cuelingo/shared`. */
   planLimits?: PlanLimitTable;
+  /** Clock for plans and billing; tests move it. Defaults to the system clock. */
+  now?: () => Date;
   queue: JobQueue;
   resolveUserId: AuthOptions['resolveUserId'];
   /** Origin of apps/web, allowed by CORS (cookies included). */
@@ -165,6 +167,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const usage = createUsageModule(deps.repos.usage, {
     limits: deps.planLimits ?? resolvePlanLimits(),
     isAdmin: admin.service.isAdmin,
+    now: deps.now,
   });
   await app.register(usage.routes);
   await app.register(

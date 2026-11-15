@@ -49,7 +49,7 @@ export function createUsageService(repo: UsageRepository, options: UsageOptions)
   /** What a gate needs for one metric: a single query by primary key, with the admin check beside it. */
   async function gateOf(userId: string, metric: UsageMetric, at: Date, admin?: boolean) {
     const [row, isAdmin] = await Promise.all([
-      repo.gate(userId, metric, periodStart(metric, at)),
+      repo.gate(userId, metric, periodStart(metric, at), at),
       admin ?? options.isAdmin(userId),
     ]);
     return {
@@ -95,7 +95,7 @@ export function createUsageService(repo: UsageRepository, options: UsageOptions)
     /** AC3: the plan and every allowance of this user, with `limit: null` for unlimited. */
     async snapshot(userId: string): Promise<UsageResponse> {
       const at = now();
-      const { plan, amounts } = await repo.snapshot(userId, startsAt(at));
+      const { plan, amounts } = await repo.snapshot(userId, startsAt(at), at);
       const admin = await options.isAdmin(userId);
       const usage = Object.fromEntries(
         USAGE_METRICS.map((m) => [
@@ -148,14 +148,24 @@ export function createUsageService(repo: UsageRepository, options: UsageOptions)
     },
 
     /** AC2: admin picks the person by email; the plan applies from the next check. */
-    async setPlan(adminId: string, email: string, plan: Plan): Promise<SetPlanResponse> {
+    async setPlan(
+      adminId: string,
+      email: string,
+      plan: Plan,
+      expiresAt?: string,
+    ): Promise<SetPlanResponse> {
       if (!(await options.isAdmin(adminId))) {
         throw new AppError(ErrorCode.Forbidden, 'Admin access required');
       }
+      // An end date only means something for a paid plan, and it must still be ahead.
+      const end = plan === 'free' || !expiresAt ? null : new Date(expiresAt);
+      if (end && end.getTime() <= now().getTime()) {
+        throw new AppError(ErrorCode.Validation, 'expiresAt must be in the future');
+      }
       const target = await repo.userIdByEmail(email);
       if (!target) throw new AppError(ErrorCode.NotFound, 'No user has this email');
-      await repo.setPlan(target, plan, adminId);
-      return { email, plan };
+      await repo.setPlan(target, plan, adminId, end);
+      return end ? { email, plan, expiresAt: end.toISOString() } : { email, plan };
     },
   };
 }
