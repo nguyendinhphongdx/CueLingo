@@ -25,6 +25,8 @@ export function useInvites() {
   return {
     invites: list.data?.items ?? [],
     loading: list.isPending,
+    /** The list answered: the caller is an admin. */
+    ready: list.isSuccess,
     hidden,
     error: hidden ? null : describeError(list.error ?? create.error ?? revoke.error),
     create: create.mutate,

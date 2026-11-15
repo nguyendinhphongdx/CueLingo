@@ -16,6 +16,8 @@ Trang tối thiểu cho quản trị viên (`ADMIN_EMAILS`) bật/tắt trợ l�
 
 ## Interface
 
+- Bọc trong `AdminFrame` (thanh liên kết giữa các trang admin, xem [Số liệu nội bộ](./admin-metrics.md)).
+
 - Hook `useAdminAgent` đọc `client.admin.agent.get()` và gửi `client.admin.agent.update(...)`; câu trả lời của PATCH thay luôn trạng thái trong cache.
 - Dùng `Button`, `Card`, `PageHeader`, `Section` của `@cuelingo/ui`.
 

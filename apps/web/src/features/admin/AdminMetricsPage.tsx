@@ -5,6 +5,7 @@ import { Card, CardContent } from '@cuelingo/ui/components/card';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { Section } from '@cuelingo/ui/components/section';
 import { notFound } from 'next/navigation';
+import { AdminFrame } from './AdminFrame';
 import { useAdminMetrics } from './use-admin-metrics';
 
 const number = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 });
@@ -68,7 +69,7 @@ export function AdminMetricsView({ metrics }: { metrics: AdminMetrics }) {
   ] as const;
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    <AdminFrame width="wide">
       <PageHeader
         title="Số liệu nội bộ"
         description="Tín hiệu vận hành tổng hợp, không chứa nội dung hoặc thông tin định danh."
@@ -149,7 +150,7 @@ export function AdminMetricsView({ metrics }: { metrics: AdminMetrics }) {
           timeStyle: 'short',
         }).format(new Date(metrics.generatedAt))}
       </p>
-    </main>
+    </AdminFrame>
   );
 }
 
@@ -158,22 +159,22 @@ export function AdminMetricsPage() {
   if (hidden) notFound();
   if (loading) {
     return (
-      <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <AdminFrame width="wide" nav={false}>
         <PageHeader title="Số liệu nội bộ" />
         <p className="text-muted-foreground text-sm" aria-live="polite">
           Đang tải số liệu…
         </p>
-      </main>
+      </AdminFrame>
     );
   }
   if (error) {
     return (
-      <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <AdminFrame width="wide" nav={false}>
         <PageHeader title="Số liệu nội bộ" />
         <p role="alert" className="text-destructive text-sm">
           {error}
         </p>
-      </main>
+      </AdminFrame>
     );
   }
   if (!metrics) notFound();

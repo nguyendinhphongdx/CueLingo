@@ -6,6 +6,7 @@ import { Card, CardContent } from '@cuelingo/ui/components/card';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { Section } from '@cuelingo/ui/components/section';
 import { notFound } from 'next/navigation';
+import { AdminFrame } from './AdminFrame';
 import { useAdminAgent } from './use-admin-agent';
 
 const time = new Intl.DateTimeFormat('vi-VN', { timeStyle: 'short' });
@@ -128,7 +129,7 @@ export function AdminAgentPage() {
   const { status, loading, hidden, error, saving, setEnabled, setPlugin } = useAdminAgent();
   if (hidden) notFound();
   return (
-    <main className="mx-auto min-h-screen w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+    <AdminFrame nav={status !== null}>
       <PageHeader
         title="Trợ lý AI"
         description="Bật hoặc tắt trợ lý và từng plugin. Thay đổi có hiệu lực từ lượt trò chuyện kế tiếp."
@@ -152,6 +153,6 @@ export function AdminAgentPage() {
           />
         )
       )}
-    </main>
+    </AdminFrame>
   );
 }

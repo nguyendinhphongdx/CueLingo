@@ -14,6 +14,7 @@ title: Số liệu nội bộ
 ## Phạm vi MVP
 
 - Trang `/admin/metrics`; không có liên kết trong thanh bên.
+- Khung chung `AdminFrame` + thanh liên kết `AdminNav` (Người dùng · Số liệu · Mã mời · Trợ lý AI, `aria-current` theo trang). Thanh chỉ hiện khi API đã trả thành công cho người gọi; lúc đang tải hoặc bị `401/403` không có liên kết nào (trang gọi `notFound()`).
 
 ## Interface
 
