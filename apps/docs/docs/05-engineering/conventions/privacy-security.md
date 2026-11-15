@@ -15,4 +15,8 @@ Nguyên tắc: [02-architecture/security-privacy](../../03-architecture/08-secur
 
 ## Nhà cung cấp được duyệt nhận dữ liệu người dùng
 
-_(chưa có — cập nhật khi chốt STT cloud / LLM / TTS theo ADR-0004)_
+| Nhà cung cấp | Nhận gì                                                                   | ADR                                                |
+| ------------ | ------------------------------------------------------------------------- | -------------------------------------------------- |
+| PayOS        | Mã đơn, số tiền, nội dung chuyển khoản, địa chỉ quay lại. Không email/tên | [0023](../../08-adr/0023-payments-payos-vietqr.md) |
+
+_(STT cloud / LLM / TTS: bổ sung khi chốt theo ADR-0004)_
