@@ -43,9 +43,20 @@ export type DebriefSkippedDetails = z.infer<typeof DebriefSkippedDetailsSchema>;
 
 /** Admin only. The target is picked by email; the caller's own id never comes from the body. */
 export const SetPlanRequestSchema = z
-  .object({ email: z.email().max(254), plan: PlanSchema })
+  .object({
+    email: z.email().max(254),
+    plan: PlanSchema,
+    /** When the plan ends and the user falls back to Free. Omitted = never (as in W2-02). */
+    expiresAt: z.iso.datetime().optional(),
+  })
   .strict();
 export type SetPlanRequest = z.infer<typeof SetPlanRequestSchema>;
 
-export const SetPlanResponseSchema = z.object({ email: z.string(), plan: PlanSchema }).strict();
+export const SetPlanResponseSchema = z
+  .object({
+    email: z.string(),
+    plan: PlanSchema,
+    expiresAt: z.iso.datetime().nullable().optional(),
+  })
+  .strict();
 export type SetPlanResponse = z.infer<typeof SetPlanResponseSchema>;
