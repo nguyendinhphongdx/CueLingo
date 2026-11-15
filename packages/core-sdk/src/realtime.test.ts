@@ -11,6 +11,7 @@ class FakeSocket implements RealtimeSocket {
   onerror: ((event: unknown) => void) | null = null;
   onclose: (() => void) | null = null;
   sent: string[] = [];
+  url = '';
   close = vi.fn();
 
   send(data: string) {
@@ -42,7 +43,7 @@ function segment(text: string): ClientMessage {
   };
 }
 
-function setup() {
+function setup(features?: readonly 'usage'[]) {
   const sockets: FakeSocket[] = [];
   const states: RealtimeState[] = [];
   const onMessage = vi.fn();
@@ -52,8 +53,10 @@ function setup() {
     token: 'access-token',
     sessionId,
     assistLevel: 3,
-    createSocket: () => {
+    features,
+    createSocket: (url) => {
       const socket = new FakeSocket();
+      socket.url = url;
       sockets.push(socket);
       return socket;
     },
@@ -159,6 +162,37 @@ describe('createRealtimeClient', () => {
     expect(sockets).toHaveLength(2);
     vi.advanceTimersByTime(1);
     expect(sockets).toHaveLength(3);
+  });
+
+  it('adds the requested features to the socket URL', () => {
+    const { client, sockets } = setup(['usage']);
+    client.connect();
+    expect(sockets[0]?.url).toBe(
+      'wss://api.example.test/v1/sessions/session/stream?features=usage',
+    );
+    expect(setup().sockets).toHaveLength(0);
+    const plain = setup();
+    plain.client.connect();
+    expect(plain.sockets[0]?.url).toBe('wss://api.example.test/v1/sessions/session/stream');
+  });
+
+  it('delivers usage messages and skips message types from a newer server without an error', () => {
+    const { client, sockets, onMessage, onError } = setup(['usage']);
+    client.connect();
+    sockets[0]?.open();
+    const usage = {
+      type: 'usage',
+      metric: 'translation_ms',
+      state: 'low',
+      item: { used: 1, limit: 2, resetsAt: '2026-12-01T00:00:00.000Z', state: 'low' },
+    };
+
+    sockets[0]?.receive({ type: 'something.new', anything: true });
+    sockets[0]?.receive(usage);
+
+    expect(onError).not.toHaveBeenCalled();
+    expect(onMessage).toHaveBeenCalledTimes(1);
+    expect(onMessage).toHaveBeenCalledWith(usage);
   });
 
   it('ignores malformed server messages and reports parsing errors', () => {

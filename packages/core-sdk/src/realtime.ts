@@ -1,11 +1,15 @@
 import {
   ServerMessageSchema,
+  type RealtimeFeature,
   type ClientMessage,
   type HelloMessage,
   type ServerMessage,
 } from '@cuelingo/shared';
 
 const BUFFER_TTL_MS = 60_000;
+/** `type` values this client understands. Others come from a newer server and are skipped, not treated as errors. */
+const KNOWN_SERVER_TYPES = new Set(['ready', 'translation', 'error', 'usage']);
+
 const RECONNECT_DELAYS_MS = [500, 1_000, 2_000, 4_000, 8_000] as const;
 
 export type RealtimeState = 'idle' | 'connecting' | 'open' | 'reconnecting' | 'closed';
@@ -24,6 +28,8 @@ export interface RealtimeClientOptions {
   token: string;
   sessionId: string;
   assistLevel: number;
+  /** Optional server messages to receive, e.g. `['usage']`. Sent as `?features=` on the URL; an older server ignores it. */
+  features?: readonly RealtimeFeature[];
   createSocket?: (url: string) => RealtimeSocket;
   now?: () => number;
   onMessage: (message: ServerMessage) => void;
@@ -54,6 +60,10 @@ export function createRealtimeClient(options: RealtimeClientOptions): RealtimeCl
     sttSource: 'local',
     assistLevel: options.assistLevel,
   };
+
+  const url = options.features?.length
+    ? `${options.url}${options.url.includes('?') ? '&' : '?'}features=${options.features.join(',')}`
+    : options.url;
 
   let currentState: RealtimeState = 'idle';
   let socket: RealtimeSocket | null = null;
@@ -116,6 +126,9 @@ export function createRealtimeClient(options: RealtimeClientOptions): RealtimeCl
       return;
     }
 
+    const type = (decoded as { type?: unknown } | null)?.type;
+    if (typeof type === 'string' && !KNOWN_SERVER_TYPES.has(type)) return;
+
     const parsed = ServerMessageSchema.safeParse(decoded);
     if (!parsed.success) {
       options.onError(parsed.error);
@@ -133,7 +146,7 @@ export function createRealtimeClient(options: RealtimeClientOptions): RealtimeCl
   function openSocket() {
     let nextSocket: RealtimeSocket;
     try {
-      nextSocket = createSocket(options.url);
+      nextSocket = createSocket(url);
     } catch (error) {
       options.onError(error instanceof Error ? error : new Error('WebSocket connection failed'));
       scheduleReconnect();
