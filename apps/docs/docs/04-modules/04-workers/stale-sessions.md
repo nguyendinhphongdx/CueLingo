@@ -18,7 +18,7 @@ Kết thúc các cuộc họp bị bỏ lửng ở trạng thái `live` (app t�
 
 ## Cấu hình
 
-Worker đọc cùng `PLAN_LIMITS` và `ADMIN_EMAILS` với API (cùng định dạng, xem [usage](../03-api/usage.md)); `src/lib/usage.ts` dùng logic thuần của `@cuelingo/shared` và lặp lại đúng một câu SQL giữ chỗ vì worker không import API. Hai bên phải đặt giống nhau, nên `infra/compose.tunnel.yml` truyền cả hai biến cho cả hai service.
+Worker đọc cùng `PLAN_LIMITS` và `ADMIN_EMAILS` với API (cùng định dạng và cùng schema `PlanLimitsEnvSchema` trong `@cuelingo/shared`, nên sai là dừng ngay lúc khởi động và nêu đúng khoá; xem [usage](../03-api/usage.md)); `src/lib/usage.ts` dùng logic thuần của `@cuelingo/shared` và lặp lại đúng một câu SQL giữ chỗ vì worker không import API. Hai bên phải đặt giống nhau, nên `infra/compose.tunnel.yml` truyền cả hai biến cho cả hai service.
 
 ## Giới hạn
 

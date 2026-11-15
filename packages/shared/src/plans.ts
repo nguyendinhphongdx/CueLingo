@@ -75,6 +75,35 @@ export function resolvePlanLimits(override: PlanLimitsOverride = {}): PlanLimitT
   return out;
 }
 
+/**
+ * The `PLAN_LIMITS` environment variable: JSON text in, resolved limit table out; absent means the defaults.
+ * API and workers both use this schema, so a bad value stops either one at start-up with the same message.
+ */
+export const PlanLimitsEnvSchema = z
+  .string()
+  .transform((value, ctx): PlanLimitTable => {
+    let json: unknown;
+    try {
+      json = JSON.parse(value);
+    } catch {
+      ctx.addIssue({ code: 'custom', message: 'PLAN_LIMITS must be valid JSON' });
+      return z.NEVER;
+    }
+    const parsed = PlanLimitsOverrideSchema.safeParse(json);
+    if (!parsed.success) {
+      const problems = parsed.error.issues.map(
+        (i) => `${i.path.join('.') || 'value'}: ${i.message}`,
+      );
+      ctx.addIssue({
+        code: 'custom',
+        message: `PLAN_LIMITS is not valid (${problems.join('; ')})`,
+      });
+      return z.NEVER;
+    }
+    return resolvePlanLimits(parsed.data);
+  })
+  .default(() => resolvePlanLimits());
+
 /** Vietnam is UTC+7 with no daylight saving. */
 const VN_OFFSET_MS = 7 * HOUR_MS;
 const DAY_MS = 24 * HOUR_MS;

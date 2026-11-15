@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PLAN_LIMITS,
+  PlanLimitsEnvSchema,
   PlanLimitsOverrideSchema,
   periodEnd,
   periodStart,
@@ -76,6 +77,22 @@ describe('plan limits', () => {
     expect(PlanLimitsOverrideSchema.safeParse({ gold: {} }).success).toBe(false);
     expect(PlanLimitsOverrideSchema.safeParse({ free: { nope: 1 } }).success).toBe(false);
     expect(PlanLimitsOverrideSchema.safeParse({ free: { debriefs: -1 } }).success).toBe(false);
+  });
+});
+
+describe('PlanLimitsEnvSchema', () => {
+  it('defaults when unset and merges an override', () => {
+    expect(PlanLimitsEnvSchema.parse(undefined).free.debriefs).toBe(8);
+    expect(PlanLimitsEnvSchema.parse('{"pro":{"agent_messages":7}}').pro.agent_messages).toBe(7);
+  });
+  it('names PLAN_LIMITS and the exact key that is wrong', () => {
+    const bad = PlanLimitsEnvSchema.safeParse('{"free":{"debriefs":-1}}');
+    expect(bad.success).toBe(false);
+    expect(bad.error?.issues[0]?.message).toContain('PLAN_LIMITS');
+    expect(bad.error?.issues[0]?.message).toContain('free.debriefs');
+    expect(PlanLimitsEnvSchema.safeParse('{oops').error?.issues[0]?.message).toContain(
+      'valid JSON',
+    );
   });
 });
 

@@ -1,4 +1,4 @@
-import { PlanLimitsOverrideSchema, resolvePlanLimits, type PlanLimitTable } from '@cuelingo/shared';
+import { PlanLimitsEnvSchema } from '@cuelingo/shared';
 import { z } from 'zod';
 
 const ConfigSchema = z
@@ -41,27 +41,7 @@ const ConfigSchema = z
      * JSON that overrides the default plan limits (packages/shared/src/plans.ts), e.g.
      * `{"free":{"translation_ms":600000,"debriefs":2},"pro":{"agent_messages":null}}`. `null` = unlimited.
      */
-    PLAN_LIMITS: z
-      .string()
-      .transform((value, ctx): PlanLimitTable => {
-        let json: unknown;
-        try {
-          json = JSON.parse(value);
-        } catch {
-          ctx.addIssue({ code: 'custom', message: 'PLAN_LIMITS must be valid JSON' });
-          return z.NEVER;
-        }
-        const parsed = PlanLimitsOverrideSchema.safeParse(json);
-        if (!parsed.success) {
-          ctx.addIssue({
-            code: 'custom',
-            message: `PLAN_LIMITS is not valid: ${parsed.error.issues.map((i) => `${i.path.join('.')} ${i.message}`).join(', ')}`,
-          });
-          return z.NEVER;
-        }
-        return resolvePlanLimits(parsed.data);
-      })
-      .default(() => resolvePlanLimits()),
+    PLAN_LIMITS: PlanLimitsEnvSchema,
     REALTIME_DEV_TOKEN: z.string().min(16).optional(),
     REALTIME_DEV_USER_ID: z.uuid().optional(),
     /** Sign-up needs an invite code. Defaults to on in production and off elsewhere. */

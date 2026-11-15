@@ -30,7 +30,10 @@ describe('worker loadConfig', () => {
     expect(config.PLAN_LIMITS.free.assist_daily).toBe(20);
     expect(config.ADMIN_EMAILS).toEqual(['owner@example.com']);
     expect(() =>
-      loadConfig({ DATABASE_URL: 'postgres://u:p@localhost:5432/d', PLAN_LIMITS: '{oops' }),
-    ).toThrow(/PLAN_LIMITS/);
+      loadConfig({
+        DATABASE_URL: 'postgres://u:p@localhost:5432/d',
+        PLAN_LIMITS: '{"free":{"debriefs":-1}}',
+      }),
+    ).toThrow(/PLAN_LIMITS is not valid \(free\.debriefs/);
   });
 });
