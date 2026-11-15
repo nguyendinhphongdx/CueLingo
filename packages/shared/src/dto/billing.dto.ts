@@ -65,6 +65,11 @@ export const BillingOrderSchema = z
     paidAt: z.iso.datetime().nullable(),
     /** The paid plan's end date once the order is `paid`. */
     planExpiresAt: z.iso.datetime().nullable(),
+    /**
+     * False for a `paid` order whose plan did not change (the user already held a higher plan): the money
+     * arrived and needs a refund by hand. Always false while the order is not `paid`.
+     */
+    planApplied: z.boolean(),
   })
   .strict();
 export type BillingOrder = z.infer<typeof BillingOrderSchema>;

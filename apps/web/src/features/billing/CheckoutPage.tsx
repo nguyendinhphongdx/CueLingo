@@ -116,6 +116,17 @@ export function CheckoutView({
         </Link>
       </div>
     );
+  } else if (order.status === 'paid' && !order.planApplied) {
+    body = (
+      <div className="space-y-3">
+        <Notice>
+          Đã nhận tiền nhưng gói không đổi vì bạn đã có gói cao hơn. Chúng tôi sẽ liên hệ hoàn tiền.
+        </Notice>
+        <Link href="/settings" className={buttonVariants({ variant: 'outline' })}>
+          Về Cài đặt
+        </Link>
+      </div>
+    );
   } else if (order.status === 'paid') {
     body = (
       <div className="space-y-3">

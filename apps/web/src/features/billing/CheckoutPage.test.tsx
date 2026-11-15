@@ -48,12 +48,22 @@ describe('CheckoutView', () => {
     );
   });
 
+  it('does not claim an upgrade when the money came but the plan did not change', () => {
+    const markup = view({
+      order: order({ status: 'paid', paidAt: '2026-11-15T10:02:00.000Z', planApplied: false }),
+    });
+    expect(markup).not.toContain('Đã lên gói');
+    expect(markup).toContain('Đã nhận tiền nhưng gói không đổi vì bạn đã có gói cao hơn');
+    expect(markup).toContain('Chúng tôi sẽ liên hệ hoàn tiền');
+  });
+
   it('says which plan is active until when once paid (AC5)', () => {
     const markup = view({
       order: order({
         status: 'paid',
         paidAt: '2026-11-15T10:02:00.000Z',
         planExpiresAt: '2026-12-15T10:02:00.000Z',
+        planApplied: true,
       }),
     });
     expect(markup).toContain('Đã lên gói Pro đến 15/12/2026');
@@ -137,7 +147,7 @@ describe('useOrder polling (AC5)', () => {
     expect(getOrder).toHaveBeenCalledTimes(2);
 
     getOrder.mockResolvedValue(
-      order({ status: 'paid', planExpiresAt: '2026-12-15T10:02:00.000Z' }),
+      order({ status: 'paid', planExpiresAt: '2026-12-15T10:02:00.000Z', planApplied: true }),
     );
     await act(async () => {
       await vi.advanceTimersByTimeAsync(ORDER_POLL_MS);

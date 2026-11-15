@@ -24,6 +24,7 @@ const order = {
   expiresAt: '2026-11-15T00:15:00.000Z',
   paidAt: null,
   planExpiresAt: null,
+  planApplied: false,
 };
 const make = (fetch: ReturnType<typeof vi.fn>) =>
   createClient({

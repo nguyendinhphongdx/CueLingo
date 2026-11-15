@@ -203,6 +203,7 @@ describe('billing module', () => {
         qrCode: null,
         checkoutUrl: null,
         planExpiresAt: '2026-12-15T03:00:00.000Z',
+        planApplied: true,
       });
       expect((await overview(ALICE)).json().current).toEqual({
         plan: 'pro',
@@ -218,6 +219,21 @@ describe('billing module', () => {
       expect(results.every((r) => r.statusCode === 200)).toBe(true);
       await pay(order);
       expect((await overview(ALICE)).json().current.expiresAt).toBe('2026-12-15T03:00:00.000Z');
+    });
+
+    it('says the plan did not change when a lower plan is paid after a higher one', async () => {
+      await build();
+      const pro = await newOrder(ALICE, 'pro', 'month');
+      const ultra = await newOrder(ALICE, 'ultra', 'month');
+      await pay(ultra);
+      await pay(pro);
+      expect(await usagePlan(ALICE)).toBe('ultra');
+      expect((await getOrder(ALICE, ultra.id)).json()).toMatchObject({ planApplied: true });
+      expect((await getOrder(ALICE, pro.id)).json()).toMatchObject({
+        status: 'paid',
+        planExpiresAt: null,
+        planApplied: false,
+      });
     });
 
     it('ignores a signed webhook that is not a success', async () => {

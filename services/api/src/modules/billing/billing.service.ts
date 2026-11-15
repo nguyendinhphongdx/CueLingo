@@ -72,6 +72,8 @@ export function createBillingService(repo: BillingRepository, options: BillingOp
       expiresAt: order.expiresAt.toISOString(),
       paidAt: order.paidAt?.toISOString() ?? null,
       planExpiresAt: order.planExpiresAt?.toISOString() ?? null,
+      // `settle` sets `plan_expires_at` only when the plan moved, so no new column is needed.
+      planApplied: status === 'paid' && order.planExpiresAt !== null,
     };
   }
 

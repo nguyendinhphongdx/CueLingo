@@ -26,7 +26,7 @@ Người dùng tự mua Pro/Ultra bằng chuyển khoản VietQR qua PayOS, tr�
 | GET    | `/v1/billing/orders/:id`    | đã đăng nhập      | `BillingOrder` của người gọi (`404` nếu là đơn người khác). Client poll mỗi 3 s khi `pending`                                                |
 | POST   | `/v1/billing/webhook/payos` | PayOS (công khai) | `200 {ok:true}`. Xác thực bằng chữ ký, không bằng đăng nhập. Là route công khai **duy nhất** của module (`lib/auth.ts` so khớp đúng URL này) |
 
-`BillingOrder`: `{id, plan, period, amount, status: pending | paid | expired | cancelled, transferContent (CL<orderCode>), qrCode, checkoutUrl, createdAt, expiresAt, paidAt, planExpiresAt}`. `qrCode` (chuỗi VietQR để client vẽ) và `checkoutUrl` chỉ có khi `pending`.
+`BillingOrder`: `{id, plan, period, amount, status: pending | paid | expired | cancelled, transferContent (CL<orderCode>), qrCode, checkoutUrl, createdAt, expiresAt, paidAt, planExpiresAt, planApplied}`. `planApplied` suy ra từ `status='paid'` và `plan_expires_at` khác null (không thêm cột): `false` nghĩa là đã nhận tiền nhưng gói không đổi vì người dùng đã có gói cao hơn, cần hoàn tay. `qrCode` (chuỗi VietQR để client vẽ) và `checkoutUrl` chỉ có khi `pending`.
 
 | Mã lỗi                    | HTTP | Khi nào                                                                              |
 | ------------------------- | ---- | ------------------------------------------------------------------------------------ |

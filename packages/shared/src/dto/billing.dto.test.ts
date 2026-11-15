@@ -45,6 +45,7 @@ describe('BillingOrderSchema', () => {
       expiresAt: '2026-11-15T00:15:00.000Z',
       paidAt: null,
       planExpiresAt: null,
+      planApplied: false,
     };
     expect(BillingOrderSchema.safeParse(order).success).toBe(false);
     expect(BillingOrderSchema.safeParse({ ...order, status: 'pending' }).success).toBe(true);

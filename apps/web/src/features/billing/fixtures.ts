@@ -43,6 +43,7 @@ export function order(patch: Partial<BillingOrder> = {}): BillingOrder {
     expiresAt: '2026-11-15T10:15:00.000Z',
     paidAt: null,
     planExpiresAt: null,
+    planApplied: false,
     ...patch,
   };
 }
