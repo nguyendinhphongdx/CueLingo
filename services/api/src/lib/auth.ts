@@ -24,6 +24,8 @@ const isPublic = (url: string) =>
   url === '/v1/device/exchange' ||
   url === '/v1/invites/intent' ||
   url === '/v1/invites/status' ||
+  // The payment provider calls this one; the webhook signature is its authentication.
+  url === '/v1/billing/webhook/payos' ||
   /^\/v1\/sessions\/[^/]+\/stream(?:\?|$)/.test(url);
 
 const acceptsDevToken = (url: string) =>

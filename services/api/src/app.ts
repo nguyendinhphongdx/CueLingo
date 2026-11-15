@@ -1,5 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { resolvePlanLimits, type PlanLimitTable } from '@cuelingo/shared';
+import {
+  resolvePlanLimits,
+  resolvePlanPrices,
+  type PlanLimitTable,
+  type PlanPriceTable,
+} from '@cuelingo/shared';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
 import Fastify, {
@@ -35,6 +40,11 @@ import { createSessionsModule, type SessionsRepository } from './modules/session
 import { createAdminModule, type AdminRepository, type AgentAdminPort } from './modules/admin';
 import { createFeedbackModule, type FeedbackRepository } from './modules/feedback';
 import { createInvitesModule, type InvitesRepository } from './modules/invites';
+import {
+  createBillingModule,
+  type BillingRepository,
+  type PaymentProvider,
+} from './modules/billing';
 import { createUsageModule, type UsageRepository } from './modules/usage';
 import { createTranscribeModule, type TranscribeDeps } from './modules/transcribe';
 import { createSettingsModule, type SettingsRepository } from './modules/settings';
@@ -53,6 +63,8 @@ const LOG_REDACT = {
     'email',
     '*.email',
     '*.*.email',
+    'signature',
+    '*.signature',
   ],
   censor: '[Redacted]',
 };
@@ -79,9 +91,14 @@ export interface AppDeps {
     feedback: FeedbackRepository;
     settings: SettingsRepository;
     usage: UsageRepository;
+    billing: BillingRepository;
   };
   /** Plan limits (`PLAN_LIMITS`); defaults to the table in `@cuelingo/shared`. */
   planLimits?: PlanLimitTable;
+  /** VND prices (`PLAN_PRICES`); defaults to the table in `@cuelingo/shared`. */
+  planPrices?: PlanPriceTable;
+  /** The payment provider. Omitted = upgrading is off: `GET /v1/billing` says `enabled: false`. */
+  paymentProvider?: PaymentProvider;
   /** Clock for plans and billing; tests move it. Defaults to the system clock. */
   now?: () => Date;
   queue: JobQueue;
@@ -170,6 +187,16 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     now: deps.now,
   });
   await app.register(usage.routes);
+  await app.register(
+    createBillingModule(deps.repos.billing, {
+      provider: deps.paymentProvider,
+      prices: deps.planPrices ?? resolvePlanPrices(),
+      limits: deps.planLimits ?? resolvePlanLimits(),
+      webOrigin: deps.webOrigin,
+      log: app.log,
+      now: deps.now,
+    }).routes,
+  );
   await app.register(
     createInvitesModule(deps.repos.invites, admin.service.isAdmin, {
       secureCookie: deps.secureCookies ?? false,

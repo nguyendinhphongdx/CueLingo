@@ -26,6 +26,7 @@ import { createPostgresPhrasesRepository, createPostgresStudyRepository } from '
 import { createPostgresAdminRepository } from './modules/admin';
 import { createPostgresFeedbackRepository } from './modules/feedback';
 import { createPostgresUsageRepository } from './modules/usage';
+import { createPayosProvider, createPostgresBillingRepository } from './modules/billing';
 import { createInviteGate, createPostgresInvitesRepository } from './modules/invites';
 import type { LanguageCode } from '@cuelingo/shared';
 
@@ -111,6 +112,7 @@ const app = await buildApp({
     invites: invitesRepository,
     feedback: createPostgresFeedbackRepository(sql),
     usage: createPostgresUsageRepository(sql),
+    billing: createPostgresBillingRepository(sql),
   },
   queue,
   resolveUserId: authModule.resolveUserId,
@@ -137,6 +139,16 @@ const app = await buildApp({
   logger: true,
   adminEmails: config.ADMIN_EMAILS,
   planLimits: config.PLAN_LIMITS,
+  planPrices: config.PLAN_PRICES,
+  // Config guarantees the three keys come together; without them upgrading stays off.
+  paymentProvider:
+    config.PAYOS_CLIENT_ID && config.PAYOS_API_KEY && config.PAYOS_CHECKSUM_KEY
+      ? createPayosProvider({
+          clientId: config.PAYOS_CLIENT_ID,
+          apiKey: config.PAYOS_API_KEY,
+          checksumKey: config.PAYOS_CHECKSUM_KEY,
+        })
+      : undefined,
   secureCookies: config.NODE_ENV === 'production',
   invitesRequired: config.INVITES_REQUIRED,
 });
