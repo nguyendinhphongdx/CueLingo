@@ -61,5 +61,5 @@ Schema đầy đủ nằm trong `@cuelingo/shared` (`ws.ts`).
 
 - Mất mạng: hiện cảnh báo trên overlay, `core-sdk` đệm tối đa 60 giây rồi gửi lại. STT local vẫn chạy nên câu gốc không bị gián đoạn.
 - LLM chậm hoặc lỗi: `ai-gateway` timeout ở 3 giây rồi chuyển sang model dự phòng; vẫn quá hạn thì bỏ bản dịch câu đó (câu gốc vẫn hiện).
-- Hết giờ dịch của gói (`usage`): bỏ bước dịch từ câu sau, caption gốc vẫn chạy, client nhận một message `usage` báo `exhausted`. Giờ dịch được cộng sau khi bản dịch đã gửi nên không thêm độ trễ vào câu đó; cổng đọc lượng dùng song song với glossary.
+- Hết giờ dịch của gói (`usage`): bỏ bước dịch từ câu sau, caption gốc vẫn chạy, client nhận một message `usage` báo `exhausted`. Cổng là một câu SQL theo khoá chính (gói và counter), chạy song song với lần đọc glossary; việc "admin hay không" hỏi một lần lúc hello. Giờ dịch được ghi sau khi bản dịch đã gửi và ngoài hàng đợi dịch nên không thêm độ trễ cho câu đó lẫn câu sau.
 - Người nói chen tiếng Việt: hiện nguyên văn, không dịch.

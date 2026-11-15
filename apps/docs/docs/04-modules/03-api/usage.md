@@ -48,7 +48,9 @@ WHERE usage_counters.amount < $5   -- limit
 RETURNING amount
 ```
 
-Không có dòng trả về nghĩa là bị từ chối. Giờ dịch thì kiểm trước (`status`) rồi cộng sau (`add`), nên có thể vượt tối đa khoảng một câu.
+Không có dòng trả về nghĩa là bị từ chối. Trước đó, cổng đọc gói và counter của đúng một metric bằng một câu theo khoá chính (`gate`), song song với việc kiểm admin; `GET /v1/me/usage` mới đọc đủ cả năm mục (`snapshot`).
+
+**Có thể vượt tối đa một phần việc.** Giữ chỗ chỉ kiểm "đã chạm trần chưa" rồi cộng cả `amount`, nên lượt cuối có thể vượt trần đúng bằng một phần: một câu dịch (tối đa 60 giây), một đoạn STT (tối đa 25,5 giây) hoặc một lượt. Không chặn lượt đó vì từ chối sau khi người dùng đã nói thì tệ hơn. Giờ dịch thì kiểm trước (`status`) rồi cộng sau (`add`), nên có thể vượt tối đa khoảng một câu.
 
 ## Dữ liệu & quyền riêng tư
 

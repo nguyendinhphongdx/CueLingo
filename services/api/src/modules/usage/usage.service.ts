@@ -46,13 +46,17 @@ export function createUsageService(repo: UsageRepository, options: UsageOptions)
     state: quotaState(metric, used, limit),
   });
 
-  async function limitOf(userId: string, plan: Plan, metric: UsageMetric): Promise<number | null> {
-    if (await options.isAdmin(userId)) return null;
-    return options.limits[plan][metric];
-  }
-
-  async function planOf(userId: string): Promise<Plan> {
-    return (await repo.snapshot(userId, startsAt(now()))).plan;
+  /** What a gate needs for one metric: a single query by primary key, with the admin check beside it. */
+  async function gateOf(userId: string, metric: UsageMetric, at: Date, admin?: boolean) {
+    const [row, isAdmin] = await Promise.all([
+      repo.gate(userId, metric, periodStart(metric, at)),
+      admin ?? options.isAdmin(userId),
+    ]);
+    return {
+      plan: row.plan,
+      used: row.amount,
+      limit: isAdmin ? null : options.limits[row.plan][metric],
+    };
   }
 
   const exceeded = (plan: Plan, metric: UsageMetric, used: number, limit: number, at: Date) => ({
@@ -70,8 +74,7 @@ export function createUsageService(repo: UsageRepository, options: UsageOptions)
     amount = 1,
   ): Promise<ReserveResult> {
     const at = now();
-    const { plan, amounts } = await repo.snapshot(userId, startsAt(at));
-    const limit = await limitOf(userId, plan, metric);
+    const { plan, used, limit } = await gateOf(userId, metric, at);
     const start = periodStart(metric, at);
     if (limit === null) {
       return {
@@ -81,7 +84,7 @@ export function createUsageService(repo: UsageRepository, options: UsageOptions)
     }
     const total = limit > 0 ? await repo.reserve(userId, metric, start, amount, limit) : null;
     if (total === null) {
-      return { ok: false, details: exceeded(plan, metric, amounts[metric], limit, at) };
+      return { ok: false, details: exceeded(plan, metric, used, limit, at) };
     }
     return { ok: true, item: itemOf(metric, total, limit, at) };
   }
@@ -103,11 +106,21 @@ export function createUsageService(repo: UsageRepository, options: UsageOptions)
       return { plan, usage };
     },
 
-    /** Read-only check, for gates that count later (translation time). Never throws. */
-    async status(userId: string, metric: UsageMetric): Promise<UsageItem> {
+    /** The single place `ADMIN_EMAILS` is read. A long-lived caller (a socket) asks once and passes `admin` on. */
+    isAdmin: options.isAdmin,
+
+    /**
+     * Read-only check, for gates that count later (translation time). Never throws. One query by primary key;
+     * `admin` skips the email lookup when the caller already knows it.
+     */
+    async status(
+      userId: string,
+      metric: UsageMetric,
+      known: { admin?: boolean } = {},
+    ): Promise<UsageItem> {
       const at = now();
-      const { plan, amounts } = await repo.snapshot(userId, startsAt(at));
-      return itemOf(metric, amounts[metric], await limitOf(userId, plan, metric), at);
+      const { used, limit } = await gateOf(userId, metric, at, known.admin);
+      return itemOf(metric, used, limit, at);
     },
 
     /** Same as {@link tryReserve} but throws 429 `QUOTA_EXCEEDED` with the allowance in `details`. */
@@ -119,12 +132,19 @@ export function createUsageService(repo: UsageRepository, options: UsageOptions)
       return result.item;
     },
 
-    /** Counts time already spent; may pass the limit by one segment (spec Q5). */
-    async add(userId: string, metric: UsageMetric, amount: number): Promise<UsageItem> {
+    /**
+     * Counts time already spent; may pass the limit by one segment (spec Q5). One write: the caller passes the
+     * `limit` its last `status` returned, so nothing is looked up again.
+     */
+    async add(
+      userId: string,
+      metric: UsageMetric,
+      amount: number,
+      limit: number | null,
+    ): Promise<UsageItem> {
       const at = now();
       const total = await repo.add(userId, metric, periodStart(metric, at), amount);
-      const plan = await planOf(userId);
-      return itemOf(metric, total, await limitOf(userId, plan, metric), at);
+      return itemOf(metric, total, limit, at);
     },
 
     /** AC2: admin picks the person by email; the plan applies from the next check. */

@@ -75,4 +75,30 @@ describe('usage counters on real Postgres', () => {
     expect(await sql`SELECT 1 FROM usage_counters WHERE user_id = ${alice}`).toHaveLength(0);
     expect(await sql`SELECT 1 FROM user_plans WHERE user_id = ${alice}`).toHaveLength(0);
   });
+
+  it('reads the gate and writes a counter in about a millisecond each (rough latency, informational)', async () => {
+    const repo = createPostgresUsageRepository(sql);
+    const uid = await newUser('timing@example.com');
+    const rounds = 200;
+    for (let i = 0; i < 20; i += 1) await repo.gate(uid, 'translation_ms', start); // warm-up
+    const time = async (work: () => Promise<unknown>) => {
+      const samples: number[] = [];
+      for (let i = 0; i < rounds; i += 1) {
+        const t0 = performance.now();
+        await work();
+        samples.push(performance.now() - t0);
+      }
+      samples.sort((a, b) => a - b);
+      return { p50: samples[Math.floor(rounds * 0.5)]!, p95: samples[Math.floor(rounds * 0.95)]! };
+    };
+    const gate = await time(() => repo.gate(uid, 'translation_ms', start));
+    const add = await time(() => repo.add(uid, 'translation_ms', start, 900));
+    // eslint-disable-next-line no-console
+    console.info(
+      `usage latency (ms): gate p50 ${gate.p50.toFixed(2)} p95 ${gate.p95.toFixed(2)}; ` +
+        `add p50 ${add.p50.toFixed(2)} p95 ${add.p95.toFixed(2)}`,
+    );
+    expect(gate.p95).toBeLessThan(50);
+    expect(add.p95).toBeLessThan(50);
+  });
 });

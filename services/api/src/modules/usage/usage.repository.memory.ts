@@ -17,6 +17,12 @@ export function createInMemoryUsageRepository(
       ) as UsageAmounts;
       return { plan: plans.get(userId) ?? DEFAULT_PLAN, amounts };
     },
+    async gate(userId, metric, periodStart) {
+      return {
+        plan: plans.get(userId) ?? DEFAULT_PLAN,
+        amount: counters.get(key(userId, metric, periodStart)) ?? 0,
+      };
+    },
     async reserve(userId, metric, periodStart, amount, limit) {
       const k = key(userId, metric, periodStart);
       const current = counters.get(k);

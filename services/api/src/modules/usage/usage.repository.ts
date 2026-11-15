@@ -8,6 +8,12 @@ export type UsageAmounts = Record<UsageMetric, number>;
 export interface UsageRepository {
   /** The plan (`free` when none was set) and what the user has used in the periods starting at `starts`. */
   snapshot(userId: string, starts: PeriodStarts): Promise<{ plan: Plan; amounts: UsageAmounts }>;
+  /** The plan and the counter of ONE metric in one round trip: what a gate needs, cheaper than `snapshot`. */
+  gate(
+    userId: string,
+    metric: UsageMetric,
+    periodStart: Date,
+  ): Promise<{ plan: Plan; amount: number }>;
   /**
    * Atomically adds `amount` unless the counter already reached `limit`.
    * Returns the new total, or null when refused. The caller rules out `limit <= 0`.
@@ -42,6 +48,16 @@ export function createPostgresUsageRepository(sql: Sql): UsageRepository {
         }
       }
       return { plan: planRow?.plan ?? DEFAULT_PLAN, amounts };
+    },
+
+    async gate(userId, metric, periodStart) {
+      // One statement by primary key: user_plans (0-1 rows) and the counter of this period (0-1 rows).
+      const [row] = await sql<{ plan: Plan | null; amount: string | null }[]>`
+        SELECT
+          (SELECT plan FROM user_plans WHERE user_id = ${userId}) AS plan,
+          (SELECT amount FROM usage_counters
+            WHERE user_id = ${userId} AND period_start = ${periodStart} AND metric = ${metric}) AS amount`;
+      return { plan: row?.plan ?? DEFAULT_PLAN, amount: Number(row?.amount ?? 0) };
     },
 
     async reserve(userId, metric, periodStart, amount, limit) {

@@ -636,4 +636,39 @@ describe('realtime usage (AC4, AC5, AC12)', () => {
     await vi.waitFor(async () => expect((await used()).state).toBe('exhausted'));
     expect((await used('bob')).used).toBe(0);
   });
+
+  it('costs one read and one write per translated sentence, and asks who is an admin only once', async () => {
+    await setup();
+    const repo = createInMemoryUsageRepository();
+    const calls = { gate: 0, snapshot: 0, add: 0, reserve: 0, userIdByEmail: 0 };
+    const counted = Object.fromEntries(
+      Object.entries(repo).map(([name, fn]) => [
+        name,
+        (...args: unknown[]) => {
+          if (name in calls) calls[name as keyof typeof calls] += 1;
+          return (fn as (...a: unknown[]) => unknown)(...args);
+        },
+      ]),
+    ) as unknown as typeof repo;
+    const isAdmin = vi.fn(async () => null);
+    await app.close();
+    llm = vi.fn(async (_task, input) => result(`vi:${input.text}`));
+    app = await buildTestApp({
+      realtime: { gateway: { llm }, verifyToken: async () => USER_ID, glossary: async () => [] },
+      repos: { usage: counted, admin: { emailForUser: isAdmin, metrics: vi.fn() } },
+    });
+    await app.ready();
+
+    const messages = await open('9ee72a14-8cd4-4f2e-8131-4ed638e2d875');
+    for (const index of [0, 1, 2]) send(segment(`line ${index}`, index));
+    await vi.waitFor(() =>
+      expect(messages.filter((m) => m.type === 'translation')).toHaveLength(3),
+    );
+    await vi.waitFor(() => expect(calls.add).toBe(3));
+
+    // Per sentence: one read by primary key (plan + counter together) and one write. Never the full snapshot.
+    expect(calls).toMatchObject({ gate: 3, snapshot: 0, add: 3 });
+    // The admin check happened at hello (the allowlist is empty here, so it is a cheap no-op lookup).
+    expect(isAdmin.mock.calls.length).toBeLessThanOrEqual(1);
+  });
 });
