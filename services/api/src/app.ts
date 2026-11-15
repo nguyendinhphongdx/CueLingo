@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { resolvePlanLimits, type PlanLimitTable } from '@cuelingo/shared';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
 import Fastify, {
@@ -34,6 +35,7 @@ import { createSessionsModule, type SessionsRepository } from './modules/session
 import { createAdminModule, type AdminRepository, type AgentAdminPort } from './modules/admin';
 import { createFeedbackModule, type FeedbackRepository } from './modules/feedback';
 import { createInvitesModule, type InvitesRepository } from './modules/invites';
+import { createUsageModule, type UsageRepository } from './modules/usage';
 import { createTranscribeModule, type TranscribeDeps } from './modules/transcribe';
 import { createSettingsModule, type SettingsRepository } from './modules/settings';
 
@@ -76,7 +78,10 @@ export interface AppDeps {
     invites: InvitesRepository;
     feedback: FeedbackRepository;
     settings: SettingsRepository;
+    usage: UsageRepository;
   };
+  /** Plan limits (`PLAN_LIMITS`); defaults to the table in `@cuelingo/shared`. */
+  planLimits?: PlanLimitTable;
   queue: JobQueue;
   resolveUserId: AuthOptions['resolveUserId'];
   /** Origin of apps/web, allowed by CORS (cookies included). */
@@ -157,6 +162,11 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   let agentAdmin: AgentAdminPort | undefined;
   const admin = createAdminModule(deps.repos.admin, deps.adminEmails ?? [], () => agentAdmin);
   await app.register(admin.routes, { prefix: '/v1/admin' });
+  const usage = createUsageModule(deps.repos.usage, {
+    limits: deps.planLimits ?? resolvePlanLimits(),
+    isAdmin: admin.service.isAdmin,
+  });
+  await app.register(usage.routes);
   await app.register(
     createInvitesModule(deps.repos.invites, admin.service.isAdmin, {
       secureCookie: deps.secureCookies ?? false,

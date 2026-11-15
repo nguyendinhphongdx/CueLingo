@@ -154,4 +154,26 @@ describe('INVITES_REQUIRED', () => {
       expect(() => loadConfig({ ...production, WEB_ORIGIN: 'https://localhost' })).toThrow(/https/);
     });
   });
+
+  describe('PLAN_LIMITS', () => {
+    it('defaults to the business model table', () => {
+      expect(loadConfig(valid).PLAN_LIMITS.free.debriefs).toBe(8);
+    });
+
+    it('overrides part of one plan and keeps the rest', () => {
+      const config = loadConfig({
+        ...valid,
+        PLAN_LIMITS: '{"free":{"translation_ms":600000},"pro":{"agent_messages":null}}',
+      });
+      expect(config.PLAN_LIMITS.free.translation_ms).toBe(600_000);
+      expect(config.PLAN_LIMITS.free.debriefs).toBe(8);
+      expect(config.PLAN_LIMITS.pro.agent_messages).toBeNull();
+    });
+
+    it('stops the start-up on bad JSON, an unknown plan or a negative limit', () => {
+      for (const PLAN_LIMITS of ['{oops', '{"gold":{}}', '{"free":{"debriefs":-1}}']) {
+        expect(() => loadConfig({ ...valid, PLAN_LIMITS })).toThrow(/PLAN_LIMITS/);
+      }
+    });
+  });
 });

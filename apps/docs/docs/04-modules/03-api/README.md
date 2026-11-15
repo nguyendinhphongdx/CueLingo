@@ -25,6 +25,7 @@ Backend modular monolith: REST + realtime WebSocket, điều phối dịch, Lear
 | [Privacy](./privacy.md)                 | `src/modules/privacy`       | Xoá dữ liệu, thời hạn lưu, xuất dữ liệu, consent.                                                |
 | [Settings](./settings.md)               | `src/modules/settings`      | Đọc và cập nhật cài đặt cá nhân dùng chung giữa web và desktop.                                  |
 | [Events](./events.md)                   | `src/modules/events`        | Nhận và kiểm tra event học tập/sản phẩm, ghi vào bảng `events` (append-only).                    |
+| [Usage](./usage.md)                     | `src/modules/usage`         | Gói Free/Pro/Ultra, đếm lượng dùng theo kỳ, cổng chặn khi hết hạn mức, `GET /v1/me/usage`.       |
 | [Admin metrics](./admin.md)             | `src/modules/admin`         | Số liệu vận hành tổng hợp cho email nội bộ trong allowlist.                                      |
 
 ## Quan hệ với phần khác
