@@ -9,7 +9,7 @@ Khối "Gói và lượng dùng" trong `/settings`: tên gói (Free/Pro/Ultra) v
 | Thành phần       | Vai trò                                                                                                            |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `UsagePanel`     | Container: `useUsage()` gọi `client.usage.get()` (`GET /v1/me/usage`), truyền cho view                             |
-| `UsagePanelView` | Thuần: tên gói, 5 meter theo `USAGE_METRICS`, trạng thái đang tải và lỗi (`describeError`)                         |
+| `UsagePanelView` | Thuần: `UsageSummary` (tên gói + 5 meter, dùng chung với desktop), trạng thái đang tải và lỗi (`describeError`)    |
 | `UsageMeter`     | Ở `@cuelingo/ui` ([ui.md](../05-packages/ui.md#usagemeter)): nhãn, thanh, "Còn X", màu theo `ok / low / exhausted` |
 
 ## Lỗi hết hạn mức

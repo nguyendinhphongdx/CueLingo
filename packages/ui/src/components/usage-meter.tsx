@@ -2,8 +2,10 @@ import { cn } from '../lib/utils';
 import {
   formatRemaining,
   formatResetDate,
+  planName,
   usageFraction,
   usageLabel,
+  USAGE_METRIC_ORDER,
   type UsageState,
 } from '../lib/usage';
 
@@ -60,5 +62,26 @@ export function UsageMeter({ metric, used, limit, state, resetsAt, className }: 
         <p className="text-muted-foreground text-xs">Làm mới ngày {reset}</p>
       ) : null}
     </div>
+  );
+}
+
+export interface UsageSummaryProps {
+  plan: string;
+  /** One entry per metric id, as returned by `GET /v1/me/usage`. */
+  usage: Record<string, Omit<UsageMeterProps, 'metric' | 'className'>>;
+}
+
+/** The plan name and one meter per allowance: the same block on web and desktop settings. */
+export function UsageSummary({ plan, usage }: UsageSummaryProps) {
+  return (
+    <>
+      <p className="text-sm">
+        Gói hiện tại: <strong>{planName(plan)}</strong>
+      </p>
+      {USAGE_METRIC_ORDER.map((metric) => {
+        const item = usage[metric];
+        return item ? <UsageMeter key={metric} metric={metric} {...item} /> : null;
+      })}
+    </>
   );
 }

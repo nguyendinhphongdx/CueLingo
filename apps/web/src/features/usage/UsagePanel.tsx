@@ -1,9 +1,8 @@
 'use client';
 
-import { USAGE_METRICS, type UsageResponse } from '@cuelingo/shared';
+import { type UsageResponse } from '@cuelingo/shared';
 import { Section } from '@cuelingo/ui/components/section';
-import { UsageMeter } from '@cuelingo/ui/components/usage-meter';
-import { planName } from '@cuelingo/ui/lib/usage';
+import { UsageSummary } from '@cuelingo/ui/components/usage-meter';
 import { useUsage } from './use-usage';
 
 interface UsagePanelViewProps {
@@ -26,16 +25,7 @@ export function UsagePanelView({ usage, loading, error }: UsagePanelViewProps) {
             {error}
           </p>
         ) : null}
-        {usage ? (
-          <>
-            <p className="text-sm">
-              Gói hiện tại: <strong>{planName(usage.plan)}</strong>
-            </p>
-            {USAGE_METRICS.map((metric) => (
-              <UsageMeter key={metric} metric={metric} {...usage.usage[metric]} />
-            ))}
-          </>
-        ) : null}
+        {usage ? <UsageSummary plan={usage.plan} usage={usage.usage} /> : null}
       </div>
     </Section>
   );

@@ -10,6 +10,15 @@ const LABELS: Record<string, string> = {
   agent_messages: 'Tin nhắn trợ lý',
 };
 
+/** The order allowances are listed in. */
+export const USAGE_METRIC_ORDER = [
+  'translation_ms',
+  'cloud_stt_ms',
+  'debriefs',
+  'assist_daily',
+  'agent_messages',
+] as const;
+
 const PLAN_NAMES: Record<string, string> = { free: 'Free', pro: 'Pro', ultra: 'Ultra' };
 
 export function usageLabel(metric: string): string {

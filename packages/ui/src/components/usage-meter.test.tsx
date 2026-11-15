@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { formatDurationMs, formatRemaining, usageFraction, usageLabel } from '../lib/usage';
-import { UsageMeter } from './usage-meter';
+import { UsageMeter, UsageSummary } from './usage-meter';
 
 const HOUR = 3_600_000;
 const MIN = 60_000;
@@ -71,5 +71,23 @@ describe('UsageMeter', () => {
     );
     expect(html).toContain('Không giới hạn');
     expect(html).not.toContain('progressbar');
+  });
+});
+
+describe('UsageSummary', () => {
+  it('shows the plan and a meter per metric it has', () => {
+    const html = renderToStaticMarkup(
+      <UsageSummary
+        plan="pro"
+        usage={{
+          translation_ms: { used: 0, limit: 20 * HOUR, state: 'ok' },
+          debriefs: { used: 0, limit: null, state: 'ok' },
+        }}
+      />,
+    );
+    expect(html).toContain('<strong>Pro</strong>');
+    expect(html).toContain('Giờ dịch');
+    expect(html).toContain('Debrief sau họp');
+    expect(html).not.toContain('Tin nhắn trợ lý');
   });
 });
