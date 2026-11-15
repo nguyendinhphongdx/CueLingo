@@ -8,6 +8,7 @@ import {
 } from '@cuelingo/shared';
 import { AppError } from '../../lib/errors';
 import type { JobQueue } from '../../lib/queue';
+import type { UsageService } from '../usage';
 import type { SessionsRepository } from './sessions.repository';
 
 export type SessionsService = ReturnType<typeof createSessionsService>;
@@ -22,6 +23,7 @@ export interface SessionsServiceOptions {
 export function createSessionsService(
   repo: SessionsRepository,
   queue: JobQueue,
+  usage: Pick<UsageService, 'tryReserve'>,
   { maxDebriefRequests = 3, windowMs = 60_000, clock = Date.now }: SessionsServiceOptions = {},
 ) {
   // In memory and per process: it only stops one account from hammering the button.
@@ -60,6 +62,13 @@ export function createSessionsService(
       const result = await repo.end(userId, id);
       if (!result) throw new AppError(ErrorCode.NotFound, 'Session not found');
       if (result.endedNow) {
+        // Only a meeting with a transcript costs a debrief. Out of allowance: the meeting still ends, and the
+        // flag lets the debrief screen say why there is none (AC7). Empty meetings keep their old path.
+        const state = await repo.findDebriefState(userId, id);
+        if (state && state.segmentCount > 0 && !(await usage.tryReserve(userId, 'debriefs')).ok) {
+          await repo.markDebriefSkipped(userId, id);
+          return result.session;
+        }
         await queue.enqueue(JobName.DebriefGenerate, { sessionId: id }, debriefJobOptions(id));
       }
       return result.session;
@@ -75,6 +84,12 @@ export function createSessionsService(
         throw new AppError(ErrorCode.Conflict, 'The meeting has no transcript to summarise');
       }
       takeSlot(userId);
+      // Throws 429 QUOTA_EXCEEDED when the month's debriefs are used up; the old skip flag then stays.
+      const slot = await usage.tryReserve(userId, 'debriefs');
+      if (!slot.ok) {
+        throw new AppError(ErrorCode.QuotaExceeded, 'Usage allowance used up', slot.details);
+      }
+      await repo.clearDebriefSkipped(userId, id);
       await queue.enqueue(JobName.DebriefGenerate, { sessionId: id }, debriefJobOptions(id));
       return { queued: true };
     },

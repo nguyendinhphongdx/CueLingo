@@ -175,7 +175,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   );
   app.get('/healthz', async () => ({ ok: true }));
   if (deps.authRoutes) await app.register(deps.authRoutes);
-  await app.register(createDebriefModule(deps.repos.debrief).routes);
+  await app.register(createDebriefModule(deps.repos.debrief, deps.repos.sessions).routes);
   await app.register(createEventsModule(deps.repos.events).routes, { prefix: '/v1/events' });
   await app.register(createFeedbackModule(deps.repos.feedback).routes);
   await app.register(createConversationsModule(deps.repos.conversations).routes, {
@@ -184,7 +184,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(createGlossaryModule(deps.repos.glossary).routes, { prefix: '/v1/glossary' });
   await app.register(createPrivacyModule(deps.repos.privacy).routes);
   await app.register(createSettingsModule(deps.repos.settings).routes);
-  await app.register(createSessionsModule(deps.repos.sessions, deps.queue).routes, {
+  await app.register(createSessionsModule(deps.repos.sessions, deps.queue, usage.service).routes, {
     prefix: '/v1/sessions',
   });
   await app.register(createSpeakersModule(deps.repos.speakers).routes);

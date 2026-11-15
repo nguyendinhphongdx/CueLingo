@@ -24,6 +24,12 @@ export interface SaveSegmentInput {
   speaker?: SpeakerLabel | null;
 }
 
+export interface DebriefState {
+  status: Session['status'];
+  segmentCount: number;
+  debriefSkipped: 'quota' | null;
+}
+
 export interface EndSessionResult {
   session: Session;
   endedNow: boolean;
@@ -35,10 +41,11 @@ export interface SessionsRepository {
   findById(userId: string, id: string): Promise<Session | null>;
   findDetail(userId: string, id: string): Promise<SessionDetail | null>;
   /** Status and stored segment count, for deciding whether a debrief can be queued. */
-  findDebriefState(
-    userId: string,
-    id: string,
-  ): Promise<{ status: Session['status']; segmentCount: number } | null>;
+  findDebriefState(userId: string, id: string): Promise<DebriefState | null>;
+  /** Records that the meeting ended without a debrief because the monthly allowance was used up. */
+  markDebriefSkipped(userId: string, id: string): Promise<void>;
+  /** Forgets a skip once a debrief is queued after all (regenerate, a new month or a better plan). */
+  clearDebriefSkipped(userId: string, id: string): Promise<void>;
   create(userId: string, input: CreateSessionRequest): Promise<Session>;
   end(userId: string, id: string): Promise<EndSessionResult | null>;
   softDelete(userId: string, id: string): Promise<boolean>;
@@ -135,11 +142,18 @@ export function createPostgresSessionsRepository(sql: Sql): SessionsRepository {
       };
     },
     async findDebriefState(userId, id) {
-      const [row] = await sql<{ status: Session['status']; segmentCount: number }[]>`
-        SELECT s.status, (SELECT count(*) FROM segments g WHERE g.session_id = s.id)::int AS "segmentCount"
+      const [row] = await sql<DebriefState[]>`
+        SELECT s.status, (SELECT count(*) FROM segments g WHERE g.session_id = s.id)::int AS "segmentCount",
+          s.debrief_skipped AS "debriefSkipped"
         FROM sessions s
         WHERE s.user_id = ${userId} AND s.id = ${id} AND s.status <> 'deleted'`;
       return row ?? null;
+    },
+    async markDebriefSkipped(userId, id) {
+      await sql`UPDATE sessions SET debrief_skipped = 'quota' WHERE user_id = ${userId} AND id = ${id}`;
+    },
+    async clearDebriefSkipped(userId, id) {
+      await sql`UPDATE sessions SET debrief_skipped = NULL WHERE user_id = ${userId} AND id = ${id}`;
     },
     async create(userId, input) {
       // One statement, so the `session_started` event and the meeting can never disagree (beta metrics).

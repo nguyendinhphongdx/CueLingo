@@ -35,4 +35,12 @@ describe('privacy repository deleteMyData', () => {
       expect(entry.text).not.toContain('deleted_at');
     }
   });
+
+  it('never touches billing counters or plans (AC13, ADR 0022)', async () => {
+    const { sql, log } = recordingSql();
+    await createPostgresPrivacyRepository(sql).deleteMyData('user-1');
+    const text = log.map((entry) => entry.text).join('\n');
+    expect(text).not.toContain('usage_counters');
+    expect(text).not.toContain('user_plans');
+  });
 });
