@@ -1,6 +1,14 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { formatDurationMs, formatRemaining, usageFraction, usageLabel } from '../lib/usage';
+import {
+  formatDateVn,
+  formatDurationMs,
+  formatRemaining,
+  formatVnd,
+  planExpiryNotice,
+  usageFraction,
+  usageLabel,
+} from '../lib/usage';
 import { UsageMeter, UsageSummary } from './usage-meter';
 
 const HOUR = 3_600_000;
@@ -30,6 +38,35 @@ describe('usage formatting', () => {
 
   it('has a Vietnamese label per metric', () => {
     expect(usageLabel('translation_ms')).toBe('Giờ dịch');
+  });
+});
+
+describe('billing wording', () => {
+  it('writes prices in dong with dots', () => {
+    expect(formatVnd(99_000)).toBe('99.000 ₫');
+    expect(formatVnd(2_490_000)).toBe('2.490.000 ₫');
+    expect(formatVnd(0)).toBe('0 ₫');
+  });
+
+  it('writes dates as dd/mm/yyyy in Vietnam time', () => {
+    expect(formatDateVn('2026-12-05T10:00:00.000Z')).toBe('05/12/2026');
+    // 20:00 UTC is already the next day in Vietnam.
+    expect(formatDateVn('2026-12-05T20:00:00.000Z')).toBe('06/12/2026');
+    expect(formatDateVn('nope')).toBe('');
+  });
+
+  it('reminds only when a paid plan ends within 3 days', () => {
+    const now = new Date('2026-12-01T00:00:00.000Z');
+    expect(planExpiryNotice('pro', '2026-12-03T10:00:00.000Z', now)).toBe(
+      'Gói Pro hết hạn ngày 03/12/2026',
+    );
+    expect(planExpiryNotice('ultra', '2026-12-04T00:00:00.000Z', now)).toBe(
+      'Gói Ultra hết hạn ngày 04/12/2026',
+    );
+    expect(planExpiryNotice('pro', '2026-12-04T00:00:01.000Z', now)).toBeNull();
+    expect(planExpiryNotice('pro', '2026-11-30T00:00:00.000Z', now)).toBeNull();
+    expect(planExpiryNotice('pro', null, now)).toBeNull();
+    expect(planExpiryNotice('free', '2026-12-02T00:00:00.000Z', now)).toBeNull();
   });
 });
 
@@ -89,5 +126,31 @@ describe('UsageSummary', () => {
     expect(html).toContain('Giờ dịch');
     expect(html).toContain('Debrief sau họp');
     expect(html).not.toContain('Tin nhắn trợ lý');
+  });
+
+  it('shows the expiry reminder and the action slot', () => {
+    const html = renderToStaticMarkup(
+      <UsageSummary
+        plan="pro"
+        planExpiresAt="2026-12-03T10:00:00.000Z"
+        now={new Date('2026-12-01T00:00:00.000Z')}
+        action={<button>Nâng gói</button>}
+        usage={{}}
+      />,
+    );
+    expect(html).toContain('Gói Pro hết hạn ngày 03/12/2026');
+    expect(html).toContain('<button>Nâng gói</button>');
+  });
+
+  it('shows no reminder when the plan is far from its end', () => {
+    const html = renderToStaticMarkup(
+      <UsageSummary
+        plan="pro"
+        planExpiresAt="2026-12-20T10:00:00.000Z"
+        now={new Date('2026-12-01T00:00:00.000Z')}
+        usage={{}}
+      />,
+    );
+    expect(html).not.toContain('hết hạn ngày');
   });
 });
