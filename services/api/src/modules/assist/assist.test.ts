@@ -1,7 +1,9 @@
 import { createAiGateway, type AiGateway, type GenerateFn } from '@cuelingo/ai-gateway';
+import { resolvePlanLimits } from '@cuelingo/shared';
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildTestApp, TEST_USER_HEADER } from '../../testing';
+import { createAssistModule } from './index';
 
 const USER = 'alice';
 
@@ -102,5 +104,65 @@ describe('assist module', () => {
     expect(response.statusCode).toBe(502);
     expect(response.json().error.code).toBe('ASSIST_FAILED');
     expect(generate).toHaveBeenCalledTimes(2);
+  });
+
+  describe('daily quota (AC8)', () => {
+    const limited = async () => {
+      await app.close();
+      app = await buildTestApp({
+        planLimits: resolvePlanLimits({ free: { assist_daily: 2 } }),
+        assist: { gateway: { json: json as unknown as AiGateway['json'] } },
+      });
+    };
+
+    it('shares one daily allowance across lookup, recap and compose, then answers 429 without calling AI', async () => {
+      await limited();
+      expect((await post('lookup', { term: 'table' })).statusCode).toBe(200);
+      expect((await post('compose', { intentVi: 'Xin chào' })).statusCode).toBe(200);
+      expect(json).toHaveBeenCalledTimes(2);
+
+      const refused = await post('recap', { sentences: [{ speaker: 'Mia', text: 'Hi.' }] });
+      expect(refused.statusCode).toBe(429);
+      expect(refused.json().error.code).toBe('QUOTA_EXCEEDED');
+      expect(refused.json().error.details).toMatchObject({
+        metric: 'assist_daily',
+        plan: 'free',
+        used: 2,
+        limit: 2,
+      });
+      expect(json).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not spend the allowance on an invalid body', async () => {
+      await limited();
+      await post('lookup', { term: '' });
+      await post('lookup', { term: '' });
+      expect((await post('lookup', { term: 'table' })).statusCode).toBe(200);
+    });
+
+    it('counts per user: another person still has their own allowance', async () => {
+      await limited();
+      await post('lookup', { term: 'a' });
+      await post('lookup', { term: 'b' });
+      const other = await app.inject({
+        method: 'POST',
+        url: '/v1/assist/lookup',
+        headers: { [TEST_USER_HEADER]: 'bob' },
+        payload: { term: 'c' },
+      });
+      expect(other.statusCode).toBe(200);
+    });
+
+    it('leaves the assistant tool path uncounted', async () => {
+      await limited();
+      const assist = createAssistModule(
+        { gateway: { json: json as unknown as AiGateway['json'] } },
+        { reserve: vi.fn() },
+      );
+      await assist.service.lookup(USER, { term: 'table' });
+      await assist.service.lookup(USER, { term: 'table' });
+      await assist.service.lookup(USER, { term: 'table' });
+      expect((await post('lookup', { term: 'table' })).statusCode).toBe(200);
+    });
   });
 });

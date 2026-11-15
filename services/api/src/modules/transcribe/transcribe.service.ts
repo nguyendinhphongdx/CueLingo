@@ -7,6 +7,7 @@ import {
 } from '@cuelingo/shared';
 import { AppError } from '../../lib/errors';
 import type { SessionsRepository } from '../sessions';
+import type { UsageService } from '../usage';
 
 /**
  * Old clients parse the response strictly, so `speaker` only goes back to a request that carried `knownSpeakers`.
@@ -47,6 +48,7 @@ const MAX_SECONDS = 25.5;
 
 export function createTranscribeService(
   sessions: Pick<SessionsRepository, 'findById'>,
+  usage: Pick<UsageService, 'reserve'>,
   { gateway, maxRequests = 10, windowMs = 1_000, clock = Date.now }: TranscribeDeps,
 ) {
   // In memory and per process: it only has to stop one client from flooding the provider.
@@ -98,6 +100,14 @@ export function createTranscribeService(
       if (pcm.length === 0) {
         return withSpeaker({ segmentId: input.segmentId, text: '' }, input, undefined, undefined);
       }
+
+      // Counted by the audio that really arrived, never by the startMs/endMs the client claims. Taken before
+      // the call so concurrent requests cannot pass the limit together; a failed call is not refunded.
+      await usage.reserve(
+        userId,
+        'cloud_stt_ms',
+        Math.round(pcm.length / (BYTES_PER_SECOND / 1000)),
+      );
 
       // Only the system stream of a language that tells speakers apart asks for labels; the registry decides.
       const labelling =

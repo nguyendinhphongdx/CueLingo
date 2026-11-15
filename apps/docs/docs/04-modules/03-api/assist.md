@@ -22,7 +22,7 @@ Tra từ theo ngữ cảnh, recap, compose (Việt → Anh).
 | `POST /v1/assist/recap`   | `RecapRequest`   | `RecapResponse`   |
 | `POST /v1/assist/compose` | `ComposeRequest` | `ComposeResponse` |
 
-Mọi endpoint cần xác thực. Lỗi model hoặc đầu ra JSON sai sau một lần thử lại trả `502 ASSIST_FAILED`.
+Mọi endpoint cần xác thực. Ba endpoint dùng chung một bộ đếm `assist_daily` theo ngày giờ Việt Nam ([usage](./usage.md)): kiểm sau khi body hợp lệ và trước khi gọi AI; hết lượt trả `429 QUOTA_EXCEEDED`. Lượt gọi AI bị lỗi vẫn tính. Công cụ `lookup` của trợ lý chat gọi thẳng service nên không bị đếm ở đây. Lỗi model hoặc đầu ra JSON sai sau một lần thử lại trả `502 ASSIST_FAILED`.
 
 ## Phụ thuộc
 

@@ -3,7 +3,7 @@ import type { AiGateway } from '@cuelingo/ai-gateway';
 import { randomUUID } from 'node:crypto';
 import type { FastifyServerOptions } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SUPPORTED_LANGUAGES } from '@cuelingo/shared';
+import { SUPPORTED_LANGUAGES, resolvePlanLimits } from '@cuelingo/shared';
 import { buildTestApp, TEST_USER_HEADER } from '../../testing';
 import { createInMemorySessionsRepository } from '../sessions';
 
@@ -321,6 +321,72 @@ describe('POST /v1/sessions/:id/transcribe', () => {
       for (const secret of ['secret-hint', 'hint-x', 'last-text-x']) {
         expect(logs).not.toContain(secret);
       }
+    });
+  });
+
+  describe('quota (AC6)', () => {
+    async function limited(
+      cloudSttMs: number,
+      overrides: { free?: Record<string, number | null> } = {},
+    ) {
+      const sessions = createInMemorySessionsRepository();
+      const gateway = gatewayReturning();
+      const app = await buildTestApp({
+        repos: { sessions },
+        transcribe: { gateway, maxRequests: 100 },
+        planLimits: resolvePlanLimits({ free: { cloud_stt_ms: cloudSttMs, ...overrides.free } }),
+      });
+      const session = await sessions.create('alice', { assistLevel: 0, language: 'vi' });
+      const post = (user: string, seconds: number, extra: Record<string, unknown> = {}) =>
+        app.inject({
+          method: 'POST',
+          url: `/v1/sessions/${session.id}/transcribe`,
+          headers: as(user),
+          payload: {
+            segmentId: randomUUID(),
+            stream: 'system',
+            startMs: 0,
+            endMs: 1,
+            sampleRate: 16000,
+            pcm: pcmOfSeconds(seconds),
+            ...extra,
+          },
+        });
+      return { gateway, post, app, sessions, session };
+    }
+
+    it('answers 429 QUOTA_EXCEEDED with the allowance and never calls the provider', async () => {
+      const { gateway, post } = await limited(3_000);
+      expect((await post('alice', 2)).statusCode).toBe(200);
+      expect((await post('alice', 2)).statusCode).toBe(200); // 2 s used < 3 s: the slot is still open
+      const refused = await post('alice', 2);
+      expect(refused.statusCode).toBe(429);
+      expect(refused.json().error.code).toBe('QUOTA_EXCEEDED');
+      expect(refused.json().error.details).toMatchObject({
+        metric: 'cloud_stt_ms',
+        plan: 'free',
+        limit: 3_000,
+        used: 4_000,
+      });
+      expect(gateway.transcribe).toHaveBeenCalledTimes(2);
+    });
+
+    it('counts the audio that arrived, not the startMs and endMs the client claims', async () => {
+      const { gateway, post } = await limited(1_500);
+      expect((await post('alice', 2, { startMs: 5_000, endMs: 5_000 })).statusCode).toBe(200);
+      expect((await post('alice', 2, { startMs: 0, endMs: 0 })).statusCode).toBe(429);
+      expect(gateway.transcribe).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses a plan with no cloud allowance and keeps users apart', async () => {
+      const { post } = await limited(0);
+      expect((await post('alice', 1)).statusCode).toBe(429);
+    });
+
+    it('does not spend the allowance on a session the user does not own', async () => {
+      const { post, gateway } = await limited(3_000);
+      expect((await post('bob', 2)).statusCode).toBe(404);
+      expect(gateway.transcribe).not.toHaveBeenCalled();
     });
   });
 });

@@ -194,7 +194,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(study.reviewRoutes, { prefix: '/v1/review' });
   await app.register(study.progressRoutes, { prefix: '/v1/progress' });
   if (deps.transcribe) {
-    await app.register(createTranscribeModule(deps.repos.sessions, deps.transcribe).routes);
+    await app.register(
+      createTranscribeModule(deps.repos.sessions, usage.service, deps.transcribe).routes,
+    );
   }
   if (deps.followup) {
     await app.register(
@@ -202,7 +204,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     );
   }
   if (deps.tts) await app.register(createTtsModule(deps.tts).routes, { prefix: '/v1/tts' });
-  const assist = deps.assist ? createAssistModule(deps.assist) : undefined;
+  const assist = deps.assist ? createAssistModule(deps.assist, usage.service) : undefined;
   if (assist) await app.register(assist.routes, { prefix: '/v1/assist' });
   if (deps.agent) {
     const agent = createAgentModule(deps.agent, {
