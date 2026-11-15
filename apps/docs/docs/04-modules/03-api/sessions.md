@@ -7,7 +7,7 @@ Vòng đời cuộc họp: tạo, kết thúc, liệt kê, transcript.
 ## Trách nhiệm
 
 - Tạo và liệt kê phiên của người dùng hiện tại
-- Kết thúc phiên idempotent; lần chuyển sang `ended` enqueue đúng một job debrief. Phiên có câu thì giữ chỗ một lượt `debriefs` của tháng ([usage](./usage.md)); hết lượt thì phiên vẫn `ended`, **không** xếp job và ghi `sessions.debrief_skipped = 'quota'` (phiên không có câu không bị tính)
+- Kết thúc phiên idempotent; lần chuyển sang `ended` enqueue đúng một job debrief. Phiên có câu thì giữ chỗ một lượt `debriefs` của tháng ([usage](./usage.md)); hết lượt thì phiên vẫn `ended`, **không** xếp job và ghi `sessions.debrief_skipped = 'quota'` (phiên không có câu không bị tính). **Khoảng hở đã biết:** phiên đã chuyển sang `ended` rồi mới kiểm hạn mức và xếp job; nếu bước này lỗi (DB, hàng đợi) thì phiên vẫn `ended`, không có debrief và không có cờ, API trả 500. Không có gì tự thử lại vì phiên không kết thúc lại được; lỗi được log kèm `sessionId` (không nội dung) và người dùng bấm "Tạo lại debrief"
 - Trả chi tiết phiên và transcript song ngữ theo thứ tự thời gian
 - Cung cấp store kiểm tra ownership để realtime lưu segment và bản dịch
 

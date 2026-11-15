@@ -338,6 +338,44 @@ describe('debrief quota (AC7)', () => {
   });
 });
 
+describe('end when the debrief step fails', () => {
+  it('keeps the meeting ended, logs only the session id, and answers 500', async () => {
+    const lines: string[] = [];
+    const repo = createInMemorySessionsRepository();
+    const app = await buildTestApp({
+      repos: { sessions: repo },
+      logger: { level: 'error', stream: { write: (line: string) => void lines.push(line) } },
+    });
+    const session = await repo.create(ALICE, { assistLevel: 3, language: 'en' });
+    await repo.saveSegment({
+      sessionId: session.id,
+      userId: ALICE,
+      segmentId: randomUUID(),
+      source: 'system',
+      startMs: 0,
+      endMs: 1000,
+      textEn: 'secret words',
+    });
+    app.queue.enqueue = async () => {
+      throw new Error('queue down');
+    };
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/v1/sessions/${session.id}/end`,
+      headers: { [TEST_USER_HEADER]: ALICE },
+    });
+
+    expect(res.statusCode).toBe(500);
+    expect((await repo.findById(ALICE, session.id))?.status).toBe('ended');
+    const log = lines.join('');
+    expect(log).toContain('Session ended but its debrief was not queued');
+    expect(log).toContain(session.id);
+    expect(log).not.toContain('secret words');
+    await app.close();
+  });
+});
+
 describe('session_started event (AC7)', () => {
   it('records exactly one event for the owner, with the meeting language', async () => {
     const sessions = createInMemorySessionsRepository();
