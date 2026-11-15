@@ -217,7 +217,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     agentAdmin = agent.service.admin;
     await app.register(agent.routes, { prefix: '/v1/conversations' });
   }
-  if (deps.realtime) await app.register(createRealtimeModule(deps.realtime).routes);
+  if (deps.realtime) await app.register(createRealtimeModule(deps.realtime, usage.service).routes);
 
   return app;
 }

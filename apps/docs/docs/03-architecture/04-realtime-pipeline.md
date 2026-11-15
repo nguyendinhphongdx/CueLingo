@@ -46,6 +46,7 @@ Schema đầy đủ nằm trong `@cuelingo/shared` (`ws.ts`).
 | server → client | `transcript.partial` / `transcript.final` | chỉ khi dùng STT cloud                                           |
 | server → client | `translation`                             | `{segmentId, textVi, hardWords[]}`                               |
 | server → client | `error`                                   | `{code, retryable}`                                              |
+| server → client | `usage`                                   | `{metric, state, item}`; chỉ khi URL có `?features=usage`        |
 
 ## Ngân sách độ trễ (ước tính từ benchmark)
 
@@ -60,4 +61,5 @@ Schema đầy đủ nằm trong `@cuelingo/shared` (`ws.ts`).
 
 - Mất mạng: hiện cảnh báo trên overlay, `core-sdk` đệm tối đa 60 giây rồi gửi lại. STT local vẫn chạy nên câu gốc không bị gián đoạn.
 - LLM chậm hoặc lỗi: `ai-gateway` timeout ở 3 giây rồi chuyển sang model dự phòng; vẫn quá hạn thì bỏ bản dịch câu đó (câu gốc vẫn hiện).
+- Hết giờ dịch của gói (`usage`): bỏ bước dịch từ câu sau, caption gốc vẫn chạy, client nhận một message `usage` báo `exhausted`. Giờ dịch được cộng sau khi bản dịch đã gửi nên không thêm độ trễ vào câu đó; cổng đọc lượng dùng song song với glossary.
 - Người nói chen tiếng Việt: hiện nguyên văn, không dịch.

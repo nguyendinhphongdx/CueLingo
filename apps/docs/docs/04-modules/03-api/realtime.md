@@ -23,7 +23,9 @@ WebSocket theo phiên: nhận transcript final từ STT local, dịch và đẩy
 
 - `WS /v1/sessions/:id/stream`
 - Client → server: `hello`, `segment.final`, `event`
-- Server → client: `ready`, `translation`, `error`
+- Server → client: `ready`, `translation`, `error`, `usage` (chỉ khi client khai `?features=usage` trên URL socket; tên lạ bị bỏ qua)
+- Hạn mức giờ dịch (`translation_ms`, [usage](./usage.md)): với mỗi câu `system` cần dịch, đọc lượng dùng **song song** với lần đọc glossary. Hết giờ thì câu vẫn được lưu, không gọi AI, caption gốc vẫn chạy, socket không đóng và không có `error`. Câu đã qua cổng thì dịch nốt, nên có thể vượt tối đa khoảng một câu. Sau khi đã gửi bản dịch mới cộng `translationCostMs` (xem [shared](../05-packages/shared.md)) vào counter; không cộng cho câu `mic`, câu tiếng Việt hay câu dịch lỗi
+- `usage {metric, state: low | exhausted, item}`: mỗi kết nối gửi tối đa một lần cho `low` và một lần cho `exhausted`. Client mở lại kết nối thì có thể nhận lại, nên client lọc trùng theo phiên. Admin không bị chặn nhưng vẫn được đếm
 - Schema nguồn sự thật: `ClientMessageSchema`, `ServerMessageSchema` trong `@cuelingo/shared`
 - `hello.sttSource` là `"local"`: văn bản luôn do client gửi lên. Với ngôn ngữ nhận dạng bằng đám mây, client lấy văn bản từ [transcribe](./transcribe.md) rồi gửi `segment.final` cho cả hai luồng.
 - `hello.token` được xác minh ở tầng WebSocket. M1 chỉ có token phát triển qua
