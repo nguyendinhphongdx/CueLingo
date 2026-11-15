@@ -19,13 +19,16 @@ export function createPostgresDebriefAllowance(
 
   return {
     async reserveDebrief(userId) {
+      // A plan past its `expires_at` counts as free, the same rule as the API (W2-03, AC7).
+      const at = options.now();
       const [row] = await sql<{ plan: Plan | null; email: string | null }[]>`
-        SELECT (SELECT plan FROM user_plans WHERE user_id = ${userId}) AS plan,
+        SELECT (SELECT CASE WHEN expires_at IS NULL OR expires_at > ${at} THEN plan ELSE ${DEFAULT_PLAN} END
+            FROM user_plans WHERE user_id = ${userId}) AS plan,
           (SELECT email FROM auth_user WHERE id = ${userId}) AS email`;
       const plan = row?.plan ?? DEFAULT_PLAN;
       const isAdmin = row?.email ? admins.has(row.email.toLowerCase()) : false;
       const limit = isAdmin ? null : options.limits[plan].debriefs;
-      const start = periodStart('debriefs', options.now());
+      const start = periodStart('debriefs', at);
 
       if (limit === null) {
         await sql`
