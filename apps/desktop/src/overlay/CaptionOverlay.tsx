@@ -9,12 +9,14 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { IconButton } from '@cuelingo/ui/components/icon-button';
-import { native, type TranscriptEvent } from '../lib/native';
+import { native, type NoticeEvent, type TranscriptEvent } from '../lib/native';
 import { DRAWER_WIDTH, QuickAssistPanel, useQuickAssist } from '../quick-assist';
 import { saveAssistLevel } from '../settings/use-assist-settings';
 import type { SelectableAssistLevel } from '../settings/settings-store';
 import { queueSettingsPatch } from '../settings/settings-api';
 import { CaptionBlock } from './CaptionBlock';
+import { NoticeBar } from './NoticeBar';
+import { useNotices } from './use-notices';
 import { DisplayMenu } from './DisplayMenu';
 import { ToolsMenu, type ToolItem } from './ToolsMenu';
 import { useOverlayPrefs, type OverlayTheme } from './overlay-prefs';
@@ -31,6 +33,8 @@ interface CaptionOverlayProps {
   level?: number;
   segments?: TranscriptEvent[];
   receivedTranscript?: boolean;
+  /** Allowance messages; the overlay listens for them itself unless given (tests). */
+  notices?: NoticeEvent[];
   listen?: boolean;
   initialFontSize?: number;
   initialTheme?: OverlayTheme;
@@ -51,6 +55,7 @@ export function CaptionOverlay({
   level,
   segments,
   receivedTranscript,
+  notices,
   listen = true,
   initialFontSize,
   initialTheme,
@@ -65,6 +70,8 @@ export function CaptionOverlay({
   const closeMenu = () => setMenu(null);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   useTranscript(listen);
+  const noticeState = useNotices(listen);
+  const shownNotices = notices ?? noticeState.notices;
 
   const received = receivedTranscript ?? storedReceived;
   const preview = !received;
@@ -213,6 +220,8 @@ export function CaptionOverlay({
           onClick={() => void native.toggleOverlay()}
         />
       </header>
+
+      <NoticeBar notices={shownNotices} onDismiss={noticeState.dismiss} />
 
       <div className="flex min-h-0 flex-1">
         <div

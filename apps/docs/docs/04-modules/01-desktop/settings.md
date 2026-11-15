@@ -19,6 +19,7 @@ Cài đặt trong app và bản đồng bộ theo tài khoản: Assist mặc đ�
 ## Interface
 
 - `<AssistSettings />`: chọn Assist level `4`, `3`, `1` hoặc `0`
+- `<UsagePanel />` (`src/usage/`): mục "Gói và lượng dùng" ở trang Cài đặt, gọi `client.usage.get()` (`GET /v1/me/usage`) và hiện `UsageSummary` của `@cuelingo/ui` (tên gói + một thanh cho từng hạn mức); lỗi tải hiện "Không tải được lượng dùng"
 - `useSettings`: store `{assistLevel, setAssistLevel()}` trong bộ nhớ của webview
 - Gọi `native.setAssistLevel(level)` và `native.publishSettings({assistLevel})` khi người dùng đổi mức
 - `settingsApi`: gọi `GET/PATCH /v1/me/settings` bằng device token

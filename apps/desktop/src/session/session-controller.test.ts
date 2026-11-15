@@ -3,11 +3,13 @@ import type {
   LanguageCode,
   TranscribeRequest,
   TranscribeResponse,
+  UsageResponse,
 } from '@cuelingo/shared';
 import type { RealtimeClient, RealtimeClientOptions } from '@cuelingo/core-sdk';
 import type {
   AudioModelEvent,
   AudioStatusEvent,
+  NoticeEvent,
   SegmentEvent,
   SessionStartInput,
   TranscriptEvent,
@@ -65,6 +67,7 @@ function setup(
     consent?: boolean;
     now?: () => number;
     onFirstCaption?: (sessionId: string) => void;
+    usage?: () => Promise<UsageResponse>;
   } = {},
 ) {
   let onUtterance: ((event: UtteranceEvent) => void) | undefined;
@@ -76,6 +79,7 @@ function setup(
   let realtimeOptions: RealtimeClientOptions | undefined;
   const sent: unknown[] = [];
   const published: TranscriptEvent[] = [];
+  const notices: NoticeEvent[] = [];
   const calls: string[] = [];
   const realtime: RealtimeClient = {
     connect: vi.fn(),
@@ -112,6 +116,9 @@ function setup(
     setVocabulary: vi.fn(async () => undefined),
     publishTranscript: vi.fn(async (event: TranscriptEvent) => {
       published.push(event);
+    }),
+    publishNotice: vi.fn(async (event: NoticeEvent) => {
+      notices.push(event);
     }),
   };
   const sessions = {
@@ -154,6 +161,7 @@ function setup(
     native,
     sessions,
     hasCloudConsent: () => options.consent ?? true,
+    usage: options.usage ? { get: options.usage } : undefined,
     glossary: glossaryList ? { list: glossaryList } : undefined,
     createRealtime: (options) => {
       calls.push('realtime.create');
@@ -174,6 +182,7 @@ function setup(
     calls,
     sent,
     published,
+    notices,
     emitUtterance: (event: UtteranceEvent) => onUtterance?.(event),
     unlistenUtterance,
     emitSegment: (event: SegmentEvent) => onSegment?.(event),
@@ -1766,6 +1775,213 @@ describe('session controller', () => {
       await context.controller.start(3);
       context.emitSegment(segment());
       expect(context.published.at(-1)?.text).toBe('Original text');
+    });
+  });
+
+  describe('plan allowances', () => {
+    const resetsAt = '2026-11-30T17:00:00.000Z';
+    const item = (used: number, limit: number | null, state: 'ok' | 'low' | 'exhausted') => ({
+      used,
+      limit,
+      resetsAt,
+      state,
+    });
+    const usageResponse = (overrides: Partial<UsageResponse['usage']> = {}): UsageResponse => ({
+      plan: 'free',
+      usage: {
+        translation_ms: item(0, 7_200_000, 'ok'),
+        cloud_stt_ms: item(0, 3_600_000, 'ok'),
+        debriefs: item(0, 8, 'ok'),
+        assist_daily: item(0, 20, 'ok'),
+        // Free has no assistant: exhausted from the start, and never worth a warning in a meeting.
+        agent_messages: item(0, 0, 'exhausted'),
+        ...overrides,
+      },
+    });
+    const flush = () => vi.advanceTimersByTimeAsync(0);
+    const MIN = 60_000;
+
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('asks the server for usage messages', async () => {
+      const ctx = setup();
+      await ctx.controller.start(3);
+      expect(ctx.getRealtimeOptions()?.features).toEqual(['usage']);
+    });
+
+    it('warns once about low translation time, even when the server repeats it after a reconnect', async () => {
+      const ctx = setup();
+      await ctx.controller.start(3);
+      const message = {
+        type: 'usage' as const,
+        metric: 'translation_ms' as const,
+        state: 'low' as const,
+        item: item(7_200_000 - 8 * MIN, 7_200_000, 'low'),
+      };
+      ctx.getRealtimeOptions()?.onMessage(message);
+      ctx.getRealtimeOptions()?.onMessage(message);
+      await flush();
+
+      expect(ctx.notices).toEqual([
+        {
+          id: 'usage:translation_ms:low',
+          tone: 'warning',
+          text: 'Còn khoảng 8 phút dịch tháng này',
+        },
+      ]);
+    });
+
+    it('says English captions keep running when translation time is used up, without stopping the meeting', async () => {
+      const ctx = setup();
+      await ctx.controller.start(3);
+      ctx.getRealtimeOptions()?.onMessage({
+        type: 'usage',
+        metric: 'translation_ms',
+        state: 'exhausted',
+        item: item(7_200_000, 7_200_000, 'exhausted'),
+      });
+      await flush();
+
+      expect(ctx.notices).toEqual([
+        expect.objectContaining({
+          tone: 'error',
+          text: 'Đã hết giờ dịch tháng này, caption tiếng Anh vẫn chạy',
+        }),
+      ]);
+      expect(ctx.controller.getSnapshot().status).not.toBe('error');
+      ctx.emitSegment(segment());
+      expect(ctx.published.at(-1)?.text).toBe('Original text');
+    });
+
+    it('shows the warning again in the next meeting', async () => {
+      const ctx = setup();
+      const message = {
+        type: 'usage' as const,
+        metric: 'translation_ms' as const,
+        state: 'low' as const,
+        item: item(7_200_000 - 5 * MIN, 7_200_000, 'low'),
+      };
+      await ctx.controller.start(3);
+      ctx.getRealtimeOptions()?.onMessage(message);
+      const stopping = ctx.controller.stop();
+      await vi.advanceTimersByTimeAsync(3_000);
+      await stopping;
+      await ctx.controller.start(3);
+      ctx.getRealtimeOptions()?.onMessage(message);
+      await flush();
+
+      expect(ctx.notices).toHaveLength(2);
+    });
+
+    it('warns at the start about other allowances that are low, and ignores the assistant', async () => {
+      const usage = vi.fn(async () =>
+        usageResponse({
+          debriefs: item(7, 8, 'low'),
+          assist_daily: item(20, 20, 'exhausted'),
+        }),
+      );
+      const ctx = setup(undefined, { usage });
+      await ctx.controller.start(3, 'en');
+      await flush();
+
+      expect(ctx.notices.map((notice) => notice.text)).toEqual([
+        'Còn 1 lần debrief tháng này',
+        'Đã hết lượt tra từ và nói giúp hôm nay',
+      ]);
+    });
+
+    it('skips the cloud recognition allowance in a meeting that recognises on the device', async () => {
+      const usage = vi.fn(async () =>
+        usageResponse({ cloud_stt_ms: item(3_600_000, 3_600_000, 'exhausted') }),
+      );
+      const ctx = setup(undefined, { usage });
+      await ctx.controller.start(3, 'en');
+      await flush();
+      expect(ctx.notices).toEqual([]);
+    });
+
+    it('ignores a failing usage read without a word', async () => {
+      const ctx = setup(undefined, {
+        usage: async () => {
+          throw new Error('offline');
+        },
+      });
+      await ctx.controller.start(3);
+      await flush();
+      expect(ctx.notices).toEqual([]);
+      expect(ctx.controller.getSnapshot().status).not.toBe('error');
+    });
+
+    describe.each(cloudCodes.slice(0, 1))('cloud recognition (%s)', (lang) => {
+      const utterance = (overrides: Partial<UtteranceEvent> = {}): UtteranceEvent => ({
+        type: 'utterance',
+        segmentId,
+        stream: 'system',
+        startMs: 100,
+        endMs: 900,
+        sampleRate: 16000,
+        pcm: 'AAAA',
+        ...overrides,
+      });
+      const otherId = '3344ed67-4d83-4778-bcd2-41af6165755f';
+      const quotaError = () =>
+        new TranscribeError('Transcribe request failed', 429, 'QUOTA_EXCEEDED');
+
+      it('stops sending audio when the cloud says the allowance is used up, without retrying', async () => {
+        const transcribe = vi.fn<Transcribe>().mockRejectedValue(quotaError());
+        const ctx = setup(undefined, { transcribe });
+        await ctx.controller.start(3, lang);
+        ctx.emitUtterance(utterance());
+        await vi.advanceTimersByTimeAsync(5_000);
+        ctx.emitUtterance(utterance({ segmentId: otherId }));
+        await vi.advanceTimersByTimeAsync(5_000);
+
+        expect(transcribe).toHaveBeenCalledTimes(1);
+        expect(ctx.notices).toEqual([
+          expect.objectContaining({
+            id: 'usage:cloud_stt_ms:exhausted',
+            tone: 'error',
+            text: expect.stringContaining('Đã hết giờ nhận dạng giọng nói đám mây tháng này'),
+          }),
+        ]);
+        // No "[không nhận dạng được]" line and the meeting is not in error.
+        expect(ctx.published).toEqual([]);
+        expect(ctx.controller.getSnapshot().status).not.toBe('error');
+      });
+
+      it('does not upload at all when the allowance is already used up at the start', async () => {
+        const transcribe = vi.fn<Transcribe>();
+        const usage = async () =>
+          usageResponse({ cloud_stt_ms: item(3_600_000, 3_600_000, 'exhausted') });
+        const ctx = setup(undefined, { transcribe, usage });
+        await ctx.controller.start(3, lang);
+        await flush();
+        ctx.emitUtterance(utterance());
+        await vi.advanceTimersByTimeAsync(1_000);
+
+        expect(transcribe).not.toHaveBeenCalled();
+        expect(ctx.notices).toHaveLength(1);
+      });
+
+      it('lets the next meeting upload again', async () => {
+        const transcribe = vi
+          .fn<Transcribe>()
+          .mockRejectedValueOnce(quotaError())
+          .mockResolvedValue({ segmentId, text: 'xin chào' });
+        const ctx = setup(undefined, { transcribe });
+        await ctx.controller.start(3, lang);
+        ctx.emitUtterance(utterance());
+        await vi.advanceTimersByTimeAsync(1_000);
+        const stopping = ctx.controller.stop();
+        await vi.advanceTimersByTimeAsync(3_000);
+        await stopping;
+        await ctx.controller.start(3, lang);
+        ctx.emitUtterance(utterance({ segmentId: otherId }));
+        await vi.advanceTimersByTimeAsync(1_000);
+
+        expect(transcribe).toHaveBeenCalledTimes(2);
+      });
     });
   });
 });

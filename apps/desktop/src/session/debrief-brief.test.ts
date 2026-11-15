@@ -115,7 +115,39 @@ describe('pollDebrief when not allowed', () => {
   });
 });
 
+describe('pollDebrief when the debrief was skipped', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('stops at once instead of waiting for a debrief that will never come', async () => {
+    const get = vi
+      .fn<DebriefApi['get']>()
+      .mockRejectedValue(new DebriefError('skipped', 404, 'DEBRIEF_SKIPPED'));
+    const onSkipped = vi.fn();
+    const onTimeout = vi.fn();
+    pollDebrief({ get }, id, { onReady: vi.fn(), onTimeout, onDenied: vi.fn(), onSkipped });
+    await vi.advanceTimersByTimeAsync(POLL_TIMEOUT_MS);
+    expect(onSkipped).toHaveBeenCalledOnce();
+    expect(onTimeout).not.toHaveBeenCalled();
+    expect(get).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('createDebriefApi', () => {
+  it('throws DEBRIEF_SKIPPED on a 404 that says the allowance was used up', async () => {
+    const body = { error: { code: 'DEBRIEF_SKIPPED', message: 'x', details: { reason: 'quota' } } };
+    const request = vi.fn<typeof fetch>().mockResolvedValue(Response.json(body, { status: 404 }));
+    const api = createDebriefApi({ apiUrl: 'http://api.test', token: 't', fetch: request });
+    await expect(api.get(id)).rejects.toMatchObject({ status: 404, code: 'DEBRIEF_SKIPPED' });
+  });
+
+  it('still returns null on a plain 404 with a JSON body', async () => {
+    const body = { error: { code: 'NOT_FOUND', message: 'x' } };
+    const request = vi.fn<typeof fetch>().mockResolvedValue(Response.json(body, { status: 404 }));
+    const api = createDebriefApi({ apiUrl: 'http://api.test', token: 't', fetch: request });
+    await expect(api.get(id)).resolves.toBeNull();
+  });
+
   it('returns null on 404 and parses a debrief', async () => {
     const request = vi
       .fn<typeof fetch>()

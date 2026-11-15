@@ -49,6 +49,20 @@ Máy trạng thái của một cuộc họp phía client: nhận segment từ ST
 - **Ngôn ngữ cuộc họp:** snapshot có `meetingLanguage` (đặt lúc bắt đầu, xoá khi phiên kết thúc); chỉ báo và kiểm tra đồng ý khi đổi ngôn ngữ dùng nó, không dùng ô cài đặt.
 - **Overlay:** câu không có bản dịch hiện chữ gốc, không có dòng "Đang dịch…"; nhãn "đang im lặng" chờ 25 giây (thay vì 6 giây) vì caption đám mây cách nhau xa hơn. Overlay hiện khi bắt đầu và ẩn khi phiên kết thúc hẳn (`native.hideOverlay`); panel không còn nút hiện/ẩn overlay và không còn nút "Chạy thử caption".
 
+## Hạn mức của gói (W2-02)
+
+Controller mở WebSocket với `features: ['usage']`, nên server báo khi giờ dịch sắp hết hoặc đã hết. Thông báo đi sang overlay bằng `native.publishNotice` (xem [overlay](./overlay.md)); mọi thông báo chỉ là chữ cố định, không chứa nội dung cuộc họp. Logic chữ nằm ở `session/usage-notices.ts` (thuần, có test), dùng định dạng của `@cuelingo/ui/lib/usage`.
+
+| Tình huống                                            | Hành vi                                                                                                                                                                                                                                                    |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Message `usage` `low` (còn ≤ 10 phút dịch)            | Cảnh báo "Còn khoảng N phút dịch tháng này" một lần mỗi cuộc họp (lọc theo id, kết nối lại không hiện lại; xoá khi bắt đầu cuộc họp mới)                                                                                                                   |
+| Message `usage` `exhausted`                           | "Đã hết giờ dịch tháng này, caption tiếng Anh vẫn chạy"; phiên không dừng, caption gốc vẫn lưu và hiện                                                                                                                                                     |
+| `transcribe` trả `QUOTA_EXCEEDED` (429)               | Không thử lại, xoá hàng đợi, **dừng gửi âm thanh lên đám mây tới hết cuộc họp**, báo "Đã hết giờ nhận dạng giọng nói đám mây tháng này…"; câu đó không hiện "[không nhận dạng được]"; phiên không lỗi                                                      |
+| Đầu phiên (`usage.get()`, giả định G8)                | Cảnh báo các hạn mức `low`/`exhausted` khác: `translation_ms`, `cloud_stt_ms` (chỉ khi họp bằng ngôn ngữ đám mây; nếu đã hết thì không tải âm thanh lên), `debriefs`, `assist_daily`. Bỏ qua `agent_messages` (Free luôn là 0). Lỗi đọc thì bỏ qua im lặng |
+| Debrief bị bỏ (`GET …/debrief` trả `DEBRIEF_SKIPPED`) | Thẻ "Cuộc họp vừa xong" ngừng hỏi lại và hiện "Đã hết lượt debrief tháng này nên cuộc họp này không có debrief."                                                                                                                                           |
+
+`TranscribeError` mang thêm `code` (mã API cố định, không phải nội dung); `QUOTA_EXCEEDED` được kiểm trước luật thử lại vì cùng là 429. `DebriefError` có `code = 'DEBRIEF_SKIPPED'` để `pollDebrief` gọi `onSkipped` thay vì hỏi tới hết 2 phút.
+
 ## Panel phiên họp: kiểm tra, sóng âm, thẻ sau họp
 
 - **Kiểm tra trước khi bắt đầu:** sau hộp thoại đồng ý (nếu có), panel đọc quyền Micro. `denied` thì không bắt đầu, hiện cảnh báo kèm nút "Mở cài đặt Micro"; `undetermined` hoặc không đọc được thì bắt đầu bình thường.

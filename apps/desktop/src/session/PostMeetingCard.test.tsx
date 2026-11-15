@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   BRIEF_DENIED_TEXT,
   BRIEF_EMPTY_TEXT,
+  BRIEF_SKIPPED_TEXT,
   BRIEF_TIMEOUT_TEXT,
   PostMeetingCard,
 } from './PostMeetingCard';
@@ -73,6 +74,12 @@ describe('PostMeetingCard', () => {
     expect(markup).toContain(BRIEF_EMPTY_TEXT);
     expect(markup).not.toContain('Đang tạo debrief');
     expect(markup).not.toContain('Xem đầy đủ');
+  });
+
+  it('says the allowance is used up instead of showing a spinner', () => {
+    const markup = render({ status: 'skipped' });
+    expect(markup).toContain(BRIEF_SKIPPED_TEXT);
+    expect(markup).not.toContain('Đang tạo debrief');
   });
 
   it('asks the person to sign in again when the debrief is forbidden', () => {

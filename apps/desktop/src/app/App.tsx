@@ -13,6 +13,7 @@ import {
 import { FeedbackPage } from '../feedback';
 import { UpdateBanner } from '../updater';
 import { PrivacyPanel } from '../privacy';
+import { UsagePanel } from '../usage';
 import { ServerLink, ServerSettings } from '../server-picker';
 import { useActivationTelemetry } from '../telemetry';
 import { RecentSessions, SessionPanel } from '../session';
@@ -168,6 +169,7 @@ function CurrentView({
       <>
         <PageHeader title="Cài đặt" />
         <AccountCard onSignOut={onSignOut} />
+        <UsagePanel />
         <PermissionsStep />
         <CalendarSettings />
         <PlacementSection />

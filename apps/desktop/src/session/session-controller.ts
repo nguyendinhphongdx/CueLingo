@@ -1,6 +1,7 @@
 import type { RealtimeClient, RealtimeClientOptions, RealtimeState } from '@cuelingo/core-sdk';
 import {
   DEFAULT_LANGUAGE,
+  ErrorCode,
   isLanguageCode,
   languageOptions,
   SUPPORTED_LANGUAGES,
@@ -8,13 +9,16 @@ import {
   type LanguageCode,
   type ServerMessage,
   type TranscribeResponse,
+  type UsageResponse,
 } from '@cuelingo/shared';
 import { captureProblemOf } from './capture-problems';
 import { nativeErrorCode } from './session-errors';
 import { createSpeakerRegistry } from './speaker-registry';
+import { isMeetingMetric, usageNotice } from './usage-notices';
 import type {
   AudioModelEvent,
   AudioStatusEvent,
+  NoticeEvent,
   SegmentEvent,
   SessionStartInput,
   SessionStartResult,
@@ -56,6 +60,7 @@ interface NativeSessionBridge {
   setLanguage(language: string): Promise<void>;
   setVocabulary(terms: string[]): Promise<void>;
   publishTranscript(event: TranscriptEvent): Promise<void>;
+  publishNotice(event: NoticeEvent): Promise<void>;
 }
 
 interface SessionControllerOptions {
@@ -65,6 +70,8 @@ interface SessionControllerOptions {
   glossary?: { list(language: LanguageCode): Promise<GlossaryTerm[]> };
   /** Whether the person agreed to send meeting audio to the cloud (ADR 0014); without it a cloud-language meeting does not start. */
   hasCloudConsent?: () => boolean;
+  /** Reads the person's allowances at the start of a meeting, to warn about the ones running low. Failures are ignored. */
+  usage?: { get(): Promise<UsageResponse> };
   createRealtime(options: RealtimeClientOptions): RealtimeClient;
   /** Called once per meeting, with its id, when the first final caption of a real meeting appears (never for the demo). */
   onFirstCaption?: (sessionId: string) => void;
@@ -138,6 +145,9 @@ const PREVIOUS_MAX_CHARS = 400;
 /** Shown in place of a sentence the cloud could not recognise (after one retry). */
 export const UNRECOGNISED_TEXT = '[không nhận dạng được]';
 
+/** What `recognise` returns when the cloud refused for lack of allowance. */
+const QUOTA_EXHAUSTED = Symbol('quota-exhausted');
+
 /** Uploads of one running meeting; replaced (and so abandoned) when the meeting ends. */
 interface CloudUploads {
   active: number;
@@ -196,6 +206,7 @@ export function createSessionController({
   sessions,
   glossary,
   hasCloudConsent = () => false,
+  usage,
   createRealtime,
   onFirstCaption,
   now = Date.now,
@@ -249,6 +260,10 @@ export function createSessionController({
   /** The people heard in this meeting, in memory only; cleared when the meeting ends and when one starts. */
   const speakerRegistry = createSpeakerRegistry(now);
   const transcriptById = new Map<string, TranscriptEvent>();
+  /** Notices already shown in this meeting (by id), so a reconnect or a second reading never repeats one. */
+  const shownNotices = new Set<string>();
+  /** The cloud refused recognition for lack of allowance: no more audio goes up for this meeting. */
+  let cloudQuotaExhausted = false;
   const listeners = new Set<() => void>();
 
   function update(next: Partial<SessionSnapshot>) {
@@ -261,6 +276,42 @@ export function createSessionController({
     void Promise.resolve()
       .then(() => native.hideOverlay())
       .catch(() => undefined);
+  }
+
+  /** Tells the person once per meeting. Never throws and never holds meeting text. */
+  function notify(notice: NoticeEvent | null) {
+    if (!notice || shownNotices.has(notice.id)) return;
+    shownNotices.add(notice.id);
+    void Promise.resolve()
+      .then(() => native.publishNotice(notice))
+      .catch(() => undefined);
+  }
+
+  /** Stops sending audio to the cloud for the rest of the meeting; the meeting itself goes on. */
+  function stopCloudUploads() {
+    cloudQuotaExhausted = true;
+    uploads.queue = [];
+    notify(usageNotice('cloud_stt_ms', { used: 0, limit: 0, state: 'exhausted' }));
+  }
+
+  /** Warns about allowances that are already low or used up when the meeting starts. */
+  async function warnAboutUsage(generation: number, language: LanguageCode) {
+    if (!usage) return;
+    let response: UsageResponse;
+    try {
+      response = await usage.get();
+    } catch {
+      return; // Warnings are a courtesy; the meeting does not depend on them.
+    }
+    if (generation !== runtimeGeneration) return;
+    for (const [metric, item] of Object.entries(response.usage)) {
+      // Cloud recognition only matters to a meeting that uses it.
+      if (metric === 'cloud_stt_ms') {
+        if (!isCloudLanguage(language)) continue;
+        if (item.state === 'exhausted' && item.limit !== null) cloudQuotaExhausted = true;
+      }
+      notify(usageNotice(metric, item));
+    }
   }
 
   function fail(error: unknown) {
@@ -330,7 +381,7 @@ export function createSessionController({
     signal: AbortSignal,
     previous: string[],
     labelsSpeakers: boolean,
-  ): Promise<TranscribeResponse | null> {
+  ): Promise<TranscribeResponse | null | typeof QUOTA_EXHAUSTED> {
     const request = {
       ...(previous.length > 0 ? { previous } : {}),
       // Present (even empty) asks the server to label who speaks; only the other side of the call is labelled.
@@ -348,6 +399,9 @@ export function createSessionController({
       try {
         return await sessions.transcribe(sessionId, request, signal);
       } catch (error) {
+        // Running out of allowance does not heal by waiting (it is a 429, so check it before the retry rule).
+        if ((error as Partial<TranscribeError> | null)?.code === ErrorCode.QuotaExceeded)
+          return QUOTA_EXHAUSTED;
         // Retry once, and only for what can heal; give up on this sentence otherwise.
         if (attempt === 1 || signal.aborted || !isRetryable(error)) return null;
         if ((error as Partial<TranscribeError>).status === 429) {
@@ -364,10 +418,12 @@ export function createSessionController({
     // Audio never leaves without consent, and never for a language the device recognises itself.
     if (!sessionId || !isCloudLanguage(meetingLanguage) || !hasCloudConsent()) return;
     if (stopping && !acceptingAfterStop) return;
+    if (cloudQuotaExhausted) return;
     const generation = runtimeGeneration;
     const current = uploads;
 
     current.queue.push(async () => {
+      if (cloudQuotaExhausted) return;
       const previous = recentTexts[utterance.stream]
         .slice(-PREVIOUS_COUNT)
         .map((entry) => entry.text);
@@ -380,6 +436,11 @@ export function createSessionController({
         labelsSpeakers,
       );
       if (generation !== runtimeGeneration || current.closed) return;
+      if (result === QUOTA_EXHAUSTED) {
+        // No caption for this sentence and no "[không nhận dạng được]" line: the notice says why.
+        stopCloudUploads();
+        return;
+      }
       const text = result === null ? null : result.text;
       // Each result goes out as soon as it is ready; a slow upload never holds a later one back.
       if (text === null) {
@@ -440,6 +501,9 @@ export function createSessionController({
     if (message.type === 'translation') {
       const transcript = transcriptById.get(message.segmentId);
       if (transcript) publish({ ...transcript, translation: message.textVi, partial: false });
+    } else if (message.type === 'usage') {
+      // Only 'low' and 'exhausted' are sent; the server sends each once per connection, the set once per meeting.
+      if (isMeetingMetric(message.metric)) notify(usageNotice(message.metric, message.item));
     } else if (message.type === 'error' && !message.retryable) {
       // Retryable errors (one sentence failed to translate) must not end the session.
       fail(new Error(message.code));
@@ -637,6 +701,8 @@ export function createSessionController({
       }
       meetingLanguage = language;
       finalIds.clear();
+      shownNotices.clear();
+      cloudQuotaExhausted = false;
       firstCaptionReported = false;
       recentTexts.system = [];
       recentTexts.mic = [];
@@ -741,6 +807,7 @@ export function createSessionController({
           token: typeof token === 'function' ? token() : token,
           sessionId: session.id,
           assistLevel,
+          features: ['usage'],
           onMessage: handleMessage,
           onState(state) {
             const status = realtimeStatus(state);
@@ -749,6 +816,7 @@ export function createSessionController({
           onError: fail,
         });
         realtime.connect();
+        void warnAboutUsage(generation, language);
       } catch (error) {
         if (generation !== runtimeGeneration) return;
         clearRuntime();

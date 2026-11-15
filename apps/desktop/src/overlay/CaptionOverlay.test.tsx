@@ -21,6 +21,33 @@ describe('CaptionOverlay', () => {
     expect(markup.match(/data-partial="true"/g)).toHaveLength(1);
   });
 
+  it('shows allowance notices above the captions, which keep running', () => {
+    const markup = renderToStaticMarkup(
+      <CaptionOverlay
+        listen={false}
+        segments={[segment]}
+        receivedTranscript
+        notices={[
+          {
+            id: 'usage:translation_ms:exhausted',
+            tone: 'error',
+            text: 'Đã hết giờ dịch tháng này, caption tiếng Anh vẫn chạy',
+          },
+        ]}
+      />,
+    );
+    expect(markup).toContain('Đã hết giờ dịch tháng này, caption tiếng Anh vẫn chạy');
+    expect(markup).toContain('aria-label="Đóng thông báo"');
+    expect(markup).toContain('Câu dịch');
+  });
+
+  it('shows no notice bar without notices', () => {
+    const markup = renderToStaticMarkup(
+      <CaptionOverlay listen={false} segments={[segment]} receivedTranscript />,
+    );
+    expect(markup).not.toContain('Đóng thông báo');
+  });
+
   it('shows only translation at level 1', () => {
     const markup = renderToStaticMarkup(
       <CaptionOverlay listen={false} level={1} segments={[segment]} receivedTranscript />,
