@@ -8,8 +8,16 @@ export type UpdateState =
   | { phase: 'installing'; version: string }
   | { phase: 'failed'; version: string; reason: 'signature' | 'other' };
 
+/** The answer to a check the person asked for; background checks never set it. */
+export type ManualCheck =
+  | { status: 'idle' }
+  | { status: 'checking' }
+  | { status: 'upToDate'; at: Date }
+  | { status: 'unsupported' }
+  | { status: 'error' };
+
 export interface UpdateDeps {
-  check(): Promise<UpdateOffer | null>;
+  check(): Promise<UpdateOffer | null | 'unsupported'>;
   /** True while a meeting runs or is draining: an update restarts the app, so it must wait. */
   meetingActive(): boolean;
 }
@@ -17,33 +25,61 @@ export interface UpdateDeps {
 /** Looks for a newer build on open and every few hours; never installs by itself, never during a meeting. */
 export function createUpdateController(deps: UpdateDeps) {
   let state: UpdateState = { phase: 'none' };
+  let manual: ManualCheck = { status: 'idle' };
   let offer: UpdateOffer | null = null;
-  let checking = false;
+  let running: Promise<'none' | 'unsupported' | 'error'> | null = null;
   const listeners = new Set<() => void>();
+  const notify = () => listeners.forEach((listener) => listener());
 
   const set = (next: UpdateState) => {
     state = next;
-    listeners.forEach((listener) => listener());
+    notify();
+  };
+  const setManual = (next: ManualCheck) => {
+    manual = next;
+    notify();
+  };
+
+  /** One request at a time: a click during a background check waits for that check's answer. */
+  const run = () => {
+    running ??= (async () => {
+      try {
+        const found = await deps.check();
+        if (found === 'unsupported') return 'unsupported' as const;
+        offer = found;
+        if (offer) set({ phase: 'available', version: offer.version, notes: offer.notes });
+        else if (state.phase === 'available') set({ phase: 'none' });
+        return 'none' as const;
+      } catch {
+        return 'error' as const;
+      } finally {
+        running = null;
+      }
+    })();
+    return running;
   };
 
   return {
     getState: () => state,
+    getManual: () => manual,
     subscribe(listener: () => void) {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    /** Background check: a failure is silent, the next one is a few hours away and nothing is broken. */
     async check() {
-      if (checking || state.phase === 'installing') return;
-      checking = true;
-      try {
-        offer = await deps.check();
-        if (offer) set({ phase: 'available', version: offer.version, notes: offer.notes });
-        else if (state.phase === 'available') set({ phase: 'none' });
-      } catch {
-        // A failed check is silent: the next one is a few hours away, and nothing is broken.
-      } finally {
-        checking = false;
-      }
+      if (state.phase === 'installing') return;
+      await run();
+    },
+    /** The person pressed "Kiểm tra cập nhật": every outcome is reported. */
+    async checkNow() {
+      if (state.phase === 'installing') return;
+      setManual({ status: 'checking' });
+      const outcome = await run();
+      if (outcome === 'unsupported') setManual({ status: 'unsupported' });
+      else if (outcome === 'error') setManual({ status: 'error' });
+      else if (offer) setManual({ status: 'idle' });
+      else setManual({ status: 'upToDate', at: new Date() });
     },
     async install() {
       if (!offer || state.phase === 'installing' || deps.meetingActive()) return;

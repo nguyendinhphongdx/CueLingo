@@ -197,15 +197,15 @@ export const native = {
     return { version, os };
   },
   /**
-   * Asks the update endpoint for a newer build. `null` when up to date, and also when this build has
-   * no updater (dev and local builds): "plugin not found" is not an error for the person.
+   * Asks the update endpoint for a newer build. `null` when up to date; `'unsupported'` when this
+   * build has no updater (dev and local builds): "plugin not found" is not an error for the person.
    */
-  checkUpdate: async (): Promise<UpdateOffer | null> => {
+  checkUpdate: async (): Promise<UpdateOffer | null | 'unsupported'> => {
     let update;
     try {
       update = await check();
     } catch (error) {
-      if (isMissingUpdater(error)) return null;
+      if (isMissingUpdater(error)) return 'unsupported';
       throw error;
     }
     if (!update) return null;

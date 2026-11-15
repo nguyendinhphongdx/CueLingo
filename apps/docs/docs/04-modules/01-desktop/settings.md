@@ -10,6 +10,7 @@ Cài đặt trong app và bản đồng bộ theo tài khoản: Assist mặc đ�
 - Chỉnh mức Assist và cách hiển thị overlay
 - Đồng bộ thay đổi lên API sau 800 ms không có thao tác mới
 - Mở trang quản lý dữ liệu trên web
+- Thẻ Giới thiệu hiện phiên bản đang chạy (`APP_VERSION` đọc từ `tauri.conf.json` lúc build) và mục cập nhật `<UpdateSection />` ([Cập nhật app](./updater.md))
 - Mục **Nâng cao → Máy chủ**: hiện máy chủ đang dùng và mở hộp thoại đổi (`<ServerSettings />`, chi tiết ở [Máy chủ](./server.md)); không gửi lên API, chỉ lưu trên máy
 
 ## Phạm vi MVP
