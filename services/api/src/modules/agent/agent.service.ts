@@ -22,6 +22,7 @@ import {
 } from '@cuelingo/shared';
 import { AppError } from '../../lib/errors';
 import type { ConversationsRepository } from '../conversations';
+import type { UsageService } from '../usage';
 import type { AgentRepository } from './agent.repository';
 import {
   DEFAULT_QUOTA_LIMITS,
@@ -57,6 +58,8 @@ export interface AgentServiceDeps {
   model?: (userId: string) => ModelPort;
   conversations: ConversationsRepository;
   usage: AgentRepository;
+  /** The plan's monthly message allowance (`agent_messages`; Free has none). */
+  plan: Pick<UsageService, 'tryReserve'>;
   /** Plugins to load, in order. Defaults to the built-in `core` plugin; the composition root adds the others. */
   plugins?: Array<AgentPlugin<CoreCapabilities>>;
   /** What the `core` plugin reaches; bound to the signed-in user per turn. */
@@ -175,6 +178,21 @@ export function createAgentService(deps: AgentServiceDeps) {
             ErrorCode.AgentQuotaExceeded,
             'Daily assistant limit reached',
             toQuota(before.usage, limits, before.resetsAt),
+          );
+        }
+
+        // Plan gate on top of the daily cap: Free has 0 messages, Pro and Ultra a monthly number.
+        const slot = await deps.plan.tryReserve(userId, 'agent_messages');
+        if (!slot.ok) {
+          const { plan, used, limit, resetsAt } = slot.details;
+          throw new AppError(
+            ErrorCode.AgentQuotaExceeded,
+            'Assistant message limit of the plan reached',
+            {
+              ...toQuota(before.usage, limits, new Date(resetsAt)),
+              plan,
+              ...(limit > 0 ? { monthly: { used, limit } } : {}),
+            },
           );
         }
 

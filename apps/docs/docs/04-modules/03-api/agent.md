@@ -8,6 +8,7 @@ Một lượt trả lời của trợ lý AI mỗi request: dựng ngữ cảnh,
 
 - `POST /v1/conversations/:id/messages` trả `text/event-stream`; tin của người dùng được lưu **ngay**, tin của trợ lý lưu `streaming` rồi cập nhật `parts` sau mỗi bước mô hình và mỗi kết quả công cụ, trạng thái cuối lưu **trước** khi gửi `done`
 - Khoá trong tiến trình theo `userId` (mọi hội thoại): người dùng đã có một lượt đang chạy thì lượt thứ hai là `409 CONFLICT`. Quota được kiểm trước khi lưu tin `user`, nên nếu khoá theo hội thoại thì N hội thoại song song cùng qua một lần kiểm; khoá theo người dùng đóng lỗ hổng đó. Khoá được nhả ngay sau khi lưu trạng thái cuối (trước khi gửi `done`). Khớp ADR-0011, một container; nợ khi scale ngang
+- Hạn mức theo gói ([usage](./usage.md)): sau khi qua trần ngày, giữ chỗ nguyên tử một tin của `agent_messages` (theo tháng giờ VN, trước khi lưu tin `user`). Free có 0 tin nên luôn bị từ chối; Pro/Ultra có trần tháng (mặc định 100/500). Từ chối trả cùng `AGENT_QUOTA_EXCEEDED` với `details` là `AgentQuota` kèm `plan` và `monthly {used, limit}` (không có `monthly` khi Free); admin không bị chặn. Trần ngày giữ nguyên và vẫn đếm từ `agent_messages` nên `DELETE /v1/me/data` đặt lại nó (ADR 0022), còn trần tháng thì không
 - Quota theo ngày UTC, kiểm **trước khi stream** (429) và trước mỗi bước tiếp theo (`done{limited}`)
 - Khách ngắt kết nối → huỷ lượt → tin lưu `stopped`, giữ phần chữ đã sinh; khoá được nhả
 - Lỗi của nhà cung cấp không lộ ra: client chỉ thấy `error{AGENT_FAILED}` rồi `done{error}`
@@ -26,14 +27,14 @@ Một lượt trả lời của trợ lý AI mỗi request: dựng ngữ cảnh,
 
 **Lỗi trước khi stream** (JSON `ErrorResponse`, chưa lưu gì):
 
-| Status | `error.code`           | Khi nào                                                                                      |
-| ------ | ---------------------- | -------------------------------------------------------------------------------------------- |
-| 400    | `VALIDATION_ERROR`     | body/`id` sai                                                                                |
-| 401    | `UNAUTHORIZED`         | chưa đăng nhập                                                                               |
-| 404    | `NOT_FOUND`            | hội thoại không tồn tại, đã xoá hoặc của người khác                                          |
-| 409    | `CONFLICT`             | người dùng đang có một lượt chạy (ở bất kỳ hội thoại nào)                                    |
-| 429    | `AGENT_QUOTA_EXCEEDED` | hết lượt/token/USD trong ngày; `error.details` là `AgentQuota` (`used`, `limit`, `resetsAt`) |
-| 503    | `AGENT_DISABLED`       | `AGENT_ENABLED=false`, thiếu `GEMINI_API_KEY` hoặc admin đã tắt công tắc                     |
+| Status | `error.code`           | Khi nào                                                                                                                                                              |
+| ------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 400    | `VALIDATION_ERROR`     | body/`id` sai                                                                                                                                                        |
+| 401    | `UNAUTHORIZED`         | chưa đăng nhập                                                                                                                                                       |
+| 404    | `NOT_FOUND`            | hội thoại không tồn tại, đã xoá hoặc của người khác                                                                                                                  |
+| 409    | `CONFLICT`             | người dùng đang có một lượt chạy (ở bất kỳ hội thoại nào)                                                                                                            |
+| 429    | `AGENT_QUOTA_EXCEEDED` | hết lượt/token/USD trong ngày, hoặc gói Free, hoặc hết trần tháng của gói; `error.details` là `AgentQuota` (`used`, `limit`, `resetsAt`, tuỳ chọn `plan`, `monthly`) |
+| 503    | `AGENT_DISABLED`       | `AGENT_ENABLED=false`, thiếu `GEMINI_API_KEY` hoặc admin đã tắt công tắc                                                                                             |
 
 **Khi stream** (200): header `Content-Type: text/event-stream; charset=utf-8`, `Cache-Control: no-cache, no-transform`, `X-Accel-Buffering: no`; không nén. Qua `reply.send(stream)` (không `hijack`) nên CORS/`x-request-id` vẫn chạy. Mỗi event là một khối:
 

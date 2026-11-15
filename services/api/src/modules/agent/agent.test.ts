@@ -1,5 +1,5 @@
 import type { AiGateway, ChatMessage, ChatStreamPart } from '@cuelingo/ai-gateway';
-import type { AgentStreamEvent } from '@cuelingo/shared';
+import { resolvePlanLimits, type AgentStreamEvent, type PlanLimitTable } from '@cuelingo/shared';
 import type { FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
 import { buildTestApp, TEST_USER_HEADER } from '../../testing';
@@ -83,6 +83,8 @@ describe('agent module', () => {
       enabled?: boolean;
       quota?: { turns?: number; tokens?: number; costUsd?: number };
       assist?: boolean;
+      /** Defaults to Free with unlimited messages, so only the plan tests care about the plan. */
+      planLimits?: PlanLimitTable;
       logger?: { level: string; stream: { write(line: string): void } };
     } = {},
   ) {
@@ -92,6 +94,7 @@ describe('agent module', () => {
     const { gateway, seen } = scriptedGateway(steps);
     const built = await buildTestApp({
       repos: { conversations, agent: usage, phrases },
+      planLimits: options.planLimits ?? resolvePlanLimits({ free: { agent_messages: null } }),
       agent: { enabled: options.enabled ?? true, gateway, quota: options.quota },
       assist: options.assist
         ? {
@@ -273,6 +276,51 @@ describe('agent module', () => {
     expect(stored).toBe(2); // one user message and one assistant message, never two turns
     // Another user is not blocked.
     expect((await t.send(await t.create(BOB), 'hi', BOB)).statusCode).toBe(200);
+  });
+
+  describe('plan limits (AC9)', () => {
+    it('refuses every message on Free with AGENT_QUOTA_EXCEEDED and stores nothing', async () => {
+      const t = await setup([text('never')], { planLimits: resolvePlanLimits() });
+      const id = await t.create();
+      const res = await t.send(id, 'Hello');
+      expect(res.statusCode).toBe(429);
+      expect(res.json().error.code).toBe('AGENT_QUOTA_EXCEEDED');
+      expect(res.json().error.details).toMatchObject({ plan: 'free' });
+      expect(res.json().error.details.monthly).toBeUndefined();
+      expect(t.seen).toHaveLength(0);
+      expect((await t.detail(id)).messages).toEqual([]);
+    });
+
+    it('lets Pro send until the monthly allowance, then reports it in details', async () => {
+      const t = await setup([text('ok')], {
+        planLimits: resolvePlanLimits({ free: { agent_messages: 2 } }),
+      });
+      const id = await t.create();
+      expect((await t.send(id, 'one')).statusCode).toBe(200);
+      expect((await t.send(id, 'two')).statusCode).toBe(200);
+      const third = await t.send(id, 'three');
+      expect(third.statusCode).toBe(429);
+      expect(third.json().error.code).toBe('AGENT_QUOTA_EXCEEDED');
+      expect(third.json().error.details).toMatchObject({
+        plan: 'free',
+        monthly: { used: 2, limit: 2 },
+      });
+      expect(t.seen).toHaveLength(2);
+      // Another person has their own monthly allowance.
+      expect((await t.send(await t.create(BOB), 'hi', BOB)).statusCode).toBe(200);
+    });
+
+    it('still applies the daily cap on top of the monthly allowance', async () => {
+      const t = await setup([text('x')], {
+        quota: { turns: 1 },
+        planLimits: resolvePlanLimits({ free: { agent_messages: 100 } }),
+      });
+      const id = await t.create();
+      expect((await t.send(id, 'one')).statusCode).toBe(200);
+      const second = await t.send(id, 'two');
+      expect(second.statusCode).toBe(429);
+      expect(second.json().error.details.turns).toEqual({ used: 1, limit: 1 });
+    });
   });
 
   describe('quota (AC15)', () => {

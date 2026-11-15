@@ -210,6 +210,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const agent = createAgentModule(deps.agent, {
       conversations: deps.repos.conversations,
       usage: deps.repos.agent,
+      plan: usage.service,
       lookup: assist?.service.lookup,
       phrases: { list: review.phrases.list, save: review.phrases.save },
     });
