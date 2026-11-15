@@ -184,6 +184,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const usage = createUsageModule(deps.repos.usage, {
     limits: deps.planLimits ?? resolvePlanLimits(),
     isAdmin: admin.service.isAdmin,
+    log: app.log,
     now: deps.now,
   });
   await app.register(usage.routes);

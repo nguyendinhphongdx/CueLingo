@@ -43,6 +43,9 @@ export function createInMemoryUsageRepository(
       counters.set(k, next);
       return next;
     },
+    async planRow(userId) {
+      return plans.get(userId) ?? null;
+    },
     async setPlan(userId, plan, _setBy, expiresAt) {
       plans.set(userId, { plan, expiresAt, source: 'manual' });
     },

@@ -12,7 +12,7 @@ export function createUsageModule(repo: UsageRepository, options: UsageOptions) 
 }
 
 export type { UsageRepository } from './usage.repository';
-export type { ReserveResult, UsageService } from './usage.service';
+export type { PlanChange, ReserveResult, UsageLog, UsageService } from './usage.service';
 export { createPostgresUsageRepository } from './usage.repository';
 export { createInMemoryUsageRepository } from './usage.repository.memory';
 export type { InMemoryPlanRows } from './usage.repository.memory';

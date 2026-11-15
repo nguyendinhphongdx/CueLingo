@@ -12,7 +12,6 @@ export function usageRoutes(service: UsageService): FastifyPluginAsync {
 
     app.put('/v1/admin/plan', async (request): Promise<SetPlanResponse> => {
       const input = parse(SetPlanRequestSchema, request.body);
-      request.log.info({ userId: request.userId, plan: input.plan }, 'plan changed');
       return service.setPlan(request.userId, input.email, input.plan, input.expiresAt);
     });
   };

@@ -1,3 +1,4 @@
+import { Writable } from 'node:stream';
 import type { FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
 import { buildTestApp, TEST_USER_HEADER } from '../../testing';
@@ -151,6 +152,82 @@ describe('plan expiry', () => {
       expiresAt: '2026-12-01T00:00:00.000Z',
     });
     expect(plans.get(ALICE)?.expiresAt?.toISOString()).toBe('2026-12-01T00:00:00.000Z');
+  });
+});
+
+describe('plan change audit log (AC8)', () => {
+  const EMAILS_ = { [ALICE]: 'alice@example.com', [OWNER]: 'owner@example.com' };
+  let app: FastifyInstance;
+  afterEach(() => app.close());
+
+  it('logs who changed whose plan, from what to what, and no email', async () => {
+    let logs = '';
+    const stream = new Writable({
+      write(chunk, _encoding, callback) {
+        logs += chunk.toString();
+        callback();
+      },
+    });
+    const plans: InMemoryPlanRows = new Map();
+    plans.set(ALICE, {
+      plan: 'pro',
+      expiresAt: new Date('2027-01-01T00:00:00Z'),
+      source: 'payment',
+    });
+    app = await buildTestApp({
+      adminEmails: ['owner@example.com'],
+      logger: { level: 'info', stream },
+      repos: {
+        admin: createInMemoryAdminRepository(EMAILS_),
+        usage: createInMemoryUsageRepository(EMAILS_, plans),
+      },
+      now: () => new Date('2026-11-14T05:00:00Z'),
+    });
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/v1/admin/plan',
+      headers: as(OWNER),
+      payload: { email: 'alice@example.com', plan: 'ultra', expiresAt: '2026-12-01T00:00:00.000Z' },
+    });
+    expect(res.statusCode).toBe(200);
+    const line = logs
+      .split('\n')
+      .filter(Boolean)
+      .map((l) => JSON.parse(l) as Record<string, unknown>)
+      .find((entry) => entry.msg === 'plan changed');
+    expect(line).toMatchObject({
+      adminId: OWNER,
+      targetUserId: ALICE,
+      from: { plan: 'pro', source: 'payment', expiresAt: '2027-01-01T00:00:00.000Z' },
+      to: { plan: 'ultra', expiresAt: '2026-12-01T00:00:00.000Z' },
+    });
+    expect(logs).not.toContain('example.com');
+  });
+
+  it('logs nothing when the caller is not an admin', async () => {
+    let logs = '';
+    const stream = new Writable({
+      write(chunk, _encoding, callback) {
+        logs += chunk.toString();
+        callback();
+      },
+    });
+    app = await buildTestApp({
+      adminEmails: ['owner@example.com'],
+      logger: { level: 'info', stream },
+      repos: {
+        admin: createInMemoryAdminRepository(EMAILS_),
+        usage: createInMemoryUsageRepository(EMAILS_),
+      },
+    });
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/v1/admin/plan',
+      headers: as(ALICE),
+      payload: { email: 'alice@example.com', plan: 'ultra' },
+    });
+    expect(res.statusCode).toBe(403);
+    expect(logs).not.toContain('plan changed');
   });
 });
 

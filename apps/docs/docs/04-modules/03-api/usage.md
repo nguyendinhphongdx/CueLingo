@@ -11,7 +11,7 @@ Gán gói Free/Pro/Ultra cho từng người, đếm lượng dùng theo kỳ v�
 ## Trách nhiệm
 
 - Lưu gói (`user_plans`; không có dòng = `free`; `expires_at` và `source` = `manual` \| `payment`) và lượng dùng (`usage_counters`, chỉ con số).
-- Cho module khác một cổng duy nhất (`UsageService`): `status`, `tryReserve`/`reserve`, `add`, `snapshot`.
+- Cho module khác một cổng duy nhất (`UsageService`): `status`, `tryReserve`/`reserve`, `add`, `snapshot`, `setPlanFor(adminId, targetUserId, plan, expiresAt?)` (trả `{previous, current}`; `PUT /v1/admin/plan` theo email và `PUT /v1/admin/users/:id/plan` của module admin-users đều đi qua đây, `user_plans` chỉ module này ghi).
 - Hạn mức mặc định ở `packages/shared/src/plans.ts`, ghi đè bằng biến môi trường `PLAN_LIMITS` (JSON, Zod kiểm lúc khởi động).
 - Admin (`ADMIN_EMAILS`) có `limit: null` ở mọi mục nhưng vẫn được đếm.
 
@@ -58,9 +58,9 @@ Không có dòng trả về nghĩa là bị từ chối. Trước đó, cổng �
 
 ## Dữ liệu & quyền riêng tư
 
-- Chỉ số và `user_id`; không log nội dung. Log đổi gói chỉ ghi `userId` của admin và `plan`.
+- Chỉ số và `user_id`; không log nội dung. Mỗi lần đổi gói ghi một dòng `plan changed` ở một chỗ (`setPlanFor`): `adminId`, `targetUserId`, `from {plan, source, expiresAt}` (dòng đã lưu, kể cả đã hết hạn), `to {plan, expiresAt}`. Không có email. `set_by` giữ người đổi gần nhất.
 - `DELETE /v1/me/data` không xoá counter và gói; xoá tài khoản thì xoá (cascade). Không có trong `GET /v1/me/export`.
 
 ## Test
 
-`usage.test.ts` (đọc lượng dùng, ranh giới người dùng, admin không giới hạn), `plans.test.ts` (gói mặc định, admin đổi gói và `expiresAt`, gói trả phí hết hạn, cổng hạn mức, chạy đua), `test/integration/usage.int.test.ts` (SQL thật).
+`usage.test.ts` (đọc lượng dùng, ranh giới người dùng, admin không giới hạn), `plans.test.ts` (gói mặc định, admin đổi gói và `expiresAt`, log đổi gói, gói trả phí hết hạn, cổng hạn mức, chạy đua), `test/integration/usage.int.test.ts` (SQL thật).
