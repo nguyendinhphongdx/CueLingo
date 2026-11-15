@@ -144,6 +144,18 @@ describe('DebriefPageView', () => {
     expect(markup).not.toContain('Tạo lại debrief');
   });
 
+  it('offers the upgrade link next to the out-of-allowance notice', () => {
+    const markup = renderToStaticMarkup(
+      <DebriefPageView
+        {...defaultProps}
+        debrief={undefined}
+        skippedByQuota
+        upgradeAction={<a href="/upgrade">Nâng gói</a>}
+      />,
+    );
+    expect(markup).toContain('href="/upgrade"');
+  });
+
   it('shows the long-wait message and retry action after 90 seconds', () => {
     const markup = renderToStaticMarkup(
       <DebriefPageView

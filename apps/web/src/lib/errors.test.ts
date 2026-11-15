@@ -23,6 +23,15 @@ describe('describeError', () => {
     );
   });
 
+  it('explains the billing errors in Vietnamese', () => {
+    expect(describeError(new ApiError(503, 'BILLING_DISABLED', 'off'))).toContain('chưa mở');
+    expect(describeError(new ApiError(409, 'PLAN_DOWNGRADE', 'x'))).toContain('gói cao hơn');
+    expect(describeError(new ApiError(502, 'BILLING_PROVIDER_FAILED', 'x'))).toContain(
+      'Chưa có khoản nào bị trừ',
+    );
+    expect(describeError(new ApiError(429, 'RATE_LIMITED', 'x'))).toContain('thao tác hơi nhanh');
+  });
+
   it('falls back to a generic message for anything else', () => {
     expect(describeError(new Error('boom'))).toBe('Đã có lỗi, vui lòng thử lại');
   });

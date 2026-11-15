@@ -37,6 +37,7 @@ import {
 import { SpeakButton } from '@cuelingo/ui/components/speak-button';
 import { client } from '../../lib/client';
 import { describeFollowupError } from '../../lib/errors';
+import { UpgradeLink } from '../billing';
 import { buildDebriefMarkdown } from './markdown';
 import {
   decideRenameSubmit,
@@ -315,6 +316,8 @@ export interface DebriefPageViewProps {
   processing: boolean;
   /** The monthly debrief allowance ran out, so none will be made (not "still processing"). */
   skippedByQuota?: boolean;
+  /** Offered next to the out-of-allowance notice (the "Nâng gói" link, absent when payments are off). */
+  upgradeAction?: ReactNode;
   processingSeconds: number;
   processingTimedOut: boolean;
   error: string | null;
@@ -370,6 +373,7 @@ export function DebriefPageView({
   loading,
   processing,
   skippedByQuota = false,
+  upgradeAction,
   processingSeconds,
   processingTimedOut,
   error,
@@ -494,7 +498,10 @@ export function DebriefPageView({
               <p className="text-muted-foreground text-sm">{EMPTY_MEETING_TEXT}</p>
             )}
             {outlook === 'pending' && skippedByQuota && (
-              <p className="text-muted-foreground text-sm">{DEBRIEF_SKIPPED_TEXT}</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-muted-foreground text-sm">{DEBRIEF_SKIPPED_TEXT}</p>
+                {upgradeAction}
+              </div>
             )}
             {outlook === 'pending' && processing && !processingTimedOut && (
               <p className="text-muted-foreground text-sm">
@@ -912,6 +919,7 @@ export function DebriefPage({ sessionId }: { sessionId: string }) {
       loading={state.loading}
       processing={state.processing}
       skippedByQuota={state.skippedByQuota}
+      upgradeAction={<UpgradeLink />}
       processingSeconds={state.processingSeconds}
       processingTimedOut={state.processingTimedOut}
       error={state.error}
