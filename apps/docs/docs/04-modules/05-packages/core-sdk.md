@@ -16,7 +16,8 @@ SDK client dùng chung cho desktop và web: auth, REST, stream phiên, hàng đ�
 
 ## Interface
 
-- `createClient({baseUrl, getToken})` → `{sessions, assist, review, events, stream, glossary, feedback, conversations, agent, usage}`
+- `createClient({baseUrl, getToken})` → `{sessions, assist, review, events, stream, glossary, feedback, conversations, agent, usage, billing}`
+- `client.billing`: `overview()` → `GET /v1/billing`; `createOrder({plan, period})` → `POST /v1/billing/orders` (không gửi giá); `getOrder(id, {signal?})` → poll đơn; `listOrders()` → lịch sử. Lỗi: `BILLING_DISABLED`, `PLAN_DOWNGRADE`, `BILLING_PROVIDER_FAILED`, `RATE_LIMITED`. Xem [billing](../03-api/billing.md)
 - `client.usage.get()` → `GET /v1/me/usage` (`UsageResponse`); `client.usage.setPlan({email, plan})` → `PUT /v1/admin/plan` (admin; `403` với người khác). Hết hạn mức thì mọi lời gọi liên quan ném `ApiError` mã `QUOTA_EXCEEDED` (429) với `details` là `QuotaExceededDetails`; gọi lại không giúp ích nên không thử lại. Xem [usage](../03-api/usage.md)
 - Màn admin (`/v1/admin/*`, gồm `admin.agent.get()` và `admin.agent.update({enabled} | {plugin:{id,enabled}})`) gọi qua client của app web (`apps/web/src/lib/client.ts`), không qua core-sdk: chỉ web admin dùng, schema ở `@cuelingo/shared`
 - `client.feedback.send(input)` → `POST /v1/feedback`, trả `{id, createdAt}`

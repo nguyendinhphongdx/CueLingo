@@ -100,3 +100,19 @@ Hợp đồng `FollowupRequestSchema` (channel, tone), `FollowupResponseSchema` 
 | `UsageItemSchema`, `UsageResponseSchema`                                                      | `{used, limit \| null, resetsAt, state}`; `{plan, usage: {<metric>: UsageItem}}`                                                                                                                                                    |
 | `QuotaExceededDetailsSchema`, `DebriefSkippedDetailsSchema`                                   | `details` của `QUOTA_EXCEEDED` (`{metric, plan, used, limit, resetsAt}`, 429) và `DEBRIEF_SKIPPED` (`{reason:'quota'}`, 404)                                                                                                        |
 | `SetPlanRequestSchema`, `SetPlanResponseSchema`                                               | `{email, plan}` (`.strict()`), admin only                                                                                                                                                                                           |
+
+## Thanh toán
+
+`billing.ts` (logic thuần) và `dto/billing.dto.ts`. Thiết kế: [billing](../03-api/billing.md), [ADR 0023](../../08-adr/0023-payments-payos-vietqr.md).
+
+| Thành phần                                                                 | Nội dung                                                                                                                                  |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `BillingPeriodSchema`, `PaidPlanSchema`, `PlanSourceSchema`                | `month \| year`; `pro \| ultra`; `manual \| payment`                                                                                      |
+| `DEFAULT_PLAN_PRICES`, `PlanPricesEnvSchema`, `resolvePlanPrices`          | Giá VND mặc định; `PLAN_PRICES` là JSON ghi đè từng phần (chỉ API đọc)                                                                    |
+| `addPeriod`, `effectivePlan`, `planAfterPurchase`                          | Cộng một kỳ theo tháng lịch giờ VN; gói đang hiệu lực (hết hạn = `free`); gói sau khi mua (nối tiếp, quy đổi Pro → Ultra, từ chối hạ gói) |
+| `BillingOverviewResponseSchema`, `BillingOfferSchema`                      | `{enabled, current:{plan, expiresAt, source}, offers[]}`; `enabled: false` = ẩn nút nâng gói                                              |
+| `CreateOrderRequestSchema`                                                 | `{plan, period}` `.strict()`: client không gửi được giá                                                                                   |
+| `BillingOrderSchema`, `BillingOrderListSchema`, `BillingOrderStatusSchema` | Đơn của người gọi; `qrCode` và `checkoutUrl` chỉ có khi `pending`                                                                         |
+| `ErrorCode.BillingDisabled` · `BillingProviderFailed` · `PlanDowngrade`    | `BILLING_DISABLED` (503) · `BILLING_PROVIDER_FAILED` (502) · `PLAN_DOWNGRADE` (409)                                                       |
+
+`SetPlanRequestSchema` thêm `expiresAt?` (ISO) và `SetPlanResponseSchema` thêm `expiresAt?`; `UsageResponseSchema` không đổi.
