@@ -113,3 +113,9 @@ Các thành phần chỉ trình bày và nhận callback; không gọi API, khô
 - **`phrases.save` luôn qua `ConfirmDialog`** do `SandboxFrame` vẽ trong DOM của host ("Lưu cụm từ này?"), không có đường nào gọi `onSavePhrase` mà bỏ qua nó; mỗi lúc chỉ một câu hỏi (`busy`), khối bị gỡ giữa chừng thì huỷ câu hỏi và không lưu. `phrases.list` chỉ trả `{phrase, meaningVi}` (tối đa 50). `tts.speak`: host tự phát, không trả âm thanh vào trang.
 - **Vì sao origin là `"null"`**: iframe không có `allow-same-origin` có origin mờ nên trình duyệt báo `event.origin === "null"` (không phải origin của runner), và `postMessage` vào nó phải dùng target `"*"`. Vì vậy ranh giới là **danh tính cửa sổ** (`source`), không phải chuỗi origin. Plan ghi `event.origin === RUNNER_ORIGIN`; cách đó sẽ từ chối mọi tin thật.
 - Test: `bridge-host.test.ts` (giả mạo nguồn/origin, thao tác lạ, tin quá cỡ, không serialise được, tần suất, xác nhận lưu), `sandbox-watchdog.test.ts` (đồng hồ giả), `sandbox-controller.test.ts` (dây nối), `sandbox-frame.test.tsx` (thuộc tính iframe, gỡ khối, xem mã nguồn dạng chữ).
+
+## UsageMeter
+
+`UsageMeter({metric, used, limit, state, resetsAt?})` (`components/usage-meter`): một hạn mức của gói là nhãn tiếng Việt, thanh tiến độ (`role="progressbar"`) và phần còn lại. `state` là `ok | low | exhausted` do server tính; `low` màu hổ phách, `exhausted` màu `destructive`, chữ vẫn nói rõ nên không chỉ dựa vào màu. `limit = null` hiện "Không giới hạn" và không có thanh; `limit = 0` hiện "Không có trong gói này". `metric` là `string` vì `@cuelingo/ui` không phụ thuộc kiểu của `shared`.
+
+Hàm định dạng ở `lib/usage` để web và desktop dùng chung câu chữ: `usageLabel`, `planName`, `formatDurationMs` ("2 giờ 5 phút", làm tròn xuống), `formatUsageAmount`, `formatRemaining`, `usageFraction`, `formatResetDate` (ngày làm mới, giờ Việt Nam). `*_ms` là mili giây, các metric còn lại là số lần.
