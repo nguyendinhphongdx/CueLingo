@@ -67,3 +67,20 @@ export function formatResetDate(iso: string): string {
     timeZone: 'Asia/Ho_Chi_Minh',
   }).format(date);
 }
+
+const DAILY_METRICS = new Set(['assist_daily']);
+
+/** What the person is told when a call is refused for lack of allowance. Never retried. */
+export function quotaExceededMessage(metric: string, resetsAt?: string): string {
+  const what: Record<string, string> = {
+    translation_ms: 'giờ dịch tháng này',
+    cloud_stt_ms: 'giờ nhận dạng giọng nói đám mây tháng này',
+    debriefs: 'lượt debrief tháng này',
+    assist_daily: 'lượt tra từ và nói giúp hôm nay',
+    agent_messages: 'tin nhắn trợ lý tháng này',
+  };
+  const head = `Bạn đã dùng hết ${what[metric] ?? 'hạn mức của gói'}.`;
+  const date = resetsAt ? formatResetDate(resetsAt) : '';
+  if (DAILY_METRICS.has(metric)) return `${head} Ngày mai sẽ được làm mới.`;
+  return date ? `${head} Hạn mức được làm mới ngày ${date}.` : head;
+}

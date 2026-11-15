@@ -11,6 +11,8 @@ Mục “Tuỳ chọn” trong `/settings`, dùng để chỉnh cài đặt chun
 - Lưu audio: công tắc mặc định tắt; mô tả nơi lưu và hạn tối đa 30 ngày
 - Nút lưu có trạng thái đang lưu, thành công và lỗi tiếng Việt
 
+Gói và lượng dùng nằm ngay dưới trong `/settings`: xem [Usage](./usage.md).
+
 ## Phụ thuộc
 
 - `@cuelingo/shared` (`UserSettings`)

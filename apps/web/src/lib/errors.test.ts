@@ -63,6 +63,41 @@ describe('describeRegenerateError', () => {
   });
 });
 
+describe('QUOTA_EXCEEDED', () => {
+  const details = (metric: string) => ({
+    metric,
+    plan: 'free',
+    used: 10,
+    limit: 10,
+    resetsAt: '2026-11-30T17:00:00.000Z',
+  });
+
+  it('names the allowance and when it renews', () => {
+    const message = describeError(
+      new ApiError(429, 'QUOTA_EXCEEDED', 'x', details('cloud_stt_ms')),
+    );
+    expect(message).toContain('giờ nhận dạng giọng nói đám mây tháng này');
+    expect(message).toContain('1/12/2026');
+  });
+
+  it('says tomorrow for the daily allowance', () => {
+    expect(
+      describeError(new ApiError(429, 'QUOTA_EXCEEDED', 'x', details('assist_daily'))),
+    ).toContain('Ngày mai');
+  });
+
+  it('is not shown as "too fast" when regenerating a debrief', () => {
+    const message = describeRegenerateError(
+      new ApiError(429, 'QUOTA_EXCEEDED', 'x', details('debriefs')),
+    );
+    expect(message).toContain('lượt debrief tháng này');
+  });
+
+  it('still explains without details', () => {
+    expect(describeError(new ApiError(429, 'QUOTA_EXCEEDED', 'x'))).toContain('hết hạn mức');
+  });
+});
+
 describe('describeAgentError', () => {
   const quota = {
     turns: { used: 60, limit: 60 },
@@ -85,6 +120,41 @@ describe('describeAgentError', () => {
     expect(describeAgentError(new ApiError(429, 'AGENT_QUOTA_EXCEEDED', 'limit'))).toContain(
       'hết lượt',
     );
+  });
+
+  it('says the Free plan has no assistant', () => {
+    const message = describeAgentError(
+      new ApiError(429, 'AGENT_QUOTA_EXCEEDED', 'limit', {
+        ...quota,
+        turns: { used: 0, limit: 0 },
+        plan: 'free',
+      }),
+    );
+    expect(message).toContain('Gói Free chưa có trợ lý');
+  });
+
+  it('says the monthly assistant allowance ran out and when it renews', () => {
+    const message = describeAgentError(
+      new ApiError(429, 'AGENT_QUOTA_EXCEEDED', 'limit', {
+        ...quota,
+        plan: 'pro',
+        resetsAt: '2026-11-30T17:00:00.000Z',
+        monthly: { used: 100, limit: 100 },
+      }),
+    );
+    expect(message).toContain('100 tin nhắn trợ lý tháng này');
+    expect(message).toContain('1/12/2026');
+  });
+
+  it('keeps the daily message for a Pro user who only hit the daily cap', () => {
+    const message = describeAgentError(
+      new ApiError(429, 'AGENT_QUOTA_EXCEEDED', 'limit', {
+        ...quota,
+        plan: 'pro',
+        monthly: { used: 3, limit: 100 },
+      }),
+    );
+    expect(message).toContain('60 lượt');
   });
 
   it('says the assistant is off on 503, offline on network errors, and never shows server text', () => {

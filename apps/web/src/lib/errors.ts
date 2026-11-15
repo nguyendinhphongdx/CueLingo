@@ -1,5 +1,6 @@
 import { ApiError } from '@cuelingo/core-sdk';
-import { AgentQuotaSchema, ErrorCode } from '@cuelingo/shared';
+import { AgentQuotaSchema, ErrorCode, QuotaExceededDetailsSchema } from '@cuelingo/shared';
+import { formatResetDate, quotaExceededMessage } from '@cuelingo/ui/lib/usage';
 
 /** What the user reads for each API error code. Server messages are English and for developers, never shown. */
 const MESSAGES: Record<string, string> = {
@@ -8,6 +9,7 @@ const MESSAGES: Record<string, string> = {
   [ErrorCode.Forbidden]: 'Bạn không có quyền thực hiện thao tác này',
   [ErrorCode.NotFound]: 'Không tìm thấy dữ liệu này',
   [ErrorCode.Conflict]: 'Mục này đã tồn tại',
+  [ErrorCode.DebriefSkipped]: 'Debrief không được tạo vì đã hết lượt debrief tháng này',
   [ErrorCode.Internal]: 'Máy chủ gặp sự cố, vui lòng thử lại sau',
   NETWORK_ERROR: 'Không kết nối được tới máy chủ',
 };
@@ -21,8 +23,19 @@ const FALLBACK = 'Đã có lỗi, vui lòng thử lại';
 /** Vietnamese message for an error thrown by core-sdk, or null when there is no error. */
 export function describeError(error: unknown): string | null {
   if (!error) return null;
-  if (error instanceof ApiError) return MESSAGES[error.code] ?? FALLBACK;
+  if (error instanceof ApiError) {
+    if (error.code === ErrorCode.QuotaExceeded) return describeQuotaError(error);
+    return MESSAGES[error.code] ?? FALLBACK;
+  }
   return FALLBACK;
+}
+
+/** Which allowance ran out and when it renews, from the error `details`. */
+function describeQuotaError(error: ApiError): string {
+  const details = QuotaExceededDetailsSchema.safeParse(error.details);
+  return details.success
+    ? quotaExceededMessage(details.data.metric, details.data.resetsAt)
+    : 'Bạn đã dùng hết hạn mức của gói hiện tại.';
 }
 
 /** Message for a failed follow-up draft: the codes this feature can hit first, then the general ones. */
@@ -39,6 +52,7 @@ export function describeFollowupError(error: unknown): string {
 /** Message for a failed "regenerate the debrief" request: not ended or empty (409), too fast (429), else generic. */
 export function describeRegenerateError(error: unknown): string {
   if (error instanceof ApiError) {
+    if (error.code === ErrorCode.QuotaExceeded) return describeQuotaError(error);
     if (error.status === 409) return 'Cuộc họp chưa kết thúc hoặc không có nội dung.';
     if (error.status === 429) return 'Bạn bấm hơi nhanh, đợi một lát rồi thử lại.';
   }
@@ -76,7 +90,12 @@ export function describeAgentError(error: unknown): string {
     if (error.code === ErrorCode.AgentQuotaExceeded) {
       const quota = AgentQuotaSchema.safeParse(error.details);
       if (!quota.success) return 'Bạn đã dùng hết lượt hỏi trợ lý hôm nay. Mai hãy quay lại nhé.';
-      const { turns, resetsAt } = quota.data;
+      const { turns, resetsAt, plan, monthly } = quota.data;
+      // Free has no assistant at all; a monthly cap that is full renews on the 1st.
+      if (plan === 'free' && !monthly)
+        return 'Gói Free chưa có trợ lý AI. Trợ lý có ở gói Pro và Ultra.';
+      if (monthly && monthly.used >= monthly.limit)
+        return `Bạn đã dùng hết ${monthly.limit} tin nhắn trợ lý tháng này. Hạn mức được làm mới ngày ${formatResetDate(resetsAt)}.`;
       const reset = `Lượt hỏi được làm mới lúc ${formatClock(resetsAt)}.`;
       return turns.used >= turns.limit
         ? `Bạn đã dùng hết ${turns.limit} lượt hỏi trợ lý hôm nay. ${reset}`
