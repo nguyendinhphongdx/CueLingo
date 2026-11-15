@@ -6,7 +6,7 @@ title: Admin người dùng và gói
 
 > Phần: [API service](./README.md) · Code: `services/api/src/modules/admin-users/` · Spec: `06-delivery/2026-11-15-admin-users-plans`
 
-Cho chủ sản phẩm xem ai đang ở gói nào, doanh thu tháng, gói sắp hết hạn, và đổi gói theo người. Màn hình: `/admin/users` trên web (`apps/web/src/features/admin`).
+Cho chủ sản phẩm xem ai đang ở gói nào, doanh thu tháng, gói sắp hết hạn, và đổi gói theo người. Màn hình: [admin-users (web)](../02-web/admin-users.md).
 
 ## Trách nhiệm
 
