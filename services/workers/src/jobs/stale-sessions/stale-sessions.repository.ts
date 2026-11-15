@@ -14,7 +14,7 @@ export interface StaleSessionsRepository {
    */
   closeStaleLive(cutoff: Date, limit: number): Promise<ClosedSession[]>;
   /** Records that this ended session got no debrief because the owner's monthly allowance was used up. */
-  markDebriefSkipped(sessionId: string): Promise<void>;
+  markDebriefSkipped(userId: string, sessionId: string): Promise<void>;
 }
 
 export function createPostgresStaleSessionsRepository(sql: Sql): StaleSessionsRepository {
@@ -40,8 +40,8 @@ export function createPostgresStaleSessionsRepository(sql: Sql): StaleSessionsRe
         WHERE sessions.id = stale.id AND sessions.status = 'live'
         RETURNING sessions.id, sessions.user_id AS "userId", stale.segment_count AS "segmentCount"`;
     },
-    async markDebriefSkipped(sessionId) {
-      await sql`UPDATE sessions SET debrief_skipped = 'quota' WHERE id = ${sessionId}`;
+    async markDebriefSkipped(userId, sessionId) {
+      await sql`UPDATE sessions SET debrief_skipped = 'quota' WHERE id = ${sessionId} AND user_id = ${userId}`;
     },
   };
 }

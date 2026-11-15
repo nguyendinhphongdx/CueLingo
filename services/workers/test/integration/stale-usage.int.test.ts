@@ -56,7 +56,13 @@ describe('stale-sessions debrief allowance on real Postgres', () => {
     const repo = createPostgresStaleSessionsRepository(sql);
     const closed = await repo.closeStaleLive(new Date(Date.now() - 30 * 60_000), 10);
     expect(closed).toEqual([{ id: session!.id, userId: owner, segmentCount: 1 }]);
-    await repo.markDebriefSkipped(session!.id);
+    // Only the owner's id marks the session.
+    await repo.markDebriefSkipped(await user('other@example.com'), session!.id);
+    expect(
+      (await sql`SELECT debrief_skipped FROM sessions WHERE id = ${session!.id}`)[0]!
+        .debrief_skipped,
+    ).toBeNull();
+    await repo.markDebriefSkipped(owner, session!.id);
     const [row] = await sql`SELECT debrief_skipped FROM sessions WHERE id = ${session!.id}`;
     expect(row!.debrief_skipped).toBe('quota');
   });

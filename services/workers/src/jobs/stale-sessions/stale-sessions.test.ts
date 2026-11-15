@@ -38,8 +38,10 @@ function setup(rows: Row[], allowed: (userId: string) => boolean = () => true) {
       }
       return closed;
     },
-    async markDebriefSkipped(sessionId) {
-      const row = rows.find((item) => item.id === sessionId);
+    async markDebriefSkipped(userId, sessionId) {
+      const row = rows.find(
+        (item) => item.id === sessionId && (item.userId ?? 'user-1') === userId,
+      );
       if (row) row.debriefSkipped = true;
     },
   };

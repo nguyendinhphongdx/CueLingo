@@ -28,7 +28,7 @@ export async function closeStaleSessions(
       if (session.segmentCount === 0) continue; // nothing to summarise
       // Same rule as POST /v1/sessions/:id/end: abandoning a meeting must not be a way around the allowance.
       if (!(await deps.usage.reserveDebrief(session.userId))) {
-        await deps.staleSessions.markDebriefSkipped(session.id);
+        await deps.staleSessions.markDebriefSkipped(session.userId, session.id);
         skipped += 1;
         continue;
       }
