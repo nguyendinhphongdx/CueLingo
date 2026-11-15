@@ -8,7 +8,8 @@
     "start": "tsx --env-file-if-exists=../../.env src/server.ts",
     "typecheck": "tsc --noEmit",
     "enqueue": "tsx --env-file-if-exists=../../.env src/scripts/enqueue.ts",
-    "invite:create": "tsx --env-file-if-exists=../../.env src/scripts/invite.ts"
+    "invite:create": "tsx --env-file-if-exists=../../.env src/scripts/invite.ts",
+    "billing:confirm-webhook": "tsx --env-file-if-exists=../../.env src/scripts/payos-confirm-webhook.ts"
   },
   "dependencies": {
     "@cuelingo/agent": "workspace:*",
