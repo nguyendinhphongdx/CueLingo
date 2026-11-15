@@ -119,7 +119,7 @@ Hợp đồng `FollowupRequestSchema` (channel, tone), `FollowupResponseSchema` 
 
 ## Admin: người dùng và gói
 
-`dto/admin-users.dto.ts`, tách khỏi `admin.dto.ts` để `AdminMetrics` vẫn không có định danh. Các schema này **có** email và tên nên chỉ trả cho `ADMIN_EMAILS`; không có tiêu đề phiên, transcript hay cụm từ. Thiết kế: trang module admin-users.
+`dto/admin-users.dto.ts`, tách khỏi `admin.dto.ts` để `AdminMetrics` vẫn không có định danh. Các schema này **có** email và tên nên chỉ trả cho `ADMIN_EMAILS`; không có tiêu đề phiên, transcript hay cụm từ. Thiết kế: [admin-users](../03-api/admin-users.md).
 
 | Thành phần                                                        | Nội dung                                                                                                                       |
 | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |

@@ -25,7 +25,7 @@ title: Admin metrics
 | GET    | `/v1/admin/metrics` | `AdminMetricsSchema`; `403` nếu email không được phép                                                                                                                                                                                                                                                                           |
 | GET    | `/v1/admin/agent`   | `AdminAgentStatusSchema`: `enabled` (công tắc admin), `available` (deploy có cho phép: `AGENT_ENABLED` và khoá AI), `plugins[]` (`id`, `version`, `state`, `permissions`, `tools`, `disabledBy?`, `retryAt?`); `403` nếu không phải admin. Khi module agent không được cấu hình: `{enabled:false, available:false, plugins:[]}` |
 | PATCH  | `/v1/admin/agent`   | Body `UpdateAdminAgentRequest`: **hoặc** `{enabled}` (công tắc toàn cục) **hoặc** `{plugin:{id, enabled}}`; trả `AdminAgentStatus` mới. `400` nếu thiếu/đủ cả hai, `404` nếu plugin không có hoặc module agent không cấu hình, `403` nếu không phải admin                                                                       |
-| PUT    | `/v1/admin/plan`    | Gán gói cho một người theo email: xem [usage](./usage.md) (module `usage` tự khai route này, nhận `isAdmin` từ đây)                                                                                                                                                                                                             |
+| PUT    | `/v1/admin/plan`    | Gán gói cho một người theo email: xem [usage](./usage.md) (module `usage` tự khai route này, nhận `isAdmin` từ đây). Dashboard, danh sách người dùng và đổi gói theo id: [admin-users](./admin-users.md)                                                                                                                        |
 
 **Công tắc trợ lý.** Giữ trong bộ nhớ của tiến trình API (một container, [ADR 0011](../../08-adr/0011-deployment-containers-sg.md)): khởi động lại thì về bật. Hiệu lực khi `AGENT_ENABLED` **và** công tắc admin cùng bật; tắt thì mọi lượt mới nhận `503 AGENT_DISABLED`, lượt đang chạy không bị cắt. Tắt một plugin làm công cụ của nó biến khỏi danh sách gửi mô hình từ lượt kế tiếp; plugin `failed` (setup lỗi) không bật lại được từ đây. Chi tiết trạng thái và cầu dao: [packages/agent](../05-packages/agent.md#trách-nhiệm). Module admin chỉ giữ cổng `AgentAdminPort`; `app.ts` nối nó với `modules/agent`.
 
@@ -36,7 +36,7 @@ title: Admin metrics
 
 ## Dữ liệu & sự kiện
 
-- Chỉ đọc số tổng hợp. Không trả email, transcript hoặc payload event.
+- Chỉ đọc số tổng hợp. Không trả email, transcript hoặc payload event. (Email của người dùng chỉ hiện ở [admin-users](./admin-users.md).)
 - Định nghĩa cửa sổ số liệu: [Quan sát hệ thống](../../05-engineering/observability.md#định-nghĩa-số-liệu).
 
 ## Câu hỏi mở

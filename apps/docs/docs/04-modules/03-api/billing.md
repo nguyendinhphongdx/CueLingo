@@ -13,7 +13,7 @@ Người dùng tự mua Pro/Ultra bằng chuyển khoản VietQR qua PayOS, tr�
 - Tạo đơn với **giá do server quyết định** (`PLAN_PRICES`, mặc định ở `packages/shared/src/billing.ts`), gọi nhà cung cấp lấy mã QR.
 - Xác nhận thanh toán từ webhook có chữ ký; nếu webhook không tới, đường đọc đơn hỏi lại nhà cung cấp.
 - Nâng gói (`user_plans`) cùng transaction với việc đánh dấu đơn `paid`.
-- Lịch sử đơn của chính người dùng.
+- Lịch sử đơn của chính người dùng. Module [admin-users](./admin-users.md) đọc `listOrders(userId)` qua service để hiện đơn của một người cho admin (bỏ `qrCode`, `checkoutUrl`, `transferContent`) và đọc tổng đơn `paid` theo tháng; nó không ghi gì vào billing.
 - Nhà cung cấp nằm sau cổng `PaymentProvider` (`providers/provider.ts`): `createCheckout`, `verifyWebhook`, `getStatus`. Có `payos.ts` (thật) và `fake.ts` (test). Thêm MoMo = thêm một adapter.
 
 ## Interface

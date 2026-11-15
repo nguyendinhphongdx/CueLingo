@@ -28,6 +28,7 @@ Backend modular monolith: REST + realtime WebSocket, điều phối dịch, Lear
 | [Usage](./usage.md)                     | `src/modules/usage`         | Gói Free/Pro/Ultra, đếm lượng dùng theo kỳ, cổng chặn khi hết hạn mức, `GET /v1/me/usage`.       |
 | [Billing](./billing.md)                 | `src/modules/billing`       | Nâng gói Pro/Ultra bằng VietQR qua PayOS: đơn, webhook, gói tự hết hạn, lịch sử thanh toán.      |
 | [Admin metrics](./admin.md)             | `src/modules/admin`         | Số liệu vận hành tổng hợp cho email nội bộ trong allowlist.                                      |
+| [Admin users](./admin-users.md)         | `src/modules/admin-users`   | Dashboard gói và doanh thu, danh sách người dùng kèm gói, đổi gói theo người (chỉ admin).        |
 
 ## Quan hệ với phần khác
 

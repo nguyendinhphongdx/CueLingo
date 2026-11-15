@@ -29,11 +29,21 @@ Dữ liệu họp là dữ liệu nhạy cảm của doanh nghiệp người dù
 
 ## Phân quyền
 
-| Vai trò                            | Thấy gì                                                                      |
-| ---------------------------------- | ---------------------------------------------------------------------------- |
-| Learner                            | Toàn bộ dữ liệu của mình                                                     |
-| Team admin / L&D (giai đoạn Scale) | Chỉ số tổng hợp, ẩn danh; **không** xem transcript hay câu nói của nhân viên |
-| Nhân viên vận hành                 | Không truy cập transcript, trừ khi người dùng gửi kèm báo cáo lỗi            |
+| Vai trò                            | Thấy gì                                                                                                                                                                                                                                             |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Learner                            | Toàn bộ dữ liệu của mình                                                                                                                                                                                                                            |
+| Team admin / L&D (giai đoạn Scale) | Chỉ số tổng hợp, ẩn danh; **không** xem transcript hay câu nói của nhân viên                                                                                                                                                                        |
+| Nhân viên vận hành                 | Không truy cập transcript, trừ khi người dùng gửi kèm báo cáo lỗi                                                                                                                                                                                   |
+| Admin vận hành (`ADMIN_EMAILS`)    | Email, tên, ngày đăng ký, gói, lượng dùng tháng, lần họp gần nhất và đơn thanh toán của **mọi** người dùng (trang `/admin/users`); số liệu tổng hợp ở `/admin/metrics`. **Không** thấy tiêu đề phiên, transcript, cụm từ, mã QR hay link thanh toán |
+
+### Admin xem danh sách người dùng
+
+Trang `/admin/users` ([admin-users](../04-modules/03-api/admin-users.md)) là chỗ duy nhất hiện email của người dùng khác; cần để hỗ trợ và đổi gói đúng người.
+
+- Chỉ email trong `ADMIN_EMAILS`; mọi route kiểm quyền trước khi đọc đầu vào. Câu trả lời đi qua schema strict nên không có trường nội dung.
+- Rủi ro còn lại: tài khoản admin bị chiếm thì lộ email hàng loạt. Giảm thiểu: mỗi trang 50 dòng, không xuất CSV, không có route ghi ngoài đổi gói.
+- Log đổi gói chỉ có id (admin, người bị đổi), gói cũ, gói mới, hạn; không có email. Đổi gói có nhật ký, đọc thì không.
+- Chính sách quyền riêng tư công khai (`apps/site`) chưa sửa trong task này; cần nêu việc admin xem email khi cập nhật.
 
 ## Mã mời (beta kín)
 

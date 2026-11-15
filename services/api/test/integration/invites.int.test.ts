@@ -22,6 +22,7 @@ import {
 import { createPostgresFeedbackRepository } from '../../src/modules/feedback';
 import { createPostgresUsageRepository } from '../../src/modules/usage';
 import { createPostgresBillingRepository } from '../../src/modules/billing';
+import { createPostgresAdminUsersRepository } from '../../src/modules/admin-users';
 import { createPostgresPlacementRepository } from '../../src/modules/placement';
 import { createPostgresPrivacyRepository } from '../../src/modules/privacy';
 import {
@@ -84,6 +85,7 @@ describe('invite codes on real Postgres (AC1-AC5)', () => {
         feedback: createPostgresFeedbackRepository(sql),
         usage: createPostgresUsageRepository(sql),
         billing: createPostgresBillingRepository(sql),
+        adminUsers: createPostgresAdminUsersRepository(sql),
       },
       queue: createInMemoryQueue(),
       resolveUserId: authModule.resolveUserId,

@@ -37,6 +37,7 @@ import {
 } from './modules/review';
 import { createSpeakersModule, type SpeakersRepository } from './modules/speakers';
 import { createSessionsModule, type SessionsRepository } from './modules/sessions';
+import { createAdminUsersModule, type AdminUsersRepository } from './modules/admin-users';
 import { createAdminModule, type AdminRepository, type AgentAdminPort } from './modules/admin';
 import { createFeedbackModule, type FeedbackRepository } from './modules/feedback';
 import { createInvitesModule, type InvitesRepository } from './modules/invites';
@@ -92,6 +93,7 @@ export interface AppDeps {
     settings: SettingsRepository;
     usage: UsageRepository;
     billing: BillingRepository;
+    adminUsers: AdminUsersRepository;
   };
   /** Plan limits (`PLAN_LIMITS`); defaults to the table in `@cuelingo/shared`. */
   planLimits?: PlanLimitTable;
@@ -159,12 +161,12 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   if (deps.realtime) await app.register(websocket);
   registerErrorHandler(app);
   // CORS first, so preflight requests are answered before the auth hook runs.
-  // @fastify/cors only allows GET, HEAD and POST by default; the glossary needs PATCH and DELETE from the browser.
+  // @fastify/cors only allows GET, HEAD and POST by default; the glossary needs PATCH and DELETE, the admin screen PUT.
   await app.register(cors, {
     // The desktop app's webview has its own origin: tauri://localhost when bundled, the Vite dev server otherwise.
     origin: [deps.webOrigin, ...DESKTOP_ORIGINS],
     credentials: true,
-    methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE'],
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
   });
   const device = createDeviceModule(deps.repos.device);
   registerAuth(app, {
@@ -188,13 +190,21 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     now: deps.now,
   });
   await app.register(usage.routes);
+  const billing = createBillingModule(deps.repos.billing, {
+    provider: deps.paymentProvider,
+    prices: deps.planPrices ?? resolvePlanPrices(),
+    limits: deps.planLimits ?? resolvePlanLimits(),
+    webOrigin: deps.webOrigin,
+    log: app.log,
+    now: deps.now,
+  });
+  await app.register(billing.routes);
+  // After usage and billing: it reads plans and orders through their services.
   await app.register(
-    createBillingModule(deps.repos.billing, {
-      provider: deps.paymentProvider,
-      prices: deps.planPrices ?? resolvePlanPrices(),
-      limits: deps.planLimits ?? resolvePlanLimits(),
-      webOrigin: deps.webOrigin,
-      log: app.log,
+    createAdminUsersModule(deps.repos.adminUsers, {
+      isAdmin: admin.service.isAdmin,
+      usage: usage.service,
+      billing: billing.service,
       now: deps.now,
     }).routes,
   );
