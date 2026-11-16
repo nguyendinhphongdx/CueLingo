@@ -10,7 +10,7 @@ import {
   PlanChangeConfirm,
   PlanForm,
 } from './AdminUserDetail';
-import { expiresAtFor, planChangeWarning } from './plan-change';
+import { dateInputFor, expiresAtFor, expiresAtToSend, planChangeWarning } from './plan-change';
 
 const NOW = new Date('2026-11-15T05:00:00Z');
 const paidPro: AdminUserRow = {
@@ -170,5 +170,25 @@ describe('plan form (AC5)', () => {
     expect(expiresAtFor('ultra', '')).toBeUndefined();
     expect(expiresAtFor('free', '2026-12-31')).toBeUndefined();
     expect(expiresAtFor('pro', 'not a date')).toBeUndefined();
+  });
+
+  it('opens with the current end date, so saving the same plan keeps it', () => {
+    // 10:00 UTC is 17:00 in Vietnam on the same day.
+    expect(dateInputFor(paidPro)).toBe('2026-12-05');
+    // 20:00 UTC on 5 Dec is already 6 Dec in Vietnam.
+    expect(dateInputFor({ plan: 'pro', expiresAt: '2026-12-05T20:00:00.000Z' })).toBe('2026-12-06');
+    expect(dateInputFor({ plan: 'free', expiresAt: '2026-12-05T10:00:00.000Z' })).toBe('');
+    expect(dateInputFor({ plan: 'pro', expiresAt: null })).toBe('');
+
+    const markup = renderToStaticMarkup(
+      <PlanForm user={paidPro} saving={false} error={null} onSave={() => {}} now={NOW} />,
+    );
+    expect(markup).toMatch(/<input[^>]*type="date"[^>]*value="2026-12-05"/);
+    // Untouched: the exact stored instant goes back. A picked day: the end of that day.
+    expect(expiresAtToSend(paidPro, 'pro', '2026-12-05')).toBe(paidPro.expiresAt);
+    expect(expiresAtToSend(paidPro, 'ultra', '2026-12-05')).toBe(paidPro.expiresAt);
+    expect(expiresAtToSend(paidPro, 'pro', '2026-12-31')).toBe('2026-12-31T16:59:59.999Z');
+    expect(expiresAtToSend(paidPro, 'free', '2026-12-05')).toBeUndefined();
+    expect(expiresAtToSend(paidPro, 'pro', '')).toBeUndefined();
   });
 });

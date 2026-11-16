@@ -21,7 +21,7 @@ import { useState } from 'react';
 import { useRouteId } from '../../lib/use-route-id';
 import { AdminFrame } from './AdminFrame';
 import { expiryText, sourceLabel } from './admin-users-format';
-import { expiresAtFor, planChangeWarning } from './plan-change';
+import { dateInputFor, expiresAtToSend, planChangeWarning } from './plan-change';
 import { useAdminUser } from './use-admin-user';
 
 const PLANS: { value: Plan; label: string }[] = [
@@ -119,9 +119,9 @@ export function PlanForm({
   now?: Date;
 }) {
   const [plan, setPlan] = useState<Plan>(user.plan);
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState(dateInputFor(user));
   const [asking, setAsking] = useState(false);
-  const expiresAt = expiresAtFor(plan, date);
+  const expiresAt = expiresAtToSend(user, plan, date);
   const inPast = expiresAt !== undefined && new Date(expiresAt).getTime() <= now.getTime();
 
   return (
