@@ -5,15 +5,22 @@ description = "CueLingo audio sidecar for Windows (same line protocol as native/
 edition = "2021"
 publish = false
 
+[lib]
+name = "cuelingo_audio"
+path = "src/lib.rs"
+
 [[bin]]
 name = "cuelingo-audio"
 path = "src/main.rs"
 
 [dependencies]
+base64 = "0.22"
 serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.55"
+windows-sys = { version = "0.61", features = ["Win32_System_ProcessStatus", "Win32_System_Threading"] }
 
 [profile.release]
 strip = true

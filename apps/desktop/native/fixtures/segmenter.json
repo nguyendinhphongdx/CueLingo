@@ -1,0 +1,1142 @@
+{
+  "about": "Shared by UtteranceSegmenterTests (Swift) and tests/fixtures.rs (Rust). Signal: tone = Int16(amplitude * sin(i * 0.2)) with i restarting at each tone, silence = zeros, 16 kHz, all durations multiples of 20 ms. Fed in one push per item. limits: 'cloud' = setLimits(25000, 300, 700) before the first sample. maxUtteranceMs is the init argument. The expected list holds every event in order.",
+  "cases": [
+    {
+      "expected": [],
+      "input": [
+        {
+          "silence": 3000
+        }
+      ],
+      "name": "silence alone produces nothing"
+    },
+    {
+      "expected": [
+        {
+          "endMs": 700,
+          "kind": "partial",
+          "samples": 11200,
+          "startMs": 0
+        },
+        {
+          "endMs": 1400,
+          "kind": "partial",
+          "samples": 22400,
+          "startMs": 0
+        },
+        {
+          "endMs": 2100,
+          "kind": "partial",
+          "samples": 33600,
+          "startMs": 0
+        },
+        {
+          "endMs": 2600,
+          "kind": "final",
+          "samples": 41600,
+          "startMs": 0
+        }
+      ],
+      "input": [
+        {
+          "amplitude": 8000,
+          "tone": 2000
+        },
+        {
+          "silence": 1000
+        }
+      ],
+      "name": "speech then silence gives partials then one final"
+    },
+    {
+      "expected": [],
+      "input": [
+        {
+          "amplitude": 8000,
+          "tone": 100
+        },
+        {
+          "silence": 1000
+        }
+      ],
+      "name": "a blip shorter than the minimum speech is ignored"
+    },
+    {
+      "expected": [
+        {
+          "endMs": 700,
+          "kind": "partial",
+          "samples": 11200,
+          "startMs": 0
+        },
+        {
+          "endMs": 1400,
+          "kind": "partial",
+          "samples": 22400,
+          "startMs": 0
+        },
+        {
+          "endMs": 2100,
+          "kind": "partial",
+          "samples": 33600,
+          "startMs": 0
+        },
+        {
+          "endMs": 2800,
+          "kind": "partial",
+          "samples": 44800,
+          "startMs": 0
+        },
+        {
+          "endMs": 3000,
+          "kind": "final",
+          "samples": 48000,
+          "startMs": 0
+        }
+      ],
+      "input": [
+        {
+          "amplitude": 8000,
+          "tone": 3500
+        }
+      ],
+      "maxUtteranceMs": 3000,
+      "name": "long speech is forced final at the cap"
+    },
+    {
+      "expected": [
+        {
+          "endMs": 1000,
+          "kind": "partial",
+          "samples": 11200,
+          "startMs": 300
+        },
+        {
+          "endMs": 1700,
+          "kind": "partial",
+          "samples": 22400,
+          "startMs": 300
+        },
+        {
+          "endMs": 2100,
+          "kind": "final",
+          "samples": 28800,
+          "startMs": 300
+        }
+      ],
+      "input": [
+        {
+          "silence": 500
+        },
+        {
+          "amplitude": 8000,
+          "tone": 1000
+        },
+        {
+          "silence": 1000
+        }
+      ],
+      "name": "pre-roll puts the start 200 ms before the speech"
+    },
+    {
+      "expected": [
+        {
+          "endMs": 700,
+          "kind": "partial",
+          "samples": 11200,
+          "startMs": 0
+        },
+        {
+          "endMs": 880,
+          "kind": "final",
+          "samples": 14080,
+          "startMs": 0
+        }
+      ],
+      "input": [
+        {
+          "amplitude": 8000,
+          "tone": 280
+        },
+        {
+          "silence": 1000
+        }
+      ],
+      "name": "280 ms of speech counts on the device"
+    },
+    {
+      "expected": [],
+      "input": [
+        {
+          "amplitude": 8000,
+          "tone": 280
+        },
+        {
+          "silence": 1000
+        }
+      ],
+      "limits": "cloud",
+      "name": "280 ms of speech is dropped for the cloud"
+    },
+    {
+      "expected": [
+        {
+          "endMs": 700,
+          "kind": "partial",
+          "samples": 11200,
+          "startMs": 0
+        },
+        {
+          "endMs": 1400,
+          "kind": "partial",
+          "samples": 22400,
+          "startMs": 0
+        },
+        {
+          "endMs": 2100,
+          "kind": "partial",
+          "samples": 33600,
+          "startMs": 0
+        },
+        {
+          "endMs": 2800,
+          "kind": "partial",
+          "samples": 44800,
+          "startMs": 0
+        },
+        {
+          "endMs": 3000,
+          "kind": "final",
+          "samples": 48000,
+          "startMs": 0
+        }
+      ],
+      "input": [
+        {
+          "amplitude": 8000,
+          "tone": 1000
+        },
+        {
+          "silence": 400
+        },
+        {
+          "amplitude": 8000,
+          "tone": 1000
+        },
+        {
+          "silence": 1500
+        }
+      ],
+      "name": "400 ms breath does not split on the device"
+    },
+    {
+      "expected": [
+        {
+          "endMs": 700,
+          "kind": "partial",
+          "samples": 11200,
+          "startMs": 0
+        },
+        {
+          "endMs": 1400,
+          "kind": "partial",
+          "samples": 22400,
+          "startMs": 0
+        },
+        {
+          "endMs": 2100,
+          "kind": "partial",
+          "samples": 33600,
+          "startMs": 0
+        },
+        {
+          "endMs": 2800,
+          "kind": "partial",
+          "samples": 44800,
+          "startMs": 0
+        },
+        {
+          "endMs": 3100,
+          "kind": "final",
+          "samples": 49600,
+          "startMs": 0
+        }
+      ],
+      "input": [
+        {
+          "amplitude": 8000,
+          "tone": 1000
+        },
+        {
+          "silence": 400
+        },
+        {
+          "amplitude": 8000,
+          "tone": 1000
+        },
+        {
+          "silence": 1500
+        }
+      ],
+      "limits": "cloud",
+      "name": "400 ms breath does not split for the cloud"
+    },
+    {
+      "expected": [
+        {
+          "endMs": 700,
+          "kind": "partial",
+          "samples": 11200,
+          "startMs": 0
+        },
+        {
+          "endMs": 1400,
+          "kind": "partial",
+          "samples": 22400,
+          "startMs": 0
+        },
+        {
+          "endMs": 1600,
+          "kind": "final",
+          "samples": 25600,
+          "startMs": 0
+        },
+        {
+          "endMs": 2300,
+          "kind": "partial",
+          "samples": 11200,
+          "startMs": 1600
+        },
+        {
+          "endMs": 3000,
+          "kind": "partial",
+          "samples": 22400,
+          "startMs": 1600
+        },
+        {
+          "endMs": 3260,
+          "kind": "final",
+          "samples": 26560,
+          "startMs": 1600
+        }
+      ],
+      "input": [
+        {
+          "amplitude": 8000,
+          "tone": 1000
+        },
+        {
+          "silence": 660
+        },
+        {
+          "amplitude": 8000,
+          "tone": 1000
+        },
+        {
+          "silence": 1500
+        }
+      ],
+      "name": "660 ms pause splits on the device"
+    },
+    {
+      "expected": [
+        {
+          "endMs": 700,
+          "kind": "partial",
+          "samples": 11200,
+          "startMs": 0
+        },
+        {
+          "endMs": 1400,
+          "kind": "partial",
+          "samples": 22400,
+          "startMs": 0
+        },
+        {
+          "endMs": 2100,
+          "kind": "partial",
+          "samples": 33600,
+          "startMs": 0
+        },
+        {
+          "endMs": 2800,
+          "kind": "partial",
+          "samples": 44800,
+          "startMs": 0
+        },
+        {
+          "endMs": 3360,
+          "kind": "final",
+          "samples": 53760,
+          "startMs": 0
+        }
+      ],
+      "input": [
+        {
+          "amplitude": 8000,
+          "tone": 1000
+        },
+        {
+          "silence": 660
+        },
+        {
+          "amplitude": 8000,
+          "tone": 1000
+        },
+        {
+          "silence": 1500
+        }
+      ],
+      "limits": "cloud",
+      "name": "660 ms pause does not split for the cloud"
+    },
+    {
+      "expected": [
+        {
+          "endMs": 700,
+          "kind": "partial",
+          "samples": 11200,
+          "startMs": 0
+        },
+        {
+          "endMs": 1400,
+          "kind": "partial",
+          "samples": 22400,
+          "startMs": 0
+        },
+        {
+          "endMs": 1600,
+          "kind": "final",
+          "samples": 25600,
+          "startMs": 0
+        },
+        {
+          "endMs": 2400,
+          "kind": "partial",
+          "samples": 11200,
+          "startMs": 1700
+        },
+        {
+          "endMs": 3100,
+          "kind": "partial",
+          "samples": 22400,
+          "startMs": 1700
+        },
+        {
+          "endMs": 3500,
+          "kind": "final",
+          "samples": 28800,
+          "startMs": 1700
+        }
+      ],
+      "input": [
+        {
+          "amplitude": 8000,
+          "tone": 1000
+        },
+        {
+          "silence": 900
+        },
+        {
+          "amplitude": 8000,
+          "tone": 1000
+        },
+        {
+          "silence": 1500
+        }
+      ],
+      "name": "900 ms pause splits on the device"
+    },
+    {
+      "expected": [
+        {
+          "endMs": 700,
+          "kind": "partial",
+          "samples": 11200,
+          "startMs": 0
+        },
+        {
+          "endMs": 1400,
+          "kind": "partial",
+          "samples": 22400,
+          "startMs": 0
+        },
+        {
+          "endMs": 1700,
+          "kind": "final",
+          "samples": 27200,
+          "startMs": 0
+        },
+        {
+          "endMs": 2400,
+          "kind": "partial",
+          "samples": 11200,
+          "startMs": 1700
+        },
+        {
+          "endMs": 3100,
+          "kind": "partial",
+          "samples": 22400,
+          "startMs": 1700
+        },
+        {
+          "endMs": 3600,
+          "kind": "final",
+          "samples": 30400,
+          "startMs": 1700
+        }
+      ],
+      "input": [
+        {
+          "amplitude": 8000,
+          "tone": 1000
+        },
+        {
+          "silence": 900
+        },
+        {
+          "amplitude": 8000,
+          "tone": 1000
+        },
+        {
+          "silence": 1500
+        }
+      ],
+      "limits": "cloud",
+      "name": "900 ms pause splits for the cloud"
+    },
+    {
+      "expected": [
+        {
+          "endMs": 700,
+          "kind": "partial",
+          "samples": 11200,
+          "startMs": 0
+        },
+        {
+          "endMs": 1400,
+          "kind": "partial",
+          "samples": 22400,
+          "startMs": 0
+        },
+        {
+          "endMs": 1600,
+          "kind": "final",
+          "samples": 25600,
+          "startMs": 0
+        },
+        {
+          "endMs": 2300,
+          "kind": "partial",
+          "samples": 11200,
+          "startMs": 1600
+        },
+        {
+          "endMs": 3000,
+          "kind": "partial",
+          "samples": 22400,
+          "startMs": 1600
+        },
+        {
+          "endMs": 3260,
+          "kind": "final",
+          "samples": 26560,
+          "startMs": 1600
+        }
+      ],
+      "input": [
+        {
+          "limits": "cloud"
+        },
+        {
+          "limits": "default"
+        },
+        {
+          "amplitude": 8000,
+          "tone": 1000
+        },
+        {
+          "silence": 660
+        },
+        {
+          "amplitude": 8000,
+          "tone": 1000
+        },
+        {
+          "silence": 1500
+        }
+      ],
+      "name": "setting the default limits again restores the 600 ms silence"
+    },
+    {
+      "expected": [
+        {
+          "endMs": 700,
+          "kind": "partial",
+          "samples": 11200,
+          "startMs": 0
+        },
+        {
+          "endMs": 1400,
+          "kind": "partial",
+          "samples": 22400,
+          "startMs": 0
+        },
+        {
+          "endMs": 2100,
+          "kind": "partial",
+          "samples": 33600,
+          "startMs": 0
+        },
+        {
+          "endMs": 2800,
+          "kind": "partial",
+          "samples": 44800,
+          "startMs": 0
+        },
+        {
+          "endMs": 3500,
+          "kind": "partial",
+          "samples": 56000,
+          "startMs": 0
+        },
+        {
+          "endMs": 4200,
+          "kind": "partial",
+          "samples": 67200,
+          "startMs": 0
+        },
+        {
+          "endMs": 4900,
+          "kind": "partial",
+          "samples": 78400,
+          "startMs": 0
+        },
+        {
+          "endMs": 5600,
+          "kind": "partial",
+          "samples": 89600,
+          "startMs": 0
+        },
+        {
+          "endMs": 6300,
+          "kind": "partial",
+          "samples": 100800,
+          "startMs": 0
+        },
+        {
+          "endMs": 7000,
+          "kind": "partial",
+          "samples": 112000,
+          "startMs": 0
+        },
+        {
+          "endMs": 7700,
+          "kind": "partial",
+          "samples": 123200,
+          "startMs": 0
+        },
+        {
+          "endMs": 8400,
+          "kind": "partial",
+          "samples": 134400,
+          "startMs": 0
+        },
+        {
+          "endMs": 9100,
+          "kind": "partial",
+          "samples": 145600,
+          "startMs": 0
+        },
+        {
+          "endMs": 9800,
+          "kind": "partial",
+          "samples": 156800,
+          "startMs": 0
+        },
+        {
+          "endMs": 10500,
+          "kind": "partial",
+          "samples": 168000,
+          "startMs": 0
+        },
+        {
+          "endMs": 11200,
+          "kind": "partial",
+          "samples": 179200,
+          "startMs": 0
+        },
+        {
+          "endMs": 11900,
+          "kind": "partial",
+          "samples": 190400,
+          "startMs": 0
+        },
+        {
+          "endMs": 12600,
+          "kind": "partial",
+          "samples": 201600,
+          "startMs": 0
+        },
+        {
+          "endMs": 13300,
+          "kind": "partial",
+          "samples": 212800,
+          "startMs": 0
+        },
+        {
+          "endMs": 14000,
+          "kind": "partial",
+          "samples": 224000,
+          "startMs": 0
+        },
+        {
+          "endMs": 14700,
+          "kind": "partial",
+          "samples": 235200,
+          "startMs": 0
+        },
+        {
+          "endMs": 15400,
+          "kind": "partial",
+          "samples": 246400,
+          "startMs": 0
+        },
+        {
+          "endMs": 16100,
+          "kind": "partial",
+          "samples": 257600,
+          "startMs": 0
+        },
+        {
+          "endMs": 16800,
+          "kind": "partial",
+          "samples": 268800,
+          "startMs": 0
+        },
+        {
+          "endMs": 17500,
+          "kind": "partial",
+          "samples": 280000,
+          "startMs": 0
+        },
+        {
+          "endMs": 18200,
+          "kind": "partial",
+          "samples": 291200,
+          "startMs": 0
+        },
+        {
+          "endMs": 18900,
+          "kind": "partial",
+          "samples": 302400,
+          "startMs": 0
+        },
+        {
+          "endMs": 19600,
+          "kind": "partial",
+          "samples": 313600,
+          "startMs": 0
+        },
+        {
+          "endMs": 20300,
+          "kind": "partial",
+          "samples": 324800,
+          "startMs": 0
+        },
+        {
+          "endMs": 21000,
+          "kind": "partial",
+          "samples": 336000,
+          "startMs": 0
+        },
+        {
+          "endMs": 21700,
+          "kind": "partial",
+          "samples": 347200,
+          "startMs": 0
+        },
+        {
+          "endMs": 22400,
+          "kind": "partial",
+          "samples": 358400,
+          "startMs": 0
+        },
+        {
+          "endMs": 23100,
+          "kind": "partial",
+          "samples": 369600,
+          "startMs": 0
+        },
+        {
+          "endMs": 23800,
+          "kind": "partial",
+          "samples": 380800,
+          "startMs": 0
+        },
+        {
+          "endMs": 24500,
+          "kind": "partial",
+          "samples": 392000,
+          "startMs": 0
+        },
+        {
+          "endMs": 25000,
+          "kind": "final",
+          "samples": 400000,
+          "startMs": 0
+        },
+        {
+          "endMs": 25700,
+          "kind": "partial",
+          "samples": 11200,
+          "startMs": 25000
+        },
+        {
+          "endMs": 26400,
+          "kind": "partial",
+          "samples": 22400,
+          "startMs": 25000
+        },
+        {
+          "endMs": 27100,
+          "kind": "partial",
+          "samples": 33600,
+          "startMs": 25000
+        },
+        {
+          "endMs": 27800,
+          "kind": "partial",
+          "samples": 44800,
+          "startMs": 25000
+        },
+        {
+          "endMs": 28500,
+          "kind": "partial",
+          "samples": 56000,
+          "startMs": 25000
+        },
+        {
+          "endMs": 29200,
+          "kind": "partial",
+          "samples": 67200,
+          "startMs": 25000
+        },
+        {
+          "endMs": 29900,
+          "kind": "partial",
+          "samples": 78400,
+          "startMs": 25000
+        },
+        {
+          "endMs": 30600,
+          "kind": "partial",
+          "samples": 89600,
+          "startMs": 25000
+        },
+        {
+          "endMs": 31300,
+          "kind": "partial",
+          "samples": 100800,
+          "startMs": 25000
+        },
+        {
+          "endMs": 32000,
+          "kind": "partial",
+          "samples": 112000,
+          "startMs": 25000
+        },
+        {
+          "endMs": 32700,
+          "kind": "partial",
+          "samples": 123200,
+          "startMs": 25000
+        },
+        {
+          "endMs": 33400,
+          "kind": "partial",
+          "samples": 134400,
+          "startMs": 25000
+        },
+        {
+          "endMs": 34100,
+          "kind": "partial",
+          "samples": 145600,
+          "startMs": 25000
+        },
+        {
+          "endMs": 34800,
+          "kind": "partial",
+          "samples": 156800,
+          "startMs": 25000
+        },
+        {
+          "endMs": 35500,
+          "kind": "partial",
+          "samples": 168000,
+          "startMs": 25000
+        },
+        {
+          "endMs": 36200,
+          "kind": "partial",
+          "samples": 179200,
+          "startMs": 25000
+        },
+        {
+          "endMs": 36900,
+          "kind": "partial",
+          "samples": 190400,
+          "startMs": 25000
+        },
+        {
+          "endMs": 37600,
+          "kind": "partial",
+          "samples": 201600,
+          "startMs": 25000
+        },
+        {
+          "endMs": 38300,
+          "kind": "partial",
+          "samples": 212800,
+          "startMs": 25000
+        },
+        {
+          "endMs": 39000,
+          "kind": "partial",
+          "samples": 224000,
+          "startMs": 25000
+        },
+        {
+          "endMs": 39700,
+          "kind": "partial",
+          "samples": 235200,
+          "startMs": 25000
+        },
+        {
+          "endMs": 40400,
+          "kind": "partial",
+          "samples": 246400,
+          "startMs": 25000
+        },
+        {
+          "endMs": 41100,
+          "kind": "partial",
+          "samples": 257600,
+          "startMs": 25000
+        },
+        {
+          "endMs": 41800,
+          "kind": "partial",
+          "samples": 268800,
+          "startMs": 25000
+        },
+        {
+          "endMs": 42500,
+          "kind": "partial",
+          "samples": 280000,
+          "startMs": 25000
+        },
+        {
+          "endMs": 43200,
+          "kind": "partial",
+          "samples": 291200,
+          "startMs": 25000
+        },
+        {
+          "endMs": 43900,
+          "kind": "partial",
+          "samples": 302400,
+          "startMs": 25000
+        },
+        {
+          "endMs": 44600,
+          "kind": "partial",
+          "samples": 313600,
+          "startMs": 25000
+        },
+        {
+          "endMs": 45300,
+          "kind": "partial",
+          "samples": 324800,
+          "startMs": 25000
+        },
+        {
+          "endMs": 46000,
+          "kind": "partial",
+          "samples": 336000,
+          "startMs": 25000
+        },
+        {
+          "endMs": 46700,
+          "kind": "partial",
+          "samples": 347200,
+          "startMs": 25000
+        },
+        {
+          "endMs": 47400,
+          "kind": "partial",
+          "samples": 358400,
+          "startMs": 25000
+        },
+        {
+          "endMs": 48100,
+          "kind": "partial",
+          "samples": 369600,
+          "startMs": 25000
+        },
+        {
+          "endMs": 48800,
+          "kind": "partial",
+          "samples": 380800,
+          "startMs": 25000
+        },
+        {
+          "endMs": 49500,
+          "kind": "partial",
+          "samples": 392000,
+          "startMs": 25000
+        },
+        {
+          "endMs": 50000,
+          "kind": "final",
+          "samples": 400000,
+          "startMs": 25000
+        },
+        {
+          "endMs": 50700,
+          "kind": "partial",
+          "samples": 11200,
+          "startMs": 50000
+        },
+        {
+          "endMs": 51400,
+          "kind": "partial",
+          "samples": 22400,
+          "startMs": 50000
+        },
+        {
+          "endMs": 52100,
+          "kind": "partial",
+          "samples": 33600,
+          "startMs": 50000
+        },
+        {
+          "endMs": 52800,
+          "kind": "partial",
+          "samples": 44800,
+          "startMs": 50000
+        },
+        {
+          "endMs": 53500,
+          "kind": "partial",
+          "samples": 56000,
+          "startMs": 50000
+        },
+        {
+          "endMs": 54200,
+          "kind": "partial",
+          "samples": 67200,
+          "startMs": 50000
+        },
+        {
+          "endMs": 54900,
+          "kind": "partial",
+          "samples": 78400,
+          "startMs": 50000
+        },
+        {
+          "endMs": 55600,
+          "kind": "partial",
+          "samples": 89600,
+          "startMs": 50000
+        },
+        {
+          "endMs": 56300,
+          "kind": "partial",
+          "samples": 100800,
+          "startMs": 50000
+        },
+        {
+          "endMs": 57000,
+          "kind": "partial",
+          "samples": 112000,
+          "startMs": 50000
+        },
+        {
+          "endMs": 57700,
+          "kind": "partial",
+          "samples": 123200,
+          "startMs": 50000
+        },
+        {
+          "endMs": 58400,
+          "kind": "partial",
+          "samples": 134400,
+          "startMs": 50000
+        },
+        {
+          "endMs": 59100,
+          "kind": "partial",
+          "samples": 145600,
+          "startMs": 50000
+        },
+        {
+          "endMs": 59800,
+          "kind": "partial",
+          "samples": 156800,
+          "startMs": 50000
+        }
+      ],
+      "input": [
+        {
+          "amplitude": 8000,
+          "tone": 60000
+        }
+      ],
+      "limits": "cloud",
+      "name": "sixty seconds of speech splits at 25 s for the cloud"
+    },
+    {
+      "expected": [
+        {
+          "endMs": 500,
+          "kind": "final",
+          "samples": 8000,
+          "startMs": 0
+        }
+      ],
+      "flush": true,
+      "input": [
+        {
+          "amplitude": 8000,
+          "tone": 500
+        }
+      ],
+      "name": "flush ends the sentence in progress"
+    },
+    {
+      "expected": [],
+      "flush": true,
+      "input": [
+        {
+          "amplitude": 8000,
+          "tone": 200
+        }
+      ],
+      "name": "flush drops speech that was too short"
+    },
+    {
+      "expected": [],
+      "input": [
+        {
+          "amplitude": 150,
+          "tone": 2000
+        },
+        {
+          "silence": 500
+        }
+      ],
+      "name": "quiet noise under the threshold is silence"
+    }
+  ]
+}

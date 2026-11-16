@@ -1,0 +1,110 @@
+{
+  "about": "Shared by AudioLevelTests (Swift) and tests/fixtures.rs (Rust). A run is [value, count]; samples are Int16.",
+  "levels": [
+    {
+      "name": "silence",
+      "runs": [[0, 320]],
+      "rms": 0,
+      "peak": 0
+    },
+    {
+      "name": "empty",
+      "runs": [],
+      "rms": 0,
+      "peak": 0
+    },
+    {
+      "name": "full scale square",
+      "runs": [
+        [32767, 160],
+        [-32768, 160]
+      ],
+      "rms": 1,
+      "peak": 1
+    },
+    {
+      "name": "half scale",
+      "runs": [[16384, 100]],
+      "rms": 0.5,
+      "peak": 0.5
+    },
+    {
+      "name": "one loud sample in silence",
+      "runs": [
+        [32767, 1],
+        [0, 99]
+      ],
+      "rms": 0.1,
+      "peak": 1
+    }
+  ],
+  "meters": [
+    {
+      "name": "first chunk reports at once, then once per interval",
+      "intervalMs": 100,
+      "steps": [
+        {
+          "nowMs": 0,
+          "runs": [[16384, 320]],
+          "report": true
+        },
+        {
+          "nowMs": 20,
+          "runs": [[16384, 320]],
+          "report": false
+        },
+        {
+          "nowMs": 99,
+          "runs": [[16384, 320]],
+          "report": false
+        },
+        {
+          "nowMs": 100,
+          "runs": [[16384, 320]],
+          "report": true
+        },
+        {
+          "nowMs": 150,
+          "runs": [[16384, 320]],
+          "report": false
+        }
+      ]
+    },
+    {
+      "name": "the report covers the whole interval",
+      "intervalMs": 100,
+      "steps": [
+        {
+          "nowMs": 0,
+          "runs": [[0, 320]],
+          "report": true
+        },
+        {
+          "nowMs": 40,
+          "runs": [
+            [32767, 1],
+            [0, 319]
+          ],
+          "report": false
+        },
+        {
+          "nowMs": 100,
+          "runs": [[0, 320]],
+          "report": true,
+          "peak": 1
+        }
+      ]
+    },
+    {
+      "name": "empty chunks report nothing",
+      "intervalMs": 100,
+      "steps": [
+        {
+          "nowMs": 0,
+          "runs": [],
+          "report": false
+        }
+      ]
+    }
+  ]
+}

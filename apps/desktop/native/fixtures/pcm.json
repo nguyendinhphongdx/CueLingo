@@ -1,0 +1,25 @@
+{
+  "about": "Shared by UtterancePCMTests (Swift) and tests/fixtures.rs (Rust): base64(floats) must equal base64. Floats are exact in Float32.",
+  "cases": [
+    {
+      "name": "clamps out of range and is little endian",
+      "floats": [2.0, -2.0, 0.5],
+      "base64": "/38AgABA"
+    },
+    {
+      "name": "round half away from zero",
+      "floats": [1.52587890625e-5, -1.52587890625e-5, 0.0],
+      "base64": "AQD//wAA"
+    },
+    {
+      "name": "int16 extremes round trip",
+      "floats": [-1.0, 0.0, 0.999969482421875],
+      "base64": "AIAAAP9/"
+    },
+    {
+      "name": "empty",
+      "floats": [],
+      "base64": ""
+    }
+  ]
+}

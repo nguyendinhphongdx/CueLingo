@@ -70,3 +70,24 @@ Tự nhận ngôn ngữ: biến môi trường `CUELINGO_DETECT` (danh sách mã
 - Tách câu: VAD năng lượng (`UtteranceSegmenter`, im lặng 600 ms hoặc 15 s thì chốt câu), partial mỗi 0,7 s bằng cách nhận dạng lại đoạn đang nói. Model: Parakeet TDT v2 (tiếng Anh) của FluidAudio, tải ~500 MB lần đầu vào `~/Library/Application Support/FluidAudio`. Câu < 1 s được đệm im lặng (model lỗi "zero shape" nếu ngắn hơn).
 - Mic khởi động ở luồng riêng vì có thể treo chờ quyền; system audio không phụ thuộc mic.
 - Lỗi đã gặp: ký lại app ad-hoc mỗi lần build làm macOS hỏi lại quyền, và chờ hộp thoại làm treo tiến trình. Cần chứng chỉ ký ổn định (M5-05) để hết.
+
+## Bản Windows (`native/windows-audio`)
+
+Cùng giao thức stdout/stdin như sidecar Swift, viết bằng Rust ([ADR 0020](../../08-adr/0020-windows-capture-stt.md)). Dựng `cuelingo-audio.exe` qua `node scripts/sidecar.mjs`.
+
+```text
+native/windows-audio/
+├── Cargo.toml                           lib `cuelingo_audio` + bin `cuelingo-audio`
+├── src/
+│   ├── main.rs                          tham số, one-shot (--permissions, --check-system-audio), --file
+│   ├── session.rs · pipeline.rs         phiên họp, vòng lặp stdin, mỗi luồng một hàng đợi nhận dạng
+│   ├── segmenter.rs · level.rs · pcm.rs · vocabulary.rs · stats.rs     port 1-1 từ Swift
+│   ├── resample.rs · wav.rs             thiết bị → 16 kHz mono Int16; đọc WAV cho --file
+│   ├── capture.rs                       trait Capture (WASAPI thật ở bước 7), bản Unavailable
+│   ├── protocol.rs · permissions.rs · memory.rs
+│   └── stt/                             Transcriber (trait ModelProvider/Recognizer, thuật ngữ, thống kê)
+├── tests/                               fixtures.rs (vector chung), session.rs (phiên giả)
+native/fixtures/*.json                   vector dùng chung với `swift test`
+```
+
+Chạy trên Mac: `cargo test`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt --check`.
