@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   DEFAULT_PLAN_PRICES,
   periodStart,
+  resolvePlanLimits,
   USAGE_METRICS,
   type AdminUserRow,
 } from '@cuelingo/shared';
@@ -213,13 +214,20 @@ describe('admin users on real Postgres', () => {
       isAdmin: async () => true,
       usage: {} as never,
       billing: {} as never,
+      limits: resolvePlanLimits(),
       now: () => NOW,
     });
     const first = await service.list('admin', { q: 'us.test' });
     expect(first.items).toHaveLength(3);
     const { service: small } = createAdminUsersModule(
       { ...repo, list: (f, n) => repo.list(f, n, 2) },
-      { isAdmin: async () => true, usage: {} as never, billing: {} as never, now: () => NOW },
+      {
+        isAdmin: async () => true,
+        usage: {} as never,
+        billing: {} as never,
+        limits: resolvePlanLimits(),
+        now: () => NOW,
+      },
     );
     const page1 = await small.list('admin', { q: 'us.test' });
     expect(page1.items.map((r) => r.email)).toEqual(['us3@us.test', 'us2@us.test']);
@@ -239,6 +247,43 @@ describe('admin users on real Postgres', () => {
     expect(await find('ax')).toEqual(['axb@esc.test']);
     // The name is searched too.
     expect(await find('pro live')).toEqual(['pro-live@x.test']);
+  });
+
+  it('filters by the share of this month limit with the plan in force, edge of the month in Vietnam time', async () => {
+    const limits = resolvePlanLimits({ free: { debriefs: 10 }, pro: { debriefs: 100 } });
+    const month = periodStart('debriefs', NOW);
+    const lastMonth = periodStart('debriefs', new Date(month.getTime() - DAY));
+    const counter = (key: string, amount: number, start = month) =>
+      sql`INSERT INTO usage_counters (user_id, period_start, metric, amount)
+        VALUES (${ids[key]!}, ${start}, 'debriefs', ${amount})`;
+    await newUser('q80', 'q80@q.test', ago(5));
+    await newUser('q100', 'q100@q.test', ago(5));
+    await newUser('qold', 'qold@q.test', ago(5));
+    await newUser('qpro', 'qpro@q.test', ago(5));
+    await newUser('qended', 'qended@q.test', ago(5));
+    await counter('q80', 8);
+    await counter('q100', 10);
+    await counter('qold', 50, lastMonth);
+    await counter('qpro', 80);
+    await plan('qpro', 'pro', 'manual', ahead(30));
+    // Pro has ended: counts as free (limit 10), so 10 used is 100%.
+    await counter('qended', 10);
+    await plan('qended', 'pro', 'payment', ago(1));
+    const find = async (percent: 80 | 100) =>
+      (await all({ q: 'q.test', quota: { metric: 'debriefs', percent, limits } }))
+        .map((r) => r.email)
+        .sort();
+    expect(await find(80)).toEqual(['q100@q.test', 'q80@q.test', 'qended@q.test', 'qpro@q.test']);
+    expect(await find(100)).toEqual(['q100@q.test', 'qended@q.test']);
+    // No plan has a limit: nobody matches.
+    const none = resolvePlanLimits({
+      free: { debriefs: null },
+      pro: { debriefs: null },
+      ultra: { debriefs: null },
+    });
+    expect(
+      await all({ q: 'q.test', quota: { metric: 'debriefs', percent: 80, limits: none } }),
+    ).toEqual([]);
   });
 
   it('grants a plan and records a 0 dong order in one transaction; revenue stays the same (AC5)', async () => {

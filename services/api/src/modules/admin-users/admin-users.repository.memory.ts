@@ -3,6 +3,7 @@ import {
   periodEnd,
   periodStart,
   type AdminDashboard,
+  type AdminUsageMetric,
   type AdminUserRow,
 } from '@cuelingo/shared';
 import type { InMemoryPlanRows } from '../usage';
@@ -19,6 +20,8 @@ export interface InMemoryAdminUser {
   createdAt: Date;
   translationMs?: number;
   lastActiveAt?: Date | null;
+  /** This month's counters besides `translationMs`. */
+  usage?: Partial<Record<AdminUsageMetric, number>>;
 }
 
 export interface InMemoryPaidOrder {
@@ -94,6 +97,16 @@ export function createInMemoryAdminUsersRepository(
         .filter((u) => !q || u.email.toLowerCase().includes(q) || u.name.toLowerCase().includes(q))
         .filter((u) => !filter.plan || effectivePlan(plans.get(u.id) ?? null, now) === filter.plan)
         .filter((u) => !filter.expiring || endsSoon(u.id, now))
+        .filter((u) => {
+          const quota = filter.quota;
+          if (!quota) return true;
+          const limit = quota.limits[effectivePlan(plans.get(u.id) ?? null, now)][quota.metric];
+          const used =
+            quota.metric === 'translation_ms'
+              ? (u.translationMs ?? 0)
+              : (u.usage?.[quota.metric] ?? 0);
+          return limit !== null && limit > 0 && used * 100 >= quota.percent * limit;
+        })
         .filter((u) => !filter.after || before(u, filter.after));
       const page = matches.slice(0, limit);
       const last = page[page.length - 1];

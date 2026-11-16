@@ -3,11 +3,14 @@ import {
   periodStart,
   type AdminDashboard,
   type AdminUserRow,
+  type AdminUsageMetric,
   type Plan,
+  type PlanLimitTable,
   type PlanSource,
 } from '@cuelingo/shared';
 import type postgres from 'postgres';
 import type { Sql } from '../../lib/db';
+import { limitsTable, livePlanSql } from '../../lib/plan-sql';
 
 /** Where the next page starts. `createdAt` is the database's own text, because a JS Date cuts microseconds. */
 export interface UserCursor {
@@ -23,6 +26,8 @@ export interface UserFilter {
   /** Pro/Ultra ending within 7 days. */
   expiring?: boolean;
   after?: UserCursor;
+  /** People who used at least `percent` of this month's limit of `metric`; limits come from the env table. */
+  quota?: { metric: AdminUsageMetric; percent: 80 | 100; limits: PlanLimitTable };
 }
 
 export interface UserPage {
@@ -155,6 +160,20 @@ export function createPostgresAdminUsersRepository(sql: Sql): AdminUsersReposito
         const soon = new Date(now.getTime() + EXPIRING_DAYS * DAY_MS);
         conditions.push(
           sql`(up.plan IN ('pro', 'ultra') AND up.expires_at > ${now} AND up.expires_at <= ${soon})`,
+        );
+      }
+      if (filter.quota) {
+        const { metric, percent, limits } = filter.quota;
+        const table = limitsTable(sql, limits, [metric]);
+        // No plan has a limit for this metric: nobody can be at 80% of nothing.
+        conditions.push(
+          table
+            ? sql`EXISTS (
+                SELECT 1 FROM ${table}
+                JOIN usage_counters c ON c.metric = l.metric AND c.user_id = u.id
+                  AND c.period_start = ${periodStart('translation_ms', now)}
+                WHERE l.plan = ${livePlanSql(sql, now)} AND c.amount * 100 >= ${percent} * l.lim)`
+            : sql`FALSE`,
         );
       }
       if (filter.after) {

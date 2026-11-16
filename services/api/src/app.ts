@@ -183,10 +183,11 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   let agentAdmin: AgentAdminPort | undefined;
   const admin = createAdminModule(deps.repos.admin, deps.adminEmails ?? [], () => agentAdmin);
   await app.register(admin.routes, { prefix: '/v1/admin' });
+  const planLimits = deps.planLimits ?? resolvePlanLimits();
   const billing = createBillingModule(deps.repos.billing, {
     provider: deps.paymentProvider,
     prices: deps.planPrices ?? resolvePlanPrices(),
-    limits: deps.planLimits ?? resolvePlanLimits(),
+    limits: planLimits,
     isAdmin: admin.service.isAdmin,
     webOrigin: deps.webOrigin,
     log: app.log,
@@ -194,7 +195,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   });
   await app.register(billing.routes);
   const usage = createUsageModule(deps.repos.usage, {
-    limits: deps.planLimits ?? resolvePlanLimits(),
+    limits: planLimits,
     isAdmin: admin.service.isAdmin,
     // Billing is built first: a plan change by an admin writes the plan and the 0 dong order together.
     grant: billing.service.grantByAdmin,
@@ -207,6 +208,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       isAdmin: admin.service.isAdmin,
       usage: usage.service,
       billing: billing.service,
+      limits: planLimits,
       now: deps.now,
     }).routes,
   );

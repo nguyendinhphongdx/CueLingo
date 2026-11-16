@@ -7,6 +7,7 @@ import {
   type AdminSetUserPlanResponse,
   type AdminUserDetail,
   type AdminUserList,
+  type PlanLimitTable,
 } from '@cuelingo/shared';
 import { z } from 'zod';
 import { AppError } from '../../lib/errors';
@@ -25,6 +26,8 @@ export interface AdminUsersOptions {
   /** The gate of the usage module: this module reads usage through it. Plans are written by billing. */
   usage: Pick<UsageService, 'snapshot'>;
   billing: Pick<BillingService, 'listOrders' | 'grantByAdmin'>;
+  /** The limits of the deploy (env `PLAN_LIMITS`), for the quota filter. */
+  limits: PlanLimitTable;
   now?: () => Date;
 }
 
@@ -92,6 +95,14 @@ export function createAdminUsersService(repo: AdminUsersRepository, options: Adm
           plan: input.plan,
           expiring: input.expiring === '1',
           after: input.cursor ? decodeCursor(input.cursor) : undefined,
+          quota:
+            input.metric && input.atLeast
+              ? {
+                  metric: input.metric,
+                  percent: input.atLeast === '100' ? 100 : 80,
+                  limits: options.limits,
+                }
+              : undefined,
         },
         now(),
         PAGE_SIZE,

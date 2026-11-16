@@ -242,6 +242,48 @@ describe('admin users', () => {
     });
   });
 
+  describe('quota filter', () => {
+    const heavy = PEOPLE.map((p) =>
+      p.id === DAVE
+        ? { ...p, translationMs: 2 * 3_600_000 }
+        : p.id === CAROL
+          ? { ...p, usage: { debriefs: 7 } }
+          : p.id === ALICE
+            ? { ...p, translationMs: 19 * 3_600_000 }
+            : p,
+    );
+    const ids = async (query: string) =>
+      (await get(OWNER, `/v1/admin/users?${query}`)).json().items.map((i: { id: string }) => i.id);
+
+    it('keeps people at or over the share of the limit of their own plan in force', async () => {
+      await build({ people: heavy });
+      // Free limit 2 h: Dave is at 100%. Alice is Pro (20 h): 19 h is 95%. Carol's Pro ended, so she is Free.
+      expect(await ids('metric=translation_ms&atLeast=100')).toEqual([DAVE]);
+      expect(await ids('metric=translation_ms&atLeast=80')).toEqual([ALICE, DAVE]);
+      expect(await ids('metric=debriefs&atLeast=80')).toEqual([CAROL]);
+      expect(await ids('metric=debriefs&atLeast=100')).toEqual([]);
+    });
+
+    it('skips a plan with no limit, and combines with the other filters', async () => {
+      await build({ people: heavy });
+      // Pro and Ultra have unlimited debriefs; Free has 8.
+      expect(await ids('metric=debriefs&atLeast=80&plan=pro')).toEqual([]);
+      expect(await ids('metric=translation_ms&atLeast=80&plan=free')).toEqual([DAVE]);
+    });
+
+    it('needs both parameters and a known value', async () => {
+      await build({ people: heavy });
+      for (const q of [
+        'metric=debriefs',
+        'atLeast=80',
+        'metric=assist_daily&atLeast=80',
+        'metric=debriefs&atLeast=50',
+      ]) {
+        expect((await get(OWNER, `/v1/admin/users?${q}`)).statusCode).toBe(400);
+      }
+    });
+  });
+
   describe('detail (AC4)', () => {
     it('shows plan, the same usage as /v1/me/usage, and only that person orders without payment links', async () => {
       await build();
