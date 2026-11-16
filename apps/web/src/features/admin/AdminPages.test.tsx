@@ -12,7 +12,7 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import { adminActiveId, ADMIN_GROUP } from './admin-nav';
+import { adminActiveId, ADMIN_GROUP } from '../admin-nav';
 import { AdminActivityView } from './AdminMetricsPage';
 import { AdminOverviewView } from './AdminOverviewPage';
 import { AdminRevenueView } from './AdminRevenuePage';

@@ -2,7 +2,7 @@
 
 | Trạng thái | Loại    | Nhánh / PR                  | Ước lượng → thực tế |
 | ---------- | ------- | --------------------------- | ------------------- |
-| Plan       | feature | `feat/admin-console` / _PR_ | L → ?               |
+| Review     | feature | `feat/admin-console` / _PR_ | L → L               |
 
 **Phạm vi:**
 
@@ -83,3 +83,4 @@ UI tiếng Việt. Biểu đồ, thẻ số liệu và nhóm thu gọn đặt �
 | 2026-11-16 | Spec | Mở hồ sơ theo yêu cầu "thanh menu chia section thu gọn được, có một section riêng cho admin: danh sách user và tình trạng sub, doanh thu, dashboard metric usage, tình trạng sử dụng app…". Analytics chỉ dùng dữ liệu đã có.                                                                                                                                                                                                                         |
 | 2026-11-16 | Spec | **Duyệt spec** theo đề xuất: Q1 nhóm Quản trị chỉ trên web; Q2 Recharts (MIT) trong `@cuelingo/ui`; Q3 hoạt động = phiên họp hoặc ôn tập; Q4 nền tảng/phiên bản để đợt sau; Q5 merge W2-03 + admin trước rồi cắt `feat/admin-console` từ `main`; Q6 tính lúc gọi, cache 60 giây ở API.                                                                                                                                                                |
 | 2026-11-16 | Plan | Chủ sản phẩm yêu cầu: (1) giao admin console cho một subagent làm song song; (2) sidebar desktop phải đồng bộ với web; (3) nhóm Học gọn lại. Đổi Q5: không chờ merge W2-03, `feat/admin-console` cắt từ `feat/w2-03-vietqr-upgrade` (xếp chồng, merge sau W2-03). Sidebar: thu gọn nhóm nằm trong `SidebarNav` dùng chung nên desktop tự có, nhóm Quản trị vẫn chỉ web (Q1). Nhóm Học: đề xuất riêng, chờ duyệt, không nằm trong phạm vi nhánh admin. |
+| 2026-11-16 | Làm  | Làm xong trên `feat/admin-console` (xếp chồng trên `feat/w2-03-vietqr-upgrade` 303a3ec). Phần nhẹ của thanh bên (nhóm Quản trị, `useIsAdmin`) tách thành feature `admin-nav` riêng: luật `web-features-via-index` cấm `AppShell` import file con của `features/admin`, còn import qua index của nó sẽ kéo Recharts vào chunk của mọi trang đã đăng nhập. Kết quả ở [03-review.md](./03-review.md).                                                    |

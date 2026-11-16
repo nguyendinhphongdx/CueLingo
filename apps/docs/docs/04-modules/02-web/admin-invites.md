@@ -12,6 +12,6 @@ Trang cho quản trị viên (`ADMIN_EMAILS`) tạo mã mời cho người thử
 - Mã rõ chỉ hiện **một lần** trong thẻ `CreatedInviteCard` kèm nút sao chép; sau khi đóng không xem lại được.
 - Bảng liệt kê không có mã: ghi chú, đã dùng/tối đa, hạn, trạng thái, nút thu hồi.
 - Người không phải admin nhận 404 (như `/admin/metrics`).
-- Bọc trong `AdminFrame` (thanh liên kết giữa các trang admin, xem [Số liệu nội bộ](./admin-metrics.md)); thanh chỉ hiện khi danh sách đã tải được.
+- Nằm trong khung app chung (`AppShell` + `AppFrame`), mục **Mã mời** của nhóm Quản trị ([Khu Quản trị](./admin-console.md)).
 
 Trang `/login` có ô "Mã mời (nếu bạn mới dùng)"; lỗi từ chối chỉ nói chung "Mã mời không dùng được" cho mọi lý do.

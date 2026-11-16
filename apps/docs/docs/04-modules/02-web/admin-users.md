@@ -29,7 +29,8 @@ Cột: email (liên kết tới chi tiết) và tên, ngày đăng ký, gói, ng
 ## Phụ thuộc
 
 - `client.admin` của web gộp khoá của core-sdk (`dashboard`, `users`) với các lời gọi chỉ web có (`metrics`, `agent`, `invites`). Khoá `admin` của web không được đè khoá của core-sdk; `lib/client.test.ts` giữ điều đó.
-- Khung `AdminFrame`/`AdminNav` (xem [Số liệu nội bộ](./admin-metrics.md)); thanh liên kết chỉ hiện khi một trong hai lời gọi đã trả thành công.
+- Nằm trong khung app chung, mục **Người dùng & gói** của nhóm Quản trị ([Khu Quản trị](./admin-console.md)).
+- **Bộ lọc hạn mức từ URL:** `/admin/users?metric=debriefs&atLeast=80` (link từ trang Lượng dùng) đặt bộ lọc ban đầu, hiện thành một nhãn có nút `×` để bỏ; gửi `metric` và `atLeast` tới `GET /v1/admin/users`. Cặp không hợp lệ thì bỏ qua. Trang bọc `useSearchParams` trong `Suspense` cho bản tĩnh.
 - Bảng, thẻ số liệu, `Segmented`, `Input`, `formatVnd`, `formatDateVn`, `planName` đều có sẵn ở `@cuelingo/ui`; admin chỉ có trên web nên khung admin nằm ở `apps/web`.
 
 ## Dữ liệu & quyền riêng tư

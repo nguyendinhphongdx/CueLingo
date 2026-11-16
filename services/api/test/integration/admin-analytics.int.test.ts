@@ -54,8 +54,9 @@ describe('admin analytics on real Postgres', () => {
     db = await startMigratedPostgres();
     sql = postgres(db.url);
     repo = createPostgresAdminAnalyticsRepository(sql);
-    [{ id: item }] = await sql<{ id: string }[]>`
+    const [lexical] = await sql<{ id: string }[]>`
       INSERT INTO lexical_items (lemma, type) VALUES ('hello', 'word') RETURNING id`;
+    item = lexical!.id;
   });
   afterAll(async () => {
     await sql.end();

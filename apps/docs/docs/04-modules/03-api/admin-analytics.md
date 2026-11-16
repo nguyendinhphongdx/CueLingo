@@ -6,7 +6,7 @@ title: Admin thống kê
 
 > Phần: [API service](./README.md) · Code: `services/api/src/modules/admin-analytics/` · Spec: `06-delivery/2026-11-16-admin-console`
 
-Số liệu tổng hợp cho các trang Tổng quan, Doanh thu, Lượng dùng và Hoạt động app của khu Quản trị (trang web `admin-console`). Chỉ đọc, chỉ số tổng, không có định danh.
+Số liệu tổng hợp cho các trang Tổng quan, Doanh thu, Lượng dùng và Hoạt động app của [khu Quản trị](../02-web/admin-console.md). Chỉ đọc, chỉ số tổng, không có định danh.
 
 ## Trách nhiệm
 

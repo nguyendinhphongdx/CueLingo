@@ -10,8 +10,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 import { authClient } from '../../lib/auth-client';
 import { CONNECTION_ERROR_MESSAGE } from '../../lib/errors';
-import { ADMIN_GROUP, adminActiveId, isAdminPath } from '../admin/admin-nav';
-import { useIsAdmin } from '../admin/use-is-admin';
+import { ADMIN_GROUP, adminActiveId, isAdminPath, useIsAdmin } from '../admin-nav';
 
 /** Full-page notice when the API cannot be reached, with a way to try again. */
 export function ConnectionProblem({ onRetry }: { onRetry: () => void }) {
