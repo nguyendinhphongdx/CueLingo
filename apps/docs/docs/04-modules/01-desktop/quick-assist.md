@@ -32,4 +32,6 @@ Tra từ theo ngữ cảnh, "Họ vừa nói gì?", "Nói giúp tôi" + teleprom
 
 ## Họp tiếng Việt
 
+Mỗi câu "Nói giúp" soạn ra là một hàng `SpeakableOption` (`@cuelingo/ui`): câu tiếng Anh, ghi chú tiếng Việt, nút **Nghe thử** (vòng quay khi đang tải, ô vuông để dừng) và **Sao chép** (hiện "Đã sao chép" 2 giây). Không còn bước chọn trước khi sao chép; sao chép thì ghi sự kiện `compose_used`. Tiếng đọc ra loa của máy, không vào cuộc họp.
+
 Tra từ và "Nói giúp" chỉ có với ngôn ngữ `learnable`. Trong họp tiếng Việt, caption không có nút "Tra từ", và nếu bảng mở ở chế độ tra từ hay "Nói giúp" thì hiện "Tính năng này chưa hỗ trợ họp bằng tiếng việt"; "Họ vừa nói gì?" vẫn dùng được. DTO assist cũng từ chối `vi` ở lookup và compose (400), recap nhận mọi ngôn ngữ đã bật.

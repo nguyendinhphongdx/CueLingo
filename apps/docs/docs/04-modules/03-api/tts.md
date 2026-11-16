@@ -12,9 +12,9 @@
 
 ## Interface
 
-| Method | Path      | Contract                                             | Ghi chú                                                                   |
-| ------ | --------- | ---------------------------------------------------- | ------------------------------------------------------------------------- |
-| `POST` | `/v1/tts` | `TtsRequest` (`{ text }`, 1–300 ký tự) → `audio/wav` | Header `x-tts-cache: hit\|miss`, `cache-control: private, max-age=604800` |
+| Method | Path      | Contract                                                                                                        | Ghi chú                                                                   |
+| ------ | --------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `POST` | `/v1/tts` | `TtsRequest` (`{ text, voice? }`, 1–300 ký tự; `voice` chỉ để nghe thử trước khi lưu, lạ thì 400) → `audio/wav` | Header `x-tts-cache: hit\|miss`, `cache-control: private, max-age=604800` |
 
 Văn bản nằm trong **body**, không nằm trong URL, để thứ người dùng luyện không vào log. Client lấy về dạng blob rồi phát bằng `<audio>`.
 
@@ -22,7 +22,7 @@ Lỗi: `400` văn bản không hợp lệ, `401` chưa đăng nhập, `429 RATE_
 
 ## Phụ thuộc
 
-- `@cuelingo/ai-gateway` `speech()`: model chính `gemini-3.8-flash-lite-tts`, dự phòng `gemini-3.8-flash-tts` (đổi bằng `AI_TTS_MODEL`, `AI_TTS_FALLBACK_MODEL`). Giọng mặc định `Kore`. Khoá API gửi trong header, không nằm trong URL.
+- `@cuelingo/ai-gateway` `speech()`: model chính `gemini-3.8-flash-lite-tts`, dự phòng `gemini-3.8-flash-tts` (đổi bằng `AI_TTS_MODEL`, `AI_TTS_FALLBACK_MODEL`). Giọng lấy từ cài đặt người dùng (`settings.voice`), mặc định `Kore`; khoá cache thêm giọng (`v1|giọng|văn bản`), nên đổi giọng thì cache cũ không bị dùng nhầm. Khoá API gửi trong header, không nằm trong URL.
 - Bộ nhớ đệm file: thư mục `TTS_CACHE_DIR` (mặc định thư mục tạm của hệ thống). Một máy chủ thì đủ; nhiều máy chủ thì chuyển sang kho đối tượng.
 
 ## Dữ liệu & sự kiện

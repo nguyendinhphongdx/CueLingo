@@ -41,7 +41,8 @@ Cài đặt trong app và bản đồng bộ theo tài khoản: Assist mặc đ�
 - Cửa sổ `main` giữ Assist level trong bộ nhớ và phát event `settings` để overlay đổi ngay
 - Các khoá `cuelingo.overlay.{fontSize,opacity,theme}` nằm trong `localStorage` chung origin
 - Khoá `cuelingo.server.v1` (máy chủ đã chọn) cũng nằm trong `localStorage`, thuộc module [Máy chủ](./server.md)
-- Nguồn lưu bền là `UserSettings` ở API; mặc định Assist 4, chữ 18 px, nền 88%, giao diện tối, không lưu audio
+- Nguồn lưu bền là `UserSettings` ở API; mặc định Assist 4, chữ 18 px, nền 88%, giao diện tối, không lưu audio, giọng đọc `Kore`
+- **Giọng đọc** (`VoiceSettings`, dùng `VoicePicker` của `@cuelingo/ui`): chọn một trong 6 giọng, có nút nghe thử câu mẫu cố định. Đổi giọng thì lưu cùng tài khoản và xoá bộ nhớ âm thanh đã tải, nên Ôn tập, tra từ và Nói giúp đọc bằng giọng mới ngay. Web có cùng mục này trong Tuỳ chọn
 
 ## Quyền riêng tư
 
