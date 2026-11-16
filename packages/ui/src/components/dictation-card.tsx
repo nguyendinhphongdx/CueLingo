@@ -100,9 +100,9 @@ export function DictationCard({
         <div aria-live="polite" className="space-y-2">
           <p className="flex items-center gap-2 text-sm font-medium">
             {result.correct ? (
-              <Check aria-hidden="true" className="size-4 text-emerald-600 dark:text-emerald-400" />
+              <Check aria-hidden="true" className="size-4 text-success" />
             ) : (
-              <X aria-hidden="true" className="size-4 text-red-600 dark:text-red-400" />
+              <X aria-hidden="true" className="size-4 text-destructive" />
             )}
             {result.correct ? 'Chính xác' : 'Chưa đúng, đáp án là:'}
           </p>
@@ -113,7 +113,7 @@ export function DictationCard({
                 className={
                   state === 'ok'
                     ? gap
-                    : `${gap} text-red-600 underline decoration-wavy underline-offset-4 dark:text-red-400`
+                    : `${gap} text-destructive underline decoration-wavy underline-offset-4`
                 }
               >
                 {word}

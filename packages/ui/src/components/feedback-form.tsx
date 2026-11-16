@@ -66,7 +66,7 @@ export function FeedbackFormView({
               : 'Bạn muốn CueLingo làm được gì thêm?'
           }
           onChange={(event) => onMessage(event.target.value)}
-          className="border-input bg-card placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 w-full resize-y rounded-md border px-3 py-2 text-base shadow-xs outline-none focus-visible:ring-[3px] disabled:opacity-50 md:text-sm"
+          className="border-input bg-card placeholder:text-muted-foreground focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:ring-offset-2 w-full resize-y rounded-md border px-3 py-2 text-base shadow-xs outline-none focus-visible:ring-2 disabled:opacity-50 md:text-sm"
         />
         <div className="text-muted-foreground mt-1 flex justify-between text-xs">
           <span>{FEEDBACK_PRIVACY_NOTE}</span>

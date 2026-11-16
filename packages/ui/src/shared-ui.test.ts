@@ -46,3 +46,15 @@ describe('shared UI rule', () => {
     );
   });
 });
+
+describe('shared components use tokens only', () => {
+  it('has no hex colour, dark: variant, text-white or bg-black outside the logo', () => {
+    const offenders: string[] = [];
+    for (const file of readdirSync(UI)) {
+      if (!file.endsWith('.tsx') || /\.test\.|^logo\./.test(file)) continue;
+      const text = readFileSync(join(UI, file), 'utf8');
+      if (/#[0-9a-fA-F]{6}\b|\bdark:|text-white|bg-black/.test(text)) offenders.push(file);
+    }
+    expect(offenders).toEqual([]);
+  });
+});

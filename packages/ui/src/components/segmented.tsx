@@ -26,7 +26,7 @@ export function Segmented<T extends string>({
         value={value}
         hover={false}
         transition={spring.pop}
-        className="bg-card rounded-lg shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+        className="bg-card rounded-lg shadow-sm ring-1 ring-border"
         containerClassName="grid grid-flow-col auto-cols-fr"
         mode="parent"
       >

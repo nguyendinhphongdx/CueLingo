@@ -56,7 +56,7 @@ export function AppFrame({
           type="button"
           aria-label="Đóng trình đơn"
           onClick={mobileNavigation.close}
-          className="absolute inset-x-0 top-16 bottom-0 z-20 cursor-default bg-black/30 md:hidden"
+          className="absolute inset-x-0 top-16 bottom-0 z-20 cursor-default bg-scrim md:hidden"
         />
       ) : null}
       <SidebarNav

@@ -151,7 +151,7 @@ function OpenServerDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4"
       onClick={onClose}
       onKeyDown={(event) => {
         if (event.key === 'Escape') onClose();
@@ -222,18 +222,16 @@ function OpenServerDialog({
           </Button>
           <p role="status" aria-live="polite" className="min-h-5 text-sm">
             {currentResult?.status === 'ok' ? (
-              <span className="text-emerald-600 dark:text-emerald-400">Kết nối được.</span>
+              <span className="text-success">Kết nối được.</span>
             ) : null}
             {currentResult?.status === 'failed' ? (
-              <span className="text-red-600 dark:text-red-400">
-                Không kết nối được. {currentResult.cause}
-              </span>
+              <span className="text-destructive">Không kết nối được. {currentResult.cause}</span>
             ) : null}
           </p>
         </div>
 
         {target && !unchanged ? (
-          <div className="text-muted-foreground space-y-1 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+          <div className="text-muted-foreground space-y-1 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
             <p>{serverWarningText(hostOf(target.api))}</p>
             <p>
               {signedIn ? `${SERVER_SIGNOUT_TEXT} ` : ''}
@@ -243,12 +241,12 @@ function OpenServerDialog({
         ) : null}
 
         {askSaveAnyway ? (
-          <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+          <p role="alert" className="text-sm text-destructive">
             {SERVER_CHECK_FAILED_CONFIRM_TEXT}
           </p>
         ) : null}
         {saveError ? (
-          <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+          <p role="alert" className="text-sm text-destructive">
             {saveError}
           </p>
         ) : null}
@@ -313,7 +311,7 @@ function AddressField({
         className="mt-1"
       />
       {error ? (
-        <p id={`${id}-error`} className="mt-1 text-xs text-red-600 dark:text-red-400">
+        <p id={`${id}-error`} className="mt-1 text-xs text-destructive">
           {error}
         </p>
       ) : null}

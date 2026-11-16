@@ -23,10 +23,10 @@ export interface ReviewCardLike {
 }
 
 const HINTS: Record<DeckRating, { label: string; className: string }> = {
-  1: { label: 'Lại', className: 'bg-red-500/20 text-red-900 dark:text-red-100' },
-  2: { label: 'Khó', className: 'bg-amber-500/20 text-amber-900 dark:text-amber-100' },
-  3: { label: 'Được', className: 'bg-green-500/20 text-green-900 dark:text-green-100' },
-  4: { label: 'Dễ', className: 'bg-sky-500/20 text-sky-900 dark:text-sky-100' },
+  1: { label: 'Lại', className: 'bg-destructive/15 text-destructive' },
+  2: { label: 'Khó', className: 'bg-warning/15 text-warning' },
+  3: { label: 'Được', className: 'bg-success/15 text-success' },
+  4: { label: 'Dễ', className: 'bg-primary/15 text-primary' },
 };
 
 const BUTTONS: { rating: DeckRating; icon: typeof ArrowLeft }[] = [

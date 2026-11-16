@@ -96,7 +96,7 @@ describe('UsageMeter', () => {
       <UsageMeter metric="debriefs" used={8} limit={8} state="exhausted" />,
     );
     expect(low).toContain('data-state="low"');
-    expect(low).toContain('amber');
+    expect(low).toContain('text-warning');
     expect(out).toContain('data-state="exhausted"');
     expect(out).toContain('bg-destructive');
     expect(out).toContain('Đã hết');

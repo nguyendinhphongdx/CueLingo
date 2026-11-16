@@ -115,7 +115,7 @@ export function SidebarNav({
           hover={false}
           controlledItems
           transition={spring.pop}
-          className="bg-card rounded-lg shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+          className="bg-card rounded-lg shadow-sm ring-1 ring-border"
         >
           {sections.map((section) => {
             const folded = isCollapsed(section.id);
