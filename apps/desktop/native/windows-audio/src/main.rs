@@ -19,10 +19,22 @@ fn one_shot(
     args: &[String],
     microphone: &str,
     system_audio: &dyn Fn() -> Result<(), String>,
+    language: &str,
 ) -> Option<Vec<String>> {
-    if args.iter().any(|a| a == "--permissions") {
+    // Windows has no microphone dialog to show, so asking reports the same state as reading it.
+    if args
+        .iter()
+        .any(|a| a == "--permissions" || a == "--request-microphone")
+    {
         return Some(vec![line(
             serde_json::json!({ "type": "permissions", "microphone": microphone }),
+        )]);
+    }
+    // The model is loaded by the meeting itself (and fetched by `--download-model`): a prewarm has nothing to
+    // do ahead of time, so it answers "ready" at once and never falls through to a meeting.
+    if args.iter().any(|a| a == "--prewarm") {
+        return Some(vec![line(
+            serde_json::json!({ "type": "model", "language": language, "state": "ready" }),
         )]);
     }
     // Calendar suggestions are macOS only (EventKit); print nothing so the app treats it as unavailable.
@@ -53,10 +65,12 @@ fn file_arguments(args: &[String]) -> Vec<&str> {
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
 
+    let language = std::env::var("CUELINGO_LANGUAGE").unwrap_or_else(|_| "en".to_string());
     if let Some(lines) = one_shot(
         &args,
         permissions::microphone(),
         &capture::check_system_audio,
+        &language,
     ) {
         let mut out = io::stdout().lock();
         for l in lines {
@@ -66,7 +80,6 @@ fn main() {
     }
 
     let out = Out::stdout();
-    let language = std::env::var("CUELINGO_LANGUAGE").unwrap_or_else(|_| "en".to_string());
 
     // Model management without a meeting (onboarding, Settings): see `modelctl`.
     if args.iter().any(|a| a == "--model-status") {
@@ -124,7 +137,7 @@ mod tests {
 
     #[test]
     fn permissions_probe_reports_the_microphone_state() {
-        let lines = one_shot(&["--permissions".into()], "denied", &|| Ok(())).unwrap();
+        let lines = one_shot(&["--permissions".into()], "denied", &|| Ok(()), "en").unwrap();
         assert_eq!(lines.len(), 1);
         let v = parse(&lines[0]);
         assert_eq!(v["type"], "permissions");
@@ -134,14 +147,20 @@ mod tests {
     #[test]
     fn calendar_probes_print_nothing() {
         assert_eq!(
-            one_shot(&["--calendar-events".into()], "granted", &|| Ok(())),
+            one_shot(&["--calendar-events".into()], "granted", &|| Ok(()), "en"),
             Some(vec![])
         );
     }
 
     #[test]
     fn system_audio_check_is_granted_when_the_output_opens() {
-        let lines = one_shot(&["--check-system-audio".into()], "granted", &|| Ok(())).unwrap();
+        let lines = one_shot(
+            &["--check-system-audio".into()],
+            "granted",
+            &|| Ok(()),
+            "en",
+        )
+        .unwrap();
         let v = parse(&lines[0]);
         assert_eq!(v["type"], "system-audio");
         assert_eq!(v["state"], "granted");
@@ -149,9 +168,12 @@ mod tests {
 
     #[test]
     fn system_audio_check_reports_why_it_failed() {
-        let lines = one_shot(&["--check-system-audio".into()], "granted", &|| {
-            Err("no output device".into())
-        })
+        let lines = one_shot(
+            &["--check-system-audio".into()],
+            "granted",
+            &|| Err("no output device".into()),
+            "en",
+        )
         .unwrap();
         let v = parse(&lines[0]);
         assert_eq!(v["state"], "error");
@@ -159,8 +181,32 @@ mod tests {
     }
 
     #[test]
+    fn requesting_the_microphone_reports_its_state_without_a_meeting() {
+        let lines = one_shot(
+            &["--request-microphone".into()],
+            "granted",
+            &|| Ok(()),
+            "en",
+        )
+        .unwrap();
+        let v = parse(&lines[0]);
+        assert_eq!(v["type"], "permissions");
+        assert_eq!(v["microphone"], "granted");
+    }
+
+    #[test]
+    fn prewarm_answers_ready_and_never_starts_a_meeting() {
+        let lines = one_shot(&["--prewarm".into()], "granted", &|| Ok(()), "ja").unwrap();
+        assert_eq!(lines.len(), 1);
+        let v = parse(&lines[0]);
+        assert_eq!(v["type"], "model");
+        assert_eq!(v["language"], "ja");
+        assert_eq!(v["state"], "ready");
+    }
+
+    #[test]
     fn a_meeting_is_not_a_one_shot() {
-        assert_eq!(one_shot(&[], "granted", &|| Ok(())), None);
+        assert_eq!(one_shot(&[], "granted", &|| Ok(()), "en"), None);
     }
 
     #[test]

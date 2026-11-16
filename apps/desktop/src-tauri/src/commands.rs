@@ -215,11 +215,18 @@ pub fn model_cancel(state: State<AppState>) -> Result<(), String> {
 
 /// Runs the sidecar in a one-shot mode and returns the JSON line whose `type` is `kind`.
 fn probe_sidecar(flag: &str, kind: &str) -> Option<serde_json::Value> {
+    probe_sidecar_for(flag, kind, None)
+}
+
+/// Like `probe_sidecar`, for a mode that depends on the meeting language (`CUELINGO_LANGUAGE`).
+fn probe_sidecar_for(flag: &str, kind: &str, language: Option<&str>) -> Option<serde_json::Value> {
     let path = crate::audio_bridge::sidecar_path()?;
-    let output = crate::audio_bridge::hidden_command(path)
-        .arg(flag)
-        .output()
-        .ok()?;
+    let mut command = crate::audio_bridge::hidden_command(path);
+    command.arg(flag);
+    if let Some(language) = language {
+        command.env("CUELINGO_LANGUAGE", language);
+    }
+    let output = command.output().ok()?;
     String::from_utf8_lossy(&output.stdout)
         .lines()
         .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
@@ -247,6 +254,49 @@ pub async fn permissions_status() -> PermissionsStatus {
         microphone: probe_field(&probe, "microphone"),
         system_audio: "unknown".to_string(),
     }
+}
+
+/// Shows macOS's microphone dialog (when it has not been asked yet) and returns the answer. The dialog comes
+/// from a child of the app, so the permission belongs to CueLingo. `.output()` waits for the user's click on a
+/// blocking thread, so the window stays responsive. Windows has no dialog: the sidecar just reports the state.
+#[tauri::command]
+pub async fn request_microphone() -> PermissionsStatus {
+    let probe = tauri::async_runtime::spawn_blocking(|| {
+        probe_sidecar("--request-microphone", "permissions")
+    })
+    .await
+    .ok()
+    .flatten();
+    PermissionsStatus {
+        microphone: probe_field(&probe, "microphone"),
+        system_audio: "unknown".to_string(),
+    }
+}
+
+/// Starts downloading, verifying and compiling the on-device speech model in the background. Progress arrives as
+/// `audio-model` events. Refused during a meeting or while another prewarm runs.
+#[tauri::command]
+pub fn stt_prewarm(app: AppHandle, state: State<AppState>, language: String) -> Result<(), String> {
+    if !valid_language(&language) {
+        return Err("invalid_language".into());
+    }
+    state.audio.prewarm(&app, &language)
+}
+
+/// Whether the speech model for `language` is on this machine: `cached`, `missing` (or `ready` when the language
+/// needs no model). Loads and downloads nothing.
+#[tauri::command]
+pub async fn stt_model_status(language: String) -> Result<String, String> {
+    if !valid_language(&language) {
+        return Err("invalid_language".into());
+    }
+    let probe = tauri::async_runtime::spawn_blocking(move || {
+        probe_sidecar_for("--model-status", "model", Some(&language))
+    })
+    .await
+    .ok()
+    .flatten();
+    Ok(probe_field(&probe, "state"))
 }
 
 /// Runs the sidecar's calendar mode (`status`, `request` or `events`) and returns its JSON line, or null.
