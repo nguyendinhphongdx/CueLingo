@@ -40,6 +40,24 @@ const make = (fetch: ReturnType<typeof vi.fn>) =>
   });
 
 describe('admin client', () => {
+  it('asks whether the caller is an admin and calls the four analytics routes', async () => {
+    const fetch = vi.fn().mockResolvedValue(json(200, { isAdmin: false }));
+    const client = make(fetch);
+    expect(await client.admin.access()).toEqual({ isAdmin: false });
+    expect(fetch.mock.calls[0]?.[0]).toBe('http://api/v1/admin/me');
+    for (const name of ['overview', 'revenue', 'usage', 'activity'] as const) {
+      fetch.mockResolvedValueOnce(json(200, { nope: true }));
+      await expect(client.admin.analytics[name]()).rejects.toBeDefined();
+      expect(fetch.mock.calls.at(-1)?.[0]).toBe(`http://api/v1/admin/analytics/${name}`);
+    }
+  });
+
+  it('sends the quota filter on the user list', async () => {
+    const fetch = vi.fn().mockResolvedValue(json(200, { items: [], nextCursor: null }));
+    await make(fetch).admin.users.list({ metric: 'debriefs', atLeast: '80' });
+    expect(fetch.mock.calls[0]?.[0]).toBe('http://api/v1/admin/users?metric=debriefs&atLeast=80');
+  });
+
   it('reads the dashboard', async () => {
     const fetch = vi.fn().mockResolvedValue(
       json(200, {

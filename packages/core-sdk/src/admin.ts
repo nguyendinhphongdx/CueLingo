@@ -1,11 +1,21 @@
 import {
+  AdminAccessSchema,
+  AdminActivitySchema,
   AdminDashboardSchema,
+  AdminOverviewSchema,
+  AdminRevenueSchema,
   AdminSetUserPlanRequestSchema,
   AdminSetUserPlanResponseSchema,
   AdminUserDetailSchema,
   AdminUserListQuerySchema,
   AdminUserListSchema,
+  AdminUsageSchema,
+  type AdminAccess,
+  type AdminActivity,
   type AdminDashboard,
+  type AdminOverview,
+  type AdminRevenue,
+  type AdminUsage,
   type AdminSetUserPlanRequest,
   type AdminSetUserPlanResponse,
   type AdminUserDetail,
@@ -17,6 +27,25 @@ import type { Http } from './http';
 /** Admin only: every call answers `403` for a signed-in user who is not in `ADMIN_EMAILS`. */
 export function adminApi(http: Http) {
   return {
+    /** Whether the signed-in person is an admin. Never `403`: a normal user gets `{isAdmin: false}`. */
+    access(): Promise<AdminAccess> {
+      return http.request('GET', '/v1/admin/me', AdminAccessSchema);
+    },
+    /** Aggregates only (no identifiers); the API caches each for 60 seconds. */
+    analytics: {
+      overview(): Promise<AdminOverview> {
+        return http.request('GET', '/v1/admin/analytics/overview', AdminOverviewSchema);
+      },
+      revenue(): Promise<AdminRevenue> {
+        return http.request('GET', '/v1/admin/analytics/revenue', AdminRevenueSchema);
+      },
+      usage(): Promise<AdminUsage> {
+        return http.request('GET', '/v1/admin/analytics/usage', AdminUsageSchema);
+      },
+      activity(): Promise<AdminActivity> {
+        return http.request('GET', '/v1/admin/analytics/activity', AdminActivitySchema);
+      },
+    },
     /** Counts of people by plan, new sign-ups, this month's revenue (VND) and plans ending soon. */
     dashboard(): Promise<AdminDashboard> {
       return http.request('GET', '/v1/admin/dashboard', AdminDashboardSchema);
