@@ -25,7 +25,17 @@ Chủ sản phẩm cần app desktop chạy trên Windows ([spec](../06-delivery
 
 ## Kết quả spike S2
 
-_Đang đo trên runner Windows của CI (đợt A); số đo ghi ở đây ngay khi có._
+Đo ngày 2026-11-16 trên runner `windows-2025` của CI (4 vCPU, 16 GB; CPU là AMD EPYC 7763 ở lần chạy 2, EPYC 9V74 ở lần 1), bằng `scripts/stt-bench.mjs`: một file người thật và 8 câu giọng David của Windows, 24 câu (dài nhất 5,9 s), WER 0,0 %. Tiêu chí: p95 ≤ 1,0 s cho câu ≤ 8 s, RAM ≤ 1,5 GB.
+
+| Cấu hình                  | p50 / p95 mỗi câu | Partial (p50 / p95)  | RAM đỉnh | Model sẵn sàng (cache có) | Kết quả |
+| ------------------------- | ----------------- | -------------------- | -------- | ------------------------- | ------- |
+| 4 thread, nạp nhanh       | 624 / 827 ms      | gần như không chạy   | 822 MB   | 2,3 s (nạp 2,3 s, băm 0)  | Qua     |
+| 2 thread, nạp nhanh       | 471 / 616 ms      | gần như không chạy   | 821 MB   | 2,3 s                     | Qua     |
+| 4 thread, đúng tốc độ họp | 575 / 767 ms      | 62 lần, 307 / 535 ms | 818 MB   | 2,3 s                     | Qua     |
+
+Lần chạy 1 (chưa có cache): tải model 26,7 s (661 MB), 486 / 661 ms, RAM 827 MB.
+
+Hạn chế của số đo: runner là CPU máy chủ đời mới, chưa phải laptop văn phòng; 2 thread chỉ giả lập số nhân ít, không giả lập xung chậm. S2 vẫn phải đo lại trên PC Windows thật ở đợt B trước khi kết luận cuối. Trên Mac M1 Pro: 250 / 420 ms, RAM đỉnh 1,2 GB (macOS tính RSS khác Windows).
 
 ## Phương án đã cân nhắc
 
