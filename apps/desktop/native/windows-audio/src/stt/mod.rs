@@ -4,6 +4,10 @@
 //!
 //! What actually runs the model sits behind `ModelProvider` / `Recognizer`: Parakeet through sherpa-onnx in
 //! production (`sherpa.rs`), a fake in the tests.
+pub mod models;
+#[cfg(feature = "stt")]
+pub mod sherpa;
+
 use crate::stats::LatencyStats;
 use crate::vocabulary::VocabularyCorrector;
 use std::collections::BTreeMap;
@@ -53,15 +57,19 @@ pub trait ModelProvider: Send + Sync {
     ) -> Result<(Box<dyn Recognizer>, Timings), String>;
 }
 
-/// The provider the sidecar runs with. The Parakeet one comes with the next step; until then every English
-/// session reports that this build cannot recognise (cloud languages work: they need no model).
+/// The provider the sidecar runs with: Parakeet through sherpa-onnx, or a refusal in a build without `stt`.
 pub fn default_provider() -> Arc<dyn ModelProvider> {
-    Arc::new(NoModel)
+    #[cfg(feature = "stt")]
+    return Arc::new(sherpa::SherpaProvider::default());
+    #[cfg(not(feature = "stt"))]
+    return Arc::new(NoModel);
 }
 
-/// Stands in until the recognition library is linked.
+/// Stands in when the build has no recognition library (`--no-default-features`).
+#[cfg(not(feature = "stt"))]
 struct NoModel;
 
+#[cfg(not(feature = "stt"))]
 impl ModelProvider for NoModel {
     fn load(
         &self,

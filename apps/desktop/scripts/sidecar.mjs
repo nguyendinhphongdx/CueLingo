@@ -50,7 +50,11 @@ const [tool, toolArgs, built] = windows
       join(swiftDir, '.build/release/cuelingo-audio'),
     ];
 console.log(`sidecar: building with ${tool} (release)…`);
-const build = spawnSync(tool, toolArgs, { stdio: 'inherit' });
+// Cargo reads `.cargo/config.toml` from the working directory, and the Windows crate needs its (static C runtime).
+const build = spawnSync(tool, toolArgs, {
+  stdio: 'inherit',
+  cwd: windows ? windowsDir : undefined,
+});
 if (build.status !== 0) process.exit(build.status ?? 1);
 
 copyFileSync(built, target);

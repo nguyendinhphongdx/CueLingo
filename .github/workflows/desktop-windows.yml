@@ -1,9 +1,10 @@
 name: Desktop (Windows)
 
 # Builds the desktop app for Windows x64 and packs it with Inno Setup into CueLingo-Windows-x64-setup.exe
-# (ADR 0021), kept as a workflow artifact. Also lints and tests both Rust crates on Windows.
-# Capture and captions on Windows are not in this build yet (ADR 0020): the app installs and opens, a meeting
-# reports that it is not available. Not part of release.yml until then.
+# (ADR 0021), kept as a workflow artifact. Also lints and tests both Rust crates on Windows, and measures the
+# speech model on this runner (spike S2 of the windows-desktop dossier: p50/p95 per sentence, memory, load time).
+# WASAPI capture is not in this build yet (ADR 0020): the app installs and opens, a meeting reports that it is
+# not available. Not part of release.yml until then.
 on:
   pull_request:
     paths:
@@ -51,6 +52,28 @@ jobs:
       - run: pnpm install --frozen-lockfile
         working-directory: .
 
+      # sherpa-onnx's build script downloads its static libraries (with their own ONNX Runtime) from GitHub.
+      # Fetch them here instead, check the SHA-256, and hand them over through SHERPA_ONNX_ARCHIVE_DIR, so what
+      # gets linked is exactly this file. Bump together with `sherpa-onnx` in native/windows-audio/Cargo.toml.
+      - name: Cache the sherpa-onnx static libraries
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/sherpa-onnx
+          key: sherpa-onnx-2.0.1-win-x64-static-MT-23e7b986
+      - name: Fetch the pinned sherpa-onnx static libraries
+        env:
+          SHERPA_ARCHIVE: sherpa-onnx-v2.0.1-win-x64-static-MT-Release-lib.tar.bz2
+          SHERPA_SHA256: 23e7b986b197eda0bbc47ff3d7d5c87afd6ef2b9077214ba26b0f1ec52ef0e66
+        run: |
+          dir="$RUNNER_TEMP/sherpa-onnx"
+          mkdir -p "$dir"
+          if [ ! -f "$dir/$SHERPA_ARCHIVE" ]; then
+            curl -fsSL --retry 3 -o "$dir/$SHERPA_ARCHIVE" \
+              "https://github.com/k2-fsa/sherpa-onnx/releases/download/v2.0.1/$SHERPA_ARCHIVE"
+          fi
+          echo "$SHERPA_SHA256  $dir/$SHERPA_ARCHIVE" | sha256sum -c -
+          echo "SHERPA_ONNX_ARCHIVE_DIR=$dir" >> "$GITHUB_ENV"
+
       - name: Lint and test the Windows sidecar
         working-directory: apps/desktop/native/windows-audio
         run: |
@@ -60,6 +83,18 @@ jobs:
 
       - name: Build the audio sidecar
         run: node scripts/sidecar.mjs --rebuild
+
+      # Spike S2: the speech model is downloaded once (pinned revision and SHA-256, checked by the sidecar) and
+      # kept between runs. The step prints p50/p95, memory and load time to the log and the job summary.
+      - name: Cache the speech model
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/cuelingo-models
+          key: speech-model-${{ hashFiles('apps/desktop/native/windows-audio/src/stt/models.rs') }}
+      - name: Measure speech recognition on this runner (S2)
+        env:
+          CUELINGO_MODELS_DIR: ${{ runner.temp }}/cuelingo-models
+        run: node scripts/stt-bench.mjs --exe native/windows-audio/target/release/cuelingo-audio.exe
 
       - name: Build the app
         env:

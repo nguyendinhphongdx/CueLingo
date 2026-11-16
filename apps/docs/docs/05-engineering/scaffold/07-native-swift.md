@@ -73,11 +73,11 @@ Tự nhận ngôn ngữ: biến môi trường `CUELINGO_DETECT` (danh sách mã
 
 ## Bản Windows (`native/windows-audio`)
 
-Cùng giao thức stdout/stdin như sidecar Swift, viết bằng Rust ([ADR 0020](../../08-adr/0020-windows-capture-stt.md)). Dựng `cuelingo-audio.exe` qua `node scripts/sidecar.mjs`.
+Cùng giao thức stdout/stdin như sidecar Swift, viết bằng Rust ([ADR 0020](../../08-adr/0020-windows-capture-stt.md)). Dựng `cuelingo-audio.exe` qua `node scripts/sidecar.mjs` (cargo chạy trong thư mục crate để đọc `.cargo/config.toml`).
 
 ```text
 native/windows-audio/
-├── Cargo.toml                           lib `cuelingo_audio` + bin `cuelingo-audio`
+├── Cargo.toml · .cargo/config.toml      lib `cuelingo_audio` + bin `cuelingo-audio`; crt-static trên MSVC
 ├── src/
 │   ├── main.rs                          tham số, one-shot (--permissions, --check-system-audio), --file
 │   ├── session.rs · pipeline.rs         phiên họp, vòng lặp stdin, mỗi luồng một hàng đợi nhận dạng
@@ -85,9 +85,9 @@ native/windows-audio/
 │   ├── resample.rs · wav.rs             thiết bị → 16 kHz mono Int16; đọc WAV cho --file
 │   ├── capture.rs                       trait Capture (WASAPI thật ở bước 7), bản Unavailable
 │   ├── protocol.rs · permissions.rs · memory.rs
-│   └── stt/                             Transcriber (trait ModelProvider/Recognizer, thuật ngữ, thống kê)
-├── tests/                               fixtures.rs (vector chung), session.rs (phiên giả)
+│   └── stt/                             Transcriber, tải và kiểm model (models.rs), sherpa-onnx (sherpa.rs); xem local-stt
+├── tests/                               fixtures.rs (vector chung), session.rs (phiên giả), models.rs (tải model qua máy chủ cục bộ)
 native/fixtures/*.json                   vector dùng chung với `swift test`
 ```
 
-Chạy trên Mac: `cargo test`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt --check`.
+Chạy trên Mac: `cargo test` (bản có STT tải thư viện native một lần khi build; `--no-default-features` bỏ qua), `cargo clippy --all-targets -- -D warnings`, `cargo fmt --check`.
