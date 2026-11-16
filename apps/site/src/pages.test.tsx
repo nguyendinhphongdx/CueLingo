@@ -9,7 +9,7 @@ const paths = sitePaths('/cuelingo-releases/');
 
 const home = () => renderToStaticMarkup(<SiteHome paths={paths} />);
 const download = (url: string | null = RELEASE_URL) =>
-  renderToStaticMarkup(<SiteDownload paths={paths} downloadUrl={url} />);
+  renderToStaticMarkup(<SiteDownload paths={paths} downloads={{ macos: url, windows: null }} />);
 
 describe('site pages', () => {
   // AC1: the intro opens without sign-in or API, and leads to the download.

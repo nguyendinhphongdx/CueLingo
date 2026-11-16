@@ -1,0 +1,4 @@
+# sherpa-onnx ships its Windows static libraries built with the static C runtime (/MT); Rust must match or the
+# link fails (LNK2038). As a bonus the sidecar needs no Visual C++ redistributable on the user's machine.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

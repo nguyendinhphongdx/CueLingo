@@ -7,7 +7,7 @@ Lớp Rust của app: cửa sổ, phím tắt toàn cục, cầu nối native �
 ## Trách nhiệm
 
 - Quản lý cửa sổ: overlay luôn nổi, không hiện khi chia sẻ màn hình (NSWindow sharingType = none), menu bar
-- Phím tắt toàn cục: ⌘⇧L (bắt đầu/dừng), ⌘⇧W (recap), ⌘⇧S (nói giúp tôi)
+- Phím tắt toàn cục: ⌘⇧L (bắt đầu/dừng), ⌘⇧W (recap), ⌘⇧S (nói giúp tôi); trên Windows là Ctrl+Shift+L/W/S, nhãn trong UI lấy từ `shortcutLabel` ở `src/lib/platform.ts`
 - Nhận sự kiện từ `audio-capture`/`local-stt` và đẩy sang webview qua Tauri events
 - Lưu token trong Keychain
 - Auto-update, ký và notarize
@@ -34,6 +34,10 @@ Rust chỉ kiểm và chuyển tiếp, không có logic sản phẩm. `clean_voc
 ## Dữ liệu & sự kiện
 
 - (chưa có)
+
+## Sidecar trên Windows
+
+`audio_bridge.rs` chạy `cuelingo-audio.exe` y như bản macOS: không đổi lệnh, sự kiện hay payload nào qua ranh giới. Sự kiện `model` (`downloading` kèm `progress`, `ready`, `error`), `stats` và `level` có cùng dạng với bản Swift. Biến môi trường sidecar Windows đọc thêm: `CUELINGO_MODELS_DIR` (thư mục model, mặc định `%LOCALAPPDATA%\vn.cmcai.cuelingo\models`) và `CUELINGO_STT_THREADS`; `CUELINGO_DETECT` bị bỏ qua. Dòng `{"type":"bench",...}` chỉ có khi chạy tay `--file … --bench`; `route_line` không nhận nó trong cuộc họp. Chi tiết: [local-stt](./local-stt.md#bản-windows-parakeet-qua-sherpa-onnx).
 
 ## Sự kiện `audio-utterance`
 

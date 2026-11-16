@@ -1,7 +1,9 @@
 name: Release
 
-# Beta channel (ADR 0017): a `v*` tag builds an ad-hoc-signed Apple Silicon .dmg, signs the update
-# bundle with the Tauri updater key, and publishes both as a release of this (public) repository.
+# Beta channel (ADR 0017, ADR 0021): a `v*` tag builds an ad-hoc-signed Apple Silicon .dmg and a Windows x64
+# Inno Setup installer, signs the update packages with the Tauri updater key, and publishes all of them with one
+# `latest.json` as a release of this (public) repository. If either platform fails, nothing is published.
+# The Windows download is a beta: the release carries it, but no public page links to it yet.
 on:
   push:
     tags: ['v*']
@@ -91,10 +93,118 @@ jobs:
           path: apps/desktop/release-files/
           if-no-files-found: error
 
+  # Windows x64 (windows-desktop dossier, ADR 0021): the Inno Setup installer, not signed with a code
+  # certificate (beta), plus its updater signature. The installer is also the update package: the updater
+  # plugin runs it with the arguments below, and the .iss reopens the app when it sees /CUELINGORELAUNCH.
+  windows:
+    # windows-2025 ships Inno Setup 6.7.1, the version installer/windows/Vietnamese.isl was taken from.
+    runs-on: windows-2025
+    env:
+      VERSION: ${{ github.ref_name }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: apps/desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: The tag must match the app version
+        run: |
+          app_version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          if [ "v${app_version}" != "${VERSION}" ]; then
+            echo "tag ${VERSION} does not match tauri.conf.json version ${app_version}" >&2
+            exit 1
+          fi
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      # Same pinned static libraries as desktop-windows.yml (see there); bump both together with `sherpa-onnx`
+      # in native/windows-audio/Cargo.toml.
+      - name: Cache the sherpa-onnx static libraries
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/sherpa-onnx
+          key: sherpa-onnx-2.0.1-win-x64-static-MT-23e7b986
+      - name: Fetch the pinned sherpa-onnx static libraries
+        env:
+          SHERPA_ARCHIVE: sherpa-onnx-v2.0.1-win-x64-static-MT-Release-lib.tar.bz2
+          SHERPA_SHA256: 23e7b986b197eda0bbc47ff3d7d5c87afd6ef2b9077214ba26b0f1ec52ef0e66
+        run: |
+          dir="$RUNNER_TEMP/sherpa-onnx"
+          mkdir -p "$dir"
+          if [ ! -f "$dir/$SHERPA_ARCHIVE" ]; then
+            curl -fsSL --retry 3 -o "$dir/$SHERPA_ARCHIVE" \
+              "https://github.com/k2-fsa/sherpa-onnx/releases/download/v2.0.1/$SHERPA_ARCHIVE"
+          fi
+          echo "$SHERPA_SHA256  $dir/$SHERPA_ARCHIVE" | sha256sum -c -
+          echo "SHERPA_ONNX_ARCHIVE_DIR=$dir" >> "$GITHUB_ENV"
+
+      - name: Build the audio sidecar
+        run: node scripts/sidecar.mjs --rebuild
+
+      - name: Build the app
+        env:
+          # Baked into the web bundle: the production API, never a dev token.
+          VITE_API_URL: ${{ vars.CUELINGO_API_URL }}
+          VITE_WEB_URL: ${{ vars.CUELINGO_WEB_URL }}
+          VITE_REALTIME_TOKEN: ''
+          # Turns the updater plugin on (src-tauri/src/lib.rs); a plain build has none.
+          CUELINGO_UPDATER: '1'
+          UPDATER_PUBKEY: ${{ vars.CUELINGO_UPDATER_PUBKEY }}
+          RELEASES_REPO: ${{ github.repository }}
+        run: |
+          test -n "$VITE_API_URL" && test -n "$UPDATER_PUBKEY"
+          # A file, not an inline string: a JSON argument loses its quotes on the way through pnpm on Windows.
+          # The Inno installer is the update package; the plugin appends /UPDATE, which Inno ignores
+          # (windows-desktop spike S3 confirms this on a real machine).
+          node -e '
+            require("node:fs").writeFileSync("release.conf.json", JSON.stringify({
+              plugins: { updater: {
+                pubkey: process.env.UPDATER_PUBKEY,
+                endpoints: [`https://github.com/${process.env.RELEASES_REPO}/releases/latest/download/latest.json`],
+                windows: {
+                  installMode: "basicUi",
+                  installerArgs: ["/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS", "/CUELINGORELAUNCH"],
+                },
+              } },
+            }))'
+          pnpm tauri build --no-bundle --config release.conf.json
+
+      - name: The bundle must not carry a development token
+        run: |
+          if grep -rIl "dev-token\|VITE_REALTIME_TOKEN=dev" dist; then
+            echo "development token found in the built frontend" >&2
+            exit 1
+          fi
+
+      - name: Pack the installer
+        run: node scripts/windows-installer.mjs --out release-files
+
+      - name: Sign the installer as the update package
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          pnpm tauri signer sign release-files/CueLingo-Windows-x64-setup.exe
+          test -s release-files/CueLingo-Windows-x64-setup.exe.sig
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: apps/desktop/release-files/
+          if-no-files-found: error
+
   # Publishes only after every platform built (spec AC2). The release starts as a draft and is made
   # public once all files are attached, so `releases/latest/download/...` never points at a partial one.
   publish:
-    needs: [macos]
+    needs: [macos, windows]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -111,6 +221,13 @@ jobs:
           path: release-files
           merge-multiple: true
 
+      - name: Every platform must have delivered its files
+        run: |
+          for file in CueLingo-macOS-arm64.dmg CueLingo.app.tar.gz CueLingo.app.tar.gz.sig \
+            CueLingo-Windows-x64-setup.exe CueLingo-Windows-x64-setup.exe.sig; do
+            test -s "release-files/$file" || { echo "missing release file: $file" >&2; exit 1; }
+          done
+
       - name: Write the updater manifest
         env:
           RELEASES_REPO: ${{ github.repository }}
@@ -118,6 +235,7 @@ jobs:
           base="https://github.com/${RELEASES_REPO}/releases/download/${VERSION}"
           node apps/desktop/scripts/updater-manifest.mjs "${VERSION#v}" \
             darwin-aarch64 release-files/CueLingo.app.tar.gz "$base/CueLingo.app.tar.gz" \
+            windows-x86_64 release-files/CueLingo-Windows-x64-setup.exe "$base/CueLingo-Windows-x64-setup.exe" \
             > release-files/latest.json
 
       - name: Publish to the releases repository

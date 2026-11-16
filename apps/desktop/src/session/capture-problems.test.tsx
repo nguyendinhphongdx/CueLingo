@@ -73,6 +73,20 @@ describe('capture problems', () => {
     expect(both.message).toBe('Không thu được âm thanh nào. Hãy cấp quyền rồi bắt đầu lại.');
   });
 
+  it('on Windows points at the Microsoft pages and never asks for a system-audio permission', () => {
+    const none = { micFailed: false, systemFailed: false };
+    expect(describeCaptureProblems(none, 'windows')).toBeNull();
+    const system = describeCaptureProblems({ micFailed: false, systemFailed: true }, 'windows')!;
+    expect(system.pane).toBe('ms-settings:sound');
+    expect(system.message).toContain('không đòi cấp quyền');
+    expect(system.message).not.toContain('macOS');
+    const mic = describeCaptureProblems({ micFailed: true, systemFailed: false }, 'windows')!;
+    expect(mic.pane).toBe('ms-settings:privacy-microphone');
+    expect(mic.message).toContain('Cài đặt Windows');
+    const both = describeCaptureProblems({ micFailed: true, systemFailed: true }, 'windows')!;
+    expect(both.pane).toBe('ms-settings:privacy-microphone');
+  });
+
   it('shows a fault only for a reported failure, never for silence', () => {
     expect(meterNote(true, true)).toBe('failed');
     expect(meterNote(true, false)).toBe('failed');

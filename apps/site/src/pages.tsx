@@ -1,3 +1,4 @@
+import type { DownloadLinks } from '@cuelingo/ui/components/landing/detect-os';
 import type { LandingPaths } from '@cuelingo/ui/components/landing/landing-link';
 import { DownloadPage } from '@cuelingo/ui/components/landing/download-page';
 import { LandingView } from '@cuelingo/ui/components/landing/landing-view';
@@ -9,24 +10,24 @@ function Shell({ children }: { children: ReactNode }) {
   );
 }
 
-export function SiteHome({ paths }: { paths: LandingPaths }) {
+export function SiteHome({ paths, downloads }: { paths: LandingPaths; downloads?: DownloadLinks }) {
   return (
     <Shell>
-      <LandingView paths={paths} />
+      <LandingView paths={paths} downloads={downloads} />
     </Shell>
   );
 }
 
 export function SiteDownload({
   paths,
-  downloadUrl,
+  downloads,
 }: {
   paths: LandingPaths;
-  downloadUrl: string | null;
+  downloads: DownloadLinks;
 }) {
   return (
     <Shell>
-      <DownloadPage downloadUrl={downloadUrl} paths={paths} />
+      <DownloadPage downloads={downloads} paths={paths} />
     </Shell>
   );
 }

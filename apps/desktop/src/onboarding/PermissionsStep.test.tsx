@@ -4,6 +4,7 @@ import {
   describePermission,
   describeSystemAudioCheck,
   PermissionsStatusView,
+  systemAudioIdleText,
 } from './PermissionsStep';
 
 describe('PermissionsStep', () => {
@@ -12,6 +13,19 @@ describe('PermissionsStep', () => {
     expect(describePermission('microphone', 'undetermined')).toContain('macOS sẽ hỏi');
     expect(describePermission('systemAudio', 'granted')).toContain('đã được cấp quyền');
     expect(describePermission('systemAudio', 'unknown')).toContain('Chưa kiểm tra được');
+  });
+
+  it('says Windows needs no system-audio permission and sends the microphone to Windows settings', () => {
+    for (const state of ['granted', 'denied', 'undetermined', 'unknown'] as const) {
+      expect(describePermission('systemAudio', state, 'windows')).toBe('Không cần cấp quyền.');
+    }
+    const denied = describePermission('microphone', 'denied', 'windows');
+    expect(denied).toContain('Cài đặt Windows');
+    expect(denied).not.toContain('macOS');
+    expect(describePermission('microphone', 'undetermined', 'windows')).not.toContain('macOS');
+    expect(describeSystemAudioCheck('silent', 'windows')).toContain('thiết bị phát âm thanh');
+    expect(systemAudioIdleText('windows')).toContain('Windows');
+    expect(systemAudioIdleText('macos')).toContain('macOS');
   });
 
   it('lists both permissions with their own guidance', () => {

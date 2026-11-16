@@ -14,6 +14,7 @@ import {
   type PermissionsStatus,
   type SystemAudioCheck,
 } from '../lib/native';
+import { currentOs, type DesktopOs } from '../lib/platform';
 
 type PermissionName = keyof PermissionsStatus;
 type PermissionState = PermissionsStatus[PermissionName];
@@ -23,15 +24,25 @@ const permissionLabels: Record<PermissionName, string> = {
   systemAudio: 'Âm thanh hệ thống',
 };
 
-export function describePermission(name: PermissionName, state: PermissionState) {
+export function describePermission(
+  name: PermissionName,
+  state: PermissionState,
+  os: DesktopOs = currentOs(),
+) {
   const label = permissionLabels[name];
 
+  // Windows has no permission for capturing what the speakers play, so there is nothing to grant.
+  if (os === 'windows' && name === 'systemAudio') return 'Không cần cấp quyền.';
   if (state === 'granted') return `${label} đã được cấp quyền.`;
   if (state === 'denied') {
-    return `${label} đang bị từ chối. Mở Cài đặt hệ thống > Quyền riêng tư & Bảo mật để cấp quyền cho CueLingo.`;
+    return os === 'windows'
+      ? `${label} đang bị từ chối. Mở Cài đặt Windows > Quyền riêng tư > Micrô để bật cho CueLingo.`
+      : `${label} đang bị từ chối. Mở Cài đặt hệ thống > Quyền riêng tư & Bảo mật để cấp quyền cho CueLingo.`;
   }
   if (state === 'undetermined') {
-    return `Chưa xác định quyền ${label.toLocaleLowerCase('vi')}. macOS sẽ hỏi khi bạn bấm Bắt đầu lần đầu.`;
+    return os === 'windows'
+      ? `Chưa xác định quyền ${label.toLocaleLowerCase('vi')}. Hãy bấm Bắt đầu để thử.`
+      : `Chưa xác định quyền ${label.toLocaleLowerCase('vi')}. macOS sẽ hỏi khi bạn bấm Bắt đầu lần đầu.`;
   }
   return `Chưa kiểm tra được quyền ${label.toLocaleLowerCase('vi')}.`;
 }
@@ -44,7 +55,17 @@ const checkText: Record<SystemAudioCheck, string> = {
   unknown: 'Chưa kiểm tra được.',
 };
 
-export const describeSystemAudioCheck = (result: SystemAudioCheck) => checkText[result];
+const windowsSilentText =
+  'Không nghe thấy âm thanh. Hãy kiểm tra thiết bị phát âm thanh mặc định của Windows, và loa không bị tắt tiếng.';
+
+export const describeSystemAudioCheck = (result: SystemAudioCheck, os: DesktopOs = currentOs()) =>
+  os === 'windows' && result === 'silent' ? windowsSilentText : checkText[result];
+
+/** What the person is told before testing the system audio. */
+export const systemAudioIdleText = (os: DesktopOs = currentOs()) =>
+  os === 'windows'
+    ? 'Windows không đòi quyền riêng cho phần này. CueLingo thử bằng một tiếng chuông ngắn.'
+    : 'macOS không cho biết trước quyền này, nên CueLingo thử bằng một tiếng chuông ngắn.';
 
 function StateIcon({ state }: { state: PermissionState | SystemAudioCheck | 'checking' }) {
   if (state === 'checking') {
@@ -102,6 +123,8 @@ export function PermissionsStatusView({ status }: { status: PermissionsStatus })
 }
 
 export function PermissionsStep() {
+  const os = currentOs();
+  const settingsLabel = os === 'windows' ? 'Mở Cài đặt Windows' : 'Mở Cài đặt hệ thống';
   const permissions = useQuery({
     queryKey: ['desktop-permissions'],
     queryFn: native.permissionsStatus,
@@ -113,7 +136,11 @@ export function PermissionsStep() {
     <Card>
       <CardHeader>
         <CardTitle>Quyền truy cập</CardTitle>
-        <CardDescription>CueLingo cần hai quyền này để nghe cuộc họp.</CardDescription>
+        <CardDescription>
+          {os === 'windows'
+            ? 'CueLingo cần quyền Micrô để nghe giọng của bạn. Âm thanh hệ thống không cần cấp quyền.'
+            : 'CueLingo cần hai quyền này để nghe cuộc họp.'}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {permissions.isPending ? (
@@ -135,7 +162,7 @@ export function PermissionsStep() {
                   className="cursor-pointer"
                   onClick={() => void native.openUrl(PRIVACY_PANES.microphone)}
                 >
-                  Mở Cài đặt hệ thống
+                  {settingsLabel}
                 </Button>
               ) : null}
             </Row>
@@ -146,8 +173,8 @@ export function PermissionsStep() {
                 audio.isPending
                   ? 'Đang phát một tiếng chuông ngắn để thử…'
                   : audio.data
-                    ? describeSystemAudioCheck(audio.data)
-                    : 'macOS không cho biết trước quyền này, nên CueLingo thử bằng một tiếng chuông ngắn.'
+                    ? describeSystemAudioCheck(audio.data, os)
+                    : systemAudioIdleText(os)
               }
             >
               <Button
@@ -164,7 +191,7 @@ export function PermissionsStep() {
                   className="cursor-pointer"
                   onClick={() => void native.openUrl(PRIVACY_PANES.systemAudio)}
                 >
-                  Mở Cài đặt hệ thống
+                  {os === 'windows' ? 'Mở cài đặt Âm thanh' : settingsLabel}
                 </Button>
               ) : null}
             </Row>

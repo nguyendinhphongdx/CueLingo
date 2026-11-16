@@ -1,3 +1,4 @@
+import { deviceLabel } from '../lib/platform';
 import { serverConfig } from '../server';
 import { DeviceExchangeResponseSchema } from '@cuelingo/shared';
 
@@ -8,7 +9,7 @@ export async function exchangeCode(code: string, fetcher: typeof fetch = fetch):
   const response = await fetcher(`${apiBase()}/v1/device/exchange`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, label: 'CueLingo cho macOS' }),
+    body: JSON.stringify({ code, label: deviceLabel() }),
   });
   if (!response.ok) throw new Error(`Sign-in failed with status ${response.status}`);
   return DeviceExchangeResponseSchema.parse(await response.json()).token;

@@ -220,3 +220,10 @@ Máy: **Win** = cần máy Windows thật (hoặc VM có âm thanh); **Mac/CI** 
 3. Nếu S2 cho thấy Parakeet trên CPU quá chậm: tiếng Anh qua đám mây (≈ 0,1–0,2 USD/giờ họp, cần đồng ý, chỉ caption khi xong câu, cần ADR + migration + sửa API), model nhỏ hơn, hay lùi Windows?
 4. Beta chưa ký mã (SmartScreen cảnh báo; Smart App Control chặn hẳn trên một số máy Win11 mới), và ngân sách chứng chỉ OV (≈ 200–400 USD/năm) trước khi mở công khai?
 5. Chỉ x64, và làm bước 2 (tách phát hành macOS) trước?
+
+## 10. Checklist đợt B (trên PC Windows thật)
+
+- [ ] Bước 7 thu âm WASAPI và spike S1; S3 + bước 11 (updater với Inno); S4 (overlay); bước 14 (kiểm tay theo AC).
+- [ ] Đo lại S2 trên PC thật (đợt A chỉ đo trên runner CI, CPU máy chủ).
+- [ ] **Tag thử trước tag thật:** chạy `release.yml` bằng một tag thử trên fork hoặc repo phụ trước tag phát hành đầu tiên. Từ đợt A job `publish` cần cả `macos` lẫn `windows`, nên một job Windows hỏng sẽ chặn luôn bản macOS (R12); phải biết job Windows xanh trên đường phát hành thật trước khi dựa vào nó.
+- [ ] **Cập nhật thật X → X+1 trên PC** (cài X, phát hành X+1, bấm cập nhật, app mở lại đúng bản mới, gói sai chữ ký bị từ chối) **trước khi mở nút tải Windows công khai** (đặt `NEXT_PUBLIC_DOWNLOAD_URL_WINDOWS` và `VITE_DOWNLOAD_URL_WINDOWS`).

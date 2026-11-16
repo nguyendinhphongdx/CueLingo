@@ -20,6 +20,20 @@ describe('UpdateBanner', () => {
     expect(markup).not.toContain('disabled=""');
   });
 
+  it('does not mention macOS permissions on Windows', () => {
+    const markup = renderToStaticMarkup(
+      <UpdateBannerView
+        state={{ phase: 'available', version: '0.2.0', notes: null }}
+        locked={false}
+        onInstall={noop}
+        onDismiss={noop}
+        os="windows"
+      />,
+    );
+    expect(markup).toContain('Windows có thể hỏi lại quyền micro');
+    expect(markup).not.toContain('macOS');
+  });
+
   it('locks the button during a meeting', () => {
     const markup = view({ phase: 'available', version: '0.2.0', notes: null }, true);
     expect(markup).toContain('disabled=""');

@@ -1,0 +1,89 @@
+{
+  "about": "Shared by VocabularyCorrectorTests (Swift) and tests/fixtures.rs (Rust): correct(input) with terms must give expected.",
+  "cases": [
+    {
+      "name": "acronym with a stray trailing letter",
+      "terms": ["SLA"],
+      "input": "I think the slaw is too tight.",
+      "expected": "I think the SLA is too tight."
+    },
+    {
+      "name": "acronym before punctuation keeps it",
+      "terms": ["SLA"],
+      "input": "Is the slaw? yes",
+      "expected": "Is the SLA? yes"
+    },
+    {
+      "name": "possessive of the acronym",
+      "terms": ["SLA"],
+      "input": "the sla's terms",
+      "expected": "the SLA terms"
+    },
+    {
+      "name": "restores casing",
+      "terms": ["SLA"],
+      "input": "the sla is tight",
+      "expected": "the SLA is tight"
+    },
+    {
+      "name": "leaves a longer word alone",
+      "terms": ["SLA"],
+      "input": "The slate is on the table",
+      "expected": "The slate is on the table"
+    },
+    {
+      "name": "leaves a different word alone",
+      "terms": ["SLA"],
+      "input": "That is a law",
+      "expected": "That is a law"
+    },
+    {
+      "name": "near miss of a longer term",
+      "terms": ["Kubernetes"],
+      "input": "deploy to kubernetis today",
+      "expected": "deploy to Kubernetes today"
+    },
+    {
+      "name": "two edits away is not a match",
+      "terms": ["Kubernetes"],
+      "input": "deploy to kubernetus2 today",
+      "expected": "deploy to kubernetus2 today"
+    },
+    {
+      "name": "short terms never fuzzy match",
+      "terms": ["Jira"],
+      "input": "open jura now",
+      "expected": "open jura now"
+    },
+    {
+      "name": "no terms is the identity",
+      "terms": [],
+      "input": "anything goes",
+      "expected": "anything goes"
+    },
+    {
+      "name": "terms under 3 characters and multi-word terms are ignored",
+      "terms": ["AI", "Big Query"],
+      "input": "ai and big query",
+      "expected": "ai and big query"
+    },
+    {
+      "name": "duplicate terms differing in case count once",
+      "terms": ["SLA", "sla"],
+      "input": "the slaw",
+      "expected": "the SLA"
+    },
+    {
+      "name": "two terms close to one word leave it alone",
+      "terms": ["SLA", "SLAS"],
+      "input": "the slas",
+      "expected": "the slas"
+    },
+    {
+      "name": "spaces are kept as they are",
+      "terms": ["SLA"],
+      "input": "a  slaw  b",
+      "expected": "a  SLA  b"
+    }
+  ]
+}

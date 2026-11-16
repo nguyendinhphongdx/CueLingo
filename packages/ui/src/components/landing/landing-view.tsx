@@ -1,3 +1,13 @@
+'use client';
+
+import {
+  downloadView,
+  NO_DOWNLOADS,
+  useDetectedOs,
+  type DownloadLinks,
+  type DownloadOs,
+  type DownloadView,
+} from './detect-os';
 import {
   DEFAULT_LANDING_PATHS,
   PlainLink,
@@ -42,44 +52,77 @@ const stages: readonly Stage[] = [
   },
 ];
 
-const faq = [
-  {
-    question: 'Dữ liệu cuộc họp của tôi đi đâu?',
-    answer:
-      'Với tiếng Anh, nhận dạng giọng nói chạy ngay trên máy Mac và chỉ văn bản được gửi đi để dịch. Tiếng Nhật, Hàn, Trung và Việt được nhận dạng trên đám mây, chỉ khi bạn đồng ý. Bạn có thể xoá dữ liệu của mình bất cứ lúc nào.',
-  },
-  {
-    question: 'CueLingo hỗ trợ những ngôn ngữ nào?',
-    answer:
-      'Caption kèm bản dịch tiếng Việt cho cuộc họp tiếng Anh, Nhật, Hàn và Trung. Với tiếng Việt, CueLingo ghi lại lời nói thành văn bản.',
-  },
-  {
-    question: 'Máy của tôi cần gì?',
-    answer:
-      'macOS 14.2 trở lên, trên máy Mac chip Apple Silicon (M1 trở lên). Chưa có bản cho Mac chip Intel. CueLingo cần quyền micro và ghi âm hệ thống để tạo caption cho cả giọng của bạn lẫn người trong cuộc họp.',
-  },
-  {
-    question: 'Vì sao macOS chặn lần mở đầu tiên?',
-    answer:
-      'Bản beta chưa được Apple công chứng, nên macOS hỏi lại trước khi mở. Trang tải về có từng bước để cho phép; chỉ cần làm một lần.',
-  },
-  {
-    question: 'Cập nhật bản mới như thế nào?',
-    answer:
-      'App tự kiểm tra bản mới khi mở và định kỳ trong lúc chạy. Khi có bản mới, app hỏi bạn trước và chỉ cài khi bạn bấm Cập nhật; đang họp thì app chờ đến khi họp xong.',
-  },
-];
+/** The questions; the Windows ones appear only once a Windows download is offered. */
+function faqItems(hasWindows: boolean) {
+  return [
+    {
+      question: 'Dữ liệu cuộc họp của tôi đi đâu?',
+      answer:
+        'Với tiếng Anh, nhận dạng giọng nói chạy ngay trên máy của bạn và chỉ văn bản được gửi đi để dịch. Tiếng Nhật, Hàn, Trung và Việt được nhận dạng trên đám mây, chỉ khi bạn đồng ý. Bạn có thể xoá dữ liệu của mình bất cứ lúc nào.',
+    },
+    {
+      question: 'CueLingo hỗ trợ những ngôn ngữ nào?',
+      answer:
+        'Caption kèm bản dịch tiếng Việt cho cuộc họp tiếng Anh, Nhật, Hàn và Trung. Với tiếng Việt, CueLingo ghi lại lời nói thành văn bản.',
+    },
+    {
+      question: 'Máy của tôi cần gì?',
+      answer: `macOS 14.2 trở lên, trên máy Mac chip Apple Silicon (M1 trở lên). Chưa có bản cho Mac chip Intel. CueLingo cần quyền micro và ghi âm hệ thống để tạo caption cho cả giọng của bạn lẫn người trong cuộc họp.${
+        hasWindows
+          ? ' Trên Windows: Windows 10 (22H2) hoặc Windows 11, bản 64-bit (x64), chưa có bản cho ARM64; chỉ cần quyền micro.'
+          : ''
+      }`,
+    },
+    {
+      question: 'Vì sao macOS chặn lần mở đầu tiên?',
+      answer:
+        'Bản beta chưa được Apple công chứng, nên macOS hỏi lại trước khi mở. Trang tải về có từng bước để cho phép; chỉ cần làm một lần.',
+    },
+    ...(hasWindows
+      ? [
+          {
+            question: 'Vì sao Windows cảnh báo khi cài?',
+            answer:
+              'Bản beta chưa được ký số, nên SmartScreen hiện "Windows protected your PC". Bấm More info rồi Run anyway; trang tải về có từng bước.',
+          },
+        ]
+      : []),
+    {
+      question: 'Cập nhật bản mới như thế nào?',
+      answer:
+        'App tự kiểm tra bản mới khi mở và định kỳ trong lúc chạy. Khi có bản mới, app hỏi bạn trước và chỉ cài khi bạn bấm Cập nhật; đang họp thì app chờ đến khi họp xong.',
+    },
+  ];
+}
+
+/** The label of the main button: it always leads to the download page, which says what is really there. */
+function heroActionLabel(view: DownloadView): string {
+  if (view === 'windows') return 'Tải cho Windows';
+  if (view === 'windows-soon') return 'Windows sắp có';
+  if (view === 'both') return 'Tải CueLingo';
+  return 'Tải cho macOS';
+}
 
 const boardLangs = ['Anh', 'Nhật', 'Hàn', 'Trung'];
 
 /** The public landing page. Pure presentation: the host app supplies its router link and where links point. */
 export function LandingView({
+  downloads = NO_DOWNLOADS,
   link: Link = PlainLink,
   paths = DEFAULT_LANDING_PATHS,
+  os,
 }: {
+  /** Only used to word the page: Windows is mentioned when a Windows download is offered. */
+  downloads?: DownloadLinks;
   link?: LandingLink;
   paths?: LandingPaths;
+  /** Forces the visitor's system (previews and tests); left out, the browser is asked after mount. */
+  os?: DownloadOs | null;
 }) {
+  const detected = useDetectedOs();
+  const view = downloadView(os === undefined ? detected : os, downloads);
+  const hasWindows = downloads.windows !== null;
+  const faq = faqItems(hasWindows);
   return (
     <main className={styles.page}>
       <PublicHeader link={Link} paths={paths} />
@@ -95,7 +138,7 @@ export function LandingView({
           </p>
           <div className={`${styles.heroActions} ${styles.reveal} ${styles.reveal3}`}>
             <Link href={paths.download} className={styles.primaryAction}>
-              Tải cho macOS
+              {heroActionLabel(view)}
             </Link>
             {paths.login ? (
               <Link className={styles.textAction} href={paths.login}>
@@ -205,8 +248,8 @@ export function LandingView({
             <h2 id="privacy-title">Tiếng Anh ở lại trên máy</h2>
             <div className={styles.privacyText}>
               <p>
-                Với tiếng Anh, nhận dạng giọng nói chạy ngay trên máy Mac và chỉ văn bản được gửi đi
-                để dịch.
+                Với tiếng Anh, nhận dạng giọng nói chạy ngay trên máy của bạn và chỉ văn bản được
+                gửi đi để dịch.
               </p>
               <p>
                 Tiếng Nhật, Hàn, Trung và Việt được nhận dạng trên đám mây, chỉ khi bạn đồng ý. Bạn
@@ -219,7 +262,7 @@ export function LandingView({
               <span>Âm thanh cuộc họp</span>
             </li>
             <li>
-              <strong>Máy Mac của bạn</strong>
+              <strong>Máy của bạn</strong>
               <span>nhận dạng giọng nói tiếng Anh</span>
             </li>
             <li>
@@ -251,7 +294,7 @@ export function LandingView({
           <div className={styles.closingCopy}>
             <h2 id="closing-title">Học từ chính cuộc họp.</h2>
             <p>
-              Cài CueLingo trên macOS để có hỗ trợ đúng lúc, rồi cần ít hỗ trợ hơn vào ngày mai.
+              {`Cài CueLingo trên ${hasWindows ? 'macOS hoặc Windows' : 'macOS'} để có hỗ trợ đúng lúc, rồi cần ít hỗ trợ hơn vào ngày mai.`}
             </p>
             <Link href={paths.download} className={styles.primaryAction}>
               Xem cách cài đặt
@@ -277,7 +320,7 @@ export function LandingView({
               <Link href={paths.download}>Tải ứng dụng</Link>
               {paths.login ? <Link href={paths.login}>Đăng nhập</Link> : null}
             </nav>
-            <p>CueLingo cho macOS</p>
+            <p>{hasWindows ? 'CueLingo cho macOS và Windows' : 'CueLingo cho macOS'}</p>
           </div>
         </div>
       </footer>

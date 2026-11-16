@@ -76,7 +76,9 @@ describe('cloud language UI', () => {
   it('has no overlay button and no demo button, only the hint', async () => {
     const { readFile } = await import('node:fs/promises');
     const source = await readFile(new URL('./SessionPanel.tsx', import.meta.url), 'utf8');
-    expect(source).toContain('Overlay tự hiện khi bắt đầu và ẩn khi dừng. ⌘⇧L để ẩn/hiện tay.');
+    expect(source).toContain(
+      "Overlay tự hiện khi bắt đầu và ẩn khi dừng. {shortcutLabel('L')} để ẩn/hiện tay.",
+    );
     expect(source).not.toContain('IconButton');
     expect(source).not.toContain('toggleOverlay');
     expect(source).not.toContain('Hiện/ẩn overlay');

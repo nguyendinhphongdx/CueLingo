@@ -1,4 +1,5 @@
 import { PRIVACY_PANES, type PermissionsStatus } from '../lib/native';
+import { currentOs, privacyPanes, type DesktopOs } from '../lib/platform';
 
 export type CaptureStream = 'mic' | 'system';
 
@@ -26,10 +27,11 @@ export interface CaptureBanner {
 }
 
 /** The warning for what failed to start, or null when nothing did. */
-export function describeCaptureProblems({
-  micFailed,
-  systemFailed,
-}: CaptureFailures): CaptureBanner | null {
+export function describeCaptureProblems(
+  { micFailed, systemFailed }: CaptureFailures,
+  os: DesktopOs = currentOs(),
+): CaptureBanner | null {
+  if (os === 'windows') return describeWindowsProblems({ micFailed, systemFailed });
   if (micFailed && systemFailed) {
     return {
       message: 'Không thu được âm thanh nào. Hãy cấp quyền rồi bắt đầu lại.',
@@ -56,12 +58,45 @@ export function describeCaptureProblems({
   return null;
 }
 
+/** Windows has no "record system audio" permission: the system stream fails for a device reason, so the page is Sound. */
+function describeWindowsProblems({
+  micFailed,
+  systemFailed,
+}: CaptureFailures): CaptureBanner | null {
+  const panes = privacyPanes('windows');
+  if (micFailed && systemFailed) {
+    return {
+      message:
+        'Không thu được âm thanh nào. Hãy bật quyền Micro cho CueLingo trong Cài đặt Windows, kiểm tra thiết bị phát âm thanh mặc định rồi bắt đầu lại.',
+      buttonLabel: MIC_BLOCKED_BUTTON,
+      pane: panes.microphone,
+    };
+  }
+  if (systemFailed) {
+    return {
+      message:
+        'Không thu được âm thanh hệ thống (tiếng của người trong cuộc họp). Windows không đòi cấp quyền cho phần này: hãy kiểm tra thiết bị phát âm thanh mặc định rồi dừng và bắt đầu lại.',
+      buttonLabel: 'Mở cài đặt Âm thanh',
+      pane: panes.systemAudio,
+    };
+  }
+  if (micFailed) {
+    return {
+      message:
+        'Không mở được micro (giọng của bạn). Hãy bật quyền Micro cho CueLingo trong Cài đặt Windows rồi dừng và bắt đầu lại.',
+      buttonLabel: MIC_BLOCKED_BUTTON,
+      pane: panes.microphone,
+    };
+  }
+  return null;
+}
+
 /** What a meter says about its stream: a fault only when the sidecar reported one, never from silence. */
 export function meterNote(failed: boolean, silent: boolean): 'failed' | 'silent' | null {
   return failed ? 'failed' : silent ? 'silent' : null;
 }
 
-/** Whether Bắt đầu may go on. Only a denied microphone blocks; any other answer (or a failed read) lets macOS or the sidecar speak. */
+/** Whether Bắt đầu may go on. Only a denied microphone blocks; any other answer (or a failed read) lets the system or the sidecar speak. */
 export async function canStartMeeting(
   read: () => Promise<PermissionsStatus>,
 ): Promise<'ok' | 'mic-denied'> {

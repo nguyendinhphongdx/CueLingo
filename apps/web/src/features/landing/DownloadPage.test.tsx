@@ -4,7 +4,9 @@ import { DownloadPage } from './DownloadPage';
 
 describe('DownloadPage', () => {
   it('shows the system requirement, installation path, and disabled release action', () => {
-    const markup = renderToStaticMarkup(<DownloadPage downloadUrl={null} />);
+    const markup = renderToStaticMarkup(
+      <DownloadPage downloads={{ macos: null, windows: null }} />,
+    );
 
     expect(markup).toContain('macOS 14.2 trở lên');
     expect(markup).toContain('Applications');
@@ -16,7 +18,9 @@ describe('DownloadPage', () => {
 
   it('links to the configured release when a URL is available', () => {
     const markup = renderToStaticMarkup(
-      <DownloadPage downloadUrl="https://downloads.example.com/CueLingo.dmg" />,
+      <DownloadPage
+        downloads={{ macos: 'https://downloads.example.com/CueLingo.dmg', windows: null }}
+      />,
     );
 
     expect(markup).toContain('href="https://downloads.example.com/CueLingo.dmg"');
@@ -25,7 +29,9 @@ describe('DownloadPage', () => {
   });
 
   it('explains how to open an app Apple has not notarized, and what to redo after an update', () => {
-    const markup = renderToStaticMarkup(<DownloadPage downloadUrl={null} />);
+    const markup = renderToStaticMarkup(
+      <DownloadPage downloads={{ macos: null, windows: null }} />,
+    );
 
     expect(markup).toContain('Open Anyway');
     expect(markup).toContain('macOS 14');

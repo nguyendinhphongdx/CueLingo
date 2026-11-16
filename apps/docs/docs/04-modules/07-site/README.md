@@ -7,22 +7,24 @@ Hai trang tĩnh để gửi cho người thử bên ngoài: giới thiệu và h
 ## Trách nhiệm
 
 - Trang chủ (`index.html`) và trang tải (`download/index.html`) dựng từ `@cuelingo/ui`, dùng chung nội dung với `/download` của web.
-- Nút "Tải cho macOS" trỏ tới `CueLingo-macOS-arm64.dmg` mới nhất trong Releases của repo này (`release.yml`).
+- Nút "Tải cho macOS" trỏ tới `CueLingo-macOS-arm64.dmg` mới nhất trong Releases của repo này (`release.yml`). Người dùng Windows chưa có nút (xem Phạm vi MVP).
 - Nói rõ yêu cầu (macOS 14.2+, Apple Silicon), cách mở bản chưa công chứng, cách cấp quyền, và việc app tự kiểm tra bản mới rồi hỏi trước khi cài.
 
 ## Phạm vi MVP
 
-- Hai trang, tiếng Việt. Không tên miền riêng, không Windows/Linux, không đổi cơ chế tự cập nhật.
+- Hai trang, tiếng Việt. Không tên miền riêng, không Linux, không đổi cơ chế tự cập nhật.
+- Windows: trang đã biết chọn nút theo hệ điều hành (`DownloadLinks`), nhưng bản Windows đang là **beta** nên **chưa có nút tải công khai**: `pages.yml` chưa đặt `VITE_DOWNLOAD_URL_WINDOWS`, người dùng Windows thấy "Windows sắp có". Mở nút là thêm đúng một dòng vào `pages.yml` (và một dòng vào `web-cloudflare.yml`), sau khi đợt B của [windows-desktop](../../06-delivery/2026-11-13-windows-desktop/01-specs.md) xong.
 
 ## Interface
 
-| Thứ                     | Nội dung                                                                                                                  |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `VITE_DOWNLOAD_URL`     | Link tải, chỉ nhận `https:`; rỗng hoặc sai thì nút khoá. Chỉ đọc ở `src/config.ts`                                        |
-| `SITE_BASE`             | Đường dẫn gốc khi build, ví dụ `/<repo>/` (mặc định `/`). Workflow tính từ tên repo                                       |
-| `src/config.ts`         | `parseDownloadUrl`, `sitePaths(base)` (trả `LandingPaths`, không có `login`)                                              |
-| `src/pages.tsx`         | `SiteHome`, `SiteDownload`: gắn `LandingView`, `DownloadPage` của `@cuelingo/ui` với `paths` và link                      |
-| `scripts/scan-dist.mjs` | `scanDist(dir, forbidden)`: quét bản build tìm khoá, token, host dev, địa chỉ riêng; in tên tệp và luật, không in giá trị |
+| Thứ                         | Nội dung                                                                                                                                         |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `VITE_DOWNLOAD_URL`         | Link tải macOS, chỉ nhận `https:`; rỗng hoặc sai thì nút khoá. Chỉ đọc ở `src/config.ts`                                                         |
+| `VITE_DOWNLOAD_URL_WINDOWS` | Link tải Windows (`CueLingo-Windows-x64-setup.exe`), cùng luật `https:`. **Không đặt** cho tới khi mở bản Windows; rỗng thì không có nút Windows |
+| `SITE_BASE`                 | Đường dẫn gốc khi build, ví dụ `/<repo>/` (mặc định `/`). Workflow tính từ tên repo                                                              |
+| `src/config.ts`             | `parseDownloadUrl`, `DOWNLOADS` (`{macos, windows}`), `sitePaths(base)` (trả `LandingPaths`, không có `login`)                                   |
+| `src/pages.tsx`             | `SiteHome`, `SiteDownload`: gắn `LandingView`, `DownloadPage` của `@cuelingo/ui` với `paths` và `downloads`                                      |
+| `scripts/scan-dist.mjs`     | `scanDist(dir, forbidden)`: quét bản build tìm khoá, token, host dev, địa chỉ riêng; in tên tệp và luật, không in giá trị                        |
 
 Component dùng chung nhận `link` và `paths` qua props, xem [UI](../05-packages/ui.md#trang-giới-thiệu-và-tải-về).
 

@@ -19,6 +19,7 @@ import { useActivationTelemetry } from '../telemetry';
 import { RecentSessions, SessionPanel } from '../session';
 import { PlacementSection } from '../study';
 import { CalendarHintCard, CalendarSettings } from '../calendar';
+import { hasCalendar } from '../lib/platform';
 import {
   AssistSettings,
   AssistSuggestionBanner,
@@ -143,7 +144,7 @@ function CurrentView({
         <PageHeader title="Phiên họp" />
         <UpdateBanner />
         <AssistSuggestionBanner />
-        <CalendarHintCard />
+        {hasCalendar() ? <CalendarHintCard /> : null}
         <SessionPanel />
         <AssistSettings />
         <RecentSessions />
@@ -171,7 +172,7 @@ function CurrentView({
         <AccountCard onSignOut={onSignOut} />
         <UsagePanel />
         <PermissionsStep />
-        <CalendarSettings />
+        {hasCalendar() ? <CalendarSettings /> : null}
         <PlacementSection />
         <Section title="Hướng dẫn">
           <div className="bg-card flex items-center justify-between gap-4 rounded-xl border px-4 py-3">

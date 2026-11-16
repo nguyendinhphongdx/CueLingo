@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { authClient } from '../../lib/auth-client';
+import { DOWNLOADS } from '../../lib/config';
 import { redirectSignedInVisitor } from './session-redirect';
 
 const PATHS = { home: '/', download: '/download', login: '/login' };
@@ -19,5 +20,5 @@ export function LandingPage() {
 
   if (isPending || session) return <LandingSessionCheck />;
 
-  return <LandingView link={Link} paths={PATHS} />;
+  return <LandingView downloads={DOWNLOADS} link={Link} paths={PATHS} />;
 }

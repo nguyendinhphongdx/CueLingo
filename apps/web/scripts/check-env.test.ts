@@ -48,5 +48,14 @@ describe('checkEnv', () => {
     );
     expect(checkEnv({ ...good, NEXT_PUBLIC_GOOGLE_ENABLED: 'yes' }, prod)).toHaveLength(1);
     expect(checkEnv({ ...good, NEXT_PUBLIC_DOWNLOAD_URL: 'ftp://x' }, prod)).toHaveLength(1);
+    expect(checkEnv({ ...good, NEXT_PUBLIC_DOWNLOAD_URL_WINDOWS: 'ftp://x' }, prod)).toHaveLength(
+      1,
+    );
+    expect(
+      checkEnv(
+        { ...good, NEXT_PUBLIC_DOWNLOAD_URL_WINDOWS: 'https://example.com/setup.exe' },
+        prod,
+      ),
+    ).toEqual([]);
   });
 });

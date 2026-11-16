@@ -10,6 +10,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { IconButton } from '@cuelingo/ui/components/icon-button';
 import { native, type NoticeEvent, type TranscriptEvent } from '../lib/native';
+import { shortcutLabel } from '../lib/platform';
 import { DRAWER_WIDTH, QuickAssistPanel, useQuickAssist } from '../quick-assist';
 import { saveAssistLevel } from '../settings/use-assist-settings';
 import type { SelectableAssistLevel } from '../settings/settings-store';
@@ -134,7 +135,7 @@ export function CaptionOverlay({
       id: 'recap',
       label: 'Tóm tắt',
       description: 'Họ vừa nói gì, trong 1 phút qua',
-      hint: '⌘⇧W',
+      hint: shortcutLabel('W'),
       icon: <ListChecks aria-hidden="true" className="size-[18px]" />,
       active: panelView === 'recap' && !panelCollapsed,
       onSelect: () => togglePanel('recap'),
@@ -143,7 +144,7 @@ export function CaptionOverlay({
       id: 'compose',
       label: 'Nói giúp',
       description: 'Soạn câu tiếng Anh từ ý của bạn',
-      hint: '⌘⇧S',
+      hint: shortcutLabel('S'),
       icon: <MessageSquareQuote aria-hidden="true" className="size-[18px]" />,
       active: panelView === 'compose' && !panelCollapsed,
       onSelect: () => togglePanel('compose'),
@@ -215,7 +216,7 @@ export function CaptionOverlay({
         />
         <IconButton
           label="Ẩn overlay"
-          title="Ẩn overlay (⌘⇧L)"
+          title={`Ẩn overlay (${shortcutLabel('L')})`}
           icon={<EyeOff aria-hidden="true" className="size-[18px]" />}
           onClick={() => void native.toggleOverlay()}
         />

@@ -11,6 +11,8 @@ Cài đặt trong app và bản đồng bộ theo tài khoản: Assist mặc đ�
 - Đồng bộ thay đổi lên API sau 800 ms không có thao tác mới
 - Mở trang quản lý dữ liệu trên web
 - Thẻ Giới thiệu hiện phiên bản đang chạy (`APP_VERSION` đọc từ `tauri.conf.json` lúc build) và mục cập nhật `<UpdateSection />` ([Cập nhật app](./updater.md))
+- Mục **Gợi ý từ lịch** (`<CalendarSettings />`) và thẻ gợi ý ở trang chủ chỉ có trên macOS (đọc EventKit); trên Windows ẩn hẳn (`hasCalendar()` ở `src/lib/platform.ts`)
+- Khung cửa sổ chỉ chừa chỗ cho đèn giao thông (`dragRegion`) trên macOS; Windows dùng thanh tiêu đề hệ thống
 - Mục **Nâng cao → Máy chủ**: hiện máy chủ đang dùng và mở hộp thoại đổi (`<ServerSettings />`, chi tiết ở [Máy chủ](./server.md)); không gửi lên API, chỉ lưu trên máy
 
 ## Phạm vi MVP
