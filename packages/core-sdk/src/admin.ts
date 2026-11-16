@@ -44,7 +44,7 @@ export function adminApi(http: Http) {
           AdminUserDetailSchema,
         );
       },
-      /** Sets the plan by hand. `400` when `expiresAt` is in the past. The admin is the session, never a field. */
+      /** Grants a plan like a purchase without payment: `period` is required for Pro/Ultra and absent for Free; the server works out the end date and records a 0 dong order. The admin is the session, never a field. */
       setPlan(id: string, input: AdminSetUserPlanRequest): Promise<AdminSetUserPlanResponse> {
         return http.request(
           'PUT',

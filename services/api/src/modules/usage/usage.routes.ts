@@ -12,7 +12,7 @@ export function usageRoutes(service: UsageService): FastifyPluginAsync {
 
     app.put('/v1/admin/plan', async (request): Promise<SetPlanResponse> => {
       const input = parse(SetPlanRequestSchema, request.body);
-      return service.setPlan(request.userId, input.email, input.plan, input.expiresAt);
+      return service.setPlan(request.userId, input.email, input.plan, input.period);
     });
   };
 }

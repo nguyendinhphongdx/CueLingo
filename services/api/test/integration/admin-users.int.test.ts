@@ -1,12 +1,18 @@
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { periodStart, USAGE_METRICS, type AdminUserRow } from '@cuelingo/shared';
+import {
+  DEFAULT_PLAN_PRICES,
+  periodStart,
+  USAGE_METRICS,
+  type AdminUserRow,
+} from '@cuelingo/shared';
 import {
   createAdminUsersModule,
   createPostgresAdminUsersRepository,
   type AdminUsersRepository,
 } from '../../src/modules/admin-users';
-import { createPostgresUsageRepository, createUsageModule } from '../../src/modules/usage';
+import { createPostgresBillingRepository } from '../../src/modules/billing';
+import { createPostgresUsageRepository } from '../../src/modules/usage';
 import { startMigratedPostgres, type TestDatabase } from './postgres';
 
 const NOW = new Date('2026-11-15T05:00:00Z');
@@ -235,20 +241,56 @@ describe('admin users on real Postgres', () => {
     expect(await find('pro live')).toEqual(['pro-live@x.test']);
   });
 
-  it('records the admin as set_by and source manual when the plan is changed by id (AC5)', async () => {
-    const { service: usage } = createUsageModule(createPostgresUsageRepository(sql), {
-      limits: {} as never,
-      isAdmin: async () => true,
-      now: () => NOW,
-    });
-    const change = await usage.setPlanFor(ids.admin!, ids.none!, 'ultra', ahead(30).toISOString());
-    expect(change.previous).toBeNull();
+  it('grants a plan and records a 0 dong order in one transaction; revenue stays the same (AC5)', async () => {
+    const billing = createPostgresBillingRepository(sql);
+    const prices = DEFAULT_PLAN_PRICES;
+    const revenueBefore = (await repo.dashboard(NOW)).revenueThisMonth;
+    const grant = (plan: 'free' | 'pro' | 'ultra', period?: 'month' | 'year', at = NOW) =>
+      billing.grant(ids.none!, { adminId: ids.admin!, plan, period, now: at, prices });
+
+    const first = await grant('ultra', 'month');
+    expect(first.previous).toBeNull();
+    expect(first.orderId).not.toBeNull();
+    expect(first.current.expiresAt?.toISOString()).toBe('2026-12-15T05:00:00.000Z');
     const [row] =
       await sql`SELECT plan, source, set_by, expires_at FROM user_plans WHERE user_id = ${ids.none!}`;
     expect(row).toMatchObject({ plan: 'ultra', source: 'manual', set_by: ids.admin });
-    expect(row!.expires_at.toISOString()).toBe(ahead(30).toISOString());
     expect((await repo.find(ids.none!, NOW))!.plan).toBe('ultra');
-    const again = await usage.setPlanFor(ids.admin!, ids.none!, 'free');
-    expect(again.previous).toMatchObject({ plan: 'ultra', source: 'manual' });
+    const [order] = await sql`SELECT * FROM billing_orders WHERE id = ${first.orderId!}`;
+    expect(order).toMatchObject({
+      user_id: ids.none,
+      provider: 'admin',
+      plan: 'ultra',
+      period: 'month',
+      amount: 0,
+      status: 'paid',
+      qr_code: null,
+      checkout_url: null,
+    });
+    expect(order!.paid_at.toISOString()).toBe(NOW.toISOString());
+    expect(order!.plan_expires_at.toISOString()).toBe('2026-12-15T05:00:00.000Z');
+
+    // Two grants at once add one period each, in turn: the plan row is locked.
+    const [a, b] = await Promise.all([grant('ultra', 'month'), grant('ultra', 'month')]);
+    expect([a.current.expiresAt, b.current.expiresAt].map((d) => d!.toISOString()).sort()).toEqual([
+      '2027-01-15T05:00:00.000Z',
+      '2027-02-15T05:00:00.000Z',
+    ]);
+
+    // Down to Pro: starts now. Free: no end date and no new order.
+    const down = await grant('pro', 'month');
+    expect(down.previous).toMatchObject({ plan: 'ultra', source: 'manual' });
+    expect(down.current.expiresAt?.toISOString()).toBe('2026-12-15T05:00:00.000Z');
+    const free = await grant('free');
+    expect(free.orderId).toBeNull();
+    expect(free.current.expiresAt).toBeNull();
+    const orders = await sql`SELECT amount FROM billing_orders WHERE user_id = ${ids.none!}`;
+    expect(orders).toHaveLength(4);
+
+    // Revenue counts money only; the order limit does not count grants.
+    expect((await repo.dashboard(NOW)).revenueThisMonth).toBe(revenueBefore);
+    expect(await billing.countCreatedSince(ids.none!, ago(1))).toBe(0);
+    const detail = await createPostgresBillingRepository(sql).listForUser(ids.none!, 10);
+    expect(detail.every((o) => o.provider === 'admin' && o.amount === 0)).toBe(true);
   });
 });

@@ -125,7 +125,7 @@ export function createPostgresAdminUsersRepository(sql: Sql): AdminUsersReposito
           count(*) FILTER (WHERE up.plan IN ('pro', 'ultra')
             AND up.expires_at > ${now} AND up.expires_at <= ${soon})::int AS expiring,
           (SELECT COALESCE(sum(amount), 0) FROM billing_orders
-            WHERE status = 'paid' AND paid_at >= ${monthStart} AND paid_at < ${monthEnd})::text AS revenue
+            WHERE status = 'paid' AND provider <> 'admin' AND paid_at >= ${monthStart} AND paid_at < ${monthEnd})::text AS revenue
         FROM auth_user u LEFT JOIN user_plans up ON up.user_id = u.id`;
       const total = row?.total ?? 0;
       const pro = row?.pro ?? 0;

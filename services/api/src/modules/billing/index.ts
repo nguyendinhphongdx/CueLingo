@@ -12,7 +12,7 @@ export function createBillingModule(repo: BillingRepository, options: BillingOpt
 }
 
 export type { BillingOptions, BillingService } from './billing.service';
-export type { BillingRepository } from './billing.repository';
+export type { BillingRepository, GrantResult } from './billing.repository';
 export type { PaymentProvider } from './providers/provider';
 export { createPostgresBillingRepository } from './billing.repository';
 export { createInMemoryBillingRepository } from './billing.repository.memory';

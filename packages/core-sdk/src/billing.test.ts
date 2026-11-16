@@ -16,6 +16,7 @@ const order = {
   plan: 'pro',
   period: 'month',
   amount: 99000,
+  byAdmin: false,
   status: 'pending',
   transferContent: 'CL1000001',
   qrCode: '000201',

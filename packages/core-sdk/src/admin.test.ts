@@ -84,11 +84,11 @@ describe('admin client', () => {
     const client = make(fetch);
     expect((await client.admin.users.get(ID)).user.email).toBe('a@example.com');
     expect(fetch.mock.calls[0]?.[0]).toBe(`http://api/v1/admin/users/${ID}`);
-    const done = await client.admin.users.setPlan(ID, { plan: 'pro' });
+    const done = await client.admin.users.setPlan(ID, { plan: 'pro', period: 'month' });
     expect(done.source).toBe('manual');
     expect(fetch.mock.calls[1]?.[0]).toBe(`http://api/v1/admin/users/${ID}/plan`);
     expect(fetch.mock.calls[1]?.[1].method).toBe('PUT');
-    expect(JSON.parse(fetch.mock.calls[1]?.[1].body)).toEqual({ plan: 'pro' });
+    expect(JSON.parse(fetch.mock.calls[1]?.[1].body)).toEqual({ plan: 'pro', period: 'month' });
   });
 
   it('keeps the status of a refusal and fails loudly on a contract break', async () => {

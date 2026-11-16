@@ -4,6 +4,7 @@ import {
   periodEnd,
   periodStart,
   quotaState,
+  type BillingPeriod,
   type Plan,
   type PlanLimitTable,
   type PlanRow,
@@ -21,14 +22,8 @@ export type UsageService = ReturnType<typeof createUsageService>;
 export type ReserveResult =
   { ok: true; item: UsageItem } | { ok: false; details: QuotaExceededDetails };
 
-/** The audit line of a plan change carries ids and plans only: never an email (AC8). */
-export interface UsageLog {
-  info(fields: Record<string, unknown>, message: string): void;
-}
-
-/** What a plan change replaced and what it wrote. `previous` is the stored row, expired or not. */
-export interface PlanChange {
-  previous: PlanRow | null;
+/** The result of an admin plan change: the stored row after it. The billing module does the write. */
+export interface PlanGrant {
   current: PlanRow;
 }
 
@@ -36,8 +31,15 @@ export interface UsageOptions {
   limits: PlanLimitTable;
   /** Admins have no limit (AC12) but are still counted, to see the cost of testing. */
   isAdmin: (userId: string) => Promise<boolean>;
-  /** Where plan changes are logged. Omitted = silent (tests that do not look). */
-  log?: UsageLog;
+  /**
+   * Changes a plan for an admin: the billing module's `grantByAdmin`. It checks the admin, writes the plan
+   * and the 0 dong order and logs the change; this module only finds the person by email.
+   */
+  grant: (
+    adminId: string,
+    targetUserId: string,
+    input: { plan: Plan; period?: BillingPeriod },
+  ) => Promise<PlanGrant>;
   now?: () => Date;
 }
 
@@ -103,45 +105,8 @@ export function createUsageService(repo: UsageRepository, options: UsageOptions)
     return { ok: true, item: itemOf(metric, total, limit, at) };
   }
 
-  /**
-   * Admin changes the plan of the person with this user id; it applies from the next check. The caller has
-   * already made sure the user exists. Logs `adminId`, `targetUserId`, the old and the new plan (E in the plan).
-   */
-  async function setPlanFor(
-    adminId: string,
-    targetUserId: string,
-    plan: Plan,
-    expiresAt?: string,
-  ): Promise<PlanChange> {
-    if (!(await options.isAdmin(adminId))) {
-      throw new AppError(ErrorCode.Forbidden, 'Admin access required');
-    }
-    // An end date only means something for a paid plan, and it must still be ahead.
-    const end = plan === 'free' || !expiresAt ? null : new Date(expiresAt);
-    if (end && end.getTime() <= now().getTime()) {
-      throw new AppError(ErrorCode.Validation, 'expiresAt must be in the future');
-    }
-    const previous = await repo.planRow(targetUserId);
-    await repo.setPlan(targetUserId, plan, adminId, end);
-    options.log?.info(
-      {
-        adminId,
-        targetUserId,
-        from: {
-          plan: previous?.plan ?? 'free',
-          source: previous?.source ?? null,
-          expiresAt: previous?.expiresAt?.toISOString() ?? null,
-        },
-        to: { plan, expiresAt: end?.toISOString() ?? null },
-      },
-      'plan changed',
-    );
-    return { previous, current: { plan, expiresAt: end, source: 'manual' } };
-  }
-
   return {
     tryReserve,
-    setPlanFor,
 
     /** AC3: the plan and every allowance of this user, with `limit: null` for unlimited. */
     async snapshot(userId: string): Promise<UsageResponse> {
@@ -203,7 +168,7 @@ export function createUsageService(repo: UsageRepository, options: UsageOptions)
       adminId: string,
       email: string,
       plan: Plan,
-      expiresAt?: string,
+      period?: BillingPeriod,
     ): Promise<SetPlanResponse> {
       // Check first so a stranger cannot learn from 404 which emails exist.
       if (!(await options.isAdmin(adminId))) {
@@ -211,7 +176,7 @@ export function createUsageService(repo: UsageRepository, options: UsageOptions)
       }
       const target = await repo.userIdByEmail(email);
       if (!target) throw new AppError(ErrorCode.NotFound, 'No user has this email');
-      const { current } = await setPlanFor(adminId, target, plan, expiresAt);
+      const { current } = await options.grant(adminId, target, { plan, period });
       return current.expiresAt
         ? { email, plan, expiresAt: current.expiresAt.toISOString() }
         : { email, plan };

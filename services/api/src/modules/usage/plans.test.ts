@@ -3,11 +3,15 @@ import type { FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
 import { buildTestApp, TEST_USER_HEADER } from '../../testing';
 import { createInMemoryAdminRepository } from '../admin';
+import { createInMemoryBillingRepository } from '../billing';
 import { createInMemoryUsageRepository, createUsageModule, type InMemoryPlanRows } from './index';
 
 const ALICE = 'alice';
 const OWNER = 'owner';
 const EMAILS = { [ALICE]: 'alice@example.com', [OWNER]: 'owner@example.com' };
+const noGrant = async (): Promise<never> => {
+  throw new Error('not used here');
+};
 const as = (user: string) => ({ [TEST_USER_HEADER]: user });
 
 describe('plans', () => {
@@ -15,11 +19,13 @@ describe('plans', () => {
   afterEach(() => app.close());
 
   async function build() {
+    const plans: InMemoryPlanRows = new Map();
     app = await buildTestApp({
       adminEmails: ['owner@example.com'],
       repos: {
         admin: createInMemoryAdminRepository(EMAILS),
-        usage: createInMemoryUsageRepository(EMAILS),
+        usage: createInMemoryUsageRepository(EMAILS, plans),
+        billing: createInMemoryBillingRepository(plans),
       },
     });
   }
@@ -40,9 +46,14 @@ describe('plans', () => {
 
   it('lets an admin change the plan, effective on the next check (AC2)', async () => {
     await build();
-    const res = await setPlan(OWNER, { email: 'alice@example.com', plan: 'pro' });
+    const res = await setPlan(OWNER, {
+      email: 'alice@example.com',
+      plan: 'pro',
+      period: 'month',
+    });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ email: 'alice@example.com', plan: 'pro' });
+    expect(res.json()).toMatchObject({ email: 'alice@example.com', plan: 'pro' });
+    expect(res.json().expiresAt).toEqual(expect.any(String));
     const after = await plan(ALICE);
     expect(after.plan).toBe('pro');
     expect(after.usage.translation_ms.limit).toBe(72_000_000);
@@ -51,33 +62,34 @@ describe('plans', () => {
 
   it('answers 403 to a caller who is not an admin', async () => {
     await build();
-    const res = await setPlan(ALICE, { email: 'alice@example.com', plan: 'ultra' });
+    const res = await setPlan(ALICE, {
+      email: 'alice@example.com',
+      plan: 'ultra',
+      period: 'month',
+    });
     expect(res.statusCode).toBe(403);
     expect((await plan(ALICE)).plan).toBe('free');
   });
 
   it('answers 404 for an unknown email and 400 for a bad plan', async () => {
     await build();
-    expect((await setPlan(OWNER, { email: 'nobody@example.com', plan: 'pro' })).statusCode).toBe(
-      404,
-    );
-    expect((await setPlan(OWNER, { email: 'alice@example.com', plan: 'gold' })).statusCode).toBe(
+    const body = { email: 'alice@example.com', period: 'month' };
+    expect(
+      (await setPlan(OWNER, { ...body, email: 'nobody@example.com', plan: 'pro' })).statusCode,
+    ).toBe(404);
+    expect((await setPlan(OWNER, { ...body, plan: 'gold' })).statusCode).toBe(400);
+    // A paid plan needs a period; free takes none; an end date is no longer accepted.
+    expect((await setPlan(OWNER, { email: 'alice@example.com', plan: 'pro' })).statusCode).toBe(
       400,
     );
-    // An end date in the past is refused.
+    expect((await setPlan(OWNER, { ...body, plan: 'free' })).statusCode).toBe(400);
     expect(
-      (
-        await setPlan(OWNER, {
-          email: 'alice@example.com',
-          plan: 'pro',
-          expiresAt: '2020-01-01T00:00:00.000Z',
-        })
-      ).statusCode,
+      (await setPlan(OWNER, { ...body, plan: 'pro', expiresAt: '2030-01-01T00:00:00.000Z' }))
+        .statusCode,
     ).toBe(400);
     // The target is never taken from a user id in the body.
-    expect(
-      (await setPlan(OWNER, { email: 'alice@example.com', plan: 'pro', userId: ALICE })).statusCode,
-    ).toBe(400);
+    expect((await setPlan(OWNER, { ...body, plan: 'pro', userId: ALICE })).statusCode).toBe(400);
+    expect((await plan(ALICE)).plan).toBe('free');
   });
 });
 
@@ -108,50 +120,42 @@ describe('plan expiry', () => {
     expect(plans.has(ALICE)).toBe(true); // nothing deleted
   });
 
-  it('keeps an admin-set plan without an end date forever (AC10)', async () => {
+  it('keeps an older admin-set plan without an end date forever (AC10)', async () => {
     const plans: InMemoryPlanRows = new Map();
+    plans.set(ALICE, { plan: 'pro', expiresAt: null, source: 'manual' });
     app = await buildTestApp({
-      adminEmails: ['owner@example.com'],
-      repos: {
-        admin: createInMemoryAdminRepository(OWNER_EMAILS),
-        usage: createInMemoryUsageRepository(OWNER_EMAILS, plans),
-      },
+      repos: { usage: createInMemoryUsageRepository(OWNER_EMAILS, plans) },
       now: () => new Date('2030-01-01T00:00:00Z'),
     });
-    const res = await app.inject({
-      method: 'PUT',
-      url: '/v1/admin/plan',
-      headers: as(OWNER),
-      payload: { email: 'alice@example.com', plan: 'pro' },
-    });
-    expect(res.json()).toEqual({ email: 'alice@example.com', plan: 'pro' });
-    expect(plans.get(ALICE)).toMatchObject({ plan: 'pro', expiresAt: null, source: 'manual' });
     const usage = await app.inject({ method: 'GET', url: '/v1/me/usage', headers: as(ALICE) });
     expect(usage.json().plan).toBe('pro');
   });
 
-  it('records an end date the admin gives', async () => {
+  it('gives a granted plan an end date worked out from the period, and free none', async () => {
     const plans: InMemoryPlanRows = new Map();
     app = await buildTestApp({
       adminEmails: ['owner@example.com'],
       repos: {
         admin: createInMemoryAdminRepository(OWNER_EMAILS),
         usage: createInMemoryUsageRepository(OWNER_EMAILS, plans),
+        billing: createInMemoryBillingRepository(plans),
       },
-      now: () => now,
+      now: () => new Date('2026-11-14T05:00:00Z'),
     });
-    const res = await app.inject({
-      method: 'PUT',
-      url: '/v1/admin/plan',
-      headers: as(OWNER),
-      payload: { email: 'alice@example.com', plan: 'ultra', expiresAt: '2026-12-01T00:00:00.000Z' },
-    });
+    const put = (payload: object) =>
+      app.inject({ method: 'PUT', url: '/v1/admin/plan', headers: as(OWNER), payload });
+    const res = await put({ email: 'alice@example.com', plan: 'ultra', period: 'year' });
     expect(res.json()).toEqual({
       email: 'alice@example.com',
       plan: 'ultra',
-      expiresAt: '2026-12-01T00:00:00.000Z',
+      expiresAt: '2027-11-14T05:00:00.000Z',
     });
-    expect(plans.get(ALICE)?.expiresAt?.toISOString()).toBe('2026-12-01T00:00:00.000Z');
+    expect(plans.get(ALICE)).toMatchObject({ plan: 'ultra', source: 'manual' });
+    expect((await put({ email: 'alice@example.com', plan: 'free' })).json()).toEqual({
+      email: 'alice@example.com',
+      plan: 'free',
+    });
+    expect(plans.get(ALICE)).toMatchObject({ plan: 'free', expiresAt: null });
   });
 });
 
@@ -180,6 +184,7 @@ describe('plan change audit log (AC8)', () => {
       repos: {
         admin: createInMemoryAdminRepository(EMAILS_),
         usage: createInMemoryUsageRepository(EMAILS_, plans),
+        billing: createInMemoryBillingRepository(plans),
       },
       now: () => new Date('2026-11-14T05:00:00Z'),
     });
@@ -187,9 +192,15 @@ describe('plan change audit log (AC8)', () => {
       method: 'PUT',
       url: '/v1/admin/plan',
       headers: as(OWNER),
-      payload: { email: 'alice@example.com', plan: 'ultra', expiresAt: '2026-12-01T00:00:00.000Z' },
+      payload: { email: 'alice@example.com', plan: 'ultra', period: 'month' },
     });
     expect(res.statusCode).toBe(200);
+    // Pro until 2027-01-01 becomes Ultra: a month from now plus the Pro time left at 99/249.
+    const left =
+      new Date('2027-01-01T00:00:00Z').getTime() - new Date('2026-11-14T05:00:00Z').getTime();
+    const ends = new Date(
+      new Date('2026-12-14T05:00:00Z').getTime() + Math.round((left * 99_000) / 249_000),
+    );
     const line = logs
       .split('\n')
       .filter(Boolean)
@@ -199,7 +210,7 @@ describe('plan change audit log (AC8)', () => {
       adminId: OWNER,
       targetUserId: ALICE,
       from: { plan: 'pro', source: 'payment', expiresAt: '2027-01-01T00:00:00.000Z' },
-      to: { plan: 'ultra', expiresAt: '2026-12-01T00:00:00.000Z' },
+      to: { plan: 'ultra', period: 'month', expiresAt: ends.toISOString() },
     });
     expect(logs).not.toContain('example.com');
   });
@@ -224,7 +235,7 @@ describe('plan change audit log (AC8)', () => {
       method: 'PUT',
       url: '/v1/admin/plan',
       headers: as(ALICE),
-      payload: { email: 'alice@example.com', plan: 'ultra' },
+      payload: { email: 'alice@example.com', plan: 'ultra', period: 'month' },
     });
     expect(res.statusCode).toBe(403);
     expect(logs).not.toContain('plan changed');
@@ -260,6 +271,7 @@ describe('quota gate', () => {
     const { service } = createUsageModule(repo, {
       limits,
       isAdmin: async (id) => id === OWNER,
+      grant: noGrant,
       now: () => now,
     });
     return service;
@@ -303,6 +315,7 @@ describe('quota gate', () => {
     const { service } = createUsageModule(repo, {
       limits,
       isAdmin: async () => false,
+      grant: noGrant,
       now: () => now,
     });
     await service.reserve(ALICE, 'debriefs');

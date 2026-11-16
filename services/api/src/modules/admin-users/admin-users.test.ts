@@ -1,4 +1,5 @@
 import { Writable } from 'node:stream';
+import { addPeriod } from '@cuelingo/shared';
 import type { FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
 import { buildTestApp, TEST_USER_HEADER } from '../../testing';
@@ -95,7 +96,7 @@ describe('admin users', () => {
         await get(ALICE, '/v1/admin/users?cursor=garbage&limit=1'),
         await get(ALICE, `/v1/admin/users/${missing}`),
         await get(ALICE, '/v1/admin/users/not-a-uuid'),
-        await put(ALICE, `/v1/admin/users/${missing}/plan`, { plan: 'ultra' }),
+        await put(ALICE, `/v1/admin/users/${missing}/plan`, { plan: 'ultra', period: 'month' }),
         await put(ALICE, `/v1/admin/users/${BOB}/plan`, { nonsense: true }),
       ]) {
         expect(res.statusCode).toBe(403);
@@ -271,6 +272,7 @@ describe('admin users', () => {
           period: 'month',
           amount: 99_000,
           status: 'pending',
+          byAdmin: false,
           createdAt: expect.any(String),
           paidAt: null,
           planExpiresAt: null,
@@ -305,64 +307,133 @@ describe('admin users', () => {
   });
 
   describe('change plan (AC5)', () => {
-    it('stores a hand-set plan, and the next quota check uses it', async () => {
+    const grant = (user: string, body: object) => put(OWNER, `/v1/admin/users/${user}/plan`, body);
+    const orders = async (user: string) => (await get(user, '/v1/billing/orders')).json().items;
+
+    it('grants a paid plan for one period from now, and the next quota check uses it', async () => {
       await build();
-      const before = (await get(DAVE, '/v1/me/usage')).json();
-      expect(before.plan).toBe('free');
-      const res = await put(OWNER, `/v1/admin/users/${DAVE}/plan`, {
-        plan: 'pro',
-        expiresAt: in_(30).toISOString(),
-      });
+      expect((await get(DAVE, '/v1/me/usage')).json().plan).toBe('free');
+      const res = await grant(DAVE, { plan: 'pro', period: 'month' });
       expect(res.statusCode).toBe(200);
       expect(res.json()).toEqual({
         plan: 'pro',
         source: 'manual',
-        expiresAt: in_(30).toISOString(),
+        expiresAt: addPeriod(NOW, 'month').toISOString(),
       });
       expect(plans.get(DAVE)).toMatchObject({ plan: 'pro', source: 'manual' });
       const after = (await get(DAVE, '/v1/me/usage')).json();
       expect(after.plan).toBe('pro');
       expect(after.usage.debriefs.limit).toBeNull();
-      // The list reflects it too.
       const row = (await get(OWNER, `/v1/admin/users/${DAVE}`)).json().user;
       expect(row).toMatchObject({ plan: 'pro', source: 'manual' });
+      const year = await grant(DAVE, { plan: 'pro', period: 'year' });
+      expect(year.json().expiresAt).toBe(addPeriod(addPeriod(NOW, 'month'), 'year').toISOString());
     });
 
-    it('drops the end date for Free, and refuses a past date, an unknown id and a user id in the body', async () => {
+    it('records a paid 0 dong order that the user and the admin both see', async () => {
       await build();
-      const free = await put(OWNER, `/v1/admin/users/${ALICE}/plan`, {
-        plan: 'free',
-        expiresAt: in_(5).toISOString(),
+      await grant(DAVE, { plan: 'ultra', period: 'year' });
+      const [mine] = await orders(DAVE);
+      expect(mine).toMatchObject({
+        plan: 'ultra',
+        period: 'year',
+        amount: 0,
+        status: 'paid',
+        byAdmin: true,
+        qrCode: null,
+        checkoutUrl: null,
+        planExpiresAt: addPeriod(NOW, 'year').toISOString(),
+        planApplied: true,
       });
+      const detail = (await get(OWNER, `/v1/admin/users/${DAVE}`)).json();
+      expect(detail.orders).toEqual([
+        expect.objectContaining({ id: mine.id, amount: 0, byAdmin: true, status: 'paid' }),
+      ]);
+      // Nobody else sees it.
+      expect(await orders(ALICE)).toEqual([]);
+    });
+
+    it('extends the same plan from its end date', async () => {
+      await build();
+      const res = await grant(ALICE, { plan: 'pro', period: 'month' });
+      expect(res.json().expiresAt).toBe(addPeriod(in_(3), 'month').toISOString());
+      expect(plans.get(ALICE)).toMatchObject({ source: 'manual' });
+    });
+
+    it('converts the Pro time left when going up to Ultra', async () => {
+      await build();
+      const res = await grant(ALICE, { plan: 'ultra', period: 'month' });
+      const left = 3 * DAY;
+      const expected = addPeriod(NOW, 'month').getTime() + Math.round((left * 99_000) / 249_000);
+      expect(res.json().expiresAt).toBe(new Date(expected).toISOString());
+    });
+
+    it('allows a downgrade: the lower plan starts now and the time left on the higher one is dropped', async () => {
+      await build();
+      await grant(DAVE, { plan: 'ultra', period: 'year' });
+      const res = await grant(DAVE, { plan: 'pro', period: 'month' });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toMatchObject({
+        plan: 'pro',
+        expiresAt: addPeriod(NOW, 'month').toISOString(),
+      });
+      expect(await orders(DAVE)).toHaveLength(2);
+    });
+
+    it('starts a fresh period for a same-plan row that has no end date', async () => {
+      await build();
+      const res = await grant(BOB, { plan: 'ultra', period: 'month' });
+      expect(res.json().expiresAt).toBe(addPeriod(NOW, 'month').toISOString());
+    });
+
+    it('moves to Free with no end date and no order', async () => {
+      await build();
+      const free = await grant(ALICE, { plan: 'free' });
       expect(free.json()).toEqual({ plan: 'free', source: 'manual', expiresAt: null });
-      expect(
-        (
-          await put(OWNER, `/v1/admin/users/${BOB}/plan`, {
-            plan: 'pro',
-            expiresAt: at(1).toISOString(),
-          })
-        ).statusCode,
-      ).toBe(400);
-      expect(plans.get(BOB)?.plan).toBe('ultra');
-      expect(
-        (await put(OWNER, `/v1/admin/users/${uuid(99)}/plan`, { plan: 'pro' })).statusCode,
-      ).toBe(404);
-      expect(
-        (await put(OWNER, `/v1/admin/users/${BOB}/plan`, { plan: 'pro', userId: DAVE })).statusCode,
-      ).toBe(400);
-      expect((await put(OWNER, `/v1/admin/users/${BOB}/plan`, { plan: 'gold' })).statusCode).toBe(
-        400,
-      );
+      expect((await get(ALICE, '/v1/me/usage')).json().plan).toBe('free');
+      expect(await orders(ALICE)).toEqual([]);
+    });
+
+    it('refuses a bad body and writes nothing: paid without period, free with one, an end date, an unknown id, a user id, a bad plan', async () => {
+      await build();
+      for (const body of [
+        { plan: 'pro' },
+        { plan: 'free', period: 'month' },
+        { plan: 'pro', period: 'week' },
+        { plan: 'pro', period: 'month', expiresAt: in_(30).toISOString() },
+        { plan: 'pro', period: 'month', userId: DAVE },
+        { plan: 'gold', period: 'month' },
+      ]) {
+        expect((await grant(BOB, body)).statusCode).toBe(400);
+      }
+      expect(plans.get(BOB)).toMatchObject({ plan: 'ultra', expiresAt: null });
+      expect(await orders(BOB)).toEqual([]);
+      expect((await grant(uuid(99), { plan: 'pro', period: 'month' })).statusCode).toBe(404);
+    });
+
+    it('answers 403 to a caller who is not an admin and writes nothing', async () => {
+      await build();
+      const res = await put(ALICE, `/v1/admin/users/${DAVE}/plan`, {
+        plan: 'ultra',
+        period: 'year',
+      });
+      expect(res.statusCode).toBe(403);
+      expect(plans.has(DAVE)).toBe(false);
+      expect(await orders(DAVE)).toEqual([]);
+    });
+
+    it('does not count a grant against the order limit of the person', async () => {
+      await build();
+      for (let i = 0; i < 12; i += 1) await grant(DAVE, { plan: 'pro', period: 'month' });
+      expect(await orders(DAVE)).toHaveLength(12);
+      expect(await billing.countCreatedSince(DAVE, at(1))).toBe(0);
     });
   });
 
   describe('audit log (AC8)', () => {
-    it('records admin, person, old and new plan, and no email', async () => {
+    it('records admin, person, old and new plan with period and end date, and no email', async () => {
       await build();
-      await put(OWNER, `/v1/admin/users/${ALICE}/plan`, {
-        plan: 'ultra',
-        expiresAt: in_(60).toISOString(),
-      });
+      await put(OWNER, `/v1/admin/users/${ALICE}/plan`, { plan: 'pro', period: 'year' });
       const entry = logs
         .split('\n')
         .filter(Boolean)
@@ -372,7 +443,11 @@ describe('admin users', () => {
         adminId: OWNER,
         targetUserId: ALICE,
         from: { plan: 'pro', source: 'payment', expiresAt: in_(3).toISOString() },
-        to: { plan: 'ultra', expiresAt: in_(60).toISOString() },
+        to: {
+          plan: 'pro',
+          period: 'year',
+          expiresAt: addPeriod(in_(3), 'year').toISOString(),
+        },
       });
       expect(logs).not.toContain('example.com');
     });

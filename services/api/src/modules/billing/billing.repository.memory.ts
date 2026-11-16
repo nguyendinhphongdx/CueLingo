@@ -1,6 +1,11 @@
-import { planAfterPurchase } from '@cuelingo/shared';
+import { planAfterAdminGrant, planAfterPurchase } from '@cuelingo/shared';
 import type { InMemoryPlanRows } from '../usage';
-import type { BillingRepository, OrderRow, SettleResult } from './billing.repository';
+import {
+  ADMIN_PROVIDER,
+  type BillingRepository,
+  type OrderRow,
+  type SettleResult,
+} from './billing.repository';
 
 /**
  * In-memory implementation with the same contract. Pass the map the in-memory usage repository uses so a paid
@@ -72,7 +77,9 @@ export function createInMemoryBillingRepository(
     },
 
     async countCreatedSince(userId, since) {
-      return orders.filter((o) => o.userId === userId && o.createdAt > since).length;
+      return orders.filter(
+        (o) => o.userId === userId && o.createdAt > since && o.provider !== ADMIN_PROVIDER,
+      ).length;
     },
 
     async getForUser(userId, id) {
@@ -129,6 +136,49 @@ export function createInMemoryBillingRepository(
       });
       order.planExpiresAt = outcome.expiresAt;
       return { settled: true, applied: true, order: { ...order } };
+    },
+
+    // No await inside, like the SQL transaction.
+    async grant(userId, input) {
+      const previous = plans.get(userId) ? { ...plans.get(userId)! } : null;
+      const outcome = planAfterAdminGrant({
+        current: previous,
+        now: input.now,
+        plan: input.plan,
+        period: input.period,
+        prices: input.prices,
+      });
+      const current = {
+        plan: outcome.plan,
+        expiresAt: outcome.expiresAt,
+        source: 'manual' as const,
+      };
+      plans.set(userId, current);
+      let orderId: string | null = null;
+      if (outcome.plan !== 'free' && input.period) {
+        const order: OrderRow = {
+          id: `00000000-0000-4000-8000-${String(nextId++).padStart(12, '0')}`,
+          userId,
+          orderCode: nextCode++,
+          provider: ADMIN_PROVIDER,
+          plan: outcome.plan,
+          period: input.period,
+          amount: 0,
+          status: 'paid',
+          providerLinkId: null,
+          providerRef: null,
+          qrCode: null,
+          checkoutUrl: null,
+          expiresAt: input.now,
+          paidAt: input.now,
+          planExpiresAt: outcome.expiresAt,
+          checkedAt: null,
+          createdAt: input.now,
+        };
+        orders.push(order);
+        orderId = order.id;
+      }
+      return { previous, current, orderId };
     },
   };
 }

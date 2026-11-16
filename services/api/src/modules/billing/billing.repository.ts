@@ -1,5 +1,7 @@
 import {
+  planAfterAdminGrant,
   planAfterPurchase,
+  type Plan,
   type BillingOrderStatus,
   type BillingPeriod,
   type PaidPlan,
@@ -55,6 +57,26 @@ export interface SettleResult {
   order: OrderRow;
 }
 
+export interface GrantInput {
+  adminId: string;
+  plan: Plan;
+  /** Required for `pro` and `ultra`. */
+  period?: BillingPeriod;
+  now: Date;
+  prices: PlanPriceTable;
+}
+
+export interface GrantResult {
+  /** The stored row before the grant (expired or not); null when the user had none. */
+  previous: PlanRow | null;
+  current: PlanRow;
+  /** The 0 dong order the grant recorded; null for `free`. */
+  orderId: string | null;
+}
+
+/** The `provider` of the 0 dong order an admin grant records. */
+export const ADMIN_PROVIDER = 'admin';
+
 /**
  * Data access for orders. Methods that take a `userId` filter by it. The two that do not (`findByOrderCode`,
  * `settle`) serve the webhook, where the caller is the payment provider and the key is the order code.
@@ -87,6 +109,12 @@ export interface BillingRepository {
    * and plan updates of one user are serialised, so parallel webhooks add the period once.
    */
   settle(orderCode: number, input: SettleInput): Promise<SettleResult | null>;
+  /**
+   * An admin changes the plan (owner decision 2026-11-16): the plan row and, for a paid plan, a `paid` order of
+   * 0 dong with provider `admin`, in one transaction. The plan row is locked first, like `settle`, so the end
+   * date is worked out from the row that is really there. The user must exist (the caller checked).
+   */
+  grant(userId: string, input: GrantInput): Promise<GrantResult>;
 }
 
 interface OrderDbRow {
@@ -169,7 +197,7 @@ export function createPostgresBillingRepository(sql: Sql): BillingRepository {
 
     async countCreatedSince(userId, since) {
       const [row] = await sql<{ n: string }[]>`
-        SELECT count(*) AS n FROM billing_orders WHERE user_id = ${userId} AND created_at > ${since}`;
+        SELECT count(*) AS n FROM billing_orders WHERE user_id = ${userId} AND created_at > ${since} AND provider <> ${ADMIN_PROVIDER}`;
       return Number(row?.n ?? 0);
     },
 
@@ -244,6 +272,51 @@ export function createPostgresBillingRepository(sql: Sql): BillingRepository {
           UPDATE billing_orders SET plan_expires_at = ${outcome.expiresAt}
           WHERE id = ${won.id} RETURNING *`;
         return { settled: true, applied: true, order: toOrder(done!) };
+      });
+    },
+
+    async grant(userId, input) {
+      return sql.begin(async (tx) => {
+        // Make sure the row exists so FOR UPDATE has something to lock for a user's first plan.
+        const inserted = await tx`
+          INSERT INTO user_plans (user_id, plan, source, set_by)
+          VALUES (${userId}, 'free', 'manual', ${input.adminId})
+          ON CONFLICT (user_id) DO NOTHING RETURNING user_id`;
+        const [row] = await tx<
+          { plan: PlanRow['plan']; expires_at: Date | null; source: PlanSource }[]
+        >`
+          SELECT plan, expires_at, source FROM user_plans WHERE user_id = ${userId} FOR UPDATE`;
+        const previous: PlanRow | null =
+          inserted.length > 0 || !row
+            ? null
+            : { plan: row.plan, expiresAt: row.expires_at, source: row.source };
+        const outcome = planAfterAdminGrant({
+          current: previous,
+          now: input.now,
+          plan: input.plan,
+          period: input.period,
+          prices: input.prices,
+        });
+        await tx`
+          UPDATE user_plans
+          SET plan = ${outcome.plan}, expires_at = ${outcome.expiresAt}, source = 'manual',
+            set_by = ${input.adminId}, updated_at = now()
+          WHERE user_id = ${userId}`;
+        let orderId: string | null = null;
+        if (outcome.plan !== 'free' && input.period) {
+          const [order] = await tx<{ id: string }[]>`
+            INSERT INTO billing_orders
+              (user_id, order_code, provider, plan, period, amount, status, expires_at, paid_at, plan_expires_at)
+            VALUES (${userId}, nextval('billing_order_code_seq'), ${ADMIN_PROVIDER}, ${outcome.plan},
+              ${input.period}, 0, 'paid', ${input.now}, ${input.now}, ${outcome.expiresAt})
+            RETURNING id`;
+          orderId = order!.id;
+        }
+        return {
+          previous,
+          current: { plan: outcome.plan, expiresAt: outcome.expiresAt, source: 'manual' as const },
+          orderId,
+        };
       });
     },
   };

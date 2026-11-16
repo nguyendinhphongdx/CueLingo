@@ -183,23 +183,25 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   let agentAdmin: AgentAdminPort | undefined;
   const admin = createAdminModule(deps.repos.admin, deps.adminEmails ?? [], () => agentAdmin);
   await app.register(admin.routes, { prefix: '/v1/admin' });
-  const usage = createUsageModule(deps.repos.usage, {
-    limits: deps.planLimits ?? resolvePlanLimits(),
-    isAdmin: admin.service.isAdmin,
-    log: app.log,
-    now: deps.now,
-  });
-  await app.register(usage.routes);
   const billing = createBillingModule(deps.repos.billing, {
     provider: deps.paymentProvider,
     prices: deps.planPrices ?? resolvePlanPrices(),
     limits: deps.planLimits ?? resolvePlanLimits(),
+    isAdmin: admin.service.isAdmin,
     webOrigin: deps.webOrigin,
     log: app.log,
     now: deps.now,
   });
   await app.register(billing.routes);
-  // After usage and billing: it reads plans and orders through their services.
+  const usage = createUsageModule(deps.repos.usage, {
+    limits: deps.planLimits ?? resolvePlanLimits(),
+    isAdmin: admin.service.isAdmin,
+    // Billing is built first: a plan change by an admin writes the plan and the 0 dong order together.
+    grant: billing.service.grantByAdmin,
+    now: deps.now,
+  });
+  await app.register(usage.routes);
+  // After billing and usage: it reads plans and orders through their services.
   await app.register(
     createAdminUsersModule(deps.repos.adminUsers, {
       isAdmin: admin.service.isAdmin,

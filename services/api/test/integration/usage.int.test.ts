@@ -68,12 +68,11 @@ describe('usage counters on real Postgres', () => {
     expect((await repo.snapshot(alice, starts, NOW)).amounts.translation_ms).toBe(0);
   });
 
-  it('sets a plan, finds a user by email ignoring case, and cascades with the account', async () => {
+  it('stores a plan, finds a user by email ignoring case, and cascades with the account', async () => {
     const repo = createPostgresUsageRepository(sql);
     expect(await repo.userIdByEmail('ALICE@example.com')).toBe(alice);
     expect(await repo.userIdByEmail('nobody@example.com')).toBeNull();
-    await repo.setPlan(alice, 'pro', bob, null);
-    await repo.setPlan(alice, 'ultra', bob, null);
+    await sql`INSERT INTO user_plans (user_id, plan, set_by) VALUES (${alice}, 'ultra', ${bob})`;
     const [row] = await sql`SELECT plan, set_by FROM user_plans WHERE user_id = ${alice}`;
     expect(row).toMatchObject({ plan: 'ultra', set_by: bob });
     await sql`DELETE FROM auth_user WHERE id = ${alice}`;
@@ -98,7 +97,7 @@ describe('usage counters on real Postgres', () => {
     expect((await repo.gate(uid, 'debriefs', start, before)).plan).toBe('pro');
     expect((await repo.snapshot(uid, starts, at)).plan).toBe('free');
     expect((await repo.gate(uid, 'debriefs', start, at)).plan).toBe('free');
-    await repo.setPlan(uid, 'ultra', uid, null);
+    await sql`UPDATE user_plans SET plan = 'ultra', source = 'manual', expires_at = NULL WHERE user_id = ${uid}`;
     const [row] = await sql`SELECT source, expires_at FROM user_plans WHERE user_id = ${uid}`;
     expect(row).toMatchObject({ source: 'manual', expires_at: null });
     expect((await repo.gate(uid, 'debriefs', start, at)).plan).toBe('ultra');

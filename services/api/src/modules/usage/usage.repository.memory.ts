@@ -43,12 +43,6 @@ export function createInMemoryUsageRepository(
       counters.set(k, next);
       return next;
     },
-    async planRow(userId) {
-      return plans.get(userId) ?? null;
-    },
-    async setPlan(userId, plan, _setBy, expiresAt) {
-      plans.set(userId, { plan, expiresAt, source: 'manual' });
-    },
     async userIdByEmail(email) {
       const target = email.toLowerCase();
       const found = Object.entries(emails).find(([, value]) => value.toLowerCase() === target);

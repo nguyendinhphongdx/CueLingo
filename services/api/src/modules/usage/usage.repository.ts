@@ -1,11 +1,4 @@
-import {
-  DEFAULT_PLAN,
-  USAGE_METRICS,
-  type Plan,
-  type PlanRow,
-  type PlanSource,
-  type UsageMetric,
-} from '@cuelingo/shared';
+import { DEFAULT_PLAN, USAGE_METRICS, type Plan, type UsageMetric } from '@cuelingo/shared';
 import type { Sql } from '../../lib/db';
 
 export type PeriodStarts = Record<UsageMetric, Date>;
@@ -42,10 +35,6 @@ export interface UsageRepository {
   ): Promise<number | null>;
   /** Adds `amount` with no cap (time already spent). Returns the new total. */
   add(userId: string, metric: UsageMetric, periodStart: Date, amount: number): Promise<number>;
-  /** The stored row as it is, expired or not. Null when the user never had one. */
-  planRow(userId: string): Promise<PlanRow | null>;
-  /** Admin-set plan (`source = 'manual'`); it never ends unless `expiresAt` is given. */
-  setPlan(userId: string, plan: Plan, setBy: string, expiresAt: Date | null): Promise<void>;
   userIdByEmail(email: string): Promise<string | null>;
 }
 
@@ -101,20 +90,6 @@ export function createPostgresUsageRepository(sql: Sql): UsageRepository {
         DO UPDATE SET amount = usage_counters.amount + EXCLUDED.amount
         RETURNING amount`;
       return Number(row!.amount);
-    },
-
-    async planRow(userId) {
-      const [row] = await sql<{ plan: Plan; expires_at: Date | null; source: PlanSource }[]>`
-        SELECT plan, expires_at, source FROM user_plans WHERE user_id = ${userId}`;
-      return row ? { plan: row.plan, expiresAt: row.expires_at, source: row.source } : null;
-    },
-
-    async setPlan(userId, plan, setBy, expiresAt) {
-      await sql`
-        INSERT INTO user_plans (user_id, plan, set_by, expires_at, source)
-        VALUES (${userId}, ${plan}, ${setBy}, ${expiresAt}, ${'manual' satisfies PlanSource})
-        ON CONFLICT (user_id) DO UPDATE SET plan = EXCLUDED.plan, set_by = EXCLUDED.set_by,
-          expires_at = EXCLUDED.expires_at, source = EXCLUDED.source, updated_at = now()`;
     },
 
     async userIdByEmail(email) {

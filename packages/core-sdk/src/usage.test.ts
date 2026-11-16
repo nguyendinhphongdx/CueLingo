@@ -32,12 +32,16 @@ describe('usage client', () => {
     const fetch = vi.fn().mockResolvedValue(json(200, { email: 'a@b.co', plan: 'pro' }));
     const client = createClient({ baseUrl: 'http://api', getToken: () => 't', fetch });
 
-    expect(await client.usage.setPlan({ email: 'a@b.co', plan: 'pro' })).toEqual({
+    expect(await client.usage.setPlan({ email: 'a@b.co', plan: 'pro', period: 'month' })).toEqual({
       email: 'a@b.co',
       plan: 'pro',
     });
     expect(fetch.mock.calls[0]?.[1].method).toBe('PUT');
-    expect(JSON.parse(fetch.mock.calls[0]?.[1].body)).toEqual({ email: 'a@b.co', plan: 'pro' });
+    expect(JSON.parse(fetch.mock.calls[0]?.[1].body)).toEqual({
+      email: 'a@b.co',
+      plan: 'pro',
+      period: 'month',
+    });
   });
 
   it('keeps the allowance in the error details of QUOTA_EXCEEDED', async () => {

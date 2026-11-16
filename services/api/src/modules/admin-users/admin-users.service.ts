@@ -22,9 +22,9 @@ export const PAGE_SIZE = 50;
 
 export interface AdminUsersOptions {
   isAdmin: (userId: string) => Promise<boolean>;
-  /** The gate of the usage module: this module reads usage and plans through it and never writes `user_plans`. */
-  usage: Pick<UsageService, 'snapshot' | 'setPlanFor'>;
-  billing: Pick<BillingService, 'listOrders'>;
+  /** The gate of the usage module: this module reads usage through it. Plans are written by billing. */
+  usage: Pick<UsageService, 'snapshot'>;
+  billing: Pick<BillingService, 'listOrders' | 'grantByAdmin'>;
   now?: () => Date;
 }
 
@@ -118,6 +118,7 @@ export function createAdminUsersService(repo: AdminUsersRepository, options: Adm
           period: o.period,
           amount: o.amount,
           status: o.status,
+          byAdmin: o.byAdmin,
           createdAt: o.createdAt,
           paidAt: o.paidAt,
           planExpiresAt: o.planExpiresAt,
@@ -125,7 +126,7 @@ export function createAdminUsersService(repo: AdminUsersRepository, options: Adm
       };
     },
 
-    /** The person is the path id; the admin is the session. The usage module checks the plan and logs it. */
+    /** The person is the path id; the admin is the session. The billing module writes the plan and the order and logs it. */
     async setPlan(
       adminId: string,
       params: unknown,
@@ -135,7 +136,7 @@ export function createAdminUsersService(repo: AdminUsersRepository, options: Adm
       const { id } = parse(IdParamsSchema, params);
       const input = parse(AdminSetUserPlanRequestSchema, body);
       if (!(await repo.find(id, now()))) throw new AppError(ErrorCode.NotFound, 'User not found');
-      const { current } = await options.usage.setPlanFor(adminId, id, input.plan, input.expiresAt);
+      const { current } = await options.billing.grantByAdmin(adminId, id, input);
       return {
         plan: current.plan,
         source: 'manual',

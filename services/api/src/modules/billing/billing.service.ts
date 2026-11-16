@@ -9,11 +9,18 @@ import {
   type BillingOrderList,
   type BillingOverviewResponse,
   type CreateOrderRequest,
+  type Plan,
+  type BillingPeriod,
   type PlanLimitTable,
   type PlanPriceTable,
 } from '@cuelingo/shared';
 import { AppError } from '../../lib/errors';
-import type { BillingRepository, OrderRow } from './billing.repository';
+import {
+  ADMIN_PROVIDER,
+  type BillingRepository,
+  type GrantResult,
+  type OrderRow,
+} from './billing.repository';
 import type { PaymentProvider } from './providers/provider';
 
 export type BillingService = ReturnType<typeof createBillingService>;
@@ -29,6 +36,8 @@ export interface BillingOptions {
   provider?: PaymentProvider;
   prices: PlanPriceTable;
   limits: PlanLimitTable;
+  /** The single reader of `ADMIN_EMAILS`: `grantByAdmin` asks it before anything else. */
+  isAdmin: (userId: string) => Promise<boolean>;
   /** Origin of apps/web, where the payer returns to. */
   webOrigin: string;
   log: BillingLog;
@@ -65,6 +74,7 @@ export function createBillingService(repo: BillingRepository, options: BillingOp
       period: order.period,
       amount: order.amount,
       status,
+      byAdmin: order.provider === ADMIN_PROVIDER,
       transferContent: `CL${order.orderCode}`,
       qrCode: open ? order.qrCode : null,
       checkoutUrl: open ? order.checkoutUrl : null,
@@ -165,6 +175,50 @@ export function createBillingService(repo: BillingRepository, options: BillingOp
   }
 
   return {
+    /**
+     * An admin changes the plan of a person: a purchase without the payment step (owner decision 2026-11-16).
+     * The plan row and, for a paid plan, a 0 dong order change in one transaction. The caller has already
+     * made sure the user exists. Logs ids, plans and dates only: never an email.
+     */
+    async grantByAdmin(
+      adminId: string,
+      targetUserId: string,
+      input: { plan: Plan; period?: BillingPeriod },
+    ): Promise<GrantResult> {
+      if (!(await options.isAdmin(adminId))) {
+        throw new AppError(ErrorCode.Forbidden, 'Admin access required');
+      }
+      if ((input.plan === 'free') !== (input.period === undefined)) {
+        throw new AppError(ErrorCode.Validation, 'period is required for a paid plan only');
+      }
+      const result = await repo.grant(targetUserId, {
+        adminId,
+        plan: input.plan,
+        period: input.period,
+        now: now(),
+        prices,
+      });
+      const { previous, current } = result;
+      log.info(
+        {
+          adminId,
+          targetUserId,
+          from: {
+            plan: previous?.plan ?? 'free',
+            source: previous?.source ?? null,
+            expiresAt: previous?.expiresAt?.toISOString() ?? null,
+          },
+          to: {
+            plan: current.plan,
+            period: input.period ?? null,
+            expiresAt: current.expiresAt?.toISOString() ?? null,
+          },
+        },
+        'plan changed',
+      );
+      return result;
+    },
+
     /** AC1, AC11: what can be bought, from the server's price table. */
     async overview(userId: string): Promise<BillingOverviewResponse> {
       const row = await repo.currentPlan(userId);
@@ -262,7 +316,7 @@ export function createBillingService(repo: BillingRepository, options: BillingOp
 
       const { event } = verdict;
       const order = await repo.findByOrderCode(event.orderCode);
-      if (!order) {
+      if (!order || order.provider === ADMIN_PROVIDER) {
         log.info({ orderCode: event.orderCode }, 'payment webhook for an unknown order, ignored');
         return;
       }

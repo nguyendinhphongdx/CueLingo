@@ -277,6 +277,7 @@ describe('billing module', () => {
         provider,
         prices: DEFAULT_PLAN_PRICES,
         limits: DEFAULT_PLAN_LIMITS,
+        isAdmin: async () => false,
         webOrigin: 'http://web',
         log: { info: (f, m) => logs.push(JSON.stringify([f, m])), warn: () => {} },
         now: () => now,
@@ -287,6 +288,35 @@ describe('billing module', () => {
       );
       expect((await repo.findByOrderCode(codeOf(order)))?.providerRef).toBe('FT999');
       expect(logs.join('\n')).not.toContain('FT999');
+    });
+  });
+
+  describe('admin grants', () => {
+    it('ignores a webhook that names an admin order, and never polls or expires it', async () => {
+      const plans = new Map();
+      const repo = createInMemoryBillingRepository(plans, () => now);
+      const service = createBillingService(repo, {
+        provider,
+        prices: DEFAULT_PLAN_PRICES,
+        limits: DEFAULT_PLAN_LIMITS,
+        isAdmin: async (id) => id === 'owner',
+        webOrigin: 'http://web',
+        log: { info: () => {}, warn: () => {} },
+        now: () => now,
+      });
+      await expect(
+        service.grantByAdmin(ALICE, ALICE, { plan: 'pro', period: 'month' }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      const { orderId } = await service.grantByAdmin('owner', ALICE, {
+        plan: 'pro',
+        period: 'month',
+      });
+      const before = JSON.stringify([...plans]);
+      const [granted] = (await service.listOrders(ALICE)).items;
+      expect(granted).toMatchObject({ id: orderId, amount: 0, status: 'paid', byAdmin: true });
+      await service.handleWebhook(provider.webhook({ orderCode: codeOf(granted!), amount: 0 }));
+      expect((await service.getOrder(ALICE, orderId!)).status).toBe('paid');
+      expect(JSON.stringify([...plans])).toBe(before);
     });
   });
 
