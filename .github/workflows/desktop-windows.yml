@@ -4,7 +4,7 @@ name: Desktop (Windows)
 # (ADR 0021), kept as a workflow artifact. Also lints and tests both Rust crates on Windows, and measures the
 # speech model on this runner (spike S2 of the windows-desktop dossier: p50/p95 per sentence, memory, load time).
 # WASAPI capture is not in this build yet (ADR 0020): the app installs and opens, a meeting reports that it is
-# not available. Not part of release.yml until then.
+# not available. release.yml builds the same installer for a tag (a beta, no public download link yet).
 on:
   pull_request:
     paths:
