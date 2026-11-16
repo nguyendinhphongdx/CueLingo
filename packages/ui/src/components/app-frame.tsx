@@ -13,12 +13,15 @@ export function AppFrame({
   nav,
   footer,
   dragRegion,
+  wide = false,
   children,
 }: {
   nav: SidebarNavProps;
   footer?: ReactNode;
   /** Adds a strip along the top for dragging a window with a transparent title bar (desktop). */
   dragRegion?: boolean;
+  /** A wider content area for tables and charts (the admin pages); the default suits forms and text. */
+  wide?: boolean;
   children: ReactNode;
 }) {
   const mobileNavigation = useMobileNavigation();
@@ -67,7 +70,9 @@ export function AppFrame({
       <main
         className={`scroll-auto-hide h-full min-w-0 flex-1 overflow-y-auto px-4 pb-9 md:px-10 ${dragRegion ? 'pt-14' : 'pt-20 md:pt-10'}`}
       >
-        <div className="mx-auto flex max-w-[640px] flex-col gap-6">{children}</div>
+        <div className={`mx-auto flex flex-col gap-6 ${wide ? 'max-w-6xl' : 'max-w-[640px]'}`}>
+          {children}
+        </div>
       </main>
     </div>
   );
