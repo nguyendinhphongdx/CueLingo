@@ -1,6 +1,6 @@
 import { DownloadPage } from '../../../features/landing';
-import { DOWNLOAD_URL } from '../../../lib/config';
+import { DOWNLOADS } from '../../../lib/config';
 
 export default function Page() {
-  return <DownloadPage downloadUrl={DOWNLOAD_URL} />;
+  return <DownloadPage downloads={DOWNLOADS} />;
 }

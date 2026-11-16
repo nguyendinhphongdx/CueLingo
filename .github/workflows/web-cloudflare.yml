@@ -44,6 +44,8 @@ jobs:
       NEXT_PUBLIC_API_URL: ${{ vars.CUELINGO_API_URL || 'https://api.invalid' }}
       # Same link as the public site (pages.yml): the newest release of this repository (release.yml).
       NEXT_PUBLIC_DOWNLOAD_URL: https://github.com/${{ github.repository }}/releases/latest/download/CueLingo-macOS-arm64.dmg
+      # No NEXT_PUBLIC_DOWNLOAD_URL_WINDOWS yet: the Windows build is a beta and the page offers no Windows download.
+      # To open it, add that variable with .../releases/latest/download/CueLingo-Windows-x64-setup.exe.
       NEXT_PUBLIC_GOOGLE_ENABLED: ${{ vars.CUELINGO_GOOGLE_ENABLED }}
       NEXT_PUBLIC_SANDBOX_ORIGIN: ${{ vars.CUELINGO_SANDBOX_ORIGIN }}
       NEXT_PUBLIC_AGENT_HTML_BLOCKS: ${{ vars.CUELINGO_AGENT_HTML_BLOCKS }}

@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { NO_DOWNLOADS } from './detect-os';
 import { DownloadPage } from './download-page';
 import { LandingView } from './landing-view';
 
@@ -49,7 +50,7 @@ describe('no invented proof', () => {
 
   it.each([
     ['landing', landing],
-    ['download', () => renderToStaticMarkup(<DownloadPage downloadUrl={null} />)],
+    ['download', () => renderToStaticMarkup(<DownloadPage downloads={NO_DOWNLOADS} />)],
   ])('%s carries no customer claims, ratings or statistics', (_name, render) => {
     const text = render().replace(/<[^>]+>/g, ' ');
     for (const pattern of forbidden) expect(text).not.toMatch(pattern);

@@ -1,3 +1,4 @@
+import type { DownloadLinks } from '@cuelingo/ui/components/landing/detect-os';
 import type { LandingPaths } from '@cuelingo/ui/components/landing/landing-link';
 
 /**
@@ -21,6 +22,12 @@ export function sitePaths(base: string): LandingPaths {
   return { home: root, download: `${root}download/`, login: null };
 }
 
-/** The only place the site reads environment variables; both are inlined at build time. */
-export const DOWNLOAD_URL = parseDownloadUrl(import.meta.env.VITE_DOWNLOAD_URL);
+/**
+ * The only place the site reads environment variables; all are inlined at build time. A build without
+ * `VITE_DOWNLOAD_URL_WINDOWS` has no Windows download: the page tells Windows visitors that Windows is coming.
+ */
+export const DOWNLOADS: DownloadLinks = {
+  macos: parseDownloadUrl(import.meta.env.VITE_DOWNLOAD_URL),
+  windows: parseDownloadUrl(import.meta.env.VITE_DOWNLOAD_URL_WINDOWS),
+};
 export const PATHS = sitePaths(import.meta.env.BASE_URL);

@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { NO_DOWNLOADS } from './detect-os';
 import { DownloadPage } from './download-page';
 import type { LandingLinkProps } from './landing-link';
 import { LandingView } from './landing-view';
@@ -16,7 +17,7 @@ describe('landing components in @cuelingo/ui', () => {
   it('draw every link through the host link component and host paths', () => {
     const paths = { home: '/site/', download: '/site/download/', login: null };
     const download = renderToStaticMarkup(
-      <DownloadPage downloadUrl={null} link={MarkedLink} paths={paths} />,
+      <DownloadPage downloads={NO_DOWNLOADS} link={MarkedLink} paths={paths} />,
     );
     const landing = renderToStaticMarkup(<LandingView link={MarkedLink} paths={paths} />);
 
@@ -28,7 +29,7 @@ describe('landing components in @cuelingo/ui', () => {
   it('hide every sign-in link when the host has no login path', () => {
     const paths = { home: '/', download: '/download/', login: null };
     const markup =
-      renderToStaticMarkup(<DownloadPage downloadUrl={null} paths={paths} />) +
+      renderToStaticMarkup(<DownloadPage downloads={NO_DOWNLOADS} paths={paths} />) +
       renderToStaticMarkup(<LandingView paths={paths} />);
 
     expect(markup).not.toContain('Đăng nhập');

@@ -33,7 +33,7 @@ Bản Windows (`scripts/windows-installer.mjs`, `installer/windows/CueLingo.iss`
 
 Release luôn tạo ở dạng draft trước, nên link `releases/latest/download/…` không bao giờ trỏ vào một release thiếu tệp; nếu một trong hai job dựng hỏng thì `publish` không chạy và không có release nào ([windows-desktop](../../06-delivery/2026-11-13-windows-desktop/02-plan.md)). Tên tệp cố định: `CueLingo-macOS-arm64.dmg`, `CueLingo.app.tar.gz(.sig)`, `CueLingo-Windows-x64-setup.exe(.sig)`, `latest.json`.
 
-Biến cần có (do người đặt): secrets `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`; variables `CUELINGO_UPDATER_PUBKEY`, `CUELINGO_API_URL`, `CUELINGO_WEB_URL`. Link tải không cần biến riêng: web (`web-cloudflare.yml` → `NEXT_PUBLIC_DOWNLOAD_URL`) và [Site công khai](../07-site/README.md) (`pages.yml` → `VITE_DOWNLOAD_URL`) cùng tự tính `https://github.com/<owner>/<repo>/releases/latest/download/CueLingo-macOS-arm64.dmg` từ chính repo này. Release đăng bằng `GITHUB_TOKEN`, không cần token riêng.
+Biến cần có (do người đặt): secrets `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`; variables `CUELINGO_UPDATER_PUBKEY`, `CUELINGO_API_URL`, `CUELINGO_WEB_URL`. Link tải không cần biến riêng: web (`web-cloudflare.yml` → `NEXT_PUBLIC_DOWNLOAD_URL`) và [Site công khai](../07-site/README.md) (`pages.yml` → `VITE_DOWNLOAD_URL`) cùng tự tính `https://github.com/<owner>/<repo>/releases/latest/download/CueLingo-macOS-arm64.dmg` từ chính repo này. Link Windows (`NEXT_PUBLIC_DOWNLOAD_URL_WINDOWS`, `VITE_DOWNLOAD_URL_WINDOWS`) **cố ý chưa đặt** trong hai workflow đó: bản Windows là beta nên chưa có nút tải công khai. Release đăng bằng `GITHUB_TOKEN`, không cần token riêng.
 
 ## Câu hỏi mở
 

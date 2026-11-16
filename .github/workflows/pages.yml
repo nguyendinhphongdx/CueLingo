@@ -40,6 +40,8 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           echo "VITE_DOWNLOAD_URL=https://github.com/${REPO}/releases/latest/download/CueLingo-macOS-arm64.dmg" >> "$GITHUB_ENV"
+          # No VITE_DOWNLOAD_URL_WINDOWS yet: the Windows build is a beta (it is in the release, ADR 0021) and the
+          # public page offers no Windows download. To open it, add the same line with CueLingo-Windows-x64-setup.exe.
           # A project site lives at /<repository name>/ unless that repository is <user>.github.io.
           name="${REPO#*/}"
           case "$name" in

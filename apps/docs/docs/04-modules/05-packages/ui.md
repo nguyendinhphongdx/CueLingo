@@ -57,16 +57,19 @@ Nhãn người nói dùng chung cho overlay và web: `SpeakerTag({label, display
 
 Dùng chung cho web (`apps/web/src/features/landing`) và site tĩnh ([Site công khai](../07-site/README.md)). Thành phần chỉ trình bày: router link, đường dẫn và việc chuyển hướng người đã đăng nhập do app chủ quyết định qua props.
 
-| Import                               | Export                                                              |
-| ------------------------------------ | ------------------------------------------------------------------- |
-| `components/landing/landing-view`    | `LandingView({link?, paths?})`, `LandingSessionCheck`               |
-| `components/landing/download-page`   | `DownloadPage({downloadUrl, link?, paths?})`                        |
-| `components/landing/public-header`   | `PublicHeader({link?, paths?})`                                     |
-| `components/landing/caption-overlay` | `CaptionOverlay({compact?})`                                        |
-| `components/landing/landing-link`    | `LandingLink`, `LandingPaths`, `PlainLink`, `DEFAULT_LANDING_PATHS` |
+| Import                               | Export                                                                                                                                |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `components/landing/landing-view`    | `LandingView({downloads?, link?, paths?, os?})`, `LandingSessionCheck`                                                                |
+| `components/landing/download-page`   | `DownloadPage({downloads?, link?, paths?, os?})`                                                                                      |
+| `components/landing/detect-os`       | `detectOs(userAgent, platformHint?, touchPoints?)`, `downloadView(os, downloads)`, `useDetectedOs()`, `DownloadLinks`, `NO_DOWNLOADS` |
+| `components/landing/public-header`   | `PublicHeader({link?, paths?})`                                                                                                       |
+| `components/landing/caption-overlay` | `CaptionOverlay({compact?})`                                                                                                          |
+| `components/landing/landing-link`    | `LandingLink`, `LandingPaths`, `PlainLink`, `DEFAULT_LANDING_PATHS`                                                                   |
 
 - `link` mặc định là thẻ `<a>`; web truyền `next/link`. `paths = {home, download, login}`; `login: null` ẩn mọi liên kết đăng nhập (site tĩnh).
-- `downloadUrl` null thì nút "Sắp có bản tải" bị khoá. Trang tải nêu macOS 14.2+, Apple Silicon, cách mở bản chưa công chứng, cấp quyền, và việc app tự kiểm tra bản mới rồi hỏi trước khi cài.
+- `downloads = {macos, windows}` (`DownloadLinks`, mỗi giá trị là link hoặc `null`). `macos: null` thì nút "Sắp có bản tải" bị khoá. **`windows: null` nghĩa là chưa mở công khai**: không có nút hay link Windows nào, và người dùng Windows thấy "Windows sắp có" thay vì nút Mac.
+- Hệ điều hành đoán ở trình duyệt bằng `useDetectedOs()` (`useSyncExternalStore`): lần render đầu và trên máy chủ là `null`, nên HTML gửi đi khớp lúc hydrate. `downloadView(os, downloads)` chọn một trong bốn kiểu: `macos` (như cũ, cũng là kiểu của mọi người khi chưa có link Windows), `windows` (nút Windows trước, kèm link Mac), `both` (chưa biết hệ điều hành mà có link Windows: hai nút) và `windows-soon`. `detectOs` coi iPhone, iPad (kể cả iPad xin bản desktop, nhận ra bằng `maxTouchPoints`), Android, ChromeOS và Linux là `other`. Prop `os` ép hệ điều hành (xem trước, test).
+- Trang tải nêu từng bản: macOS 14.2+ Apple Silicon, cách mở bản chưa công chứng, cấp quyền; Windows 10 22H2 / 11 x64, cách vượt SmartScreen ("Windows protected your PC" → More info → Run anyway), quyền micro; và việc app tự kiểm tra bản mới rồi hỏi trước khi cài. Landing và FAQ chỉ nhắc Windows khi `downloads.windows` có link.
 - CSS nằm ở `landing/landing.module.css` (CSS module). Cần `src/css-modules.d.ts` để kiểm kiểu.
 
 ## Câu hỏi mở
