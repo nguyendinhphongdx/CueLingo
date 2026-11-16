@@ -37,6 +37,7 @@ describe('BillingOrderSchema', () => {
       plan: 'pro',
       period: 'month',
       amount: 99000,
+      byAdmin: false,
       status: 'refunded',
       transferContent: 'CL1000001',
       qrCode: null,
@@ -52,19 +53,39 @@ describe('BillingOrderSchema', () => {
   });
 });
 
-describe('SetPlanRequestSchema expiresAt', () => {
-  it('is optional and must be an ISO datetime', () => {
-    expect(SetPlanRequestSchema.safeParse({ email: 'a@b.co', plan: 'pro' }).success).toBe(true);
-    expect(
-      SetPlanRequestSchema.safeParse({
-        email: 'a@b.co',
-        plan: 'pro',
-        expiresAt: '2027-01-01T00:00:00Z',
-      }).success,
-    ).toBe(true);
-    expect(
-      SetPlanRequestSchema.safeParse({ email: 'a@b.co', plan: 'pro', expiresAt: 'tomorrow' })
-        .success,
-    ).toBe(false);
+describe('SetPlanRequestSchema period', () => {
+  it('is required for a paid plan and absent for free; expiresAt is gone', () => {
+    const ok = (body: object) =>
+      SetPlanRequestSchema.safeParse({ email: 'a@b.co', ...body }).success;
+    expect(ok({ plan: 'pro', period: 'month' })).toBe(true);
+    expect(ok({ plan: 'ultra', period: 'year' })).toBe(true);
+    expect(ok({ plan: 'free' })).toBe(true);
+    expect(ok({ plan: 'pro' })).toBe(false);
+    expect(ok({ plan: 'free', period: 'month' })).toBe(false);
+    expect(ok({ plan: 'pro', period: 'week' })).toBe(false);
+    expect(ok({ plan: 'pro', period: 'month', expiresAt: '2027-01-01T00:00:00Z' })).toBe(false);
+  });
+});
+
+describe('BillingOrderSchema grant by an admin', () => {
+  it('allows a 0 dong order marked byAdmin', () => {
+    const order = {
+      id: '11111111-1111-4111-8111-111111111111',
+      plan: 'pro',
+      period: 'month',
+      amount: 0,
+      byAdmin: true,
+      status: 'paid',
+      transferContent: 'CL1000000',
+      qrCode: null,
+      checkoutUrl: null,
+      createdAt: '2026-11-16T03:00:00.000Z',
+      expiresAt: '2026-11-16T03:00:00.000Z',
+      paidAt: '2026-11-16T03:00:00.000Z',
+      planExpiresAt: '2026-12-16T03:00:00.000Z',
+      planApplied: true,
+    };
+    expect(BillingOrderSchema.safeParse(order).success).toBe(true);
+    expect(BillingOrderSchema.safeParse({ ...order, amount: -1 }).success).toBe(false);
   });
 });

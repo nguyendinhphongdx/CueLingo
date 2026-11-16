@@ -78,8 +78,11 @@ export const AdminUserOrderSchema = z
     id: z.uuid(),
     plan: PaidPlanSchema,
     period: BillingPeriodSchema,
-    amount: z.number().int().positive(),
+    /** 0 for a grant by an admin. */
+    amount: z.number().int().nonnegative(),
     status: BillingOrderStatusSchema,
+    /** True for the 0 dong order an admin grant records. */
+    byAdmin: z.boolean(),
     createdAt: z.iso.datetime(),
     paidAt: z.iso.datetime().nullable(),
     planExpiresAt: z.iso.datetime().nullable(),
@@ -101,10 +104,14 @@ export type AdminUserDetail = z.infer<typeof AdminUserDetailSchema>;
 export const AdminSetUserPlanRequestSchema = z
   .object({
     plan: PlanSchema,
-    /** When a paid plan ends. Omitted = never. Ignored for `free`. Must be in the future. */
-    expiresAt: z.iso.datetime().optional(),
+    /** Required for `pro` and `ultra`, absent for `free`. The end date is worked out by the server. */
+    period: BillingPeriodSchema.optional(),
   })
-  .strict();
+  .strict()
+  .refine((v) => (v.plan === 'free') === (v.period === undefined), {
+    message: 'period is required for a paid plan and absent for free',
+    path: ['period'],
+  });
 export type AdminSetUserPlanRequest = z.infer<typeof AdminSetUserPlanRequestSchema>;
 
 /** The stored plan after the change; the source is always `manual`. */

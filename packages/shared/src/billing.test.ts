@@ -4,6 +4,7 @@ import {
   PlanPricesEnvSchema,
   addPeriod,
   effectivePlan,
+  planAfterAdminGrant,
   planAfterPurchase,
   type PlanRow,
 } from './billing';
@@ -136,5 +137,74 @@ describe('PlanPricesEnvSchema', () => {
     expect(PlanPricesEnvSchema.safeParse('{"free":{"month":1}}').success).toBe(false);
     expect(PlanPricesEnvSchema.safeParse('{"pro":{"month":0}}').success).toBe(false);
     expect(PlanPricesEnvSchema.safeParse('{"pro":{"month":1.5}}').success).toBe(false);
+  });
+});
+
+describe('planAfterAdminGrant', () => {
+  const now = at('2026-11-15T03:00:00Z');
+  const grant = (
+    current: PlanRow | null,
+    plan: 'free' | 'pro' | 'ultra',
+    period?: 'month' | 'year',
+  ) => planAfterAdminGrant({ current, now, plan, period, prices });
+  const paid = (plan: 'pro' | 'ultra', end: string | null): PlanRow => ({
+    plan,
+    expiresAt: end ? at(end) : null,
+    source: 'payment',
+  });
+
+  it('starts now from free, a month or a year', () => {
+    expect(grant(null, 'pro', 'month')).toEqual({
+      plan: 'pro',
+      expiresAt: at('2026-12-15T03:00:00Z'),
+    });
+    expect(grant(null, 'ultra', 'year')).toEqual({
+      plan: 'ultra',
+      expiresAt: at('2027-11-15T03:00:00Z'),
+    });
+  });
+
+  it('starts now when the old plan ended', () => {
+    expect(grant(paid('ultra', '2026-11-01T00:00:00Z'), 'pro', 'month').expiresAt).toEqual(
+      at('2026-12-15T03:00:00Z'),
+    );
+  });
+
+  it('extends the same plan from its end date', () => {
+    expect(grant(paid('pro', '2026-12-01T03:00:00Z'), 'pro', 'month')).toEqual({
+      plan: 'pro',
+      expiresAt: at('2027-01-01T03:00:00Z'),
+    });
+  });
+
+  it('converts the Pro time left into Ultra time like a purchase', () => {
+    const out = grant(paid('pro', '2026-11-25T03:00:00Z'), 'ultra', 'month');
+    const extra = Math.round((10 * 86_400_000 * 99_000) / 249_000);
+    expect(out.expiresAt).toEqual(new Date(at('2026-12-15T03:00:00Z').getTime() + extra));
+  });
+
+  it('allows a downgrade: starts now and drops the time left', () => {
+    expect(grant(paid('ultra', '2027-06-01T00:00:00Z'), 'pro', 'month')).toEqual({
+      plan: 'pro',
+      expiresAt: at('2026-12-15T03:00:00Z'),
+    });
+  });
+
+  it('treats the same plan with no end date (legacy manual row) as a fresh start', () => {
+    expect(grant({ plan: 'pro', expiresAt: null, source: 'manual' }, 'pro', 'year')).toEqual({
+      plan: 'pro',
+      expiresAt: at('2027-11-15T03:00:00Z'),
+    });
+  });
+
+  it('free has no end date and ignores the period', () => {
+    expect(grant(paid('pro', '2027-01-01T00:00:00Z'), 'free')).toEqual({
+      plan: 'free',
+      expiresAt: null,
+    });
+  });
+
+  it('refuses a paid plan without a period', () => {
+    expect(() => grant(null, 'pro')).toThrow();
   });
 });

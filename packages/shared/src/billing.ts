@@ -145,3 +145,30 @@ export function planAfterPurchase(input: {
   const ratio = prices[active as PaidPlan].month / prices[plan].month;
   return { ok: true, plan, expiresAt: new Date(base.getTime() + Math.round(leftMs * ratio)) };
 }
+
+/** What an admin grant writes: the plan and its end (`null` = never, only for `free`). */
+export interface AdminGrantOutcome {
+  plan: Plan;
+  expiresAt: Date | null;
+}
+
+/**
+ * What the plan row becomes when an admin changes a plan: a purchase without the payment step (owner decision
+ * 2026-11-16). Same dates as {@link planAfterPurchase}, except where a purchase is refused: a lower plan, or
+ * the same plan with no end date (an older admin-set row), simply starts now and runs one `period`; the time
+ * left on the old plan is dropped. `free` ends any plan now and has no end date.
+ */
+export function planAfterAdminGrant(input: {
+  current: PlanRow | null;
+  now: Date;
+  plan: Plan;
+  /** Required for `pro` and `ultra`; ignored for `free`. */
+  period?: BillingPeriod;
+  prices: PlanPriceTable;
+}): AdminGrantOutcome {
+  const { plan, period, now } = input;
+  if (plan === 'free') return { plan, expiresAt: null };
+  if (!period) throw new Error('A paid plan needs a billing period');
+  const outcome = planAfterPurchase({ ...input, plan, period });
+  return { plan, expiresAt: outcome.ok ? outcome.expiresAt : addPeriod(now, period) };
+}

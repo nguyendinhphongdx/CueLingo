@@ -50,6 +50,7 @@ describe('admin users contract', () => {
       plan: 'pro',
       period: 'month',
       amount: 99000,
+      byAdmin: false,
       status: 'paid',
       createdAt: row.createdAt,
       paidAt: row.createdAt,
@@ -60,15 +61,15 @@ describe('admin users contract', () => {
     expect(AdminUserDetailSchema.safeParse({ user: row, orders: [] }).success).toBe(false);
   });
 
-  it('takes only plan and an optional end date; the person is never in the body', () => {
-    expect(AdminSetUserPlanRequestSchema.safeParse({ plan: 'pro' }).success).toBe(true);
-    expect(
-      AdminSetUserPlanRequestSchema.safeParse({ plan: 'pro', expiresAt: '2027-01-01T00:00:00Z' })
-        .success,
-    ).toBe(true);
-    expect(AdminSetUserPlanRequestSchema.safeParse({ plan: 'pro', userId: row.id }).success).toBe(
-      false,
-    );
-    expect(AdminSetUserPlanRequestSchema.safeParse({ plan: 'gold' }).success).toBe(false);
+  it('takes a plan and a period (paid only); the person is never in the body', () => {
+    const ok = (body: object) => AdminSetUserPlanRequestSchema.safeParse(body).success;
+    expect(ok({ plan: 'pro', period: 'month' })).toBe(true);
+    expect(ok({ plan: 'ultra', period: 'year' })).toBe(true);
+    expect(ok({ plan: 'free' })).toBe(true);
+    expect(ok({ plan: 'pro' })).toBe(false);
+    expect(ok({ plan: 'free', period: 'year' })).toBe(false);
+    expect(ok({ plan: 'pro', period: 'month', expiresAt: '2027-01-01T00:00:00Z' })).toBe(false);
+    expect(ok({ plan: 'pro', period: 'month', userId: row.id })).toBe(false);
+    expect(ok({ plan: 'gold', period: 'month' })).toBe(false);
   });
 });

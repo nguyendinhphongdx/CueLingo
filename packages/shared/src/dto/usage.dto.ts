@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BillingPeriodSchema } from '../billing';
 import { PlanSchema, UsageMetricSchema, UsageStateSchema, USAGE_METRICS } from '../plans';
 
 /** One allowance. `limit: null` = unlimited. `*_ms` metrics are milliseconds, the rest are counts. */
@@ -46,10 +47,14 @@ export const SetPlanRequestSchema = z
   .object({
     email: z.email().max(254),
     plan: PlanSchema,
-    /** When the plan ends and the user falls back to Free. Omitted = never (as in W2-02). */
-    expiresAt: z.iso.datetime().optional(),
+    /** Required for `pro` and `ultra`, absent for `free`. The end date is worked out by the server. */
+    period: BillingPeriodSchema.optional(),
   })
-  .strict();
+  .strict()
+  .refine((v) => (v.plan === 'free') === (v.period === undefined), {
+    message: 'period is required for a paid plan and absent for free',
+    path: ['period'],
+  });
 export type SetPlanRequest = z.infer<typeof SetPlanRequestSchema>;
 
 export const SetPlanResponseSchema = z

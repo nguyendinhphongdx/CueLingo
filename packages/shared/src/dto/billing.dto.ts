@@ -54,8 +54,11 @@ export const BillingOrderSchema = z
     id: z.uuid(),
     plan: PaidPlanSchema,
     period: BillingPeriodSchema,
-    amount: z.number().int().positive(),
+    /** VND. 0 for a grant by an admin. */
+    amount: z.number().int().nonnegative(),
     status: BillingOrderStatusSchema,
+    /** True for the 0 dong, already `paid` order an admin grant records: shown as "Admin tặng". */
+    byAdmin: z.boolean(),
     transferContent: z.string(),
     qrCode: z.string().nullable(),
     checkoutUrl: z.string().nullable(),
