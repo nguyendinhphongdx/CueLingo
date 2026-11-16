@@ -7,6 +7,7 @@ describe('settings sync', () => {
       assistDefault: 3 as const,
       overlay: { fontSize: 24, opacity: 72, theme: 'light' as const },
       saveAudio: true,
+      ttsVoice: 'Kore' as const,
     };
     const setAssistLevel = vi.fn();
     const setNativeAssistLevel = vi.fn(async () => {});

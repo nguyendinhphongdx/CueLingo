@@ -22,6 +22,7 @@ import { CalendarHintCard, CalendarSettings } from '../calendar';
 import { hasCalendar } from '../lib/platform';
 import {
   AssistSettings,
+  VoiceSettings,
   AssistSuggestionBanner,
   useLearnLanguage,
   useSettingsSync,
@@ -147,6 +148,7 @@ function CurrentView({
         {hasCalendar() ? <CalendarHintCard /> : null}
         <SessionPanel />
         <AssistSettings />
+        <VoiceSettings />
         <RecentSessions />
         <Section title="Phím tắt">
           <div className="bg-card rounded-xl border px-4 py-3">

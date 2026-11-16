@@ -27,8 +27,6 @@ export type QuickAssistState =
       status: RequestStatus;
       intent: string;
       result?: ComposeResponse;
-      selectedIndex?: number;
-      copyStatus?: 'copied' | 'error';
     };
 
 type HotkeySource = Pick<typeof native, 'onHotkey'>;
@@ -126,30 +124,16 @@ export function useQuickAssist({
     [api],
   );
 
-  const selectOption = useCallback(
-    (index: number) => {
-      setState((current) =>
-        current.view === 'compose' ? { ...current, selectedIndex: index } : current,
-      );
+  /** Copying a sentence is the sign it was used; the copy itself can fail, and the caller shows that. */
+  const copyOption = useCallback(
+    async (index: number, text: string) => {
       void api
         .record({ type: 'compose_used', chosenIndex: index, at: now() })
         .catch(() => undefined);
+      await navigator.clipboard.writeText(text);
     },
     [api],
   );
-
-  const copyOption = useCallback(async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setState((current) =>
-        current.view === 'compose' ? { ...current, copyStatus: 'copied' } : current,
-      );
-    } catch {
-      setState((current) =>
-        current.view === 'compose' ? { ...current, copyStatus: 'error' } : current,
-      );
-    }
-  }, []);
 
   useEffect(() => {
     if (!listen) return;
@@ -180,9 +164,7 @@ export function useQuickAssist({
     retryRecap: () => void openRecap(),
     openCompose,
     setComposeIntent: (intent: string) => {
-      setState((current) =>
-        current.view === 'compose' ? { ...current, intent, copyStatus: undefined } : current,
-      );
+      setState((current) => (current.view === 'compose' ? { ...current, intent } : current));
     },
     submitCompose: () => {
       if (state.view === 'compose') void submitCompose(state.intent);
@@ -190,8 +172,7 @@ export function useQuickAssist({
     retryCompose: () => {
       if (state.view === 'compose') void submitCompose(state.intent);
     },
-    selectOption,
-    copyOption: (text: string) => void copyOption(text),
+    copyOption,
     close: () => setState({ view: 'closed' }),
   };
 }

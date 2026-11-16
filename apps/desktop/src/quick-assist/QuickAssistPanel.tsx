@@ -1,7 +1,9 @@
 import { SUPPORTED_LANGUAGES } from '@cuelingo/shared';
 import { IconButton } from '@cuelingo/ui/components/icon-button';
+import { SpeakableOption } from '@cuelingo/ui/components/speakable-option';
 import { ChevronRight, X } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
+import { studyApi } from '../study/study-api';
 import { meetingLanguage, meetingLearnable } from './use-quick-assist';
 import type { QuickAssistActions, QuickAssistState } from './use-quick-assist';
 
@@ -198,39 +200,16 @@ export function QuickAssistPanel({
 
       {state.status === 'success' && state.result ? (
         <div aria-live="polite" className="mt-4 space-y-2.5">
-          <p className="text-muted-foreground text-xs">Chọn một câu để nói:</p>
+          <p className="text-muted-foreground text-xs">Nghe thử, rồi sao chép câu bạn muốn nói:</p>
           {state.result.options.map((option, index) => (
-            <div key={`${index}-${option.en}`} className="space-y-2">
-              <button
-                type="button"
-                aria-pressed={state.selectedIndex === index}
-                className={`min-h-9 w-full cursor-pointer rounded-xl border px-3 py-2.5 text-left text-base leading-snug focus-visible:ring-2 focus-visible:outline-none ${
-                  state.selectedIndex === index
-                    ? 'border-primary bg-primary/10'
-                    : 'hover:bg-foreground/5'
-                }`}
-                onClick={() => actions.selectOption(index)}
-              >
-                {option.en}
-                {option.noteVi ? (
-                  <span className="text-muted-foreground mt-1 block text-xs">{option.noteVi}</span>
-                ) : null}
-              </button>
-              {state.selectedIndex === index ? (
-                <button
-                  type="button"
-                  className={buttonClass}
-                  onClick={() => actions.copyOption(option.en)}
-                >
-                  Sao chép câu đã chọn
-                </button>
-              ) : null}
-            </div>
+            <SpeakableOption
+              key={`${index}-${option.en}`}
+              text={option.en}
+              note={option.noteVi ?? undefined}
+              loadAudio={studyApi.speak}
+              onCopy={(text) => actions.copyOption(index, text)}
+            />
           ))}
-          {state.copyStatus === 'copied' ? <p>Đã sao chép.</p> : null}
-          {state.copyStatus === 'error' ? (
-            <p role="alert">Không thể sao chép. Vui lòng thử lại.</p>
-          ) : null}
         </div>
       ) : null}
     </PanelFrame>

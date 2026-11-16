@@ -7,3 +7,4 @@ export { useSettings, type SelectableAssistLevel } from './settings-store';
 export { useSettingsSync } from './use-settings-sync';
 export { AssistSuggestionBanner } from './AssistSuggestionBanner';
 export { useLanguage, useLearnLanguage } from './use-language';
+export { VoiceSettings } from './VoiceSettings';

@@ -49,6 +49,7 @@ import {
   type SubmitPlacementRequest,
   type UpdateAdminAgentRequest,
   type UpdateMeRequest,
+  type TtsVoice,
   type UpdateUserSettings,
 } from '@cuelingo/shared';
 import { API_URL } from './config';
@@ -110,14 +111,14 @@ async function request<T>(
 
 /** Web endpoints that are not yet part of core-sdk still stay behind this single client boundary. */
 /** Spoken audio for a short English text, as a blob the page can play. */
-async function speak(text: string): Promise<Blob> {
+async function speak(text: string, voice?: TtsVoice): Promise<Blob> {
   let response: Response;
   try {
     response = await fetch(`${API_URL}/v1/tts`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(TtsRequestSchema.parse({ text })),
+      body: JSON.stringify(TtsRequestSchema.parse({ text, ...(voice ? { voice } : {}) })),
     });
   } catch (error) {
     throw new ApiError(0, 'NETWORK_ERROR', (error as Error).message);

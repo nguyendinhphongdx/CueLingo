@@ -6,6 +6,7 @@ const settings = {
   assistDefault: 4 as const,
   overlay: { fontSize: 18, opacity: 88, theme: 'dark' as const },
   saveAudio: false,
+  ttsVoice: 'Kore' as const,
 };
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -65,9 +66,12 @@ describe('desktop settings api', () => {
     await vi.advanceTimersByTimeAsync(5_000);
     expect(update).toHaveBeenCalledOnce();
 
-    saver.schedule({ saveAudio: true });
+    saver.schedule({ saveAudio: true, ttsVoice: 'Kore' as const });
     await vi.advanceTimersByTimeAsync(800);
-    expect(update).toHaveBeenLastCalledWith({ overlay: { opacity: 70 }, saveAudio: true }, 'en');
+    expect(update).toHaveBeenLastCalledWith(
+      { overlay: { opacity: 70 }, saveAudio: true, ttsVoice: 'Kore' as const },
+      'en',
+    );
   });
 
   it('saves a change under the language it was made in, even if the language changes while waiting', async () => {
