@@ -26,6 +26,7 @@ import { createPostgresPhrasesRepository, createPostgresStudyRepository } from '
 import { createPostgresAdminRepository } from './modules/admin';
 import { createPostgresFeedbackRepository } from './modules/feedback';
 import { createPostgresUsageRepository } from './modules/usage';
+import { createPostgresAdminAnalyticsRepository } from './modules/admin-analytics';
 import { createPostgresAdminUsersRepository } from './modules/admin-users';
 import { createPayosProvider, createPostgresBillingRepository } from './modules/billing';
 import { createInviteGate, createPostgresInvitesRepository } from './modules/invites';
@@ -115,6 +116,7 @@ const app = await buildApp({
     usage: createPostgresUsageRepository(sql),
     billing: createPostgresBillingRepository(sql),
     adminUsers: createPostgresAdminUsersRepository(sql),
+    adminAnalytics: createPostgresAdminAnalyticsRepository(sql),
   },
   queue,
   resolveUserId: authModule.resolveUserId,

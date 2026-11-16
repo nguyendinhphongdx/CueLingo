@@ -20,6 +20,7 @@ import { createInMemoryFeedbackRepository } from './modules/feedback';
 import { createInMemoryInvitesRepository } from './modules/invites';
 import { createInMemoryUsageRepository, type InMemoryPlanRows } from './modules/usage';
 import { createInMemoryBillingRepository } from './modules/billing';
+import { createInMemoryAdminAnalyticsRepository } from './modules/admin-analytics';
 import { createInMemoryAdminUsersRepository } from './modules/admin-users';
 
 /** Header the test resolver reads in place of a real session. */
@@ -77,6 +78,7 @@ export async function buildTestApp(
       usage: createInMemoryUsageRepository({}, plans),
       billing: createInMemoryBillingRepository(plans, appOverrides.now),
       adminUsers: createInMemoryAdminUsersRepository([], plans),
+      adminAnalytics: createInMemoryAdminAnalyticsRepository(),
       ...repos,
     },
     queue,

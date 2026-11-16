@@ -27,6 +27,7 @@ import { createPostgresInvitesRepository } from '../../src/modules/invites';
 import { createPostgresFeedbackRepository } from '../../src/modules/feedback';
 import { createPostgresUsageRepository } from '../../src/modules/usage';
 import { createPostgresBillingRepository } from '../../src/modules/billing';
+import { createPostgresAdminAnalyticsRepository } from '../../src/modules/admin-analytics';
 import { createPostgresAdminUsersRepository } from '../../src/modules/admin-users';
 import { startMigratedPostgres, type TestDatabase } from './postgres';
 
@@ -78,6 +79,7 @@ describe('auth on real Postgres (AC3, AC4)', () => {
         usage: createPostgresUsageRepository(sql),
         billing: createPostgresBillingRepository(sql),
         adminUsers: createPostgresAdminUsersRepository(sql),
+        adminAnalytics: createPostgresAdminAnalyticsRepository(sql),
       },
       queue: createInMemoryQueue(),
       resolveUserId: authModule.resolveUserId,

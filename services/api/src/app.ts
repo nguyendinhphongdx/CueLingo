@@ -37,6 +37,10 @@ import {
 } from './modules/review';
 import { createSpeakersModule, type SpeakersRepository } from './modules/speakers';
 import { createSessionsModule, type SessionsRepository } from './modules/sessions';
+import {
+  createAdminAnalyticsModule,
+  type AdminAnalyticsRepository,
+} from './modules/admin-analytics';
 import { createAdminUsersModule, type AdminUsersRepository } from './modules/admin-users';
 import { createAdminModule, type AdminRepository, type AgentAdminPort } from './modules/admin';
 import { createFeedbackModule, type FeedbackRepository } from './modules/feedback';
@@ -94,6 +98,7 @@ export interface AppDeps {
     usage: UsageRepository;
     billing: BillingRepository;
     adminUsers: AdminUsersRepository;
+    adminAnalytics: AdminAnalyticsRepository;
   };
   /** Plan limits (`PLAN_LIMITS`); defaults to the table in `@cuelingo/shared`. */
   planLimits?: PlanLimitTable;
@@ -203,12 +208,21 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   });
   await app.register(usage.routes);
   // After billing and usage: it reads plans and orders through their services.
+  const adminUsers = createAdminUsersModule(deps.repos.adminUsers, {
+    isAdmin: admin.service.isAdmin,
+    usage: usage.service,
+    billing: billing.service,
+    limits: planLimits,
+    now: deps.now,
+  });
+  await app.register(adminUsers.routes);
+  // Last of the admin modules: it reuses the dashboard of admin-users and the metrics of admin.
   await app.register(
-    createAdminUsersModule(deps.repos.adminUsers, {
+    createAdminAnalyticsModule(deps.repos.adminAnalytics, {
       isAdmin: admin.service.isAdmin,
-      usage: usage.service,
-      billing: billing.service,
       limits: planLimits,
+      dashboard: adminUsers.service.dashboard,
+      metrics: admin.service.metrics,
       now: deps.now,
     }).routes,
   );
