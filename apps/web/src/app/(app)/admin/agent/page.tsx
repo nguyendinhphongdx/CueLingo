@@ -1,4 +1,4 @@
-import { AdminAgentPage } from '../../../features/admin';
+import { AdminAgentPage } from '../../../../features/admin';
 
 export default function Page() {
   return <AdminAgentPage />;

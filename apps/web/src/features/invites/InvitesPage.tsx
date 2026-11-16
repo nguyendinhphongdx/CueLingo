@@ -7,7 +7,6 @@ import { Input } from '@cuelingo/ui/components/input';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { Section } from '@cuelingo/ui/components/section';
 import { notFound } from 'next/navigation';
-import { AdminFrame } from '../admin';
 import { useState, type FormEvent } from 'react';
 import { useInvites } from './use-invites';
 
@@ -128,18 +127,8 @@ export function InvitesView({
 }
 
 export function InvitesPage() {
-  const {
-    invites,
-    loading,
-    ready,
-    hidden,
-    error,
-    create,
-    creating,
-    created,
-    dismissCreated,
-    revoke,
-  } = useInvites();
+  const { invites, loading, hidden, error, create, creating, created, dismissCreated, revoke } =
+    useInvites();
   const [maxUses, setMaxUses] = useState('1');
   const [days, setDays] = useState('30');
   const [note, setNote] = useState('');
@@ -156,7 +145,7 @@ export function InvitesPage() {
   };
 
   return (
-    <AdminFrame nav={ready}>
+    <>
       <PageHeader
         title="Mã mời"
         description="Mỗi mã là một người thử mới. Chỉ có băm của mã được lưu, nên mã chỉ hiện một lần."
@@ -206,6 +195,6 @@ export function InvitesPage() {
           <InvitesView invites={invites} onRevoke={revoke} />
         )}
       </Section>
-    </AdminFrame>
+    </>
   );
 }

@@ -1,5 +1,5 @@
 import { ApiError } from '@cuelingo/core-sdk';
-import type { AdminUserListQuery, Plan } from '@cuelingo/shared';
+import type { AdminUsageMetric, AdminUserListQuery, Plan } from '@cuelingo/shared';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { client } from '../../lib/client';
@@ -9,18 +9,29 @@ import { isAuthRefusal } from './admin-users-format';
 /** The one filter control: a plan, or "ending soon". */
 export type PlanFilter = 'all' | Plan | 'expiring';
 
+/** "At least 80% / 100% of this month's limit of one metric": set by the links on the usage page. */
+export interface QuotaFilter {
+  metric: AdminUsageMetric;
+  atLeast: '80' | '100';
+}
+
 export interface UserFilters {
   q: string;
   plan: PlanFilter;
+  quota?: QuotaFilter | null;
 }
 
 /** What the API takes for these filters. Empty text and "all" send nothing. */
-export function queryFor({ q, plan }: UserFilters): AdminUserListQuery {
+export function queryFor({ q, plan, quota }: UserFilters): AdminUserListQuery {
   const query: AdminUserListQuery = {};
   const text = q.trim();
   if (text) query.q = text;
   if (plan === 'expiring') query.expiring = '1';
   else if (plan !== 'all') query.plan = plan;
+  if (quota) {
+    query.metric = quota.metric;
+    query.atLeast = quota.atLeast;
+  }
   return query;
 }
 

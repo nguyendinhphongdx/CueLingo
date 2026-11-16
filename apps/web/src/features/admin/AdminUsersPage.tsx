@@ -1,19 +1,30 @@
 'use client';
 
-import type { AdminDashboard, AdminUserRow } from '@cuelingo/shared';
+import { AdminUserListQuerySchema, type AdminDashboard, type AdminUserRow } from '@cuelingo/shared';
 import { Button } from '@cuelingo/ui/components/button';
 import { Card, CardContent } from '@cuelingo/ui/components/card';
 import { Input } from '@cuelingo/ui/components/input';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { Section } from '@cuelingo/ui/components/section';
 import { Segmented } from '@cuelingo/ui/components/segmented';
-import { formatDateVn, formatDurationMs, formatVnd, planName } from '@cuelingo/ui/lib/usage';
+import {
+  formatDateVn,
+  formatDurationMs,
+  formatVnd,
+  planName,
+  usageLabel,
+} from '@cuelingo/ui/lib/usage';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
-import { AdminFrame } from './AdminFrame';
 import { expiryText, sourceLabel } from './admin-users-format';
-import { useAdminDashboard, useAdminUsers, useDebounced, type PlanFilter } from './use-admin-users';
+import {
+  useAdminDashboard,
+  useAdminUsers,
+  useDebounced,
+  type PlanFilter,
+  type QuotaFilter,
+} from './use-admin-users';
 
 const number = new Intl.NumberFormat('vi-VN');
 
@@ -119,17 +130,31 @@ export function AdminUserTable({ users }: { users: AdminUserRow[] }) {
   );
 }
 
+/** The filter in the address (`?metric=debriefs&atLeast=80`), or null when absent or not valid. */
+export function quotaFromParams(params: { get(name: string): string | null }): QuotaFilter | null {
+  const parsed = AdminUserListQuerySchema.safeParse({
+    metric: params.get('metric') ?? undefined,
+    atLeast: params.get('atLeast') ?? undefined,
+  });
+  return parsed.success && parsed.data.metric && parsed.data.atLeast
+    ? { metric: parsed.data.metric, atLeast: parsed.data.atLeast }
+    : null;
+}
+
 export function AdminUsersPage() {
+  const router = useRouter();
+  const params = useSearchParams();
+  const [quota, setQuota] = useState<QuotaFilter | null>(() => quotaFromParams(params));
   const [text, setText] = useState('');
   const [plan, setPlan] = useState<PlanFilter>('all');
   const q = useDebounced(text);
   const dashboard = useAdminDashboard();
-  const list = useAdminUsers({ q, plan });
+  const list = useAdminUsers({ q, plan, quota });
   if (dashboard.hidden || list.hidden) notFound();
 
   return (
     // Links show once either call has answered without 401/403: that is proof the caller is an admin.
-    <AdminFrame width="wide" nav={dashboard.dashboard !== null || list.ready}>
+    <>
       <PageHeader
         title="Người dùng và gói"
         description="Ai đang ở gói nào, doanh thu tháng này và gói sắp hết hạn. Chỉ thấy email, gói và lượng dùng, không thấy nội dung cuộc họp."
@@ -160,6 +185,22 @@ export function AdminUsersPage() {
               onChange={(event) => setText(event.target.value)}
             />
             <Segmented label="Lọc theo gói" options={FILTERS} value={plan} onChange={setPlan} />
+            {quota && (
+              <span className="bg-muted inline-flex items-center gap-2 rounded-full py-1 pr-1 pl-3 text-sm">
+                {quota.atLeast === '100' ? 'Hết' : 'Từ 80% của'} hạn mức {usageLabel(quota.metric)}
+                <button
+                  type="button"
+                  aria-label="Bỏ bộ lọc hạn mức"
+                  className="hover:bg-background focus-visible:ring-ring size-6 cursor-pointer rounded-full focus-visible:ring-2 focus-visible:outline-none"
+                  onClick={() => {
+                    setQuota(null);
+                    router.replace('/admin/users');
+                  }}
+                >
+                  ×
+                </button>
+              </span>
+            )}
           </div>
           {list.error && (
             <p role="alert" className="text-destructive text-sm">
@@ -180,6 +221,6 @@ export function AdminUsersPage() {
           )}
         </Section>
       </div>
-    </AdminFrame>
+    </>
   );
 }

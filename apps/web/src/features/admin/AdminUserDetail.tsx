@@ -20,7 +20,6 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { useState } from 'react';
 import { useRouteId } from '../../lib/use-route-id';
-import { AdminFrame } from './AdminFrame';
 import { expiryText, sourceLabel } from './admin-users-format';
 import { planChangeWarning, previewExpiresAt } from './plan-change';
 import { useAdminUser } from './use-admin-user';
@@ -253,7 +252,7 @@ export function AdminUserDetail({ id }: { id: string }) {
     </p>
   );
   return (
-    <AdminFrame nav={state.detail !== null || state.missing}>
+    <>
       {back}
       {state.loading && (
         <p className="text-muted-foreground text-sm" aria-live="polite">
@@ -276,7 +275,7 @@ export function AdminUserDetail({ id }: { id: string }) {
           onSave={state.save}
         />
       )}
-    </AdminFrame>
+    </>
   );
 }
 
