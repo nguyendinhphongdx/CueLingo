@@ -10,6 +10,7 @@ const snap = (over: Partial<SessionSnapshot> = {}): SessionSnapshot => ({
   startedAt: 0,
   endedAt: null,
   micFailed: false,
+  micPermission: null,
   systemFailed: false,
   suggestedLanguage: null,
   meetingLanguage: 'en',

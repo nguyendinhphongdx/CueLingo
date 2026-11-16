@@ -1,9 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import type { PermissionsStatus } from '../lib/native';
 import { PRIVACY_PANES } from '../lib/native';
 import {
-  canStartMeeting,
   captureProblemOf,
   decideStart,
   describeCaptureProblems,
@@ -11,6 +9,7 @@ import {
   elapsedMs,
   formatDuration,
   meterNote,
+  micPermissionOf,
 } from './capture-problems';
 import {
   AudioLevelRows,
@@ -24,21 +23,18 @@ vi.mock('../lib/native', async (importOriginal) => ({
   native: {},
 }));
 
-const permissions = (microphone: PermissionsStatus['microphone']): PermissionsStatus => ({
-  microphone,
-  systemAudio: 'unknown',
-});
-
-describe('preflight', () => {
-  it('blocks only when the microphone is denied', async () => {
-    expect(await canStartMeeting(async () => permissions('denied'))).toBe('mic-denied');
-    for (const state of ['granted', 'undetermined', 'unknown'] as const) {
-      expect(await canStartMeeting(async () => permissions(state))).toBe('ok');
-    }
+describe('microphone permission messages', () => {
+  it('reads the three fixed sidecar messages and nothing else', () => {
+    expect(micPermissionOf('microphone: not authorized (denied)')).toBe('denied');
+    expect(micPermissionOf('microphone: not authorized (undetermined)')).toBe('undetermined');
+    expect(micPermissionOf('microphone: authorized')).toBe('authorized');
+    expect(micPermissionOf('microphone: engine failed')).toBeNull();
+    expect(micPermissionOf('system audio: tap failed')).toBeNull();
+    expect(micPermissionOf(undefined)).toBeNull();
   });
 
-  it('starts when the permission read itself fails', async () => {
-    expect(await canStartMeeting(() => Promise.reject(new Error('no native')))).toBe('ok');
+  it('still counts the permission messages as a microphone problem', () => {
+    expect(captureProblemOf('microphone: not authorized (denied)')).toBe('mic');
   });
 
   it('names the microphone settings pane as the fix for a blocked microphone', () => {
@@ -48,6 +44,41 @@ describe('preflight', () => {
     expect(PRIVACY_PANES.microphone).toBe(
       'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone',
     );
+  });
+
+  it('says the microphone is not allowed, offers Settings and keeps system captions running', () => {
+    const denied = describeCaptureProblems({
+      micFailed: true,
+      systemFailed: false,
+      micPermission: 'denied',
+    })!;
+    expect(denied.message).toContain('Micro chưa được cấp quyền');
+    expect(denied.message).toContain('âm thanh hệ thống vẫn chạy');
+    expect(denied.buttonLabel).toBe('Mở Cài đặt');
+    expect(denied.pane).toBe(PRIVACY_PANES.microphone);
+    const asking = describeCaptureProblems({
+      micFailed: true,
+      systemFailed: false,
+      micPermission: 'undetermined',
+    })!;
+    expect(asking.message).toContain('Micro chưa được cấp quyền');
+    expect(asking.message).toContain('bấm Cho phép');
+    expect(asking.buttonLabel).toBe('Mở Cài đặt');
+  });
+
+  it('keeps the both-failed message when the system audio failed too', () => {
+    const both = describeCaptureProblems({
+      micFailed: true,
+      systemFailed: true,
+      micPermission: 'denied',
+    })!;
+    expect(both.message).toContain('Không thu được âm thanh nào');
+  });
+
+  it('puts the permission message on the microphone row, and only there', () => {
+    const failures = { micFailed: true, systemFailed: false, micPermission: 'denied' as const };
+    expect(describeStream('mic', failures, 'macos')!.message).toContain('Micro chưa được cấp quyền');
+    expect(describeStream('system', failures, 'macos')).toBeNull();
   });
 });
 
@@ -149,21 +180,9 @@ describe('capture problems', () => {
 });
 
 describe('start decision', () => {
-  const read = (microphone: PermissionsStatus['microphone']) => async () => permissions(microphone);
-
-  it('checks the microphone before asking for consent', async () => {
-    expect(await decideStart({ needsConsent: true, readPermissions: read('denied') })).toBe(
-      'mic-denied',
-    );
-    expect(await decideStart({ needsConsent: true, readPermissions: read('undetermined') })).toBe(
-      'ask-consent',
-    );
-    expect(await decideStart({ needsConsent: false, readPermissions: read('granted') })).toBe(
-      'start',
-    );
-    expect(await decideStart({ needsConsent: false, readPermissions: read('denied') })).toBe(
-      'mic-denied',
-    );
+  it('never blocks on the microphone: it only asks for consent when the language needs it', () => {
+    expect(decideStart({ needsConsent: true })).toBe('ask-consent');
+    expect(decideStart({ needsConsent: false })).toBe('start');
   });
 });
 

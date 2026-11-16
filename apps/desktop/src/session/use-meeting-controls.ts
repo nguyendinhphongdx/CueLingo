@@ -1,7 +1,6 @@
 import { SUPPORTED_LANGUAGES, type LanguageCode } from '@cuelingo/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMe } from '../auth';
-import { native } from '../lib/native';
 import { gateAction, type ModelView } from '../models/model-state';
 import { useLocalModels } from '../models/use-local-models';
 import { useLanguage, useSettings } from '../settings';
@@ -30,7 +29,7 @@ export interface MeetingControls {
 
 /**
  * Start and stop of a meeting, shared by the Start button and the calendar card.
- * The click answers at once (`pending`): the permission check, the native stop and the cloud drain
+ * The click answers at once (`pending`): the native start, the native stop and the cloud drain
  * each take a second or more. A blocked microphone does not stop the meeting: the other person's
  * speech still gets captions, and the readiness list already shows the fix.
  */
@@ -87,18 +86,13 @@ export function useMeetingControls(): MeetingControls {
     const language = override ?? picked;
     setPending('starting');
     try {
-      const decision = await decideStart({
+      // A missing microphone permission does not block Start: the sidecar reports it and a banner says so.
+      const decision = decideStart({
         needsConsent:
           SUPPORTED_LANGUAGES[language].recognition === 'cloud' && !hasCloudConsent(userId),
-        readPermissions: native.permissionsStatus,
       });
       if (decision === 'ask-consent') setAskFor(language);
-      else if (decision === 'mic-denied') {
-        // Without the microphone, cloud audio still needs the consent first.
-        if (SUPPORTED_LANGUAGES[language].recognition === 'cloud' && !hasCloudConsent(userId)) {
-          setAskFor(language);
-        } else proceed(language);
-      } else proceed(language);
+      else proceed(language);
     } finally {
       setPending(null);
     }
