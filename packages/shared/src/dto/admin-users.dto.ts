@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { BillingPeriodSchema, PaidPlanSchema, PlanSourceSchema } from '../billing';
 import { PlanSchema } from '../plans';
+import { AdminUsageMetricSchema } from './admin-analytics.dto';
 import { BillingOrderStatusSchema } from './billing.dto';
 import { UsageResponseSchema } from './usage.dto';
 
@@ -42,8 +43,15 @@ export const AdminUserListQuerySchema = z
     expiring: z.literal('1').optional(),
     /** Opaque; take it from `nextCursor` of the previous page. */
     cursor: z.string().min(1).max(200).optional(),
+    /** With `atLeast`: only people who used at least that share of this month's limit for the metric. */
+    metric: AdminUsageMetricSchema.optional(),
+    atLeast: z.enum(['80', '100']).optional(),
   })
-  .strict();
+  .strict()
+  .refine((v) => (v.metric === undefined) === (v.atLeast === undefined), {
+    message: 'metric and atLeast go together',
+    path: ['atLeast'],
+  });
 export type AdminUserListQuery = z.infer<typeof AdminUserListQuerySchema>;
 
 /**
