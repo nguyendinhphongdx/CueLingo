@@ -1,4 +1,4 @@
-import { PlanLimitsEnvSchema } from '@cuelingo/shared';
+import { PlanLimitsEnvSchema, PlanPricesEnvSchema } from '@cuelingo/shared';
 import { z } from 'zod';
 
 const ConfigSchema = z
@@ -42,6 +42,15 @@ const ConfigSchema = z
      * `{"free":{"translation_ms":600000,"debriefs":2},"pro":{"agent_messages":null}}`. `null` = unlimited.
      */
     PLAN_LIMITS: PlanLimitsEnvSchema,
+    /**
+     * JSON that overrides the default VND prices (packages/shared/src/billing.ts), e.g.
+     * `{"pro":{"month":2000}}` for a real-money test. Only the API reads it.
+     */
+    PLAN_PRICES: PlanPricesEnvSchema,
+    /** PayOS (ADR 0023). All three set = upgrading is on; none set = the upgrade button is hidden. */
+    PAYOS_CLIENT_ID: z.string().min(1).optional(),
+    PAYOS_API_KEY: z.string().min(1).optional(),
+    PAYOS_CHECKSUM_KEY: z.string().min(1).optional(),
     REALTIME_DEV_TOKEN: z.string().min(16).optional(),
     REALTIME_DEV_USER_ID: z.uuid().optional(),
     /** Sign-up needs an invite code. Defaults to on in production and off elsewhere. */
@@ -82,6 +91,14 @@ const ConfigSchema = z
     {
       message: 'production needs https addresses that are not localhost',
       path: ['WEB_ORIGIN'],
+    },
+  )
+  .refine(
+    (c) =>
+      [c.PAYOS_CLIENT_ID, c.PAYOS_API_KEY, c.PAYOS_CHECKSUM_KEY].filter(Boolean).length % 3 === 0,
+    {
+      message: 'PAYOS_CLIENT_ID, PAYOS_API_KEY and PAYOS_CHECKSUM_KEY must be set together',
+      path: ['PAYOS_CLIENT_ID'],
     },
   )
   .refine((c) => Boolean(c.GOOGLE_CLIENT_ID) === Boolean(c.GOOGLE_CLIENT_SECRET), {

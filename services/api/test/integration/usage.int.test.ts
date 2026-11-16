@@ -10,6 +10,7 @@ describe('usage counters on real Postgres', () => {
   let alice: string;
   let bob: string;
   const start = new Date('2026-10-31T17:00:00Z');
+  const NOW = new Date('2026-11-14T05:00:00Z');
 
   const newUser = async (email: string) =>
     (
@@ -35,13 +36,17 @@ describe('usage counters on real Postgres', () => {
       Array.from({ length: 12 }, () => repo.reserve(alice, 'debriefs', start, 1, 5)),
     );
     expect(results.filter((r) => r !== null)).toHaveLength(5);
-    const snap = await repo.snapshot(alice, {
-      translation_ms: start,
-      cloud_stt_ms: start,
-      debriefs: start,
-      assist_daily: start,
-      agent_messages: start,
-    });
+    const snap = await repo.snapshot(
+      alice,
+      {
+        translation_ms: start,
+        cloud_stt_ms: start,
+        debriefs: start,
+        assist_daily: start,
+        agent_messages: start,
+      },
+      NOW,
+    );
     expect(snap.amounts.debriefs).toBe(5);
     expect(snap.plan).toBe('free');
   });
@@ -57,18 +62,17 @@ describe('usage counters on real Postgres', () => {
     };
     await repo.add(bob, 'translation_ms', start, 1500);
     await repo.add(bob, 'assist_daily', new Date('2026-11-12T17:00:00Z'), 9);
-    const snap = await repo.snapshot(bob, starts);
+    const snap = await repo.snapshot(bob, starts, NOW);
     expect(snap.amounts.translation_ms).toBe(1500);
     expect(snap.amounts.assist_daily).toBe(0);
-    expect((await repo.snapshot(alice, starts)).amounts.translation_ms).toBe(0);
+    expect((await repo.snapshot(alice, starts, NOW)).amounts.translation_ms).toBe(0);
   });
 
-  it('sets a plan, finds a user by email ignoring case, and cascades with the account', async () => {
+  it('stores a plan, finds a user by email ignoring case, and cascades with the account', async () => {
     const repo = createPostgresUsageRepository(sql);
     expect(await repo.userIdByEmail('ALICE@example.com')).toBe(alice);
     expect(await repo.userIdByEmail('nobody@example.com')).toBeNull();
-    await repo.setPlan(alice, 'pro', bob);
-    await repo.setPlan(alice, 'ultra', bob);
+    await sql`INSERT INTO user_plans (user_id, plan, set_by) VALUES (${alice}, 'ultra', ${bob})`;
     const [row] = await sql`SELECT plan, set_by FROM user_plans WHERE user_id = ${alice}`;
     expect(row).toMatchObject({ plan: 'ultra', set_by: bob });
     await sql`DELETE FROM auth_user WHERE id = ${alice}`;
@@ -76,11 +80,34 @@ describe('usage counters on real Postgres', () => {
     expect(await sql`SELECT 1 FROM user_plans WHERE user_id = ${alice}`).toHaveLength(0);
   });
 
+  it('treats a plan past its end date as free, in both snapshot and gate (AC7)', async () => {
+    const repo = createPostgresUsageRepository(sql);
+    const uid = await newUser('expiry@example.com');
+    await sql`INSERT INTO user_plans (user_id, plan, source, expires_at)
+      VALUES (${uid}, 'pro', 'payment', ${new Date('2026-11-20T00:00:00Z')})`;
+    const starts = Object.fromEntries(
+      ['translation_ms', 'cloud_stt_ms', 'debriefs', 'assist_daily', 'agent_messages'].map((m) => [
+        m,
+        start,
+      ]),
+    ) as Parameters<typeof repo.snapshot>[1];
+    const before = new Date('2026-11-19T23:59:59Z');
+    const at = new Date('2026-11-20T00:00:00Z');
+    expect((await repo.snapshot(uid, starts, before)).plan).toBe('pro');
+    expect((await repo.gate(uid, 'debriefs', start, before)).plan).toBe('pro');
+    expect((await repo.snapshot(uid, starts, at)).plan).toBe('free');
+    expect((await repo.gate(uid, 'debriefs', start, at)).plan).toBe('free');
+    await sql`UPDATE user_plans SET plan = 'ultra', source = 'manual', expires_at = NULL WHERE user_id = ${uid}`;
+    const [row] = await sql`SELECT source, expires_at FROM user_plans WHERE user_id = ${uid}`;
+    expect(row).toMatchObject({ source: 'manual', expires_at: null });
+    expect((await repo.gate(uid, 'debriefs', start, at)).plan).toBe('ultra');
+  });
+
   it('reads the gate and writes a counter in about a millisecond each (rough latency, informational)', async () => {
     const repo = createPostgresUsageRepository(sql);
     const uid = await newUser('timing@example.com');
     const rounds = 200;
-    for (let i = 0; i < 20; i += 1) await repo.gate(uid, 'translation_ms', start); // warm-up
+    for (let i = 0; i < 20; i += 1) await repo.gate(uid, 'translation_ms', start, NOW); // warm-up
     const time = async (work: () => Promise<unknown>) => {
       const samples: number[] = [];
       for (let i = 0; i < rounds; i += 1) {
@@ -91,7 +118,7 @@ describe('usage counters on real Postgres', () => {
       samples.sort((a, b) => a - b);
       return { p50: samples[Math.floor(rounds * 0.5)]!, p95: samples[Math.floor(rounds * 0.95)]! };
     };
-    const gate = await time(() => repo.gate(uid, 'translation_ms', start));
+    const gate = await time(() => repo.gate(uid, 'translation_ms', start, NOW));
     const add = await time(() => repo.add(uid, 'translation_ms', start, 900));
     // eslint-disable-next-line no-console
     console.info(

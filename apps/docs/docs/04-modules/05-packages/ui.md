@@ -122,6 +122,37 @@ Các thành phần chỉ trình bày và nhận callback; không gọi API, khô
 
 `UsageMeter({metric, used, limit, state, resetsAt?})` (`components/usage-meter`): một hạn mức của gói là nhãn tiếng Việt, thanh tiến độ (`role="progressbar"`) và phần còn lại. `state` là `ok | low | exhausted` do server tính; `low` màu hổ phách, `exhausted` màu `destructive`, chữ vẫn nói rõ nên không chỉ dựa vào màu. `limit = null` hiện "Không giới hạn" và không có thanh; `limit = 0` hiện "Không có trong gói này". `metric` là `string` vì `@cuelingo/ui` không phụ thuộc kiểu của `shared`.
 
-`UsageSummary({plan, usage})` (cùng file) là khối "Gói hiện tại: X" kèm một meter cho mỗi hạn mức, dùng chung cho Cài đặt của web và desktop; `usage` là bản đồ metric → `{used, limit, resetsAt, state}` đúng như `GET /v1/me/usage`.
+`UsageSummary({plan, usage, planExpiresAt?, now?, action?})` (cùng file) là khối "Gói hiện tại: X" kèm một meter cho mỗi hạn mức, dùng chung cho Cài đặt của web và desktop. `action` là chỗ cho nút "Nâng gói" (client quyết định có hiện không, ẩn khi `GET /v1/billing` trả `enabled: false`); `planExpiresAt` lấy từ `GET /v1/billing`, còn ≤ 3 ngày thì hiện "Gói Pro hết hạn ngày dd/mm/yyyy" (`now` chỉ để test); `usage` là bản đồ metric → `{used, limit, resetsAt, state}` đúng như `GET /v1/me/usage`.
 
-Hàm định dạng ở `lib/usage` để web và desktop dùng chung câu chữ: `usageLabel`, `planName`, `formatDurationMs` ("2 giờ 5 phút", làm tròn xuống), `formatUsageAmount`, `formatRemaining`, `usageFraction`, `formatResetDate` (ngày làm mới, giờ Việt Nam), `quotaExceededMessage` (lời nhắn khi `QUOTA_EXCEEDED`), `USAGE_METRIC_ORDER`. `*_ms` là mili giây, các metric còn lại là số lần.
+Hàm định dạng ở `lib/usage` để web và desktop dùng chung câu chữ: `usageLabel`, `planName`, `formatDurationMs` ("2 giờ 5 phút", làm tròn xuống), `formatUsageAmount`, `formatRemaining`, `usageFraction`, `formatResetDate` (ngày làm mới, giờ Việt Nam), `quotaExceededMessage` (lời nhắn khi `QUOTA_EXCEEDED`), `formatVnd` ("99.000 ₫"), `formatDateVn` (dd/mm/yyyy, giờ Việt Nam), `planExpiryNotice(plan, expiresAt, now)` (null nếu không hết hạn trong ≤ 3 ngày), `USAGE_METRIC_ORDER`. `*_ms` là mili giây, các metric còn lại là số lần.
+
+## Thanh bên chia nhóm thu gọn được
+
+Code: `components/sidebar-nav.tsx`, `hooks/use-collapsed-groups.ts`, `components/app-frame.tsx`. Spec: `06-delivery/2026-11-16-admin-console`.
+
+| Import                       | Export                                                     |
+| ---------------------------- | ---------------------------------------------------------- |
+| `components/sidebar-nav`     | `SidebarNav`, `NavItem`, `NavGroup`, `SidebarNavProps`     |
+| `hooks/use-collapsed-groups` | `useCollapsedGroups`, `COLLAPSED_GROUPS_KEY`               |
+| `components/feature-icon`    | `FeatureIcon`, `NavIconName` (thêm icon cho nhóm Quản trị) |
+| `components/app-frame`       | `AppFrame({nav, footer?, dragRegion?, wide?, children})`   |
+
+- Mỗi nhóm có một nút tiêu đề (`<button>` thật nên Enter và Space chạy sẵn) với `aria-expanded` và `aria-controls` trỏ tới danh sách. Danh sách thu gọn dùng `hidden`, nên rời khỏi cây truy cập nhưng id vẫn còn. Desktop và web dùng chung nên cùng có thu gọn.
+- **Lưu theo thiết bị:** khoá `cuelingo.sidebar.collapsed.v1`, giá trị là mảng JSON các id nhóm đang thu gọn. Đọc ghi bọc `try/catch` (storage bị chặn thì vẫn thu gọn được trong lần xem đó); giá trị hỏng hay id lạ thì bỏ qua; id của nhóm không hiện (ví dụ Quản trị với người thường) giữ nguyên trong storage. Mặc định mọi nhóm mở.
+- Khi trang đang mở thuộc một nhóm đang thu gọn (mở app, bấm link, nút back) thì nhóm đó tự mở. Người dùng vẫn thu gọn lại được bằng tay.
+- `extraGroups?: NavGroup[]` thêm nhóm sau các nhóm roadmap, thu gọn và lưu như chúng. Chỉ web truyền nhóm Quản trị (Q1); desktop không truyền nên không đổi. `renderItem` khai báo dạng method nên desktop vẫn gõ tham số là `Feature`.
+- `AppFrame` `wide` đổi chiều rộng nội dung từ 640px sang `max-w-6xl` (bảng, biểu đồ).
+- Test: `sidebar-nav.test.tsx` (collapse, persist, admin group).
+
+## Biểu đồ và thẻ số liệu
+
+Dùng cho các trang admin. Code: `components/chart-card.tsx`, `components/stat-card.tsx`. Phụ thuộc mới: `recharts@^3` (MIT, chạy trong trình duyệt, không nhận dữ liệu người dùng; đã duyệt ở Q2 của spec admin-console).
+
+| Import                  | Export                                                                                                                                       |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `components/chart-card` | `LineChartCard`, `BarChartCard`, `ChartCardProps` (`title`, `description?`, `data`, `xKey`, `xLabel?`, `series`, `formatX?`, `formatValue?`) |
+| `components/stat-card`  | `StatCard({label, value, hint?})`, `StatGrid`, `NO_DATA_TEXT`                                                                                |
+
+- Mỗi biểu đồ có một bảng `sr-only` chứa cùng dữ liệu (cho trình đọc màn hình và để test), phần SVG là `aria-hidden`. Màu lấy từ token `--chart-1`, `--chart-2` trong `globals.css`.
+- `StatCard` `value={null}` hiện "Chưa đủ dữ liệu"; số 0 thật vẫn hiện 0.
+- Chỉ trang admin import `chart-card`, nên Next tách Recharts vào chunk của route admin; desktop không import file này.

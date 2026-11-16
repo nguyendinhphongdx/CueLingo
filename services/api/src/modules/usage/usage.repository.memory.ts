@@ -1,25 +1,31 @@
-import { DEFAULT_PLAN, USAGE_METRICS, type Plan } from '@cuelingo/shared';
+import { USAGE_METRICS, effectivePlan, type PlanRow } from '@cuelingo/shared';
 import type { UsageAmounts, UsageRepository } from './usage.repository';
 
-/** In-memory implementation with the same contract. `emails` maps user id to email, like the admin repository. */
+/** Plan rows by user id. The in-memory billing repository shares this map so a paid order changes the plan. */
+export type InMemoryPlanRows = Map<string, PlanRow>;
+
+/**
+ * In-memory implementation with the same contract. `emails` maps user id to email, like the admin repository.
+ * Pass `plans` to share plan rows with another in-memory repository.
+ */
 export function createInMemoryUsageRepository(
   emails: Readonly<Record<string, string>> = {},
+  plans: InMemoryPlanRows = new Map(),
 ): UsageRepository {
-  const plans = new Map<string, Plan>();
   const counters = new Map<string, number>();
   const key = (userId: string, metric: string, start: Date) =>
     `${userId}|${metric}|${start.toISOString()}`;
 
   return {
-    async snapshot(userId, starts) {
+    async snapshot(userId, starts, now) {
       const amounts = Object.fromEntries(
         USAGE_METRICS.map((m) => [m, counters.get(key(userId, m, starts[m])) ?? 0]),
       ) as UsageAmounts;
-      return { plan: plans.get(userId) ?? DEFAULT_PLAN, amounts };
+      return { plan: effectivePlan(plans.get(userId) ?? null, now), amounts };
     },
-    async gate(userId, metric, periodStart) {
+    async gate(userId, metric, periodStart, now) {
       return {
-        plan: plans.get(userId) ?? DEFAULT_PLAN,
+        plan: effectivePlan(plans.get(userId) ?? null, now),
         amount: counters.get(key(userId, metric, periodStart)) ?? 0,
       };
     },
@@ -36,9 +42,6 @@ export function createInMemoryUsageRepository(
       const next = (counters.get(k) ?? 0) + amount;
       counters.set(k, next);
       return next;
-    },
-    async setPlan(userId, plan) {
-      plans.set(userId, plan);
     },
     async userIdByEmail(email) {
       const target = email.toLowerCase();

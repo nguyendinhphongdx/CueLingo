@@ -32,7 +32,7 @@ const metrics: AdminMetrics = {
 describe('AdminMetricsView', () => {
   it('renders aggregate metrics and a compact accessible 14-day table', () => {
     const markup = renderToStaticMarkup(<AdminMetricsView metrics={metrics} />);
-    expect(markup).toContain('Số liệu nội bộ');
+    expect(markup).toContain('Beta');
     expect(markup).toContain('Chi phí AI / giờ họp');
     expect(markup).toContain('Debrief p95');
     expect(markup).toContain('<caption class="sr-only">');

@@ -81,7 +81,8 @@ describe('CORS for the web app', () => {
     });
 
   // Found by running the web app in a browser: DELETE failed with ERR_FAILED because the preflight did not allow it.
-  it.each(['GET', 'POST', 'PATCH', 'DELETE'])(
+  // PUT was added for the admin plan screen.
+  it.each(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])(
     'allows %s from the web origin, with cookies',
     async (method) => {
       const res = await preflight(method);

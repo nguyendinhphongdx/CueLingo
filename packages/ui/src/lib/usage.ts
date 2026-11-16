@@ -77,6 +77,45 @@ export function formatResetDate(iso: string): string {
   }).format(date);
 }
 
+/** "99.000 ₫": whole dong with dots between thousands, the way prices are written in Vietnam. */
+export function formatVnd(amount: number): string {
+  return `${Math.round(amount)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, '.')} ₫`;
+}
+
+/** "05/12/2026" (day/month/year, zero padded) in Vietnam time; empty for a value that is not a date. */
+export function formatDateVn(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'Asia/Ho_Chi_Minh',
+  }).format(date);
+}
+
+/** How long before a paid plan ends the person is reminded. */
+export const PLAN_EXPIRY_NOTICE_DAYS = 3;
+
+/**
+ * "Gói Pro hết hạn ngày 05/12/2026" when a paid plan ends within {@link PLAN_EXPIRY_NOTICE_DAYS} days, else null
+ * (no end date, not near, or already over: the server then applies Free by itself).
+ */
+export function planExpiryNotice(
+  plan: string,
+  expiresAt: string | null | undefined,
+  now: Date,
+): string | null {
+  if (!expiresAt || plan === 'free') return null;
+  const end = new Date(expiresAt).getTime();
+  if (Number.isNaN(end)) return null;
+  const left = end - now.getTime();
+  if (left <= 0 || left > PLAN_EXPIRY_NOTICE_DAYS * 86_400_000) return null;
+  return `Gói ${planName(plan)} hết hạn ngày ${formatDateVn(expiresAt)}`;
+}
+
 const DAILY_METRICS = new Set(['assist_daily']);
 
 /** What the person is told when a call is refused for lack of allowance. Never retried. */

@@ -29,11 +29,25 @@ Dữ liệu họp là dữ liệu nhạy cảm của doanh nghiệp người dù
 
 ## Phân quyền
 
-| Vai trò                            | Thấy gì                                                                      |
-| ---------------------------------- | ---------------------------------------------------------------------------- |
-| Learner                            | Toàn bộ dữ liệu của mình                                                     |
-| Team admin / L&D (giai đoạn Scale) | Chỉ số tổng hợp, ẩn danh; **không** xem transcript hay câu nói của nhân viên |
-| Nhân viên vận hành                 | Không truy cập transcript, trừ khi người dùng gửi kèm báo cáo lỗi            |
+| Vai trò                            | Thấy gì                                                                                                                                                                                                                                                                                                                                    |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Learner                            | Toàn bộ dữ liệu của mình                                                                                                                                                                                                                                                                                                                   |
+| Team admin / L&D (giai đoạn Scale) | Chỉ số tổng hợp, ẩn danh; **không** xem transcript hay câu nói của nhân viên                                                                                                                                                                                                                                                               |
+| Nhân viên vận hành                 | Không truy cập transcript, trừ khi người dùng gửi kèm báo cáo lỗi                                                                                                                                                                                                                                                                          |
+| Admin vận hành (`ADMIN_EMAILS`)    | Email, tên, ngày đăng ký, gói, lượng dùng tháng, lần họp gần nhất và đơn thanh toán của **mọi** người dùng (trang `/admin/users`); số liệu tổng hợp ở `/admin` (Tổng quan), `/admin/revenue`, `/admin/usage`, `/admin/metrics` (chỉ số tổng, không định danh). **Không** thấy tiêu đề phiên, transcript, cụm từ, mã QR hay link thanh toán |
+
+### Admin xem số liệu tổng hợp
+
+Bốn trang Tổng quan, Doanh thu, Lượng dùng, Hoạt động app ([admin-analytics](../04-modules/03-api/admin-analytics.md)) chỉ trả số tổng, không có email, id hay nội dung cuộc họp; từ bảng `events` chỉ đọc `cost_usd`, không đọc `payload`. Ở quy mô nhỏ, một số rất nhỏ (ví dụ "1 người Ultra") có thể chỉ ra một người, nhưng admin vốn đã thấy định danh ở `/admin/users`. `GET /v1/admin/me` chỉ cho người gọi biết chính họ có phải admin. Thanh bên lưu `localStorage` chỉ id nhóm đang thu gọn, không có dữ liệu người dùng.
+
+### Admin xem danh sách người dùng
+
+Trang `/admin/users` ([admin-users](../04-modules/03-api/admin-users.md)) là chỗ duy nhất hiện email của người dùng khác; cần để hỗ trợ và đổi gói đúng người.
+
+- Chỉ email trong `ADMIN_EMAILS`; mọi route kiểm quyền trước khi đọc đầu vào. Câu trả lời đi qua schema strict nên không có trường nội dung.
+- Rủi ro còn lại: tài khoản admin bị chiếm thì lộ email hàng loạt. Giảm thiểu: mỗi trang 50 dòng, không xuất CSV, không có route ghi ngoài đổi gói.
+- Log đổi gói chỉ có id (admin, người bị đổi), gói cũ, gói mới, hạn; không có email. Đổi gói có nhật ký, đọc thì không.
+- Chính sách quyền riêng tư công khai (`apps/site`) chưa sửa trong task này; cần nêu việc admin xem email khi cập nhật.
 
 ## Mã mời (beta kín)
 

@@ -128,7 +128,7 @@ export function AdminAgentPage() {
   const { status, loading, hidden, error, saving, setEnabled, setPlugin } = useAdminAgent();
   if (hidden) notFound();
   return (
-    <main className="mx-auto min-h-screen w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+    <>
       <PageHeader
         title="Trợ lý AI"
         description="Bật hoặc tắt trợ lý và từng plugin. Thay đổi có hiệu lực từ lượt trò chuyện kế tiếp."
@@ -152,6 +152,6 @@ export function AdminAgentPage() {
           />
         )
       )}
-    </main>
+    </>
   );
 }

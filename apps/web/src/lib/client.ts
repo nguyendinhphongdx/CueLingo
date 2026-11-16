@@ -204,7 +204,10 @@ export const client = {
   },
   progress: (language: LanguageCode) =>
     request('GET', `/v1/progress?language=${language}`, ProgressSchema),
+  // Merged on purpose: a plain `admin: {...}` here would replace core-sdk's `admin` (dashboard, users) with only
+  // the web-only calls below. `client.test.ts` fails if one side is lost.
   admin: {
+    ...coreClient.admin,
     metrics: () => request('GET', '/v1/admin/metrics', AdminMetricsSchema),
     agent: {
       get: () => request('GET', '/v1/admin/agent', AdminAgentStatusSchema),

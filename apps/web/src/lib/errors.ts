@@ -11,6 +11,12 @@ const MESSAGES: Record<string, string> = {
   [ErrorCode.Conflict]: 'Mục này đã tồn tại',
   [ErrorCode.DebriefSkipped]: 'Debrief không được tạo vì đã hết lượt debrief tháng này',
   [ErrorCode.Internal]: 'Máy chủ gặp sự cố, vui lòng thử lại sau',
+  [ErrorCode.BillingDisabled]: 'Tính năng nâng gói hiện chưa mở. Hãy quay lại sau.',
+  [ErrorCode.PlanDowngrade]:
+    'Bạn đang dùng gói cao hơn hoặc bằng gói này nên không cần mua. Hãy chọn gói cao hơn.',
+  [ErrorCode.BillingProviderFailed]:
+    'Chưa tạo được mã thanh toán. Chưa có khoản nào bị trừ, hãy thử lại sau ít phút.',
+  [ErrorCode.RateLimited]: 'Bạn thao tác hơi nhanh, đợi một lát rồi thử lại.',
   NETWORK_ERROR: 'Không kết nối được tới máy chủ',
 };
 

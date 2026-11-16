@@ -101,7 +101,11 @@ describe('privacy on real Postgres (AC3, AC4)', () => {
     await sql`INSERT INTO usage_counters (user_id, period_start, metric, amount)
       VALUES (${alice}, ${start}, 'debriefs', 3)`;
     await sql`INSERT INTO user_plans (user_id, plan) VALUES (${alice}, 'pro')`;
+    await sql`INSERT INTO billing_orders (user_id, order_code, provider, plan, period, amount, expires_at)
+      VALUES (${alice}, nextval('billing_order_code_seq'), 'fake', 'pro', 'month', 99000, now())`;
     await createPostgresPrivacyRepository(sql).deleteMyData(alice);
+    // Payment records are kept too (ADR 0023, G5).
+    expect(await sql`SELECT 1 FROM billing_orders WHERE user_id = ${alice}`).toHaveLength(1);
     const [counter] = await sql<{ amount: string }[]>`
       SELECT amount FROM usage_counters WHERE user_id = ${alice}`;
     expect(Number(counter?.amount)).toBe(3);

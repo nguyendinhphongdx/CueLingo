@@ -13,6 +13,7 @@ title: Admin metrics
 
 ## Phạm vi MVP
 
+- `GET /v1/admin/me`: người gọi có phải admin không (cho thanh bên).
 - `GET /v1/admin/metrics`
 - Khối `beta` trong metrics: thời gian từ cài tới caption đầu (trung vị phút, theo người), họp/tuần/người, D1, D7, số phản hồi 30 ngày. Mỗi số `null` khi chưa đủ dữ liệu. Định nghĩa: D1 = tỉ lệ người đã mở app ≥ 2 ngày có `session_started` trong `[24h, 48h)` sau lần mở đầu; D7 = như vậy với `[7 ngày, 8 ngày)` cho người ≥ 8 ngày; UTC, cửa sổ tuyệt đối.
 - `GET`/`PATCH /v1/admin/agent`: công tắc toàn cục của trợ lý AI và bật/tắt từng plugin (ai-agent lô 2).
@@ -22,10 +23,11 @@ title: Admin metrics
 
 | Method | Path                | Kết quả                                                                                                                                                                                                                                                                                                                         |
 | ------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/v1/admin/me`      | `AdminAccessSchema` `{isAdmin}`: `200` cho mọi người đã đăng nhập (người thường nhận `false`, không phải `403`), `401` khi chưa đăng nhập                                                                                                                                                                                       |
 | GET    | `/v1/admin/metrics` | `AdminMetricsSchema`; `403` nếu email không được phép                                                                                                                                                                                                                                                                           |
 | GET    | `/v1/admin/agent`   | `AdminAgentStatusSchema`: `enabled` (công tắc admin), `available` (deploy có cho phép: `AGENT_ENABLED` và khoá AI), `plugins[]` (`id`, `version`, `state`, `permissions`, `tools`, `disabledBy?`, `retryAt?`); `403` nếu không phải admin. Khi module agent không được cấu hình: `{enabled:false, available:false, plugins:[]}` |
 | PATCH  | `/v1/admin/agent`   | Body `UpdateAdminAgentRequest`: **hoặc** `{enabled}` (công tắc toàn cục) **hoặc** `{plugin:{id, enabled}}`; trả `AdminAgentStatus` mới. `400` nếu thiếu/đủ cả hai, `404` nếu plugin không có hoặc module agent không cấu hình, `403` nếu không phải admin                                                                       |
-| PUT    | `/v1/admin/plan`    | Gán gói cho một người theo email: xem [usage](./usage.md) (module `usage` tự khai route này, nhận `isAdmin` từ đây)                                                                                                                                                                                                             |
+| PUT    | `/v1/admin/plan`    | Gán gói cho một người theo email, body `{email, plan, period?}`: xem [usage](./usage.md) và [billing](./billing.md) (module `usage` tự khai route này, nhận `isAdmin` từ đây). Dashboard, danh sách người dùng và đổi gói theo id: [admin-users](./admin-users.md)                                                              |
 
 **Công tắc trợ lý.** Giữ trong bộ nhớ của tiến trình API (một container, [ADR 0011](../../08-adr/0011-deployment-containers-sg.md)): khởi động lại thì về bật. Hiệu lực khi `AGENT_ENABLED` **và** công tắc admin cùng bật; tắt thì mọi lượt mới nhận `503 AGENT_DISABLED`, lượt đang chạy không bị cắt. Tắt một plugin làm công cụ của nó biến khỏi danh sách gửi mô hình từ lượt kế tiếp; plugin `failed` (setup lỗi) không bật lại được từ đây. Chi tiết trạng thái và cầu dao: [packages/agent](../05-packages/agent.md#trách-nhiệm). Module admin chỉ giữ cổng `AgentAdminPort`; `app.ts` nối nó với `modules/agent`.
 
@@ -36,7 +38,7 @@ title: Admin metrics
 
 ## Dữ liệu & sự kiện
 
-- Chỉ đọc số tổng hợp. Không trả email, transcript hoặc payload event.
+- Chỉ đọc số tổng hợp. Không trả email, transcript hoặc payload event. (Email của người dùng chỉ hiện ở [admin-users](./admin-users.md).)
 - Định nghĩa cửa sổ số liệu: [Quan sát hệ thống](../../05-engineering/observability.md#định-nghĩa-số-liệu).
 
 ## Câu hỏi mở

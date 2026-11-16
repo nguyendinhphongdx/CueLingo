@@ -7,7 +7,7 @@ Web được xuất thành file tĩnh (HTML/JS/CSS) và đưa lên Cloudflare Pa
 ## Trách nhiệm
 
 - `pnpm --filter @cuelingo/web build:static`: kiểm biến, xuất tĩnh ra `apps/web/out/`, sinh `out/_headers`. `next dev` và `next build` giữ nguyên (cờ `NEXT_STATIC_EXPORT=true` chỉ bật trong `build:static`).
-- Hai route động (`/sessions/[id]`, `/assistant/[[...id]]`) xuất thành **một trang giữ chỗ** (`/sessions/_`, `/assistant/_`). `public/_redirects` rewrite (200) mọi `/sessions/*` và `/assistant/*` về trang đó; `id` đọc ở trình duyệt bằng `useRouteId` (`src/lib/use-route-id.ts`) từ `usePathname`, không đọc từ `params` của máy chủ.
+- Ba route động (`/sessions/[id]`, `/assistant/[[...id]]`, `/admin/users/[id]`) xuất thành **một trang giữ chỗ** (`/sessions/_`, `/assistant/_`, `/admin/users/_`). `public/_redirects` rewrite (200) mọi `/sessions/*`, `/assistant/*` và `/admin/users/*` về trang đó; `id` đọc ở trình duyệt bằng `useRouteId` (`src/lib/use-route-id.ts`) từ `usePathname`, không đọc từ `params` của máy chủ.
 - Header bảo mật: `securityHeaders()` ở `src/lib/csp.ts` là nguồn duy nhất cho `next.config.ts` và `scripts/write-headers.mjs` (CSP có `frame-src` của runner hộp cát, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`). Test `scripts/write-headers.test.ts` giữ hai nơi bằng nhau.
 - Workflow `web-cloudflare.yml`: cài, build, quét, deploy bằng `wrangler pages deploy`.
 

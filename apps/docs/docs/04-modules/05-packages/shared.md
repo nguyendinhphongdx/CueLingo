@@ -100,3 +100,31 @@ Hợp đồng `FollowupRequestSchema` (channel, tone), `FollowupResponseSchema` 
 | `UsageItemSchema`, `UsageResponseSchema`                                                      | `{used, limit \| null, resetsAt, state}`; `{plan, usage: {<metric>: UsageItem}}`                                                                                                                                                    |
 | `QuotaExceededDetailsSchema`, `DebriefSkippedDetailsSchema`                                   | `details` của `QUOTA_EXCEEDED` (`{metric, plan, used, limit, resetsAt}`, 429) và `DEBRIEF_SKIPPED` (`{reason:'quota'}`, 404)                                                                                                        |
 | `SetPlanRequestSchema`, `SetPlanResponseSchema`                                               | `{email, plan}` (`.strict()`), admin only                                                                                                                                                                                           |
+
+## Thanh toán
+
+`billing.ts` (logic thuần) và `dto/billing.dto.ts`. Thiết kế: [billing](../03-api/billing.md), [ADR 0023](../../08-adr/0023-payments-payos-vietqr.md).
+
+| Thành phần                                                                 | Nội dung                                                                                                                                  |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `BillingPeriodSchema`, `PaidPlanSchema`, `PlanSourceSchema`                | `month \| year`; `pro \| ultra`; `manual \| payment`                                                                                      |
+| `DEFAULT_PLAN_PRICES`, `PlanPricesEnvSchema`, `resolvePlanPrices`          | Giá VND mặc định; `PLAN_PRICES` là JSON ghi đè từng phần (chỉ API đọc)                                                                    |
+| `addPeriod`, `effectivePlan`, `planAfterPurchase`                          | Cộng một kỳ theo tháng lịch giờ VN; gói đang hiệu lực (hết hạn = `free`); gói sau khi mua (nối tiếp, quy đổi Pro → Ultra, từ chối hạ gói) |
+| `BillingOverviewResponseSchema`, `BillingOfferSchema`                      | `{enabled, current:{plan, expiresAt, source}, offers[]}`; `enabled: false` = ẩn nút nâng gói                                              |
+| `CreateOrderRequestSchema`                                                 | `{plan, period}` `.strict()`: client không gửi được giá                                                                                   |
+| `BillingOrderSchema`, `BillingOrderListSchema`, `BillingOrderStatusSchema` | Đơn của người gọi; `qrCode` và `checkoutUrl` chỉ có khi `pending`                                                                         |
+| `ErrorCode.BillingDisabled` · `BillingProviderFailed` · `PlanDowngrade`    | `BILLING_DISABLED` (503) · `BILLING_PROVIDER_FAILED` (502) · `PLAN_DOWNGRADE` (409)                                                       |
+
+`SetPlanRequestSchema` `{email, plan, period?}` (refine: `period` bắt buộc với `pro`/`ultra`, vắng với `free`; không còn `expiresAt`, thay đổi phá vỡ của route chỉ admin) và `SetPlanResponseSchema` có `expiresAt?`; `UsageResponseSchema` không đổi. `BillingOrderSchema` thêm `byAdmin` và cho `amount >= 0`. `planAfterAdminGrant({current, now, plan, period?, prices})` trong `billing.ts` (thuần): dùng `planAfterPurchase`, nhưng hạ gói và dòng gán tay không hạn không bị từ chối mà bắt đầu từ `now` một kỳ; `free` → không hạn.
+
+## Admin: người dùng và gói
+
+`dto/admin-users.dto.ts`, tách khỏi `admin.dto.ts` để `AdminMetrics` vẫn không có định danh. Các schema này **có** email và tên nên chỉ trả cho `ADMIN_EMAILS`; không có tiêu đề phiên, transcript hay cụm từ. Thiết kế: [admin-users](../03-api/admin-users.md).
+
+| Thành phần                                                        | Nội dung                                                                                                                                      |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AdminDashboardSchema`                                            | `{generatedAt, totalUsers, byPlan:{free,pro,ultra}, newUsers7d, revenueThisMonth, expiringIn7d}`                                              |
+| `AdminUserListQuerySchema`                                        | `{q?, plan?, expiring?: '1', cursor?}` `.strict()`; `q` đã cắt khoảng trắng, ≤ 100 ký tự                                                      |
+| `AdminUserRowSchema`, `AdminUserListSchema`                       | Một người (`plan` là gói đang hiệu lực; `source`, `expiresAt` là dòng đã lưu); `{items, nextCursor}`                                          |
+| `AdminUserOrderSchema`, `AdminUserDetailSchema`                   | Đơn (có `byAdmin`, `amount >= 0`) không có `qrCode`, `checkoutUrl`, `transferContent`; `{user, usage: UsageResponse, orders}`                 |
+| `AdminSetUserPlanRequestSchema`, `AdminSetUserPlanResponseSchema` | `{plan, period?}` `.strict()` + refine như trên (người đổi nằm ở đường dẫn, admin lấy từ phiên); `{plan, source:'manual', expiresAt \| null}` |

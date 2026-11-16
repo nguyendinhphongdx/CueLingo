@@ -176,4 +176,35 @@ describe('INVITES_REQUIRED', () => {
       }
     });
   });
+
+  describe('PLAN_PRICES and PAYOS_*', () => {
+    const payos = { PAYOS_CLIENT_ID: 'id', PAYOS_API_KEY: 'key', PAYOS_CHECKSUM_KEY: 'sum' };
+
+    it('defaults to the price table and leaves PayOS off', () => {
+      const config = loadConfig(valid);
+      expect(config.PLAN_PRICES.pro.month).toBe(99_000);
+      expect(config.PAYOS_CLIENT_ID).toBeUndefined();
+    });
+
+    it('overrides one price and keeps the others', () => {
+      const config = loadConfig({ ...valid, PLAN_PRICES: '{"pro":{"month":2000}}' });
+      expect(config.PLAN_PRICES.pro).toEqual({ month: 2000, year: 990_000 });
+      expect(config.PLAN_PRICES.ultra.month).toBe(249_000);
+    });
+
+    it('stops the start-up on a bad price', () => {
+      for (const PLAN_PRICES of ['{oops', '{"free":{"month":1}}', '{"pro":{"month":-5}}']) {
+        expect(() => loadConfig({ ...valid, PLAN_PRICES })).toThrow(/PLAN_PRICES/);
+      }
+    });
+
+    it('accepts all three PayOS keys or none, never part of them (AC11)', () => {
+      expect(loadConfig({ ...valid, ...payos }).PAYOS_API_KEY).toBe('key');
+      for (const missing of Object.keys(payos)) {
+        const partial = { ...valid, ...payos, [missing]: '' };
+        expect(() => loadConfig(partial)).toThrow(ConfigError);
+      }
+      expect(() => loadConfig({ ...valid, PAYOS_API_KEY: 'key' })).toThrow(/PAYOS_CLIENT_ID/);
+    });
+  });
 });

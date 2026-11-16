@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BillingPeriodSchema } from '../billing';
 import { PlanSchema, UsageMetricSchema, UsageStateSchema, USAGE_METRICS } from '../plans';
 
 /** One allowance. `limit: null` = unlimited. `*_ms` metrics are milliseconds, the rest are counts. */
@@ -43,9 +44,24 @@ export type DebriefSkippedDetails = z.infer<typeof DebriefSkippedDetailsSchema>;
 
 /** Admin only. The target is picked by email; the caller's own id never comes from the body. */
 export const SetPlanRequestSchema = z
-  .object({ email: z.email().max(254), plan: PlanSchema })
-  .strict();
+  .object({
+    email: z.email().max(254),
+    plan: PlanSchema,
+    /** Required for `pro` and `ultra`, absent for `free`. The end date is worked out by the server. */
+    period: BillingPeriodSchema.optional(),
+  })
+  .strict()
+  .refine((v) => (v.plan === 'free') === (v.period === undefined), {
+    message: 'period is required for a paid plan and absent for free',
+    path: ['period'],
+  });
 export type SetPlanRequest = z.infer<typeof SetPlanRequestSchema>;
 
-export const SetPlanResponseSchema = z.object({ email: z.string(), plan: PlanSchema }).strict();
+export const SetPlanResponseSchema = z
+  .object({
+    email: z.string(),
+    plan: PlanSchema,
+    expiresAt: z.iso.datetime().nullable().optional(),
+  })
+  .strict();
 export type SetPlanResponse = z.infer<typeof SetPlanResponseSchema>;

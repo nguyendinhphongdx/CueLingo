@@ -4,15 +4,19 @@ import {
   periodEnd,
   periodStart,
   quotaState,
+  type BillingPeriod,
   type Plan,
   type PlanLimitTable,
+  type PlanRow,
   type QuotaExceededDetails,
+  SetPlanRequestSchema,
   type SetPlanResponse,
   type UsageItem,
   type UsageMetric,
   type UsageResponse,
 } from '@cuelingo/shared';
 import { AppError } from '../../lib/errors';
+import { parse } from '../../lib/http';
 import type { PeriodStarts, UsageRepository } from './usage.repository';
 
 export type UsageService = ReturnType<typeof createUsageService>;
@@ -20,10 +24,24 @@ export type UsageService = ReturnType<typeof createUsageService>;
 export type ReserveResult =
   { ok: true; item: UsageItem } | { ok: false; details: QuotaExceededDetails };
 
+/** The result of an admin plan change: the stored row after it. The billing module does the write. */
+export interface PlanGrant {
+  current: PlanRow;
+}
+
 export interface UsageOptions {
   limits: PlanLimitTable;
   /** Admins have no limit (AC12) but are still counted, to see the cost of testing. */
   isAdmin: (userId: string) => Promise<boolean>;
+  /**
+   * Changes a plan for an admin: the billing module's `grantByAdmin`. It checks the admin, writes the plan
+   * and the 0 dong order and logs the change; this module only finds the person by email.
+   */
+  grant: (
+    adminId: string,
+    targetUserId: string,
+    input: { plan: Plan; period?: BillingPeriod },
+  ) => Promise<PlanGrant>;
   now?: () => Date;
 }
 
@@ -49,7 +67,7 @@ export function createUsageService(repo: UsageRepository, options: UsageOptions)
   /** What a gate needs for one metric: a single query by primary key, with the admin check beside it. */
   async function gateOf(userId: string, metric: UsageMetric, at: Date, admin?: boolean) {
     const [row, isAdmin] = await Promise.all([
-      repo.gate(userId, metric, periodStart(metric, at)),
+      repo.gate(userId, metric, periodStart(metric, at), at),
       admin ?? options.isAdmin(userId),
     ]);
     return {
@@ -95,7 +113,7 @@ export function createUsageService(repo: UsageRepository, options: UsageOptions)
     /** AC3: the plan and every allowance of this user, with `limit: null` for unlimited. */
     async snapshot(userId: string): Promise<UsageResponse> {
       const at = now();
-      const { plan, amounts } = await repo.snapshot(userId, startsAt(at));
+      const { plan, amounts } = await repo.snapshot(userId, startsAt(at), at);
       const admin = await options.isAdmin(userId);
       const usage = Object.fromEntries(
         USAGE_METRICS.map((m) => [
@@ -148,14 +166,19 @@ export function createUsageService(repo: UsageRepository, options: UsageOptions)
     },
 
     /** AC2: admin picks the person by email; the plan applies from the next check. */
-    async setPlan(adminId: string, email: string, plan: Plan): Promise<SetPlanResponse> {
+    async setPlan(adminId: string, body: unknown): Promise<SetPlanResponse> {
+      // Check first, before the body is read: a stranger gets 403 whatever they send, and cannot learn from
+      // 404 which emails exist.
       if (!(await options.isAdmin(adminId))) {
         throw new AppError(ErrorCode.Forbidden, 'Admin access required');
       }
+      const { email, plan, period } = parse(SetPlanRequestSchema, body);
       const target = await repo.userIdByEmail(email);
       if (!target) throw new AppError(ErrorCode.NotFound, 'No user has this email');
-      await repo.setPlan(target, plan, adminId);
-      return { email, plan };
+      const { current } = await options.grant(adminId, target, { plan, period });
+      return current.expiresAt
+        ? { email, plan, expiresAt: current.expiresAt.toISOString() }
+        : { email, plan };
     },
   };
 }

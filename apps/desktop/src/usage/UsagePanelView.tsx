@@ -1,4 +1,5 @@
 import type { UsageResponse } from '@cuelingo/shared';
+import { Button } from '@cuelingo/ui/components/button';
 import { Section } from '@cuelingo/ui/components/section';
 import { UsageSummary } from '@cuelingo/ui/components/usage-meter';
 
@@ -6,10 +7,20 @@ interface UsagePanelViewProps {
   usage?: UsageResponse;
   loading: boolean;
   error: string | null;
+  /** When the paid plan ends; a reminder shows within 3 days of it. */
+  planExpiresAt?: string | null;
+  /** Given only when payments are on: shows the "Nâng gói" button. */
+  onUpgrade?: () => void;
 }
 
 /** Pure presentation of the plan and its allowances: no data fetching, easy to test. */
-export function UsagePanelView({ usage, loading, error }: UsagePanelViewProps) {
+export function UsagePanelView({
+  usage,
+  loading,
+  error,
+  planExpiresAt,
+  onUpgrade,
+}: UsagePanelViewProps) {
   return (
     <Section
       title="Gói và lượng dùng"
@@ -22,7 +33,20 @@ export function UsagePanelView({ usage, loading, error }: UsagePanelViewProps) {
             {error}
           </p>
         ) : null}
-        {usage ? <UsageSummary plan={usage.plan} usage={usage.usage} /> : null}
+        {usage ? (
+          <UsageSummary
+            plan={usage.plan}
+            planExpiresAt={planExpiresAt}
+            action={
+              onUpgrade ? (
+                <Button size="sm" variant="outline" onClick={onUpgrade}>
+                  Nâng gói
+                </Button>
+              ) : undefined
+            }
+            usage={usage.usage}
+          />
+        ) : null}
       </div>
     </Section>
   );

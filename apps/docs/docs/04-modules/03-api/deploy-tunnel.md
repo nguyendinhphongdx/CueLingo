@@ -65,9 +65,36 @@ Kiểm: `curl https://<địa-chỉ-API>/healthz` trả `{"ok":true}`. Sau đó 
 - `AGENT_ENABLED=false` là mặc định: bật khi mời tester. `AGENT_HTML_BLOCKS` luôn tắt ở đây (xem [ADR 0019](../../08-adr/0019-ai-generated-ui.md)).
 - Secret không nằm trong ảnh Docker hay repo; đừng dán `infra/.env.tunnel` hay token vào chat, issue, ảnh chụp.
 
+## Đăng ký webhook PayOS
+
+Chỉ cần khi bật nâng gói bằng VietQR ([billing](./billing.md), [ADR 0023](../../08-adr/0023-payments-payos-vietqr.md)). Việc **bạn** làm, không dán khoá vào chat:
+
+1. Đăng ký PayOS (cá nhân đăng ký được, định danh bằng CCCD), gắn tài khoản ngân hàng nhận tiền, tạo kênh thanh toán.
+2. Điền `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY` vào `infra/.env.tunnel` (cả ba, hoặc để trống cả ba để ẩn nút), rồi `infra/tunnel/tunnel.sh reload`.
+3. Đăng ký URL webhook (PayOS gửi một giao dịch mẫu để kiểm; API trả 200):
+
+   ```bash
+   docker compose -f infra/compose.tunnel.yml --env-file infra/.env.tunnel exec api \
+     pnpm --filter @cuelingo/api billing:confirm-webhook https://<địa-chỉ-API>/v1/billing/webhook/payos
+   ```
+
+   Hoặc dán URL đó vào dashboard PayOS. Chạy lại khi đổi tên miền API.
+
+4. Chạy thật với giá nhỏ: đặt `PLAN_PRICES={"pro":{"month":2000}}`, `reload`, trả bằng app ngân hàng và bằng MoMo (quét cùng mã VietQR); xong thì xoá `PLAN_PRICES`.
+
 ## Đổi tên miền
 
-Sửa `WEB_ORIGIN`, `BETTER_AUTH_URL` trong `infra/.env.tunnel`, đổi Public Hostname ở Cloudflare, rồi `tunnel.sh reload`. Phía web: biến GitHub `CUELINGO_API_URL`. Danh sách đầy đủ: [Deploy Cloudflare](../02-web/deploy-cloudflare.md).
+Sửa `WEB_ORIGIN`, `BETTER_AUTH_URL` trong `infra/.env.tunnel`, đổi Public Hostname ở Cloudflare, rồi `tunnel.sh reload` (có nâng gói thì đăng ký lại webhook PayOS). Phía web: biến GitHub `CUELINGO_API_URL`. Danh sách đầy đủ: [Deploy Cloudflare](../02-web/deploy-cloudflare.md).
+
+## Dựng lại hoặc khôi phục DB với cùng khoá PayOS
+
+`billing_order_code_seq` khởi tạo ở 1000000 trong migration. DB dựng lại hoặc khôi phục từ bản cũ thì sequence chạy lại từ đó, `orderCode` trùng đơn đã gửi PayOS và PayOS từ chối (API trả 502 khi tạo đơn). Đặt lại sequence lên quá mã lớn nhất đã dùng:
+
+```sql
+SELECT setval('billing_order_code_seq', <max đã dùng + 1>);
+```
+
+Mã đã dùng xem ở dashboard PayOS (hoặc `SELECT max(order_code) FROM billing_orders` trên DB cũ).
 
 ## Khôi phục thử
 

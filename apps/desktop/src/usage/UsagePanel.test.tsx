@@ -1,6 +1,7 @@
 import type { UsageResponse } from '@cuelingo/shared';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { canUpgrade, UPGRADE_PATH } from './upgrade';
 import { UsagePanelView } from './UsagePanelView';
 
 const resetsAt = '2026-11-30T17:00:00.000Z';
@@ -29,5 +30,50 @@ describe('UsagePanelView', () => {
   it('shows loading and error', () => {
     expect(renderToStaticMarkup(<UsagePanelView loading error={null} />)).toContain('Đang tải');
     expect(renderToStaticMarkup(<UsagePanelView loading={false} error="Lỗi" />)).toContain('Lỗi');
+  });
+});
+
+describe('upgrade button', () => {
+  it('shows "Nâng gói" only when an upgrade handler is given', () => {
+    const on = renderToStaticMarkup(
+      <UsagePanelView usage={usage} loading={false} error={null} onUpgrade={() => {}} />,
+    );
+    const off = renderToStaticMarkup(<UsagePanelView usage={usage} loading={false} error={null} />);
+    expect(on).toContain('Nâng gói');
+    expect(off).not.toContain('Nâng gói');
+  });
+
+  it('reminds when the paid plan ends within 3 days', () => {
+    const soon = new Date(Date.now() + 2 * 86_400_000).toISOString();
+    const markup = renderToStaticMarkup(
+      <UsagePanelView usage={usage} loading={false} error={null} planExpiresAt={soon} />,
+    );
+    expect(markup).toContain('Gói Pro hết hạn ngày');
+    const far = new Date(Date.now() + 20 * 86_400_000).toISOString();
+    expect(
+      renderToStaticMarkup(
+        <UsagePanelView usage={usage} loading={false} error={null} planExpiresAt={far} />,
+      ),
+    ).not.toContain('hết hạn ngày');
+  });
+});
+
+describe('canUpgrade', () => {
+  const overview = (enabled: boolean, offers: number) =>
+    ({
+      enabled,
+      current: { plan: 'free', expiresAt: null, source: null },
+      offers: Array.from({ length: offers }, () => ({})),
+    }) as never;
+
+  it('is false while loading, when payments are off, or when nothing is left to buy', () => {
+    expect(canUpgrade(undefined)).toBe(false);
+    expect(canUpgrade(overview(false, 0))).toBe(false);
+    expect(canUpgrade(overview(true, 0))).toBe(false);
+    expect(canUpgrade(overview(true, 2))).toBe(true);
+  });
+
+  it('opens the web upgrade page, never carrying a token', () => {
+    expect(UPGRADE_PATH).toBe('/upgrade');
   });
 });

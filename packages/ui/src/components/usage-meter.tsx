@@ -1,7 +1,9 @@
+import type { ReactNode } from 'react';
 import { cn } from '../lib/utils';
 import {
   formatRemaining,
   formatResetDate,
+  planExpiryNotice,
   planName,
   usageFraction,
   usageLabel,
@@ -67,17 +69,32 @@ export function UsageMeter({ metric, used, limit, state, resetsAt, className }: 
 
 export interface UsageSummaryProps {
   plan: string;
+  /** When the paid plan ends (from `GET /v1/billing`); a reminder shows when it is within 3 days. */
+  planExpiresAt?: string | null;
+  /** The current time, for the reminder; tests pass a fixed one. */
+  now?: Date;
+  /** Next to the plan name, e.g. the "Nâng gói" button. The caller decides whether to offer it. */
+  action?: ReactNode;
   /** One entry per metric id, as returned by `GET /v1/me/usage`. */
   usage: Record<string, Omit<UsageMeterProps, 'metric' | 'className'>>;
 }
 
 /** The plan name and one meter per allowance: the same block on web and desktop settings. */
-export function UsageSummary({ plan, usage }: UsageSummaryProps) {
+export function UsageSummary({ plan, planExpiresAt, now, action, usage }: UsageSummaryProps) {
+  const notice = planExpiryNotice(plan, planExpiresAt, now ?? new Date());
   return (
     <>
-      <p className="text-sm">
-        Gói hiện tại: <strong>{planName(plan)}</strong>
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm">
+          Gói hiện tại: <strong>{planName(plan)}</strong>
+        </p>
+        {action}
+      </div>
+      {notice ? (
+        <p role="status" className="text-sm text-amber-700 dark:text-amber-400">
+          {notice}
+        </p>
+      ) : null}
       {USAGE_METRIC_ORDER.map((metric) => {
         const item = usage[metric];
         return item ? <UsageMeter key={metric} metric={metric} {...item} /> : null;

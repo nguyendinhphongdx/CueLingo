@@ -145,7 +145,7 @@ export function InvitesPage() {
   };
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+    <>
       <PageHeader
         title="Mã mời"
         description="Mỗi mã là một người thử mới. Chỉ có băm của mã được lưu, nên mã chỉ hiện một lần."
@@ -195,6 +195,6 @@ export function InvitesPage() {
           <InvitesView invites={invites} onRevoke={revoke} />
         )}
       </Section>
-    </main>
+    </>
   );
 }

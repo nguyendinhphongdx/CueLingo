@@ -63,3 +63,33 @@ describe('GET /v1/admin/metrics', () => {
     expect(response.body).not.toMatch(/owner|example\.com|transcript/i);
   });
 });
+
+describe('GET /v1/admin/me', () => {
+  const apps: Array<Awaited<ReturnType<typeof buildTestApp>>> = [];
+  afterEach(async () => Promise.all(apps.splice(0).map((app) => app.close())));
+
+  async function ask(adminEmails: string[], headers: Record<string, string>) {
+    const app = await buildTestApp({
+      repos: { admin: createInMemoryAdminRepository({ [USER_ID]: 'Owner@Example.com' }) },
+      adminEmails,
+    });
+    apps.push(app);
+    return app.inject({ method: 'GET', url: '/v1/admin/me', headers });
+  }
+
+  it('says true for an allowlisted email, ignoring case', async () => {
+    const response = await ask(['owner@example.com'], { 'x-test-user-id': USER_ID });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ isAdmin: true });
+  });
+
+  it('says false, not 403, for anyone else', async () => {
+    const response = await ask([], { 'x-test-user-id': USER_ID });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ isAdmin: false });
+  });
+
+  it('needs a login', async () => {
+    expect((await ask(['owner@example.com'], {})).statusCode).toBe(401);
+  });
+});

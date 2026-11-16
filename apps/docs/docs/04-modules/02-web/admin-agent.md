@@ -12,9 +12,11 @@ Trang tối thiểu cho quản trị viên (`ADMIN_EMAILS`) bật/tắt trợ l�
 
 - Nút **Tắt trợ lý / Bật trợ lý**: công tắc toàn cục (`PATCH /v1/admin/agent {enabled}`). Nếu deploy đang tắt trợ lý (`available=false`) thì trang nói rõ công tắc chưa có tác dụng.
 - Bảng plugin: `id` + phiên bản, công cụ, quyền, trạng thái bằng tiếng Việt (đang bật, đã tắt bởi admin, tự tắt do lỗi liên tiếp kèm giờ thử lại, lỗi khi nạp) và nút **Tắt/Bật** từng plugin. Plugin lỗi khi nạp không có nút.
-- Người không phải admin nhận 404 (như `/admin/metrics`). Không có liên kết trong thanh bên.
+- Người không phải admin nhận 404 (như `/admin/metrics`). Mục **Trợ lý AI** của nhóm Quản trị trong thanh bên ([Khu Quản trị](./admin-console.md)).
 
 ## Interface
+
+- Nằm trong khung app chung (`AppShell` + `AppFrame`), không còn khung riêng ([Khu Quản trị](./admin-console.md)).
 
 - Hook `useAdminAgent` đọc `client.admin.agent.get()` và gửi `client.admin.agent.update(...)`; câu trả lời của PATCH thay luôn trạng thái trong cache.
 - Dùng `Button`, `Card`, `PageHeader`, `Section` của `@cuelingo/ui`.

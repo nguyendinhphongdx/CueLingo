@@ -3,11 +3,14 @@
  * Design: apps/docs/docs/04-modules/05-packages/shared.md · Convention: apps/docs/docs/05-engineering/conventions/shared-contract.md
  */
 export * from './dto/account.dto';
+export * from './dto/admin-analytics.dto';
+export * from './dto/admin-users.dto';
 export * from './dto/admin.dto';
 export * from './dto/agent-bridge';
 export * from './dto/agent.dto';
 export * from './dto/assist-suggestion.dto';
 export * from './dto/assist.dto';
+export * from './dto/billing.dto';
 export * from './dto/debrief.dto';
 export * from './dto/device.dto';
 export * from './dto/events.dto';
@@ -24,6 +27,7 @@ export * from './dto/transcribe.dto';
 export * from './dto/tts.dto';
 export * from './dto/usage.dto';
 export * from './dto/settings.dto';
+export * from './billing';
 export * from './errors/error-code';
 export * from './jobs';
 export * from './languages';

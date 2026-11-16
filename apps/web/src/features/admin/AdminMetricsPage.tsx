@@ -1,11 +1,14 @@
 'use client';
 
-import type { AdminMetrics } from '@cuelingo/shared';
+import type { AdminActivity, AdminMetrics } from '@cuelingo/shared';
+import { BarChartCard, LineChartCard } from '@cuelingo/ui/components/chart-card';
+import { StatCard, StatGrid } from '@cuelingo/ui/components/stat-card';
 import { Card, CardContent } from '@cuelingo/ui/components/card';
-import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { Section } from '@cuelingo/ui/components/section';
 import { notFound } from 'next/navigation';
-import { useAdminMetrics } from './use-admin-metrics';
+import { AnalyticsFrame } from './AnalyticsFrame';
+import { dayLabel } from './analytics-format';
+import { useAdminActivity } from './use-admin-analytics';
 
 const number = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 });
 const usd = new Intl.NumberFormat('vi-VN', {
@@ -68,11 +71,7 @@ export function AdminMetricsView({ metrics }: { metrics: AdminMetrics }) {
   ] as const;
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-      <PageHeader
-        title="Số liệu nội bộ"
-        description="Tín hiệu vận hành tổng hợp, không chứa nội dung hoặc thông tin định danh."
-      />
+    <>
       <Section title="Tổng quan">
         <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {stats.map(([label, value]) => (
@@ -142,40 +141,61 @@ export function AdminMetricsView({ metrics }: { metrics: AdminMetrics }) {
           </CardContent>
         </Card>
       </Section>
-      <p className="text-muted-foreground mt-6 text-xs">
-        Cập nhật lúc{' '}
-        {new Intl.DateTimeFormat('vi-VN', {
-          dateStyle: 'short',
-          timeStyle: 'short',
-        }).format(new Date(metrics.generatedAt))}
-      </p>
-    </main>
+    </>
+  );
+}
+
+/** The page "Hoạt động app": the beta numbers of `/v1/admin/metrics` plus meetings per day and who met. */
+export function AdminActivityView({ activity }: { activity: AdminActivity }) {
+  return (
+    <>
+      <Section title="Người dùng họp">
+        <StatGrid>
+          <StatCard
+            label="DAU · 1 ngày"
+            value={number.format(activity.meetingUsers.dau)}
+            hint="Người có phiên họp"
+          />
+          <StatCard label="WAU · 7 ngày" value={number.format(activity.meetingUsers.wau)} />
+          <StatCard label="MAU · 30 ngày" value={number.format(activity.meetingUsers.mau)} />
+        </StatGrid>
+      </Section>
+      <BarChartCard
+        title="Cuộc họp theo ngày"
+        description="30 ngày gần nhất, giờ Việt Nam"
+        data={activity.daily}
+        xKey="date"
+        formatX={dayLabel}
+        series={[{ key: 'meetings', label: 'Cuộc họp' }]}
+      />
+      <LineChartCard
+        title="Giờ họp theo ngày"
+        description="Chỉ tính cuộc họp đã kết thúc"
+        data={activity.daily}
+        xKey="date"
+        formatX={dayLabel}
+        formatValue={(value) => number.format(value)}
+        series={[{ key: 'hours', label: 'Giờ họp' }]}
+      />
+      <AdminMetricsView metrics={activity.metrics} />
+    </>
   );
 }
 
 export function AdminMetricsPage() {
-  const { metrics, loading, hidden, error } = useAdminMetrics();
+  const { data, loading, hidden, error, reload, reloading } = useAdminActivity();
   if (hidden) notFound();
-  if (loading) {
-    return (
-      <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <PageHeader title="Số liệu nội bộ" />
-        <p className="text-muted-foreground text-sm" aria-live="polite">
-          Đang tải số liệu…
-        </p>
-      </main>
-    );
-  }
-  if (error) {
-    return (
-      <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <PageHeader title="Số liệu nội bộ" />
-        <p role="alert" className="text-destructive text-sm">
-          {error}
-        </p>
-      </main>
-    );
-  }
-  if (!metrics) notFound();
-  return <AdminMetricsView metrics={metrics} />;
+  return (
+    <AnalyticsFrame
+      title="Hoạt động app"
+      description="Tín hiệu vận hành tổng hợp, không chứa nội dung hoặc thông tin định danh."
+      generatedAt={data?.generatedAt}
+      loading={loading}
+      error={error}
+      onReload={reload}
+      reloading={reloading}
+    >
+      {data ? <AdminActivityView activity={data} /> : null}
+    </AnalyticsFrame>
+  );
 }

@@ -10,6 +10,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 import { authClient } from '../../lib/auth-client';
 import { CONNECTION_ERROR_MESSAGE } from '../../lib/errors';
+import { ADMIN_GROUP, adminActiveId, isAdminPath, useIsAdmin } from '../admin-nav';
 
 /** Full-page notice when the API cannot be reached, with a way to try again. */
 export function ConnectionProblem({ onRetry }: { onRetry: () => void }) {
@@ -31,6 +32,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { data: session, isPending, error, refetch } = authClient.useSession();
   // The session request failed (API unreachable or erroring): that is not "signed out", so do not send them to /login.
   const unreachable = !isPending && !session && Boolean(error);
+  const isAdmin = useIsAdmin(Boolean(session));
 
   useEffect(() => {
     if (!isPending && !session && !unreachable) router.replace('/login');
@@ -51,16 +53,20 @@ export function AppShell({ children }: { children: ReactNode }) {
     router.replace('/login');
   };
 
-  const activeId =
-    features.find(
-      (feature) => pathname === feature.webPath || pathname.startsWith(`${feature.webPath}/`),
-    )?.id ?? '';
+  const onAdminPage = isAdminPath(pathname);
+  const activeId = onAdminPage
+    ? adminActiveId(pathname)
+    : (features.find(
+        (feature) => pathname === feature.webPath || pathname.startsWith(`${feature.webPath}/`),
+      )?.id ?? '');
 
   return (
     <AppFrame
+      wide={onAdminPage}
       nav={{
         client: 'web',
         activeId,
+        extraGroups: isAdmin ? [ADMIN_GROUP] : undefined,
         brand: (
           <div className="flex items-center gap-3">
             <Logo size={36} className="rounded-[22%]" />

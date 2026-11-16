@@ -40,6 +40,27 @@ describe('UsagePanelView', () => {
     expect(markup.match(/data-state="low"/g)).toHaveLength(1);
   });
 
+  it('shows the upgrade action and the expiry reminder when given', () => {
+    const markup = renderToStaticMarkup(
+      <UsagePanelView
+        usage={{ ...usage, plan: 'pro' }}
+        loading={false}
+        error={null}
+        planExpiresAt={new Date(Date.now() + 86_400_000).toISOString()}
+        action={<a href="/upgrade">Nâng gói</a>}
+      />,
+    );
+    expect(markup).toContain('href="/upgrade"');
+    expect(markup).toContain('Gói Pro hết hạn ngày');
+  });
+
+  it('shows no upgrade action when none is given (payments off)', () => {
+    const markup = renderToStaticMarkup(
+      <UsagePanelView usage={usage} loading={false} error={null} />,
+    );
+    expect(markup).not.toContain('Nâng gói');
+  });
+
   it('shows loading and error states', () => {
     expect(renderToStaticMarkup(<UsagePanelView loading error={null} />)).toContain(
       'Đang tải lượng dùng',

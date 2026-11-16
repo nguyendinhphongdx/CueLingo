@@ -1,5 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { resolvePlanLimits, type PlanLimitTable } from '@cuelingo/shared';
+import {
+  resolvePlanLimits,
+  resolvePlanPrices,
+  type PlanLimitTable,
+  type PlanPriceTable,
+} from '@cuelingo/shared';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
 import Fastify, {
@@ -32,9 +37,19 @@ import {
 } from './modules/review';
 import { createSpeakersModule, type SpeakersRepository } from './modules/speakers';
 import { createSessionsModule, type SessionsRepository } from './modules/sessions';
+import {
+  createAdminAnalyticsModule,
+  type AdminAnalyticsRepository,
+} from './modules/admin-analytics';
+import { createAdminUsersModule, type AdminUsersRepository } from './modules/admin-users';
 import { createAdminModule, type AdminRepository, type AgentAdminPort } from './modules/admin';
 import { createFeedbackModule, type FeedbackRepository } from './modules/feedback';
 import { createInvitesModule, type InvitesRepository } from './modules/invites';
+import {
+  createBillingModule,
+  type BillingRepository,
+  type PaymentProvider,
+} from './modules/billing';
 import { createUsageModule, type UsageRepository } from './modules/usage';
 import { createTranscribeModule, type TranscribeDeps } from './modules/transcribe';
 import { createSettingsModule, type SettingsRepository } from './modules/settings';
@@ -53,6 +68,8 @@ const LOG_REDACT = {
     'email',
     '*.email',
     '*.*.email',
+    'signature',
+    '*.signature',
   ],
   censor: '[Redacted]',
 };
@@ -79,9 +96,18 @@ export interface AppDeps {
     feedback: FeedbackRepository;
     settings: SettingsRepository;
     usage: UsageRepository;
+    billing: BillingRepository;
+    adminUsers: AdminUsersRepository;
+    adminAnalytics: AdminAnalyticsRepository;
   };
   /** Plan limits (`PLAN_LIMITS`); defaults to the table in `@cuelingo/shared`. */
   planLimits?: PlanLimitTable;
+  /** VND prices (`PLAN_PRICES`); defaults to the table in `@cuelingo/shared`. */
+  planPrices?: PlanPriceTable;
+  /** The payment provider. Omitted = upgrading is off: `GET /v1/billing` says `enabled: false`. */
+  paymentProvider?: PaymentProvider;
+  /** Clock for plans and billing; tests move it. Defaults to the system clock. */
+  now?: () => Date;
   queue: JobQueue;
   resolveUserId: AuthOptions['resolveUserId'];
   /** Origin of apps/web, allowed by CORS (cookies included). */
@@ -140,12 +166,12 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   if (deps.realtime) await app.register(websocket);
   registerErrorHandler(app);
   // CORS first, so preflight requests are answered before the auth hook runs.
-  // @fastify/cors only allows GET, HEAD and POST by default; the glossary needs PATCH and DELETE from the browser.
+  // @fastify/cors only allows GET, HEAD and POST by default; the glossary needs PATCH and DELETE, the admin screen PUT.
   await app.register(cors, {
     // The desktop app's webview has its own origin: tauri://localhost when bundled, the Vite dev server otherwise.
     origin: [deps.webOrigin, ...DESKTOP_ORIGINS],
     credentials: true,
-    methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE'],
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
   });
   const device = createDeviceModule(deps.repos.device);
   registerAuth(app, {
@@ -162,11 +188,44 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   let agentAdmin: AgentAdminPort | undefined;
   const admin = createAdminModule(deps.repos.admin, deps.adminEmails ?? [], () => agentAdmin);
   await app.register(admin.routes, { prefix: '/v1/admin' });
-  const usage = createUsageModule(deps.repos.usage, {
-    limits: deps.planLimits ?? resolvePlanLimits(),
+  const planLimits = deps.planLimits ?? resolvePlanLimits();
+  const billing = createBillingModule(deps.repos.billing, {
+    provider: deps.paymentProvider,
+    prices: deps.planPrices ?? resolvePlanPrices(),
+    limits: planLimits,
     isAdmin: admin.service.isAdmin,
+    webOrigin: deps.webOrigin,
+    log: app.log,
+    now: deps.now,
+  });
+  await app.register(billing.routes);
+  const usage = createUsageModule(deps.repos.usage, {
+    limits: planLimits,
+    isAdmin: admin.service.isAdmin,
+    // Billing is built first: a plan change by an admin writes the plan and the 0 dong order together.
+    grant: billing.service.grantByAdmin,
+    now: deps.now,
   });
   await app.register(usage.routes);
+  // After billing and usage: it reads plans and orders through their services.
+  const adminUsers = createAdminUsersModule(deps.repos.adminUsers, {
+    isAdmin: admin.service.isAdmin,
+    usage: usage.service,
+    billing: billing.service,
+    limits: planLimits,
+    now: deps.now,
+  });
+  await app.register(adminUsers.routes);
+  // Last of the admin modules: it reuses the dashboard of admin-users and the metrics of admin.
+  await app.register(
+    createAdminAnalyticsModule(deps.repos.adminAnalytics, {
+      isAdmin: admin.service.isAdmin,
+      limits: planLimits,
+      dashboard: adminUsers.service.dashboard,
+      metrics: admin.service.metrics,
+      now: deps.now,
+    }).routes,
+  );
   await app.register(
     createInvitesModule(deps.repos.invites, admin.service.isAdmin, {
       secureCookie: deps.secureCookies ?? false,

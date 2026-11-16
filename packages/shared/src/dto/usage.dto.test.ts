@@ -20,10 +20,13 @@ describe('UsageResponseSchema', () => {
 
 describe('SetPlanRequestSchema', () => {
   it('accepts a known plan and rejects extras', () => {
-    expect(SetPlanRequestSchema.safeParse({ email: 'a@b.co', plan: 'pro' }).success).toBe(true);
+    expect(
+      SetPlanRequestSchema.safeParse({ email: 'a@b.co', plan: 'pro', period: 'month' }).success,
+    ).toBe(true);
     expect(SetPlanRequestSchema.safeParse({ email: 'a@b.co', plan: 'gold' }).success).toBe(false);
     expect(
-      SetPlanRequestSchema.safeParse({ email: 'a@b.co', plan: 'pro', userId: 'x' }).success,
+      SetPlanRequestSchema.safeParse({ email: 'a@b.co', plan: 'pro', period: 'month', userId: 'x' })
+        .success,
     ).toBe(false);
   });
 });

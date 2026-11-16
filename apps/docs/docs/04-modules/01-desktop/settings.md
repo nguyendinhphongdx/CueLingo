@@ -22,7 +22,10 @@ Cài đặt trong app và bản đồng bộ theo tài khoản: Assist mặc đ�
 ## Interface
 
 - `<AssistSettings />`: chọn Assist level `4`, `3`, `1` hoặc `0`
-- `<UsagePanel />` (`src/usage/`): mục "Gói và lượng dùng" ở trang Cài đặt, gọi `client.usage.get()` (`GET /v1/me/usage`) và hiện `UsageSummary` của `@cuelingo/ui` (tên gói + một thanh cho từng hạn mức); lỗi tải hiện "Không tải được lượng dùng"
+- `<UsagePanel />` (`src/usage/`): mục "Gói và lượng dùng" ở trang Cài đặt, gọi `client.usage.get()` (`GET /v1/me/usage`) và `client.billing.overview()` (`GET /v1/billing`, qua `billing-api.ts`), hiện `UsageSummary` của `@cuelingo/ui` (tên gói + một thanh cho từng hạn mức); lỗi tải hiện "Không tải được lượng dùng"
+  - Nút **"Nâng gói"** gọi `openWeb('/upgrade')` → `native.openUrl(webUrl + '/upgrade')` mở trình duyệt mặc định. **Không truyền token** trên URL: nếu chưa đăng nhập trên web thì đăng nhập lại ở đó. Mua và hiện QR đều ở web, desktop không tạo đơn
+  - Nút **ẩn** khi `enabled: false`, khi không còn gói nào để nâng (`canUpgrade` trong `upgrade.ts`), hoặc khi đọc `/v1/billing` lỗi
+  - Còn ≤ 3 ngày hết hạn thì hiện "Gói Pro hết hạn ngày dd/mm/yyyy" (`planExpiresAt = current.expiresAt`)
 - `useSettings`: store `{assistLevel, setAssistLevel()}` trong bộ nhớ của webview
 - Gọi `native.setAssistLevel(level)` và `native.publishSettings({assistLevel})` khi người dùng đổi mức
 - `settingsApi`: gọi `GET/PATCH /v1/me/settings` bằng device token

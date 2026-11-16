@@ -46,6 +46,24 @@ describe('stale-sessions debrief allowance on real Postgres', () => {
     expect(await allowance.reserveDebrief(alice)).toBe(true);
   });
 
+  it('gives a debrief by the Free allowance once a paid plan has expired', async () => {
+    const allowance = createPostgresDebriefAllowance(sql, {
+      limits: resolvePlanLimits({ free: { debriefs: 1 }, pro: { debriefs: null } }),
+      adminEmails: [],
+      now: () => now,
+    });
+    const carol = await user('carol@example.com');
+    await sql`INSERT INTO user_plans (user_id, plan, source, expires_at)
+      VALUES (${carol}, 'pro', 'payment', ${new Date('2026-11-14T04:00:00Z')})`;
+    expect(await allowance.reserveDebrief(carol)).toBe(true);
+    expect(await allowance.reserveDebrief(carol)).toBe(false);
+
+    const dave = await user('dave@example.com');
+    await sql`INSERT INTO user_plans (user_id, plan, source, expires_at)
+      VALUES (${dave}, 'pro', 'payment', ${new Date('2026-11-14T06:00:00Z')})`;
+    for (let i = 0; i < 3; i += 1) expect(await allowance.reserveDebrief(dave)).toBe(true);
+  });
+
   it('records the skip flag on the session and returns the owner of a closed session', async () => {
     const owner = await user('stale@example.com');
     const [session] = await sql<{ id: string }[]>`
