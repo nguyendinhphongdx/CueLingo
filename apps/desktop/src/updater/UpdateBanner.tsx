@@ -1,3 +1,4 @@
+import { currentOs, type DesktopOs } from '../lib/platform';
 import { useUpdater } from './use-updater';
 
 export interface UpdateBannerViewProps {
@@ -5,10 +6,18 @@ export interface UpdateBannerViewProps {
   locked: boolean;
   onInstall(): void;
   onDismiss(): void;
+  /** The system whose permission note is shown; the system this window runs on when left out. */
+  os?: DesktopOs;
 }
 
 /** What the person sees when a newer build exists. Pure markup so it can be tested. */
-export function UpdateBannerView({ state, locked, onInstall, onDismiss }: UpdateBannerViewProps) {
+export function UpdateBannerView({
+  state,
+  locked,
+  onInstall,
+  onDismiss,
+  os = currentOs(),
+}: UpdateBannerViewProps) {
   if (state.phase === 'none') return null;
   const box =
     'bg-card mb-4 flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm';
@@ -40,8 +49,10 @@ export function UpdateBannerView({ state, locked, onInstall, onDismiss }: Update
     <div role="status" className={box}>
       <span>
         Có bản mới {state.version}.
-        {locked ? ' Cập nhật sau khi họp xong, vì app sẽ tự mở lại.' : ''} Sau khi cập nhật, macOS
-        có thể hỏi lại quyền micro và ghi âm hệ thống.
+        {locked ? ' Cập nhật sau khi họp xong, vì app sẽ tự mở lại.' : ''}
+        {os === 'windows'
+          ? ' Windows có thể hỏi lại quyền micro sau khi cập nhật.'
+          : ' Sau khi cập nhật, macOS có thể hỏi lại quyền micro và ghi âm hệ thống.'}
       </span>
       <button type="button" className={button} disabled={locked} onClick={onInstall}>
         Cập nhật

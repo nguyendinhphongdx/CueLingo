@@ -2,6 +2,7 @@ import { AppFrame } from '@cuelingo/ui/components/app-frame';
 import { Logo } from '@cuelingo/ui/components/logo';
 import type { ReactNode } from 'react';
 import { UserChip } from '../auth';
+import { isWindows } from '../lib/platform';
 import { APP_NAME, APP_VERSION } from './brand';
 
 interface AppShellProps {
@@ -15,7 +16,8 @@ interface AppShellProps {
 export function AppShell({ view, onNavigate, onSignOut, children }: AppShellProps) {
   return (
     <AppFrame
-      dragRegion
+      // macOS hides the title bar behind the traffic lights; Windows keeps its own, so no drag strip there.
+      dragRegion={!isWindows()}
       nav={{
         client: 'desktop',
         activeId: view,

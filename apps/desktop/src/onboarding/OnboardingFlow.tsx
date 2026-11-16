@@ -4,6 +4,7 @@ import { Segmented } from '@cuelingo/ui/components/segmented';
 import { ArrowLeft, Captions, Languages, MessageSquareText } from 'lucide-react';
 import { Logo } from '@cuelingo/ui/components/logo';
 import { native } from '../lib/native';
+import { shortcutLabel } from '../lib/platform';
 import { CaptionBlock } from '../overlay/CaptionBlock';
 import { sampleTranscript } from '../overlay/sample';
 import { saveAssistLevel } from '../settings/use-assist-settings';
@@ -98,7 +99,8 @@ function SampleCaptionStep() {
           Hiện overlay thử
         </Button>
         <p className="text-muted-foreground text-sm">
-          Sau này, bấm <kbd className="text-foreground font-medium">⌘⇧L</kbd> để ẩn hoặc hiện.
+          Sau này, bấm <kbd className="text-foreground font-medium">{shortcutLabel('L')}</kbd> để ẩn
+          hoặc hiện.
         </p>
       </div>
       {overlayMessage ? (

@@ -7,7 +7,7 @@ Lớp Rust của app: cửa sổ, phím tắt toàn cục, cầu nối native �
 ## Trách nhiệm
 
 - Quản lý cửa sổ: overlay luôn nổi, không hiện khi chia sẻ màn hình (NSWindow sharingType = none), menu bar
-- Phím tắt toàn cục: ⌘⇧L (bắt đầu/dừng), ⌘⇧W (recap), ⌘⇧S (nói giúp tôi)
+- Phím tắt toàn cục: ⌘⇧L (bắt đầu/dừng), ⌘⇧W (recap), ⌘⇧S (nói giúp tôi); trên Windows là Ctrl+Shift+L/W/S, nhãn trong UI lấy từ `shortcutLabel` ở `src/lib/platform.ts`
 - Nhận sự kiện từ `audio-capture`/`local-stt` và đẩy sang webview qua Tauri events
 - Lưu token trong Keychain
 - Auto-update, ký và notarize

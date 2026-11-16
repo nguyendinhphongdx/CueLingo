@@ -7,6 +7,7 @@ import { getVersion } from '@tauri-apps/api/app';
 import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { platform, version as osVersion } from '@tauri-apps/plugin-os';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { CALENDAR_PANE, platformName, privacyPanes } from './platform';
 import { check } from '@tauri-apps/plugin-updater';
 import { z } from 'zod';
 
@@ -57,11 +58,16 @@ export type PermissionsStatus = z.infer<typeof PermissionsStatus>;
 export const SystemAudioCheck = z.enum(['granted', 'silent', 'error', 'unknown']);
 export type SystemAudioCheck = z.infer<typeof SystemAudioCheck>;
 
+/** Where "open settings" goes on this system. Read when used, so it follows the system the window runs on. */
 export const PRIVACY_PANES = {
-  microphone: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone',
-  systemAudio: 'x-apple.systempreferences:com.apple.preference.security?Privacy_AudioCapture',
-  calendar: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars',
-} as const;
+  get microphone() {
+    return privacyPanes().microphone;
+  },
+  get systemAudio() {
+    return privacyPanes().systemAudio;
+  },
+  calendar: CALENDAR_PANE,
+};
 
 export const TranscriptEvent = z.object({
   segmentId: z.string(),
@@ -191,7 +197,7 @@ export const native = {
       getVersion().catch(() => 'unknown'),
       // plugin-os is sync in v2; wrapped so a failure never blocks a report.
       Promise.resolve()
-        .then(() => `${platform() === 'macos' ? 'macOS' : platform()} ${osVersion()}`)
+        .then(() => `${platformName(platform())} ${osVersion()}`)
         .catch(() => 'macOS'),
     ]);
     return { version, os };
@@ -237,18 +243,18 @@ export const native = {
   },
   onAudioModel: (cb: (e: AudioModelEvent) => void): Promise<UnlistenFn> =>
     listen('audio-model', (e) => cb(AudioModelEvent.parse(e.payload))),
-  /** `request` shows macOS's own permission prompt the first time; `events` lists the next meetings. */
+  /** macOS only (EventKit). `request` shows the system's permission prompt the first time; `events` lists the next meetings. */
   calendar: (mode: 'status' | 'request' | 'events') =>
     invoke('calendar', { mode }).then((v) => CalendarResult.nullable().parse(v)),
   sessionStop: () => invoke('session_stop').then(() => undefined),
-  /** The device token kept in the macOS Keychain; null when nobody is signed in. */
+  /** The device token kept in the system's secure store (Keychain on macOS, Credential Manager on Windows); null when nobody is signed in. */
   authTokenGet: () => invoke('auth_token_get').then((v) => z.string().nullable().parse(v)),
   authTokenSet: (token: string) => invoke('auth_token_set', { token }).then(() => undefined),
   authTokenClear: () => invoke('auth_token_clear').then(() => undefined),
   /** Fires when the browser hands back a sign-in code through the cuelingo:// link. */
   onAuthCode: (cb: (code: string) => void): Promise<UnlistenFn> =>
     listen('auth-code', (e) => cb(z.string().parse(e.payload))),
-  /** Opens a web page or a macOS privacy pane with the system handler (the webview cannot open windows). */
+  /** Opens a web page or a system settings page with the system handler (the webview cannot open windows). */
   openUrl: (url: string) =>
     invoke('open_external', { url: z.string().min(1).parse(url) }).then(() => undefined),
   /** Plays a short system sound and reports whether the app heard it: the only way to test system-audio permission. */

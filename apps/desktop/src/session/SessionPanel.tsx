@@ -10,6 +10,7 @@ import { useLanguage, useSettings } from '../settings';
 import { grantCloudConsent, hasCloudConsent, setConsentUser } from './cloud-consent';
 import { describeNativeError, openDebrief } from './session-actions';
 import { PRIVACY_PANES, native } from '../lib/native';
+import { shortcutLabel } from '../lib/platform';
 import type { SessionStatus } from './session-controller';
 import { SUPPORTED_LANGUAGES, type LanguageCode } from '@cuelingo/shared';
 import { describeModelProgress, useModelProgress } from './model-progress';
@@ -142,7 +143,7 @@ export function CaptureBanner({ failures }: { failures: CaptureFailures }) {
   );
 }
 
-/** Shown instead of starting when macOS has the microphone blocked for CueLingo. */
+/** Shown instead of starting when the system has the microphone blocked for CueLingo. */
 export function MicBlockedNotice() {
   return (
     <div
@@ -281,7 +282,7 @@ export function SessionPanel() {
               : 'Bấm bắt đầu rồi mở Zoom, Meet hoặc Teams như bình thường.'}
           </p>
           <p className={`mt-1 text-xs ${running ? 'text-white/70' : 'text-muted-foreground'}`}>
-            Overlay tự hiện khi bắt đầu và ẩn khi dừng. ⌘⇧L để ẩn/hiện tay.
+            Overlay tự hiện khi bắt đầu và ẩn khi dừng. {shortcutLabel('L')} để ẩn/hiện tay.
           </p>
         </div>
         {running && session.startedAt !== null ? (
