@@ -125,7 +125,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
         working-directory: .
 
-      # Same pinned static libraries as desktop-windows.yml (see there); bump both together with `sherpa-onnx`
+      # Same pinned static libraries as the desktop-windows job of ci.yml (see there); bump both together with `sherpa-onnx`
       # in native/windows-audio/Cargo.toml.
       - name: Cache the sherpa-onnx static libraries
         uses: actions/cache@v4
