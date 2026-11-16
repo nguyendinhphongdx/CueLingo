@@ -31,7 +31,7 @@ export function useAdminUser(id: string) {
         : describeError(query.error),
     save: save.mutate,
     saving: save.isPending,
-    saved: save.isSuccess,
+    saved: save.isSuccess ? { expiresAt: save.data.expiresAt } : null,
     saveError: describeError(save.error),
     resetSave: save.reset,
   };

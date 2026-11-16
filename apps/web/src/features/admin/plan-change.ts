@@ -1,17 +1,14 @@
-import type { AdminUserRow, Plan } from '@cuelingo/shared';
+import {
+  DEFAULT_PLAN_PRICES,
+  planAfterAdminGrant,
+  type AdminUserRow,
+  type BillingPeriod,
+  type Plan,
+  type PlanRow,
+} from '@cuelingo/shared';
 import { formatDateVn } from '@cuelingo/ui/lib/usage';
 
 const RANK: Record<Plan, number> = { free: 0, pro: 1, ultra: 2 };
-
-/**
- * The end date typed in the form ("2026-12-31") as the instant the plan ends: the end of that day in Vietnam
- * (G5). Free has no end, and an empty date means the plan never ends.
- */
-export function expiresAtFor(plan: Plan, date: string): string | undefined {
-  if (plan === 'free' || !date) return undefined;
-  const end = new Date(`${date}T23:59:59.999+07:00`);
-  return Number.isNaN(end.getTime()) ? undefined : end.toISOString();
-}
 
 /** AC6: the warning when a plan someone PAID for, and which is still in force, is lowered. Null otherwise (G6). */
 export function planChangeWarning(
@@ -26,28 +23,31 @@ export function planChangeWarning(
 }
 
 /**
- * The stored end date as the day the form shows ("2026-12-31", the day in Vietnam). `expiresAtFor` turns it back
- * into the end of that day, so saving an unchanged plan keeps its end date. Free or no date: empty.
+ * Where the plan would end if the admin saved now: the same shared function the server uses, fed the person's
+ * stored plan. Prices are the defaults; they only matter when a Pro person goes up to Ultra, and only the
+ * server's `PLAN_PRICES` can differ, so the form calls this "dự kiến" and the exact date comes back after saving.
+ * Null for Free (no end date).
  */
-export function dateInputFor(user: Pick<AdminUserRow, 'plan' | 'expiresAt'>): string {
-  if (user.plan === 'free' || !user.expiresAt) return '';
-  const end = new Date(user.expiresAt);
-  if (Number.isNaN(end.getTime())) return '';
-  // Vietnam is UTC+7 with no daylight saving; the `sv-SE` locale writes YYYY-MM-DD.
-  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh' }).format(end);
-}
-
-/**
- * The end date to send. Left as it was prefilled, the exact stored instant goes back (a paid plan ends at the
- * time of day it was bought for, not at the end of that day); a day the admin picked means the end of that day.
- */
-export function expiresAtToSend(
-  user: Pick<AdminUserRow, 'plan' | 'expiresAt'>,
+export function previewExpiresAt(
+  user: Pick<AdminUserRow, 'plan' | 'source' | 'expiresAt'>,
   plan: Plan,
-  date: string,
-): string | undefined {
-  if (plan !== 'free' && user.expiresAt && date !== '' && date === dateInputFor(user)) {
-    return user.expiresAt;
-  }
-  return expiresAtFor(plan, date);
+  period: BillingPeriod,
+  now: Date,
+): string | null {
+  const current: PlanRow | null =
+    user.source === null
+      ? null
+      : {
+          plan: user.plan,
+          expiresAt: user.expiresAt ? new Date(user.expiresAt) : null,
+          source: user.source,
+        };
+  const outcome = planAfterAdminGrant({
+    current,
+    now,
+    plan,
+    period: plan === 'free' ? undefined : period,
+    prices: DEFAULT_PLAN_PRICES,
+  });
+  return outcome.expiresAt ? outcome.expiresAt.toISOString() : null;
 }

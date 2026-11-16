@@ -2,14 +2,15 @@
 
 import type {
   AdminUserDetail as Detail,
+  AdminSetUserPlanRequest,
   AdminUserOrder,
   AdminUserRow,
+  BillingPeriod,
   Plan,
 } from '@cuelingo/shared';
 import { Button } from '@cuelingo/ui/components/button';
 import { Card, CardContent } from '@cuelingo/ui/components/card';
 import { ConfirmDialog } from '@cuelingo/ui/components/confirm-dialog';
-import { Input } from '@cuelingo/ui/components/input';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { ListCard, Section } from '@cuelingo/ui/components/section';
 import { Segmented } from '@cuelingo/ui/components/segmented';
@@ -21,13 +22,18 @@ import { useState } from 'react';
 import { useRouteId } from '../../lib/use-route-id';
 import { AdminFrame } from './AdminFrame';
 import { expiryText, sourceLabel } from './admin-users-format';
-import { dateInputFor, expiresAtToSend, planChangeWarning } from './plan-change';
+import { planChangeWarning, previewExpiresAt } from './plan-change';
 import { useAdminUser } from './use-admin-user';
 
 const PLANS: { value: Plan; label: string }[] = [
   { value: 'free', label: 'Free' },
   { value: 'pro', label: 'Pro' },
   { value: 'ultra', label: 'Ultra' },
+];
+
+const PERIODS: { value: BillingPeriod; label: string }[] = [
+  { value: 'month', label: '1 tháng' },
+  { value: 'year', label: '1 năm' },
 ];
 
 const STATUS_LABEL: Record<AdminUserOrder['status'], string> = {
@@ -57,7 +63,9 @@ export function AdminOrderList({ orders }: { orders: AdminUserOrder[] }) {
           </div>
           <div className="text-right">
             <p>{formatVnd(order.amount)}</p>
-            <p className="text-muted-foreground text-xs">{STATUS_LABEL[order.status]}</p>
+            <p className="text-muted-foreground text-xs">
+              {order.byAdmin ? 'Admin tặng' : STATUS_LABEL[order.status]}
+            </p>
           </div>
         </li>
       ))}
@@ -69,6 +77,7 @@ export function AdminOrderList({ orders }: { orders: AdminUserOrder[] }) {
 export function PlanChangeConfirm({
   user,
   plan,
+  period,
   expiresAt,
   now,
   open,
@@ -78,7 +87,9 @@ export function PlanChangeConfirm({
 }: {
   user: Pick<AdminUserRow, 'email' | 'plan' | 'source' | 'expiresAt'>;
   plan: Plan;
-  expiresAt: string | undefined;
+  period: BillingPeriod;
+  /** The planned end date (see `previewExpiresAt`); null for Free. */
+  expiresAt: string | null;
   now: Date;
   open: boolean;
   busy?: boolean;
@@ -86,7 +97,10 @@ export function PlanChangeConfirm({
   onCancel: () => void;
 }) {
   const warning = planChangeWarning(user, plan, now);
-  const until = expiresAt ? `, đến hết ngày ${formatDateVn(expiresAt)}` : ', không hết hạn';
+  const detail =
+    plan === 'free'
+      ? ', không hết hạn'
+      : `, ${period === 'year' ? '1 năm' : '1 tháng'}, hết hạn ${expiresAt ? formatDateVn(expiresAt) : ''} (dự kiến). Hệ thống ghi một đơn 0đ "Admin tặng"`;
   return (
     <ConfirmDialog
       open={open}
@@ -98,13 +112,16 @@ export function PlanChangeConfirm({
       onConfirm={busy ? () => {} : onConfirm}
       onCancel={onCancel}
     >
-      {`${user.email}: ${planName(user.plan)} → ${planName(plan)}${plan === 'free' ? '' : until}. `}
+      {`${user.email}: ${planName(user.plan)} → ${planName(plan)}${detail}. `}
       {warning ? <strong>{warning}</strong> : null}
     </ConfirmDialog>
   );
 }
 
-/** Pick a plan and an optional end date, then confirm. Mounted per person, so the fields start from their plan. */
+/**
+ * Pick a plan and, for Pro or Ultra, a period (default 1 month), then confirm. The end date is the server's
+ * work; the form shows the date it expects. Mounted per person, so the plan field starts from their plan.
+ */
 export function PlanForm({
   user,
   saving,
@@ -115,14 +132,13 @@ export function PlanForm({
   user: AdminUserRow;
   saving: boolean;
   error: string | null;
-  onSave: (input: { plan: Plan; expiresAt?: string }) => void;
+  onSave: (input: AdminSetUserPlanRequest) => void;
   now?: Date;
 }) {
   const [plan, setPlan] = useState<Plan>(user.plan);
-  const [date, setDate] = useState(dateInputFor(user));
+  const [period, setPeriod] = useState<BillingPeriod>('month');
   const [asking, setAsking] = useState(false);
-  const expiresAt = expiresAtToSend(user, plan, date);
-  const inPast = expiresAt !== undefined && new Date(expiresAt).getTime() <= now.getTime();
+  const expiresAt = previewExpiresAt(user, plan, period, now);
 
   return (
     <form
@@ -133,47 +149,34 @@ export function PlanForm({
       }}
     >
       <Segmented label="Gói mới" options={PLANS} value={plan} onChange={setPlan} />
-      <div className="max-w-xs space-y-1">
-        <label htmlFor="plan-expires" className="text-sm font-medium">
-          Ngày hết hạn (tuỳ chọn)
-        </label>
-        <Input
-          id="plan-expires"
-          type="date"
-          value={plan === 'free' ? '' : date}
-          disabled={plan === 'free'}
-          onChange={(event) => setDate(event.target.value)}
-          aria-describedby="plan-expires-hint"
-        />
-        <p id="plan-expires-hint" className="text-muted-foreground text-xs">
-          {plan === 'free'
-            ? 'Gói Free không có ngày hết hạn.'
-            : 'Hết hạn vào cuối ngày này (giờ Việt Nam). Để trống nếu không hết hạn.'}
-        </p>
-      </div>
-      {inPast && (
-        <p role="alert" className="text-destructive text-sm">
-          Ngày hết hạn phải ở tương lai.
-        </p>
+      {plan !== 'free' && (
+        <>
+          <Segmented label="Thời hạn" options={PERIODS} value={period} onChange={setPeriod} />
+          <p className="text-muted-foreground text-sm">
+            Hết hạn (dự kiến): {expiresAt ? formatDateVn(expiresAt) : '—'}. Tính như khi mua: gia
+            hạn từ ngày hết hạn hiện tại nếu cùng gói, hạ gói thì bắt đầu từ hôm nay.
+          </p>
+        </>
       )}
       {error && (
         <p role="alert" className="text-destructive text-sm">
           {error}
         </p>
       )}
-      <Button type="submit" disabled={saving || inPast}>
+      <Button type="submit" disabled={saving}>
         Lưu gói
       </Button>
       <PlanChangeConfirm
         user={user}
         plan={plan}
+        period={period}
         expiresAt={expiresAt}
         now={now}
         open={asking}
         busy={saving}
         onCancel={() => setAsking(false)}
         onConfirm={() => {
-          onSave({ plan, ...(expiresAt ? { expiresAt } : {}) });
+          onSave(plan === 'free' ? { plan } : { plan, period });
           setAsking(false);
         }}
       />
@@ -192,8 +195,9 @@ export function AdminUserDetailView({
   detail: Detail;
   saving: boolean;
   saveError: string | null;
-  saved: boolean;
-  onSave: (input: { plan: Plan; expiresAt?: string }) => void;
+  /** The end date the server worked out for the last save: `null` = no end date, undefined = not saved yet. */
+  saved: { expiresAt: string | null } | null;
+  onSave: (input: AdminSetUserPlanRequest) => void;
 }) {
   const { user } = detail;
   return (
@@ -219,12 +223,12 @@ export function AdminUserDetailView({
       <div className="mt-8">
         <Section
           title="Đổi gói"
-          description="Gói áp dụng từ lần kiểm hạn mức tiếp theo. Ghi là gán tay, kèm tên người đổi."
+          description="Giống một lần mua nhưng không qua thanh toán: gói áp dụng từ lần kiểm hạn mức tiếp theo, ghi là gán tay kèm tên người đổi và một đơn 0đ (Admin tặng) cho gói trả phí."
         >
           <PlanForm user={user} saving={saving} error={saveError} onSave={onSave} />
           {saved && (
             <p role="status" className="text-sm text-emerald-700 dark:text-emerald-400">
-              Đã đổi gói.
+              Đã đổi gói.{saved.expiresAt ? ` Hết hạn ${formatDateVn(saved.expiresAt)}.` : ''}
             </p>
           )}
         </Section>

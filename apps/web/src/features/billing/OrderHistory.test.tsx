@@ -36,4 +36,13 @@ describe('OrderHistory', () => {
     expect(markup).toContain('href="/checkout?order=p1"');
     expect(markup).not.toContain('order=x');
   });
+
+  it('labels an order an admin granted as "Admin tặng" with 0đ', () => {
+    const markup = renderToStaticMarkup(
+      <OrderHistory orders={[order({ status: 'paid', amount: 0, byAdmin: true })]} />,
+    );
+    expect(markup).toContain('Admin tặng');
+    expect(markup).toContain('0 ₫');
+    expect(markup).not.toContain('Đã thanh toán');
+  });
 });

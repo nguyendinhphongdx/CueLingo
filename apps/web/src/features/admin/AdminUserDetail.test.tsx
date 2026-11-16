@@ -10,7 +10,7 @@ import {
   PlanChangeConfirm,
   PlanForm,
 } from './AdminUserDetail';
-import { dateInputFor, expiresAtFor, expiresAtToSend, planChangeWarning } from './plan-change';
+import { planChangeWarning, previewExpiresAt } from './plan-change';
 
 const NOW = new Date('2026-11-15T05:00:00Z');
 const paidPro: AdminUserRow = {
@@ -49,6 +49,7 @@ const detail: AdminUserDetail = {
       period: 'month',
       amount: 99000,
       status: 'paid',
+      byAdmin: false,
       createdAt: '2026-11-05T03:00:00.000Z',
       paidAt: '2026-11-05T03:05:00.000Z',
       planExpiresAt: '2026-12-05T10:00:00.000Z',
@@ -63,7 +64,7 @@ describe('AdminUserDetailView (AC4)', () => {
         detail={detail}
         saving={false}
         saveError={null}
-        saved={false}
+        saved={null}
         onSave={() => {}}
       />,
     );
@@ -113,7 +114,8 @@ describe('warning before lowering a paid plan (AC6)', () => {
         <PlanChangeConfirm
           user={user}
           plan={plan}
-          expiresAt={undefined}
+          period="month"
+          expiresAt={null}
           now={NOW}
           open
           onConfirm={() => {}}
@@ -134,7 +136,8 @@ describe('warning before lowering a paid plan (AC6)', () => {
         <PlanChangeConfirm
           user={paidPro}
           plan="free"
-          expiresAt={undefined}
+          period="month"
+          expiresAt={null}
           now={NOW}
           open={false}
           onConfirm={() => {}}
@@ -146,49 +149,73 @@ describe('warning before lowering a paid plan (AC6)', () => {
 });
 
 describe('plan form (AC5)', () => {
-  it('starts from the current plan and offers the three plans and an end date', () => {
-    const markup = renderToStaticMarkup(
-      <PlanForm user={paidPro} saving={false} error={null} onSave={() => {}} now={NOW} />,
+  const form = (user: AdminUserRow, error: string | null = null) =>
+    renderToStaticMarkup(
+      <PlanForm user={user} saving={false} error={error} onSave={() => {}} now={NOW} />,
     );
-    for (const plan of ['Free', 'Pro', 'Ultra']) expect(markup).toContain(plan);
+
+  it('starts from the current plan, with a period and the expected end date, and no date input', () => {
+    const markup = form(paidPro);
+    for (const label of ['Free', 'Pro', 'Ultra', '1 tháng', '1 năm']) {
+      expect(markup).toContain(label);
+    }
     expect(markup).toMatch(/aria-pressed="true"[^>]*>Pro</);
-    expect(markup).toContain('type="date"');
+    expect(markup).toMatch(/aria-pressed="true"[^>]*>1 tháng</);
+    // Pro paid until 05/12/2026: one more month extends from that date.
+    expect(markup).toContain('Hết hạn (dự kiến): 05/01/2027');
+    expect(markup).not.toContain('type="date"');
     expect(markup).toContain('Lưu gói');
   });
 
-  it('shows the error the server gave, and no end date field for Free', () => {
-    const free = renderToStaticMarkup(
-      <PlanForm user={{ ...paidPro, plan: 'free' }} saving={false} error="Lỗi" onSave={() => {}} />,
-    );
+  it('shows the server error, and no period or end date for Free', () => {
+    const free = form({ ...paidPro, plan: 'free', source: null, expiresAt: null }, 'Lỗi');
     expect(free).toContain('Lỗi');
-    expect(free).toMatch(/<input[^>]*disabled/);
-    expect(free).toContain('Gói Free không có ngày hết hạn');
+    expect(free).not.toContain('1 năm');
+    expect(free).not.toContain('dự kiến');
   });
 
-  it('turns the chosen day into the end of that day in Vietnam, and drops it for Free', () => {
-    expect(expiresAtFor('pro', '2026-12-31')).toBe('2026-12-31T16:59:59.999Z');
-    expect(expiresAtFor('ultra', '')).toBeUndefined();
-    expect(expiresAtFor('free', '2026-12-31')).toBeUndefined();
-    expect(expiresAtFor('pro', 'not a date')).toBeUndefined();
-  });
-
-  it('opens with the current end date, so saving the same plan keeps it', () => {
-    // 10:00 UTC is 17:00 in Vietnam on the same day.
-    expect(dateInputFor(paidPro)).toBe('2026-12-05');
-    // 20:00 UTC on 5 Dec is already 6 Dec in Vietnam.
-    expect(dateInputFor({ plan: 'pro', expiresAt: '2026-12-05T20:00:00.000Z' })).toBe('2026-12-06');
-    expect(dateInputFor({ plan: 'free', expiresAt: '2026-12-05T10:00:00.000Z' })).toBe('');
-    expect(dateInputFor({ plan: 'pro', expiresAt: null })).toBe('');
-
-    const markup = renderToStaticMarkup(
-      <PlanForm user={paidPro} saving={false} error={null} onSave={() => {}} now={NOW} />,
+  it('works out the date like a grant: extend, fresh start, downgrade, convert', () => {
+    const iso = (
+      user: Parameters<typeof previewExpiresAt>[0],
+      plan: 'free' | 'pro' | 'ultra',
+      period: 'month' | 'year' = 'month',
+    ) => previewExpiresAt(user, plan, period, NOW);
+    expect(iso(paidPro, 'pro')).toBe('2027-01-05T10:00:00.000Z');
+    expect(iso(paidPro, 'pro', 'year')).toBe('2027-12-05T10:00:00.000Z');
+    expect(iso({ plan: 'free', source: null, expiresAt: null }, 'pro')).toBe(
+      '2026-12-15T05:00:00.000Z',
     );
-    expect(markup).toMatch(/<input[^>]*type="date"[^>]*value="2026-12-05"/);
-    // Untouched: the exact stored instant goes back. A picked day: the end of that day.
-    expect(expiresAtToSend(paidPro, 'pro', '2026-12-05')).toBe(paidPro.expiresAt);
-    expect(expiresAtToSend(paidPro, 'ultra', '2026-12-05')).toBe(paidPro.expiresAt);
-    expect(expiresAtToSend(paidPro, 'pro', '2026-12-31')).toBe('2026-12-31T16:59:59.999Z');
-    expect(expiresAtToSend(paidPro, 'free', '2026-12-05')).toBeUndefined();
-    expect(expiresAtToSend(paidPro, 'pro', '')).toBeUndefined();
+    expect(iso({ ...paidPro, plan: 'ultra' }, 'pro')).toBe('2026-12-15T05:00:00.000Z');
+    expect(iso({ ...paidPro, source: 'manual', expiresAt: null }, 'pro')).toBe(
+      '2026-12-15T05:00:00.000Z',
+    );
+    expect(iso(paidPro, 'ultra')! > '2026-12-15T05:00:00.000Z').toBe(true);
+    expect(iso(paidPro, 'free')).toBeNull();
+  });
+
+  it('puts the date, the period and the 0 dong order into the confirmation', () => {
+    const text = renderToStaticMarkup(
+      <PlanChangeConfirm
+        user={paidPro}
+        plan="ultra"
+        period="year"
+        expiresAt="2027-12-05T10:00:00.000Z"
+        now={NOW}
+        open
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(text).toContain('Pro → Ultra, 1 năm, hết hạn 05/12/2027 (dự kiến)');
+    expect(text).toContain('đơn 0đ');
+  });
+
+  it('labels an order granted by an admin and shows its 0 dong', () => {
+    const markup = renderToStaticMarkup(
+      <AdminOrderList orders={[{ ...detail.orders[0]!, amount: 0, byAdmin: true }]} />,
+    );
+    expect(markup).toContain('Admin tặng');
+    expect(markup).toContain('0');
+    expect(markup).not.toContain('Đã thanh toán');
   });
 });

@@ -31,7 +31,7 @@ export function OrderHistory({ orders }: { orders: BillingOrder[] }) {
           <div className="text-right">
             <p>{formatVnd(order.amount)}</p>
             <p className="text-muted-foreground text-xs">
-              {STATUS_LABEL[order.status]}
+              {order.byAdmin ? 'Admin tặng' : STATUS_LABEL[order.status]}
               {order.status === 'pending' ? (
                 <>
                   {' · '}

@@ -36,6 +36,7 @@ export function order(patch: Partial<BillingOrder> = {}): BillingOrder {
     period: 'month',
     amount: 99_000,
     status: 'pending',
+    byAdmin: false,
     transferContent: 'CL123456',
     qrCode: '00020101021238570010A000000727',
     checkoutUrl: 'https://pay.payos.vn/web/abc',
