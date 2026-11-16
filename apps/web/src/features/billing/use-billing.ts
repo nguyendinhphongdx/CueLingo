@@ -11,9 +11,25 @@ const BILLING_ROOT = ['billing'] as const;
 /** How often the open order is asked for while the QR is shown (AC5). */
 export const ORDER_POLL_MS = 3000;
 
-/** Poll only while the order waits for money: `paid`, `expired` and `cancelled` are final, so polling stops. */
-export function orderRefetchInterval(order: BillingOrder | undefined): number | false {
-  return order?.status === 'pending' ? ORDER_POLL_MS : false;
+/** An expired order is still read now and then: a webhook may arrive late and the payment still counts (G3). */
+export const EXPIRED_POLL_MS = 15_000;
+export const EXPIRED_POLL_WINDOW_MS = 10 * 60_000;
+
+/**
+ * Poll every 3 s while the order waits for money, and every 15 s for 10 minutes after it expired. `paid` and
+ * `cancelled` are final, so polling stops.
+ */
+export function orderRefetchInterval(
+  order: BillingOrder | undefined,
+  now: number = Date.now(),
+): number | false {
+  if (order?.status === 'pending') return ORDER_POLL_MS;
+  if (order?.status === 'expired') {
+    return now - new Date(order.expiresAt).getTime() < EXPIRED_POLL_WINDOW_MS
+      ? EXPIRED_POLL_MS
+      : false;
+  }
+  return false;
 }
 
 /** What can be bought and the plan in force. `enabled: false` means the upgrade button stays hidden. */

@@ -150,6 +150,10 @@ export function CheckoutView({
     body = (
       <div className="space-y-3">
         <Notice>Đơn đã hết hạn thanh toán. Hãy tạo đơn mới.</Notice>
+        <Notice>
+          Nếu bạn đã chuyển khoản, gói sẽ tự lên khi hệ thống nhận được tiền; cần hỗ trợ hãy gửi
+          phản hồi kèm nội dung chuyển khoản.
+        </Notice>
         {retry}
       </div>
     );

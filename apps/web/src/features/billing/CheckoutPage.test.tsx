@@ -73,6 +73,9 @@ describe('CheckoutView', () => {
 
   it('offers a new order when the old one expired (AC6), also when the clock passed its end', () => {
     expect(view({ order: order({ status: 'expired', qrCode: null }) })).toContain('Tạo đơn mới');
+    expect(view({ order: order({ status: 'expired', qrCode: null }) })).toContain(
+      'gói sẽ tự lên khi hệ thống nhận được tiền',
+    );
     expect(view({ now: new Date('2026-11-15T10:16:00.000Z').getTime() })).toContain('Tạo đơn mới');
   });
 
@@ -98,10 +101,17 @@ describe('CheckoutView', () => {
 describe('orderRefetchInterval', () => {
   it('polls only while pending', () => {
     expect(orderRefetchInterval(order())).toBe(ORDER_POLL_MS);
-    for (const status of ['paid', 'expired', 'cancelled'] as const) {
+    for (const status of ['paid', 'cancelled'] as const) {
       expect(orderRefetchInterval(order({ status }))).toBe(false);
     }
     expect(orderRefetchInterval(undefined)).toBe(false);
+  });
+
+  it('polls an expired order every 15 s for 10 minutes, then stops (G3)', () => {
+    const expired = order({ status: 'expired', qrCode: null });
+    const end = new Date(expired.expiresAt).getTime();
+    expect(orderRefetchInterval(expired, end + 60_000)).toBe(15_000);
+    expect(orderRefetchInterval(expired, end + 10 * 60_000)).toBe(false);
   });
 });
 
