@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { encode } from 'uqr';
 
-/** Quiet zone around the code, in modules: the QR spec asks for 4 so scanners find the edges. */
+/** Quiet zone around the code, in modules (the encoder is asked for no border of its own): the QR spec asks for 4 so scanners find the edges. */
 const QUIET_ZONE = 4;
 
 /** One path with a rectangle per run of dark modules in a row. */
@@ -29,7 +29,7 @@ function pathOf(matrix: boolean[][]): string {
 export function QrCode({ value, label }: { value: string; label: string }) {
   const drawn = useMemo(() => {
     try {
-      const matrix = encode(value, { ecc: 'M' }).data;
+      const matrix = encode(value, { ecc: 'M', border: 0 }).data;
       return { size: matrix.length + QUIET_ZONE * 2, d: pathOf(matrix) };
     } catch {
       // Too long for a QR code: the page still has the PayOS link and the transfer details.
