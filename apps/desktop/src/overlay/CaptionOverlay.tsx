@@ -228,7 +228,7 @@ export function CaptionOverlay({
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="scroll-auto-hide min-h-0 min-w-0 flex-1 overflow-y-auto px-5 pb-5"
+          className="min-h-0 min-w-0 flex-1 overflow-y-auto px-5 pb-5"
           style={{ fontSize: prefs.fontSize }}
         >
           {hidden ? (
