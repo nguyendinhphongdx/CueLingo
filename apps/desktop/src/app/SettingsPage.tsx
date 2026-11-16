@@ -14,7 +14,7 @@ import { NotificationSettings } from '../notifications';
 import { PermissionsStep } from '../onboarding';
 import { PrivacyPanel } from '../privacy';
 import { ServerSettings } from '../server-picker';
-import { AssistSettings, VoiceSettings } from '../settings';
+import { AssistSettings, ModelSetting, VoiceSettings } from '../settings';
 import { PlacementSection } from '../study';
 import { UsagePanel } from '../usage';
 import { hasCalendar } from '../lib/platform';
@@ -154,6 +154,7 @@ function SectionBody({
       return (
         <>
           <LanguageModels />
+          <ModelSetting />
           <OfflineSttSettings />
         </>
       );

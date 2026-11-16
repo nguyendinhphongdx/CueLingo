@@ -77,7 +77,9 @@ describe('microphone permission messages', () => {
 
   it('puts the permission message on the microphone row, and only there', () => {
     const failures = { micFailed: true, systemFailed: false, micPermission: 'denied' as const };
-    expect(describeStream('mic', failures, 'macos')!.message).toContain('Micro chưa được cấp quyền');
+    expect(describeStream('mic', failures, 'macos')!.message).toContain(
+      'Micro chưa được cấp quyền',
+    );
     expect(describeStream('system', failures, 'macos')).toBeNull();
   });
 });
