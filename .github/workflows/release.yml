@@ -29,6 +29,13 @@ jobs:
           node-version: 24
           cache: pnpm
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: desktop-macos
+          workspaces: |
+            apps/desktop/src-tauri -> target
+          # Restore what CI on main saved; a tag run does not save its own copy.
+          save-if: false
 
       - name: The tag must match the app version
         run: |
@@ -113,6 +120,14 @@ jobs:
           node-version: 24
           cache: pnpm
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: desktop-windows
+          workspaces: |
+            apps/desktop/native/windows-audio -> target
+            apps/desktop/src-tauri -> target
+          # Restore what CI on main saved; a tag run does not save its own copy.
+          save-if: false
 
       - name: The tag must match the app version
         run: |

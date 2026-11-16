@@ -86,6 +86,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: desktop-macos
+          workspaces: |
+            apps/desktop/src-tauri -> target
       - run: pnpm --filter @cuelingo/desktop build
         working-directory: .
       # Tauri checks that the bundled sidecar exists; these steps only compile Rust, so a stand-in will do.
@@ -117,6 +122,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: desktop-windows
+          workspaces: |
+            apps/desktop/native/windows-audio -> target
+            apps/desktop/src-tauri -> target
       - run: pnpm install --frozen-lockfile
         working-directory: .
 
@@ -152,14 +163,16 @@ jobs:
       - name: Build the audio sidecar
         run: node scripts/sidecar.mjs --rebuild
 
-      # Spike S2: the speech model is downloaded once (pinned revision and SHA-256, checked by the sidecar) and
+      # Spike S2 (passed, see ADR 0020): run by hand with workflow_dispatch to measure again. The speech model is downloaded once (pinned revision and SHA-256, checked by the sidecar) and
       # kept between runs. The step prints p50/p95, memory and load time to the log and the job summary.
       - name: Cache the speech model
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/cuelingo-models
           key: speech-model-${{ hashFiles('apps/desktop/native/windows-audio/src/stt/models.rs') }}
       - name: Measure speech recognition on this runner (S2)
+        if: github.event_name == 'workflow_dispatch'
         env:
           CUELINGO_MODELS_DIR: ${{ runner.temp }}/cuelingo-models
         run: |
