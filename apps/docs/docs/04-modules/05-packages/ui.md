@@ -25,6 +25,12 @@ Component React dùng chung cho desktop và web.
 | `@cuelingo/ui/components/input`        | `Input`                                                                                                        |
 | `@cuelingo/ui/components/card`         | `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardAction`, `CardContent`, `CardFooter`                |
 | `@cuelingo/ui/components/caption-line` | `CaptionLine`, `CaptionLineProps`                                                                              |
+| `@cuelingo/ui/components/badge`        | `Badge` (default, outline, success, warning, destructive)                                                      |
+| `@cuelingo/ui/components/tabs`         | `Tabs` (gạch chân, `role=tablist`)                                                                             |
+| `@cuelingo/ui/components/skeleton`     | `Skeleton`                                                                                                     |
+| `@cuelingo/ui/components/status-row`   | `StatusRow` (một mục "sẵn sàng" kèm nút sửa riêng)                                                             |
+| `@cuelingo/ui/components/notice-strip` | `NoticeStrip` (info, warning, error; có chỗ cho nút hành động)                                                 |
+| `@cuelingo/ui/components/empty-state`  | `EmptyState`                                                                                                   |
 
 `FeedbackForm` (`@cuelingo/ui/components/feedback-form`): chọn Báo lỗi/Góp ý, đếm ký tự trên 2000, dòng "Không gửi kèm transcript hay âm thanh". Nhận `send({kind, message})` từ client; component không biết phiên bản app hay OS và không có chỗ đính gì khác. `FeedbackFormView` là bản thuần markup để test.
 
@@ -160,3 +166,7 @@ Dùng cho các trang admin. Code: `components/chart-card.tsx`, `components/stat-
 - Mỗi biểu đồ có một bảng `sr-only` chứa cùng dữ liệu (cho trình đọc màn hình và để test), phần SVG là `aria-hidden`. Màu lấy từ token `--chart-1`, `--chart-2` trong `globals.css`.
 - `StatCard` `value={null}` hiện "Chưa đủ dữ liệu"; số 0 thật vẫn hiện 0.
 - Chỉ trang admin import `chart-card`, nên Next tách Recharts vào chunk của route admin; desktop không import file này.
+
+## Token và chuyển động
+
+Mọi token (màu sáng/tối, `success`, `warning`, `translation`, `brand`, bo góc, bóng, `--duration-fast|base|slow`, `--ease-out|in-out`) định nghĩa một lần trong `globals.css`; phông Be Vietnam Pro và JetBrains Mono tải kèm app (`@fontsource`), không gọi Google Fonts. Có khối `prefers-reduced-motion` tắt animation. Component dùng chung chỉ dùng token: không hex, không `dark:`, không `text-white`/`bg-black` (trừ `Logo`); `shared-ui.test.ts` quét.
