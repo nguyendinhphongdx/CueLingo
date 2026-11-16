@@ -139,3 +139,16 @@ Code: `components/sidebar-nav.tsx`, `hooks/use-collapsed-groups.ts`, `components
 - `extraGroups?: NavGroup[]` thêm nhóm sau các nhóm roadmap, thu gọn và lưu như chúng. Chỉ web truyền nhóm Quản trị (Q1); desktop không truyền nên không đổi. `renderItem` khai báo dạng method nên desktop vẫn gõ tham số là `Feature`.
 - `AppFrame` `wide` đổi chiều rộng nội dung từ 640px sang `max-w-6xl` (bảng, biểu đồ).
 - Test: `sidebar-nav.test.tsx` (collapse, persist, admin group).
+
+## Biểu đồ và thẻ số liệu
+
+Dùng cho các trang admin. Code: `components/chart-card.tsx`, `components/stat-card.tsx`. Phụ thuộc mới: `recharts@^3` (MIT, chạy trong trình duyệt, không nhận dữ liệu người dùng; đã duyệt ở Q2 của spec admin-console).
+
+| Import                  | Export                                                                                                                                       |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `components/chart-card` | `LineChartCard`, `BarChartCard`, `ChartCardProps` (`title`, `description?`, `data`, `xKey`, `xLabel?`, `series`, `formatX?`, `formatValue?`) |
+| `components/stat-card`  | `StatCard({label, value, hint?})`, `StatGrid`, `NO_DATA_TEXT`                                                                                |
+
+- Mỗi biểu đồ có một bảng `sr-only` chứa cùng dữ liệu (cho trình đọc màn hình và để test), phần SVG là `aria-hidden`. Màu lấy từ token `--chart-1`, `--chart-2` trong `globals.css`.
+- `StatCard` `value={null}` hiện "Chưa đủ dữ liệu"; số 0 thật vẫn hiện 0.
+- Chỉ trang admin import `chart-card`, nên Next tách Recharts vào chunk của route admin; desktop không import file này.
