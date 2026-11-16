@@ -34,6 +34,7 @@ export function createInMemoryBillingRepository(
         ...input,
         status: 'pending',
         providerLinkId: null,
+        providerRef: null,
         qrCode: null,
         checkoutUrl: null,
         paidAt: null,
@@ -112,6 +113,7 @@ export function createInMemoryBillingRepository(
       }
       order.status = 'paid';
       order.paidAt = input.paidAt;
+      order.providerRef = input.reference ?? null;
       const outcome = planAfterPurchase({
         current: plans.get(order.userId) ?? null,
         now: input.now,

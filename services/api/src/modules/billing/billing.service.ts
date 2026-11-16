@@ -83,7 +83,7 @@ export function createBillingService(repo: BillingRepository, options: BillingOp
    */
   async function applyPayment(
     order: OrderRow,
-    payment: { amount: number; transactionAt: Date | null },
+    payment: { amount: number; transactionAt: Date | null; reference: string | null },
   ): Promise<void> {
     if (order.status === 'paid') return;
     if (order.status === 'cancelled') {
@@ -103,7 +103,12 @@ export function createBillingService(repo: BillingRepository, options: BillingOp
       );
       return;
     }
-    const result = await repo.settle(order.orderCode, { paidAt, now: at, prices });
+    const result = await repo.settle(order.orderCode, {
+      paidAt,
+      now: at,
+      prices,
+      reference: payment.reference,
+    });
     if (!result?.settled) return; // another request got there first: the period is not added twice
     if (!result.applied) {
       log.warn(
@@ -144,7 +149,11 @@ export function createBillingService(repo: BillingRepository, options: BillingOp
     try {
       const state = await provider.getStatus(order.orderCode);
       if (state.status === 'paid' && state.amountPaid === order.amount) {
-        await applyPayment(order, { amount: state.amountPaid, transactionAt: state.transactionAt });
+        await applyPayment(order, {
+          amount: state.amountPaid,
+          transactionAt: state.transactionAt,
+          reference: state.reference,
+        });
       } else if (state.status === 'cancelled') {
         await repo.closePending(order.id, 'cancelled');
       }
@@ -264,7 +273,11 @@ export function createBillingService(repo: BillingRepository, options: BillingOp
         );
         throw new AppError(ErrorCode.Validation, 'Invalid webhook');
       }
-      await applyPayment(order, { amount: event.amount, transactionAt: event.transactionAt });
+      await applyPayment(order, {
+        amount: event.amount,
+        transactionAt: event.transactionAt,
+        reference: event.reference,
+      });
     },
   };
 }

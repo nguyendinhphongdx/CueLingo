@@ -1,7 +1,10 @@
 import { Writable } from 'node:stream';
+import { DEFAULT_PLAN_LIMITS, DEFAULT_PLAN_PRICES } from '@cuelingo/shared';
 import type { FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
 import { buildTestApp, TEST_USER_HEADER } from '../../testing';
+import { createBillingService } from './billing.service';
+import { createInMemoryBillingRepository } from './billing.repository.memory';
 import { createFakeProvider, type FakeProvider } from './providers/fake';
 
 const ALICE = 'alice';
@@ -264,6 +267,26 @@ describe('billing module', () => {
         new Date('2026-12-25T03:00:00Z').getTime() + Math.round((leftMs * 99_000) / 249_000),
       );
       expect(current.expiresAt).toBe(expected.toISOString());
+    });
+  });
+
+  describe('bank reference', () => {
+    it('is stored on the order when it is settled and never logged', async () => {
+      const repo = createInMemoryBillingRepository(new Map(), () => now);
+      const service = createBillingService(repo, {
+        provider,
+        prices: DEFAULT_PLAN_PRICES,
+        limits: DEFAULT_PLAN_LIMITS,
+        webOrigin: 'http://web',
+        log: { info: (f, m) => logs.push(JSON.stringify([f, m])), warn: () => {} },
+        now: () => now,
+      });
+      const order = await service.createOrder(ALICE, { plan: 'pro', period: 'month' });
+      await service.handleWebhook(
+        provider.webhook({ orderCode: codeOf(order), amount: order.amount, reference: 'FT999' }),
+      );
+      expect((await repo.findByOrderCode(codeOf(order)))?.providerRef).toBe('FT999');
+      expect(logs.join('\n')).not.toContain('FT999');
     });
   });
 

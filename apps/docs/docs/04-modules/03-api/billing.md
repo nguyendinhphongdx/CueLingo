@@ -41,7 +41,7 @@ Người dùng tự mua Pro/Ultra bằng chuyển khoản VietQR qua PayOS, tr�
 1. **Tạo đơn.** Lỗi 409 nếu là hạ gói. Nếu còn đơn `pending` cùng gói và kỳ thì trả lại đơn đó. Nếu không: ghi đơn (giá chụp vào đơn, hết hạn sau 15 phút), gọi `createCheckout` với `description = CL<orderCode>`, `returnUrl = <WEB_ORIGIN>/checkout?order=<id>`.
 2. **Webhook.** Chữ ký sai → 400. `code != '00'` → bỏ qua (200). Mã đơn không tồn tại nhưng chữ ký đúng → **200, không đổi gì** (PayOS gửi giao dịch mẫu khi đăng ký URL). Số tiền khác đơn → 400, log cảnh báo. Hợp lệ → `settle`.
 3. **Đọc đơn.** Đơn `pending` mà lần hỏi trước quá 15 s thì gọi `getStatus`; `paid` đi chung đường `settle` với webhook. Quá hạn mà chưa trả → `expired`.
-4. **`settle`** (một transaction): `UPDATE … SET status='paid' WHERE order_code=$1 AND status IN ('pending','expired')` (chỉ một bên thắng), khoá `user_plans` bằng `FOR UPDATE`, tính `planAfterPurchase`, ghi gói `source='payment'` và `plan_expires_at` của đơn. Webhook trùng hoặc song song không cộng kỳ hai lần.
+4. **`settle`** (một transaction): `UPDATE … SET status='paid' WHERE order_code=$1 AND status IN ('pending','expired')` (chỉ một bên thắng), khoá `user_plans` bằng `FOR UPDATE`, tính `planAfterPurchase`, ghi gói `source='payment'` và `plan_expires_at` của đơn. `reference` (mã giao dịch ngân hàng, không phải dữ liệu người chuyển) lưu vào `provider_ref` để đối soát tay; không log, không trả cho client. Webhook trùng hoặc song song không cộng kỳ hai lần.
 
 Tiền chuyển trong hạn đơn (`transactionDateTime` ≤ `expires_at`) vẫn được nhận dù webhook tới muộn hoặc đơn đã bị đánh dấu `expired`. Ngoài hạn: không đổi gói, log `orderCode` để hoàn tay.
 

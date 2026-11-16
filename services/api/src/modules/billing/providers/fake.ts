@@ -26,6 +26,7 @@ export interface FakeProvider extends PaymentProvider {
     orderCode: number;
     amount: number;
     transactionDateTime?: string;
+    reference?: string;
     code?: string;
     signature?: string;
   }): unknown;
@@ -63,11 +64,16 @@ export function createFakeProvider(): FakeProvider {
       const b = body as {
         code?: string;
         signature?: string;
-        data?: { orderCode?: number; amount?: number; transactionDateTime?: string };
+        data?: {
+          orderCode?: number;
+          amount?: number;
+          transactionDateTime?: string;
+          reference?: string;
+        };
       } | null;
       if (!b || b.signature !== 'valid' || !b.data) return { kind: 'invalid' };
       if (b.code !== '00') return { kind: 'ignored' };
-      const { orderCode, amount, transactionDateTime } = b.data;
+      const { orderCode, amount, transactionDateTime, reference } = b.data;
       if (typeof orderCode !== 'number' || typeof amount !== 'number') return { kind: 'invalid' };
       return {
         kind: 'paid',
@@ -75,7 +81,7 @@ export function createFakeProvider(): FakeProvider {
           orderCode,
           amount,
           transactionAt: transactionDateTime ? new Date(transactionDateTime) : null,
-          reference: null,
+          reference: reference ?? null,
         },
       };
     },
@@ -90,12 +96,19 @@ export function createFakeProvider(): FakeProvider {
         }
       );
     },
-    webhook({ orderCode, amount, transactionDateTime, code = '00', signature = 'valid' }) {
+    webhook({
+      orderCode,
+      amount,
+      transactionDateTime,
+      reference,
+      code = '00',
+      signature = 'valid',
+    }) {
       return {
         code,
         desc: 'success',
         success: code === '00',
-        data: { orderCode, amount, transactionDateTime },
+        data: { orderCode, amount, transactionDateTime, reference },
         signature,
       };
     },

@@ -71,6 +71,20 @@ describe('billing on real Postgres', () => {
     expect(row!.plan_expires_at.toISOString()).toBe('2026-12-15T03:00:00.000Z');
   });
 
+  it('keeps the bank reference of the payment on the order', async () => {
+    const repo = createPostgresBillingRepository(sql);
+    const user = await newUser('ref@example.com');
+    const order = await open(user);
+    await repo.settle(order.orderCode, {
+      paidAt: now,
+      now,
+      prices: DEFAULT_PLAN_PRICES,
+      reference: 'FT123',
+    });
+    const [row] = await sql`SELECT provider_ref FROM billing_orders WHERE id = ${order.id}`;
+    expect(row!.provider_ref).toBe('FT123');
+  });
+
   it('serialises two different orders of one new user: both periods count', async () => {
     const repo = createPostgresBillingRepository(sql);
     const user = await newUser('two-orders@example.com');

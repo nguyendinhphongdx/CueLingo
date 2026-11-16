@@ -20,6 +20,8 @@ export interface OrderRow {
   amount: number;
   status: BillingOrderStatus;
   providerLinkId: string | null;
+  /** The bank's transaction reference, kept to match a payment by hand. Never logged, never sent to a client. */
+  providerRef: string | null;
   qrCode: string | null;
   checkoutUrl: string | null;
   expiresAt: Date;
@@ -40,6 +42,8 @@ export interface NewOrder {
 export interface SettleInput {
   paidAt: Date;
   now: Date;
+  /** The bank's transaction reference from the provider, if it sent one. */
+  reference?: string | null;
   prices: PlanPriceTable;
 }
 
@@ -95,6 +99,7 @@ interface OrderDbRow {
   amount: number;
   status: BillingOrderStatus;
   provider_link_id: string | null;
+  provider_ref: string | null;
   qr_code: string | null;
   checkout_url: string | null;
   expires_at: Date;
@@ -114,6 +119,7 @@ const toOrder = (r: OrderDbRow): OrderRow => ({
   amount: r.amount,
   status: r.status,
   providerLinkId: r.provider_link_id,
+  providerRef: r.provider_ref,
   qrCode: r.qr_code,
   checkoutUrl: r.checkout_url,
   expiresAt: r.expires_at,
@@ -201,7 +207,7 @@ export function createPostgresBillingRepository(sql: Sql): BillingRepository {
         // Only one transaction can flip the order; a parallel one waits on the row, then finds it already paid.
         // An `expired` order still counts: the payment may have been made inside its window (G3).
         const [won] = await tx<OrderDbRow[]>`
-          UPDATE billing_orders SET status = 'paid', paid_at = ${input.paidAt}
+          UPDATE billing_orders SET status = 'paid', paid_at = ${input.paidAt}, provider_ref = ${input.reference ?? null}
           WHERE order_code = ${orderCode} AND status IN ('pending', 'expired')
           RETURNING *`;
         if (!won) {
