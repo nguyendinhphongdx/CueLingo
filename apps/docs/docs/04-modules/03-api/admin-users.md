@@ -37,6 +37,18 @@ Câu trả lời đi qua schema strict ở route, nên thêm nhầm một trư�
 | Đổi gói       | Admin lấy từ phiên, người bị đổi từ đường dẫn. `source='manual'`, `set_by` = admin. Chọn Free thì bỏ hạn. Hạ gói người đã trả tiền vẫn được (hoàn tiền tay ngoài hệ thống); cảnh báo là việc của UI                                                                                                                                                                                                                                                                   |
 | Nhật ký       | Một dòng `plan changed` do `usage.setPlanFor` ghi: `adminId`, `targetUserId`, `from`, `to`. Không có email. Không có bảng lịch sử                                                                                                                                                                                                                                                                                                                                     |
 
+## Giới hạn hiệu năng đã biết
+
+Cột "hoạt động gần nhất" chạy `max(started_at)` trên `sessions` cho từng id của trang (≤ 50 người), mà `sessions` **chưa có index trên `user_id`**, nên mỗi lần mở trang quét bảng `sessions` tới 50 lần (theo `user_id`). Chấp nhận được ở quy mô beta; chậm dần khi `sessions` lớn lên. Không thêm migration trong task này (đổi schema cần chủ sản phẩm duyệt).
+
+Việc tiếp theo, làm bằng một migration mới (không sửa file cũ):
+
+```sql
+CREATE INDEX sessions_user_started_idx ON sessions (user_id, started_at DESC);
+```
+
+Khi nào làm: trang `/admin/users` mất trên khoảng 1 giây, hoặc `sessions` vượt vài trăm nghìn dòng. Index này cũng giúp các truy vấn khác lọc theo người dùng (danh sách phiên của chính họ).
+
 ## Quyền riêng tư
 
 Đây là chỗ **duy nhất** admin thấy email và tên của mọi người dùng (Q1 của spec); [Số liệu nội bộ](../02-web/admin-metrics.md) vẫn không có định danh. Xem hàng "Admin vận hành" ở [bảo mật & riêng tư](../../03-architecture/08-security-privacy.md). Giảm thiểu: chỉ `ADMIN_EMAILS`, mỗi trang 50 dòng, không xuất CSV, log không chứa email.
