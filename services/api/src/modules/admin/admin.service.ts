@@ -1,5 +1,6 @@
 import {
   ErrorCode,
+  type AdminAccess,
   type AdminAgentStatus,
   type AdminMetrics,
   type UpdateAdminAgentRequest,
@@ -35,6 +36,10 @@ export function createAdminService(
   return {
     /** The single place the allowlist is read; other modules ask this instead of copying it. */
     isAdmin,
+    /** For the caller's own sidebar: never throws, so a normal user costs no error. */
+    async access(userId: string): Promise<AdminAccess> {
+      return { isAdmin: await isAdmin(userId) };
+    },
     async metrics(userId: string): Promise<AdminMetrics> {
       await requireAdmin(userId);
       return repo.metrics(new Date());

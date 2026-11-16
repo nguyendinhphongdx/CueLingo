@@ -13,6 +13,7 @@ title: Admin metrics
 
 ## Phạm vi MVP
 
+- `GET /v1/admin/me`: người gọi có phải admin không (cho thanh bên).
 - `GET /v1/admin/metrics`
 - Khối `beta` trong metrics: thời gian từ cài tới caption đầu (trung vị phút, theo người), họp/tuần/người, D1, D7, số phản hồi 30 ngày. Mỗi số `null` khi chưa đủ dữ liệu. Định nghĩa: D1 = tỉ lệ người đã mở app ≥ 2 ngày có `session_started` trong `[24h, 48h)` sau lần mở đầu; D7 = như vậy với `[7 ngày, 8 ngày)` cho người ≥ 8 ngày; UTC, cửa sổ tuyệt đối.
 - `GET`/`PATCH /v1/admin/agent`: công tắc toàn cục của trợ lý AI và bật/tắt từng plugin (ai-agent lô 2).
@@ -22,6 +23,7 @@ title: Admin metrics
 
 | Method | Path                | Kết quả                                                                                                                                                                                                                                                                                                                         |
 | ------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/v1/admin/me`      | `AdminAccessSchema` `{isAdmin}`: `200` cho mọi người đã đăng nhập (người thường nhận `false`, không phải `403`), `401` khi chưa đăng nhập                                                                                                                                                                                       |
 | GET    | `/v1/admin/metrics` | `AdminMetricsSchema`; `403` nếu email không được phép                                                                                                                                                                                                                                                                           |
 | GET    | `/v1/admin/agent`   | `AdminAgentStatusSchema`: `enabled` (công tắc admin), `available` (deploy có cho phép: `AGENT_ENABLED` và khoá AI), `plugins[]` (`id`, `version`, `state`, `permissions`, `tools`, `disabledBy?`, `retryAt?`); `403` nếu không phải admin. Khi module agent không được cấu hình: `{enabled:false, available:false, plugins:[]}` |
 | PATCH  | `/v1/admin/agent`   | Body `UpdateAdminAgentRequest`: **hoặc** `{enabled}` (công tắc toàn cục) **hoặc** `{plugin:{id, enabled}}`; trả `AdminAgentStatus` mới. `400` nếu thiếu/đủ cả hai, `404` nếu plugin không có hoặc module agent không cấu hình, `403` nếu không phải admin                                                                       |
