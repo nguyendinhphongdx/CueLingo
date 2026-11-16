@@ -1,7 +1,9 @@
 import {
   DEFAULT_USER_SETTINGS,
   UserSettingsSchema,
+  TtsVoiceSchema,
   type LanguageCode,
+  type TtsVoice,
   type UserSettings,
 } from '@cuelingo/shared';
 import type { Sql } from '../../lib/db';
@@ -14,6 +16,8 @@ export interface SettingsRepository {
     settings: UserSettings,
     language: LanguageCode,
   ): Promise<UserSettings | null>;
+  /** Only the chosen reading voice; null when the person has none saved (the default applies). */
+  voice(userId: string): Promise<TtsVoice | null>;
 }
 
 interface SettingsRow {
@@ -35,6 +39,7 @@ function fromRow(row: SettingsRow): UserSettings {
     assistDefault: row.assistDefault,
     overlay: { ...DEFAULT_USER_SETTINGS.overlay, ...overlay },
     saveAudio: stored.saveAudio ?? DEFAULT_USER_SETTINGS.saveAudio,
+    ttsVoice: stored.ttsVoice ?? DEFAULT_USER_SETTINGS.ttsVoice,
   });
 }
 
@@ -53,8 +58,19 @@ export function createPostgresSettingsRepository(sql: Sql): SettingsRepository {
       return row ? fromRow(row) : null;
     },
 
+    async voice(userId) {
+      const [row] = await sql<Array<{ voice: unknown }>>`
+        SELECT settings -> 'ttsVoice' AS voice FROM learner_profiles WHERE user_id = ${userId}`;
+      const parsed = TtsVoiceSchema.safeParse(row?.voice);
+      return parsed.success ? parsed.data : null;
+    },
+
     async save(userId, settings, language) {
-      const stored = { overlay: settings.overlay, saveAudio: settings.saveAudio };
+      const stored = {
+        overlay: settings.overlay,
+        saveAudio: settings.saveAudio,
+        ttsVoice: settings.ttsVoice,
+      };
       return sql.begin(async (tx) => {
         const [row] = await tx<SettingsRow[]>`
           UPDATE learner_profiles
@@ -87,6 +103,9 @@ export function createInMemorySettingsRepository(
       if (!settings) return null;
       const assistDefault = assistByLanguage.get(`${userId}:${language}`) ?? settings.assistDefault;
       return structuredClone({ ...settings, assistDefault });
+    },
+    async voice(userId) {
+      return values.get(userId)?.ttsVoice ?? null;
     },
     async save(userId, settings, language) {
       const current = values.get(userId);

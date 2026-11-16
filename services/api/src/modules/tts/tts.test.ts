@@ -112,3 +112,56 @@ describe('POST /v1/tts', () => {
     await app.close();
   });
 });
+
+describe('tts voice', () => {
+  const voiceOf = (gateway: ReturnType<typeof gatewayWith>, call = 0) =>
+    (gateway.speech.mock.calls[call] as unknown as [string, { voice: string }])[1].voice;
+
+  it('uses Kore when the person has no voice saved (AC4)', async () => {
+    const gateway = gatewayWith();
+    const service = createTtsService({ gateway, cache: createInMemoryTtsCache() });
+    await service.speak('alice', 'hello');
+    expect(voiceOf(gateway)).toBe('Kore');
+  });
+
+  it("uses the person's saved voice and keeps voices apart in the cache (AC5)", async () => {
+    const gateway = gatewayWith();
+    const voices: Record<string, 'Puck' | 'Leda'> = { alice: 'Puck', bob: 'Leda' };
+    const service = createTtsService({
+      gateway,
+      cache: createInMemoryTtsCache(),
+      getVoice: async (userId) => voices[userId] ?? null,
+    });
+    expect((await service.speak('alice', 'hello')).cache).toBe('miss');
+    expect((await service.speak('bob', 'hello')).cache).toBe('miss');
+    expect((await service.speak('alice', 'hello')).cache).toBe('hit');
+    expect([voiceOf(gateway, 0), voiceOf(gateway, 1)]).toEqual(['Puck', 'Leda']);
+  });
+
+  it('plays a voice that is only being tried, ahead of the saved one', async () => {
+    const gateway = gatewayWith();
+    const service = createTtsService({
+      gateway,
+      cache: createInMemoryTtsCache(),
+      getVoice: async () => 'Puck',
+    });
+    await service.speak('alice', 'hello', 'Charon');
+    expect(voiceOf(gateway)).toBe('Charon');
+  });
+
+  it('rejects a voice outside the list with 400 and sends nothing to the gateway (AC7)', async () => {
+    const gateway = gatewayWith();
+    const app = await buildTestApp({
+      tts: { gateway, cache: createInMemoryTtsCache() },
+    });
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/tts',
+      headers: { [TEST_USER_HEADER]: 'alice' },
+      payload: { text: 'hello', voice: 'Nobody' },
+    });
+    expect(response.statusCode).toBe(400);
+    expect(gateway.speech).not.toHaveBeenCalled();
+    await app.close();
+  });
+});

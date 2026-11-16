@@ -10,8 +10,8 @@ import type { TtsService } from './tts.service';
 export function ttsRoutes(service: TtsService): FastifyPluginAsync {
   return async (app) => {
     app.post('/', async (request, reply) => {
-      const { text } = parse(TtsRequestSchema, request.body);
-      const { audio, cache } = await service.speak(request.userId, text);
+      const { text, voice } = parse(TtsRequestSchema, request.body);
+      const { audio, cache } = await service.speak(request.userId, text, voice);
       return reply
         .type('audio/wav')
         .header('x-tts-cache', cache)
