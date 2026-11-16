@@ -13,6 +13,9 @@ import LocalSTT
 //                 one finished utterance as base64 16-bit LE mono PCM; no model runs on this machine)
 //                {"type":"level","stream":"system|mic","rms":0...1,"peak":0...1}  (at most 10 per second per stream)
 //                {"type":"mic","muted":true|false}  (the microphone was switched off or on; sent once per change)
+// One-shot modes (print one line and exit, no meeting): --permissions, --request-microphone (shows the macOS dialog),
+// --check-system-audio, --calendar-*, --model-status (is the model on this machine), --prewarm (download, verify and
+// compile the model, with `model` progress lines). Protocol: apps/docs/docs/05-engineering/scaffold/07-native-swift.md
 // stdin: a line "stop" ends the session; "vocab ["SLA",...]" replaces the glossary terms;
 //        "language ja" switches the recognition model (captions continue on the old one until it is ready);
 //        "mic off" / "mic on" stops / reopens the microphone (system audio keeps running).
@@ -118,11 +121,35 @@ final class Pipeline: @unchecked Sendable {
     private let probe: LanguageProbe?
     private var meter = LevelMeter()
     private let clock = DispatchTime.now()
+    /// Until the model is ready, finished utterances wait here (at most 60 s of audio, memory only); levels
+    /// and utterance cutting run from the first sample.
+    private var ready: Bool
+    private var backlog = UtteranceBacklog()
 
-    init(stream: String, transcriber: Transcriber, probe: LanguageProbe? = nil) {
+    init(stream: String, transcriber: Transcriber, probe: LanguageProbe? = nil, ready: Bool = false) {
         self.stream = stream
         self.transcriber = transcriber
         self.probe = probe
+        self.ready = ready
+    }
+
+    /// The model is loaded: recognise what was kept, in order, then switch to live handling. New utterances that
+    /// arrive while the backlog drains join its end, so nothing is reordered.
+    func markReady() {
+        Task {
+            while let batch = takeBacklog() {
+                for utterance in batch { await process(utterance, partial: false) }
+            }
+        }
+    }
+
+    /// The kept utterances, or nil (and live handling on) once the backlog is empty.
+    private func takeBacklog() -> [UtteranceSegmenter.Utterance]? {
+        lock.lock()
+        defer { lock.unlock() }
+        let batch = backlog.drain()
+        if batch.isEmpty { ready = true; return nil }
+        return batch
     }
 
     func feed(_ samples: [Int16]) {
@@ -170,6 +197,29 @@ final class Pipeline: @unchecked Sendable {
         case .partial(let u): (utterance, partial) = (u, true)
         case .final(let u): (utterance, partial) = (u, false)
         }
+        lock.lock()
+        if !ready {
+            // Still loading: keep the sentence, drop the live partial (the final comes later).
+            if !partial { backlog.push(utterance) }
+            lock.unlock()
+            return
+        }
+        lock.unlock()
+        if !partial || !mode.cloud {
+            if partial {
+                lock.lock()
+                if busy { lock.unlock(); return }  // drop partials while a recognition is running
+                busy = true
+                lock.unlock()
+            }
+            Task {
+                defer { if partial { clearBusy() } }
+                await process(utterance, partial: partial)
+            }
+        }
+    }
+
+    private func process(_ utterance: UtteranceSegmenter.Utterance, partial: Bool) async {
         if mode.cloud {
             // Cloud language: only finished utterances leave, as audio; partials are not sent.
             guard !partial else { return }
@@ -180,49 +230,47 @@ final class Pipeline: @unchecked Sendable {
             ])
             return
         }
-        if partial {
-            lock.lock()
-            if busy { lock.unlock(); return }  // drop partials while a recognition is running
-            busy = true
-            lock.unlock()
-        }
-        Task {
-            defer { if partial { clearBusy() } }
-            do {
-                let text = try await transcriber.transcribe(utterance.samples)
-                if !partial, let probe { await probe.hear(utterance.samples) }
-                guard !text.isEmpty else { return }
-                emit([
-                    "type": "segment", "segmentId": utterance.id.uuidString.lowercased(), "stream": stream,
-                    "startMs": utterance.startMs, "endMs": utterance.endMs, "text": text,
-                    "words": [Any](), "partial": partial,
-                ])
-            } catch {
-                status("error", "transcribe failed: \(error)")
-            }
+        do {
+            let text = try await transcriber.transcribe(utterance.samples)
+            if !partial, let probe { await probe.hear(utterance.samples) }
+            guard !text.isEmpty else { return }
+            emit([
+                "type": "segment", "segmentId": utterance.id.uuidString.lowercased(), "stream": stream,
+                "startMs": utterance.startMs, "endMs": utterance.endMs, "text": text,
+                "words": [Any](), "partial": partial,
+            ])
+        } catch {
+            status("error", "transcribe failed: \(error)")
         }
     }
 }
 
-status("loading", "loading speech model")
-// `--permissions`: print the microphone permission state and exit (no model load).
-if CommandLine.arguments.contains("--permissions") {
-    let state: String
-    switch AVCaptureDevice.authorizationStatus(for: .audio) {
-    case .authorized: state = "granted"
-    case .denied, .restricted: state = "denied"
-    default: state = "undetermined"
+let sidecarMode = SidecarMode.parse(CommandLine.arguments)
+if !sidecarMode.isOneShot { status("loading", "starting capture") }
+
+// `--permissions`: print the microphone permission state and exit (no dialog, no model load).
+func permissionsLine(_ state: MicCapture.Authorization) -> [String: Any] {
+    let word: String
+    switch state {
+    case .authorized: word = "granted"
+    case .denied: word = "denied"
+    case .undetermined: word = "undetermined"
     }
-    emit(["type": "permissions", "microphone": state])
+    return ["type": "permissions", "microphone": word]
+}
+if sidecarMode == .permissions {
+    emit(permissionsLine(MicCapture.authorization()))
+    exit(0)
+}
+// `--request-microphone`: show macOS's microphone dialog when it has not been asked yet, then print the answer.
+if sidecarMode == .requestMicrophone {
+    emit(permissionsLine(await MicCapture.requestAccess()))
     exit(0)
 }
 
 // `--calendar-status` / `--calendar-request` / `--calendar-events`: calendar access and the next meetings, for
 // suggesting a language before a meeting. Read on this machine only; attendees are reduced to their domains.
-func calendarArgument() -> String? {
-    CommandLine.arguments.first { $0.hasPrefix("--calendar-") }
-}
-if let mode = calendarArgument() {
+if case .calendar(let mode) = sidecarMode {
     let access = mode == "--calendar-request" ? await CalendarEvents.request() : CalendarEvents.access()
     var message: [String: Any] = ["type": "calendar", "state": access.rawValue]
     if mode == "--calendar-events", access == .granted {
@@ -238,32 +286,44 @@ if let mode = calendarArgument() {
 }
 
 // `--check-system-audio`: macOS has no API to read the system-audio permission, so play a short system
-// sound and see whether the tap hears it. Silence means no permission or a muted speaker.
-if CommandLine.arguments.contains("--check-system-audio") {
+// sound and see whether the tap hears it. The first run shows the permission dialog and the tap is silent until
+// the user answers, so the probe keeps trying for `SystemAudioProbe.timeoutSeconds`: a sound every 2 s, and the
+// tap is created afresh each round in case one made before the answer stays silent. Silence at the end means no
+// permission or a muted speaker.
+if sidecarMode == .checkSystemAudio {
     let lock = NSLock()
     nonisolated(unsafe) var peak = 0
-    let probe = SystemAudioTap()
-    do {
-        try probe.start { samples in
-            let loudest = samples.map { abs(Int($0)) }.max() ?? 0
-            lock.lock()
-            peak = max(peak, loudest)
-            lock.unlock()
+    var failure: String?
+    var heard = 0
+    for _ in 0..<(SystemAudioProbe.timeoutSeconds / SystemAudioProbe.pingEverySeconds) {
+        let probe = SystemAudioTap()
+        do {
+            try probe.start { samples in
+                let loudest = samples.map { abs(Int($0)) }.max() ?? 0
+                lock.lock()
+                peak = max(peak, loudest)
+                lock.unlock()
+            }
+        } catch {
+            failure = "\(error)"
+            break
         }
-    } catch {
-        emit(["type": "system-audio", "state": "error", "message": "\(error)"])
-        exit(0)
+        let player = Process()
+        player.executableURL = URL(fileURLWithPath: "/usr/bin/afplay")
+        player.arguments = ["/System/Library/Sounds/Ping.aiff"]
+        try? player.run()
+        try? await Task.sleep(nanoseconds: UInt64(SystemAudioProbe.pingEverySeconds) * 1_000_000_000)
+        probe.stop()
+        lock.lock()
+        heard = peak
+        lock.unlock()
+        if SystemAudioProbe.heard(peak: heard) { break }
     }
-    let player = Process()
-    player.executableURL = URL(fileURLWithPath: "/usr/bin/afplay")
-    player.arguments = ["/System/Library/Sounds/Ping.aiff"]
-    try? player.run()
-    try? await Task.sleep(nanoseconds: 1_600_000_000)
-    probe.stop()
-    lock.lock()
-    let heard = peak
-    lock.unlock()
-    emit(["type": "system-audio", "state": heard > 200 ? "granted" : "silent", "peak": heard])
+    if let failure, !SystemAudioProbe.heard(peak: heard) {
+        emit(["type": "system-audio", "state": "error", "message": failure])
+    } else {
+        emit(["type": "system-audio", "state": SystemAudioProbe.heard(peak: heard) ? "granted" : "silent", "peak": heard])
+    }
     exit(0)
 }
 
@@ -307,9 +367,17 @@ func reportLatency() async {
 }
 
 let startLanguage = ProcessInfo.processInfo.environment["CUELINGO_LANGUAGE"] ?? "en"
-if !(await loadModel(startLanguage)) {
-    status("error", "model load failed for \(startLanguage)")
-    exit(2)
+
+// `--model-status`: is the model for CUELINGO_LANGUAGE on this machine? Nothing is loaded or downloaded.
+if sidecarMode == .modelStatus {
+    let present = SpeechModels.isCloud(startLanguage) || Transcriber.isCached(language: startLanguage)
+    emit(["type": "model", "language": startLanguage, "state": present ? "cached" : "missing"])
+    exit(0)
+}
+// `--prewarm`: download (with progress), verify and compile the model, then exit and give the memory back.
+// Needs no permission and opens no audio.
+if sidecarMode == .prewarm {
+    exit(await loadModel(startLanguage) ? 0 : 2)
 }
 func applyVocabulary(_ json: String) async {
     guard let data = json.data(using: .utf8),
@@ -323,11 +391,16 @@ let detectCandidates = SpeechModels.probeCandidates(
     requested: (ProcessInfo.processInfo.environment["CUELINGO_DETECT"] ?? "").split(separator: ",").map(String.init))
 let probe: LanguageProbe? = detectCandidates.isEmpty
     ? nil : LanguageProbe(candidates: detectCandidates, current: { await transcriber.language ?? "en" })
-let system = Pipeline(stream: "system", transcriber: transcriber, probe: probe)
+if let initial = ProcessInfo.processInfo.environment["CUELINGO_VOCAB"] { await applyVocabulary(initial) }
 
 // `--file x.wav` (16 kHz mono Int16): run a recording through the same pipeline, for tests and demos.
-if let flag = CommandLine.arguments.firstIndex(of: "--file"), flag + 1 < CommandLine.arguments.count {
-    let data = try Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[flag + 1]))
+if case .file(let path) = sidecarMode {
+    guard await loadModel(startLanguage) else {
+        status("error", "model load failed for \(startLanguage)")
+        exit(2)
+    }
+    let system = Pipeline(stream: "system", transcriber: transcriber, probe: probe, ready: true)
+    let data = try Data(contentsOf: URL(fileURLWithPath: path))
     let pcm = data.dropFirst(44)
     let samples: [Int16] = pcm.withUnsafeBytes { Array($0.bindMemory(to: Int16.self)) }
     status("ready")
@@ -343,18 +416,57 @@ if let flag = CommandLine.arguments.firstIndex(of: "--file"), flag + 1 < Command
     status("stopped")
     exit(0)
 }
+
+// A meeting: capture starts first, the model loads alongside. Levels and utterance cutting run from the first
+// sample; sentences finished before the model is ready wait in a 60 s memory backlog and come out in order.
+mode.cloud = SpeechModels.isCloud(startLanguage)
+let system = Pipeline(stream: "system", transcriber: transcriber, probe: probe)
 let mic = Pipeline(stream: "mic", transcriber: transcriber)
 let tap = SystemAudioTap()
 let micCapture = MicCapture()
 do { try tap.start { system.feed($0) } } catch { status("error", "system audio: \(error)") }
-status("ready")
-// The mic can block on its permission prompt; start it off the main path so system captions never wait for it.
-// Starting and stopping run on one serial queue, so a quick off/on never leaves the engine half open.
+/// The mic can block on its permission prompt, so it starts off the main path and system captions never wait for it.
+/// Starting and stopping run on one serial queue, so a quick off/on never leaves the engine half open.
 let micQueue = DispatchQueue(label: "cuelingo.mic")
 nonisolated(unsafe) var mutedAt: DispatchTime?  // only touched on micQueue
-func startMic() {
-    micQueue.async {
-        do { try micCapture.start { mic.feed($0) } } catch { status("error", "microphone: \(error)") }
+
+/// Starts the microphone according to its permission. Never blocks system captions: this runs on its own task.
+/// The parent shows a banner for the not-authorized messages (`micPermissionOf` in capture-problems.ts).
+func startMicrophone() async {
+    func begin() {
+        micQueue.async {
+            do { try micCapture.start { mic.feed($0) } } catch { status("error", "microphone: \(error)") }
+        }
+    }
+    switch MicCapture.authorization() {
+    case .authorized:
+        begin()
+    case .denied:
+        status("error", MicStatusMessage.denied)
+    case .undetermined:
+        // Say so first, then ask: the dialog is up while the banner shows.
+        status("error", MicStatusMessage.undetermined)
+        if await MicCapture.requestAccess() == .authorized {
+            status("ready", MicStatusMessage.authorized)
+            begin()
+        } else {
+            status("error", MicStatusMessage.denied)
+        }
+    }
+}
+Task { await startMicrophone() }
+// "ready" now means capture is running; the model has its own `model` lines.
+status("ready", "capturing")
+
+Task {
+    if await loadModel(startLanguage) {
+        system.markReady()
+        mic.markReady()
+    } else {
+        tap.stop()
+        micQueue.sync { micCapture.stop() }
+        status("error", "model load failed for \(startLanguage)")
+        exit(2)
     }
 }
 /// Closes the microphone and flushes the sentence in progress; the reply is sent once it is really closed.
@@ -379,7 +491,6 @@ func resumeMic() {
         } catch { status("error", "microphone: \(error)") }
     }
 }
-startMic()
 
 // Wait for "stop" on stdin (or EOF when the parent exits).
 while let line = readLine() {
