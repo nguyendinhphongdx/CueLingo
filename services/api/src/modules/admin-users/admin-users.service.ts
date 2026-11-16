@@ -36,6 +36,17 @@ const CursorSchema = z
   })
   .strict();
 
+/**
+ * Postgres refuses 2026-02-30 and year 0000 with an error, which would be a 500. `new Date` alone is not enough
+ * (it accepts year 0000 and, for some forms, rolls an impossible day over), so the text must survive a round trip
+ * to the second, and the year must be 1 or later.
+ */
+export function isRealInstant(text: string): boolean {
+  const at = new Date(text);
+  if (Number.isNaN(at.getTime()) || at.getUTCFullYear() < 1) return false;
+  return at.toISOString().slice(0, 19) === text.slice(0, 19);
+}
+
 const encodeCursor = (cursor: UserCursor) =>
   Buffer.from(JSON.stringify(cursor), 'utf8').toString('base64url');
 
@@ -45,7 +56,7 @@ function decodeCursor(text: string): UserCursor {
     const parsed = CursorSchema.safeParse(
       JSON.parse(Buffer.from(text, 'base64url').toString('utf8')),
     );
-    if (!parsed.success || Number.isNaN(new Date(parsed.data.createdAt).getTime())) throw bad();
+    if (!parsed.success || !isRealInstant(parsed.data.createdAt)) throw bad();
     return parsed.data;
   } catch {
     throw bad();
