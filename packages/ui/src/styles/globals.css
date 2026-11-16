@@ -1,4 +1,9 @@
 @import 'tailwindcss';
+@import '@fontsource/be-vietnam-pro/400.css';
+@import '@fontsource/be-vietnam-pro/500.css';
+@import '@fontsource/be-vietnam-pro/600.css';
+@import '@fontsource/be-vietnam-pro/700.css';
+@import '@fontsource-variable/jetbrains-mono/index.css';
 
 /* Tailwind scans from the app that builds the CSS, so list every folder whose classes must be generated,
    this package's own components included. Paths are relative to this file. */
@@ -9,51 +14,89 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Tokens of the CueLingo design system (light and dark). One source for web, desktop, overlay and site. */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --chart-1: oklch(0.55 0.2 260);
-  --chart-2: oklch(0.7 0.16 70);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --background: #f6f6fb;
+  --foreground: #14142b;
+  --card: #ffffff;
+  --card-foreground: #14142b;
+  --popover: #ffffff;
+  --popover-foreground: #14142b;
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --secondary: #ecebfd;
+  --secondary-foreground: #2d2a8f;
+  --muted: #ececf4;
+  --muted-foreground: #5a5a78;
+  --accent: #e2e1f7;
+  --accent-foreground: #14142b;
+  --destructive: #b31f15;
+  --destructive-foreground: #ffffff;
+  --success: #08694a;
+  --warning: #8f3f04;
+  --translation: #0a7a79;
+  --brand: #4f46e5;
+  --scrim: #14142b80;
+  --border: #d9d9ea;
+  --input: #7c7c9c;
+  --ring: #4f46e5;
+  --chart-1: #4f46e5;
+  --chart-2: #0a7a79;
+  --chart-3: #b8860b;
+  --chart-4: #c2410c;
+  --chart-5: #6b6b8a;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #14142b;
+  --sidebar-accent: #ecebfd;
+  --elev-sm: 0 1px 2px #14142b0f;
+  --elev-md: 0 4px 12px #14142b14, 0 1px 3px #14142b0f;
+  --elev-lg: 0 16px 40px #14142b24;
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --motion-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --font-sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:
+    'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --chart-1: oklch(0.72 0.15 260);
-  --chart-2: oklch(0.8 0.15 80);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --background: #0f1020;
+  --foreground: #ececf8;
+  --card: #171830;
+  --card-foreground: #ececf8;
+  --popover: #1d1e3b;
+  --popover-foreground: #ececf8;
+  --primary: #9a95fa;
+  --primary-foreground: #0f1020;
+  --secondary: #25264d;
+  --secondary-foreground: #c9c7ff;
+  --muted: #1f2040;
+  --muted-foreground: #a3a4c4;
+  --accent: #2e2f5c;
+  --accent-foreground: #ececf8;
+  --destructive: #f97066;
+  --destructive-foreground: #0f1020;
+  --success: #47cd89;
+  --warning: #fdb022;
+  --translation: #4fd1c5;
+  --brand: #4f46e5;
+  --scrim: #000000a6;
+  --border: #34355a;
+  --input: #7071a0;
+  --ring: #9a95fa;
+  --chart-1: #9a95fa;
+  --chart-2: #4fd1c5;
+  --chart-3: #fdb022;
+  --chart-4: #fb923c;
+  --chart-5: #a3a4c4;
+  --sidebar: #13142a;
+  --sidebar-foreground: #ececf8;
+  --sidebar-accent: #25264d;
+  --elev-sm: 0 1px 2px #00000066;
+  --elev-md: 0 6px 16px #00000080;
+  --elev-lg: 0 20px 48px #000000a6;
 }
 
 @theme inline {
@@ -72,15 +115,30 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-translation: var(--translation);
+  --color-brand: var(--brand);
+  --color-scrim: var(--scrim);
   --color-border: var(--border);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --shadow-sm: var(--elev-sm);
+  --shadow-md: var(--elev-md);
+  --shadow-lg: var(--elev-lg);
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 }
 
 @layer base {
@@ -90,5 +148,21 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 22px;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Motion explains a change; with reduced motion on, nothing moves. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

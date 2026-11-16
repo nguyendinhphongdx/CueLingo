@@ -1,25 +1,4 @@
-/* CueLingo brand tokens shared by desktop and web: indigo primary, faintly cool canvas. Import after globals.css. */
-:root,
-.light {
-  --primary: oklch(0.511 0.262 276.966);
-  --primary-foreground: oklch(0.985 0 0);
-  --ring: oklch(0.585 0.233 277.117);
-  --background: oklch(0.975 0.004 270);
-  --card: oklch(1 0 0);
-  --muted: oklch(0.955 0.006 270);
-  --border: oklch(0.915 0.008 270);
-  --brand: #4f46e5;
-}
-
-.dark {
-  --primary: oklch(0.673 0.182 277);
-  --primary-foreground: oklch(0.145 0 0);
-  --ring: oklch(0.585 0.233 277.117);
-  --background: oklch(0.17 0.012 272);
-  --card: oklch(0.215 0.014 272);
-  --muted: oklch(0.255 0.014 272);
-  --border: oklch(1 0 0 / 9%);
-}
+/* Brand surfaces and the shared scrollbar. Colour tokens live in globals.css, the one source for every client. */
 
 /* One flat field of the brand colour: the only loud surface, used for a live state. */
 .surface-live {
