@@ -11,16 +11,16 @@ Gán gói Free/Pro/Ultra cho từng người, đếm lượng dùng theo kỳ v�
 ## Trách nhiệm
 
 - Lưu gói (`user_plans`; không có dòng = `free`; `expires_at` và `source` = `manual` \| `payment`) và lượng dùng (`usage_counters`, chỉ con số).
-- Cho module khác một cổng duy nhất (`UsageService`): `status`, `tryReserve`/`reserve`, `add`, `snapshot`, `setPlanFor(adminId, targetUserId, plan, expiresAt?)` (trả `{previous, current}`; `PUT /v1/admin/plan` theo email và `PUT /v1/admin/users/:id/plan` của module admin-users đều đi qua đây, `user_plans` chỉ module này ghi).
+- Cho module khác một cổng duy nhất (`UsageService`): `status`, `tryReserve`/`reserve`, `add`, `snapshot`. Module này **không còn ghi `user_plans` khi admin đổi gói**: `PUT /v1/admin/plan` tìm người theo email rồi gọi `options.grant` (là `billing.service.grantByAdmin`, nối trong `app.ts`), vì đổi gói giờ ghi cả đơn 0đ trong cùng transaction ([billing](./billing.md)).
 - Hạn mức mặc định ở `packages/shared/src/plans.ts`, ghi đè bằng biến môi trường `PLAN_LIMITS` (JSON, Zod kiểm lúc khởi động).
 - Admin (`ADMIN_EMAILS`) có `limit: null` ở mọi mục nhưng vẫn được đếm.
 
 ## Interface
 
-| Method | Path             | Ai gọi       | Kết quả                                                                                                                                                                                                                                                |
-| ------ | ---------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| GET    | `/v1/me/usage`   | đã đăng nhập | `UsageResponseSchema`: `{plan, usage:{translation_ms, cloud_stt_ms, debriefs, assist_daily, agent_messages}}`, mỗi mục `{used, limit \| null, resetsAt, state: ok \| low \| exhausted}`                                                                |
-| PUT    | `/v1/admin/plan` | admin        | Body `SetPlanRequestSchema` `{email, plan, expiresAt?}` → `{email, plan, expiresAt?}`; `403` không phải admin, `404` email không có, `400` gói lạ hoặc `expiresAt` đã qua. Gói gán tay (`source='manual'`) không hết hạn trừ khi admin đặt `expiresAt` |
+| Method | Path             | Ai gọi       | Kết quả                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------ | ---------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/v1/me/usage`   | đã đăng nhập | `UsageResponseSchema`: `{plan, usage:{translation_ms, cloud_stt_ms, debriefs, assist_daily, agent_messages}}`, mỗi mục `{used, limit \| null, resetsAt, state: ok \| low \| exhausted}`                                                                                                                                                                                                                                                                                                         |
+| PUT    | `/v1/admin/plan` | admin        | Body `SetPlanRequestSchema` `{email, plan, period?}` **strict**: `period` (`month` \| `year`) bắt buộc với Pro/Ultra, không có với Free → `{email, plan, expiresAt?}` (hạn do server tính); `403` không phải admin, `404` email không có, `400` gói lạ, thiếu/thừa `period` hoặc còn gửi `expiresAt`. **Thay đổi phá vỡ** (route chỉ admin): `expiresAt` trong body đã bỏ. Hạ gói được phép. Dòng cũ không hạn (`source='manual'`, `expires_at` NULL) vẫn có hiệu lực mãi cho đến khi admin đổi |
 
 Hết hạn mức: `429` mã `QUOTA_EXCEEDED`, `details` = `QuotaExceededDetailsSchema` `{metric, plan, used, limit, resetsAt}`.
 
@@ -58,9 +58,9 @@ Không có dòng trả về nghĩa là bị từ chối. Trước đó, cổng �
 
 ## Dữ liệu & quyền riêng tư
 
-- Chỉ số và `user_id`; không log nội dung. Mỗi lần đổi gói ghi một dòng `plan changed` ở một chỗ (`setPlanFor`): `adminId`, `targetUserId`, `from {plan, source, expiresAt}` (dòng đã lưu, kể cả đã hết hạn), `to {plan, expiresAt}`. Không có email. `set_by` giữ người đổi gần nhất.
+- Chỉ số và `user_id`; không log nội dung. Dòng `plan changed` (audit đổi gói) do billing ghi, xem [billing](./billing.md). `set_by` giữ người đổi gần nhất.
 - `DELETE /v1/me/data` không xoá counter và gói; xoá tài khoản thì xoá (cascade). Không có trong `GET /v1/me/export`.
 
 ## Test
 
-`usage.test.ts` (đọc lượng dùng, ranh giới người dùng, admin không giới hạn), `plans.test.ts` (gói mặc định, admin đổi gói và `expiresAt`, log đổi gói, gói trả phí hết hạn, cổng hạn mức, chạy đua), `test/integration/usage.int.test.ts` (SQL thật).
+`usage.test.ts` (đọc lượng dùng, ranh giới người dùng, admin không giới hạn), `plans.test.ts` (gói mặc định, admin đổi gói theo `period` (hạn tính ở server), log đổi gói, gói trả phí hết hạn, cổng hạn mức, chạy đua), `test/integration/usage.int.test.ts` (SQL thật).

@@ -115,16 +115,16 @@ Hợp đồng `FollowupRequestSchema` (channel, tone), `FollowupResponseSchema` 
 | `BillingOrderSchema`, `BillingOrderListSchema`, `BillingOrderStatusSchema` | Đơn của người gọi; `qrCode` và `checkoutUrl` chỉ có khi `pending`                                                                         |
 | `ErrorCode.BillingDisabled` · `BillingProviderFailed` · `PlanDowngrade`    | `BILLING_DISABLED` (503) · `BILLING_PROVIDER_FAILED` (502) · `PLAN_DOWNGRADE` (409)                                                       |
 
-`SetPlanRequestSchema` thêm `expiresAt?` (ISO) và `SetPlanResponseSchema` thêm `expiresAt?`; `UsageResponseSchema` không đổi.
+`SetPlanRequestSchema` `{email, plan, period?}` (refine: `period` bắt buộc với `pro`/`ultra`, vắng với `free`; không còn `expiresAt`, thay đổi phá vỡ của route chỉ admin) và `SetPlanResponseSchema` có `expiresAt?`; `UsageResponseSchema` không đổi. `BillingOrderSchema` thêm `byAdmin` và cho `amount >= 0`. `planAfterAdminGrant({current, now, plan, period?, prices})` trong `billing.ts` (thuần): dùng `planAfterPurchase`, nhưng hạ gói và dòng gán tay không hạn không bị từ chối mà bắt đầu từ `now` một kỳ; `free` → không hạn.
 
 ## Admin: người dùng và gói
 
 `dto/admin-users.dto.ts`, tách khỏi `admin.dto.ts` để `AdminMetrics` vẫn không có định danh. Các schema này **có** email và tên nên chỉ trả cho `ADMIN_EMAILS`; không có tiêu đề phiên, transcript hay cụm từ. Thiết kế: [admin-users](../03-api/admin-users.md).
 
-| Thành phần                                                        | Nội dung                                                                                                                       |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `AdminDashboardSchema`                                            | `{generatedAt, totalUsers, byPlan:{free,pro,ultra}, newUsers7d, revenueThisMonth, expiringIn7d}`                               |
-| `AdminUserListQuerySchema`                                        | `{q?, plan?, expiring?: '1', cursor?}` `.strict()`; `q` đã cắt khoảng trắng, ≤ 100 ký tự                                       |
-| `AdminUserRowSchema`, `AdminUserListSchema`                       | Một người (`plan` là gói đang hiệu lực; `source`, `expiresAt` là dòng đã lưu); `{items, nextCursor}`                           |
-| `AdminUserOrderSchema`, `AdminUserDetailSchema`                   | Đơn không có `qrCode`, `checkoutUrl`, `transferContent`; `{user, usage: UsageResponse, orders}`                                |
-| `AdminSetUserPlanRequestSchema`, `AdminSetUserPlanResponseSchema` | `{plan, expiresAt?}` `.strict()` (người đổi nằm ở đường dẫn, admin lấy từ phiên); `{plan, source:'manual', expiresAt \| null}` |
+| Thành phần                                                        | Nội dung                                                                                                                                      |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AdminDashboardSchema`                                            | `{generatedAt, totalUsers, byPlan:{free,pro,ultra}, newUsers7d, revenueThisMonth, expiringIn7d}`                                              |
+| `AdminUserListQuerySchema`                                        | `{q?, plan?, expiring?: '1', cursor?}` `.strict()`; `q` đã cắt khoảng trắng, ≤ 100 ký tự                                                      |
+| `AdminUserRowSchema`, `AdminUserListSchema`                       | Một người (`plan` là gói đang hiệu lực; `source`, `expiresAt` là dòng đã lưu); `{items, nextCursor}`                                          |
+| `AdminUserOrderSchema`, `AdminUserDetailSchema`                   | Đơn (có `byAdmin`, `amount >= 0`) không có `qrCode`, `checkoutUrl`, `transferContent`; `{user, usage: UsageResponse, orders}`                 |
+| `AdminSetUserPlanRequestSchema`, `AdminSetUserPlanResponseSchema` | `{plan, period?}` `.strict()` + refine như trên (người đổi nằm ở đường dẫn, admin lấy từ phiên); `{plan, source:'manual', expiresAt \| null}` |
