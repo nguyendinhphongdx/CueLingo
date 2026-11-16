@@ -54,6 +54,10 @@ Dropdown dựa trên `<select>` gốc (bàn phím và di động có sẵn): nh�
 
 Nhãn người nói dùng chung cho overlay và web: `SpeakerTag({label, displayName, source, onRename?})` (`components/speaker-tag`). `speakerDisplayName({label, displayName, source})` (`lib/speaker`) trả “Tôi” (`me`, hoặc không nhãn và `source = mic`), tên người dùng đặt, “Speaker N” (`speaker_N` chưa có tên), hoặc “Người khác”. Màu nhẹ cố định theo N (token `primary`/`accent`/`secondary`/`muted`; “Tôi” và “Người khác” có màu riêng); tên luôn hiện bằng chữ nên không chỉ dựa vào màu. Có `onRename` thì nhãn là nút (`aria-label` “<tên>, đổi tên người nói”), không thì là `span`. `label` là `string` vì `@cuelingo/ui` không phụ thuộc `shared`.
 
+## SpeakableOption và VoicePicker
+
+`SpeakableOption({text, note?, loadAudio, onCopy})` (`components/speakable-option`) là một câu để nói: chữ, ghi chú, nút Nghe thử (`useSpeaker`: đang tải, đang phát, lỗi) và Sao chép (việc chép do client làm, lỗi thì báo tại chỗ). `VoicePicker({voice, onChange, loadAudio(text, voice), disabled?, error?})` (`components/voice-picker`) chọn một trong `TTS_VOICES` và nghe thử `VOICE_SAMPLE`. `SpeakButton`/`useSpeaker` nhận `scope` để âm thanh cùng văn bản mà khác giọng không lẫn; `forgetSpokenAudio()` xoá bộ nhớ khi giọng đổi.
+
 ## Trang giới thiệu và tải về
 
 Dùng chung cho web (`apps/web/src/features/landing`) và site tĩnh ([Site công khai](../07-site/README.md)). Thành phần chỉ trình bày: router link, đường dẫn và việc chuyển hướng người đã đăng nhập do app chủ quyết định qua props.

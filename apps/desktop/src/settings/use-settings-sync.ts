@@ -12,6 +12,7 @@ interface ApplySettingsDeps {
   setNativeAssistLevel(level: UserSettings['assistDefault']): Promise<void>;
   publishAssistLevel(level: UserSettings['assistDefault']): Promise<void>;
   storeOverlay(overlay: UserSettings['overlay']): void;
+  setTtsVoice?(voice: UserSettings['ttsVoice']): void;
 }
 
 /** Applies the account copy to both webviews and the native session default. */
@@ -22,10 +23,12 @@ export async function applyLoadedSettings(
     setNativeAssistLevel: native.setAssistLevel,
     publishAssistLevel: (assistLevel) => native.publishSettings({ assistLevel }),
     storeOverlay: storeOverlaySettings,
+    setTtsVoice: useSettings.getState().setTtsVoice,
   },
 ) {
   deps.setAssistLevel(settings.assistDefault);
   deps.storeOverlay(settings.overlay);
+  deps.setTtsVoice?.(settings.ttsVoice);
   await deps.setNativeAssistLevel(settings.assistDefault);
   await deps.publishAssistLevel(settings.assistDefault);
 }

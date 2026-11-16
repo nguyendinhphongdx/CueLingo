@@ -7,6 +7,7 @@ import {
   ReviewQueueSchema,
   type ReviewAnswerRequest,
   TtsRequestSchema,
+  type TtsVoice,
   DEFAULT_LANGUAGE,
   PlacementResultSchema,
   PlacementTestSchema,
@@ -29,7 +30,7 @@ export interface StudyApi {
   getPlacement(language?: LanguageCode): Promise<PlacementTest>;
   submitPlacement(input: SubmitPlacementRequest): Promise<PlacementResult>;
   /** Spoken audio for a short English text. */
-  speak(text: string): Promise<Blob>;
+  speak(text: string, voice?: TtsVoice): Promise<Blob>;
 }
 
 interface StudyApiOptions {
@@ -65,11 +66,11 @@ export function createStudyApi({
     // `dictation=1`: this client can play and grade listen-and-type cards.
     getReviewQueue: (language = DEFAULT_LANGUAGE) =>
       get(`/v1/review/queue?dictation=1&language=${language}`, ReviewQueueSchema),
-    async speak(text) {
+    async speak(text, voice) {
       const response = await request(`${baseUrl}/v1/tts`, {
         method: 'POST',
         headers,
-        body: JSON.stringify(TtsRequestSchema.parse({ text })),
+        body: JSON.stringify(TtsRequestSchema.parse({ text, ...(voice ? { voice } : {}) })),
       });
       if (!response.ok) throw new Error(`Speech request failed with status ${response.status}`);
       return response.blob();

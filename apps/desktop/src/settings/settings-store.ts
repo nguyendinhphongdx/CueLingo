@@ -1,4 +1,10 @@
-import { DEFAULT_LANGUAGE, languageOptions, type LanguageCode } from '@cuelingo/shared';
+import {
+  DEFAULT_LANGUAGE,
+  DEFAULT_TTS_VOICE,
+  languageOptions,
+  type LanguageCode,
+  type TtsVoice,
+} from '@cuelingo/shared';
 import { create } from 'zustand';
 
 export type SelectableAssistLevel = 4 | 3 | 1 | 0;
@@ -19,6 +25,8 @@ function readLanguage(): LanguageCode {
 interface SettingsState {
   assistLevel: SelectableAssistLevel;
   setAssistLevel: (level: SelectableAssistLevel) => void;
+  ttsVoice: TtsVoice;
+  setTtsVoice: (voice: TtsVoice) => void;
   language: LanguageCode;
   setLanguage: (language: LanguageCode) => void;
 }
@@ -26,6 +34,8 @@ interface SettingsState {
 export const useSettings = create<SettingsState>((set) => ({
   assistLevel: 4,
   setAssistLevel: (assistLevel) => set({ assistLevel }),
+  ttsVoice: DEFAULT_TTS_VOICE,
+  setTtsVoice: (ttsVoice) => set({ ttsVoice }),
   language: readLanguage(),
   setLanguage: (language) => {
     try {

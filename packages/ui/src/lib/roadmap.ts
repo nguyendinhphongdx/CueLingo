@@ -53,6 +53,20 @@ export const features: Feature[] = [
     webPath: '/sessions',
   },
   {
+    id: 'glossary',
+    label: 'Thuật ngữ',
+    group: 'meeting',
+    icon: 'languages',
+    status: { desktop: 'ready', web: 'ready' },
+    summary: 'Thuật ngữ riêng của công việc, để caption nghe và dịch đúng.',
+    bullets: [
+      'Thêm từ viết tắt và tên sản phẩm như SLA, roadmap',
+      'Nhận dạng giọng nói sửa đúng các từ này',
+      'Chọn bộ thuật ngữ trước mỗi cuộc họp',
+    ],
+    webPath: '/glossary',
+  },
+  {
     id: 'review',
     label: 'Ôn tập',
     group: 'learn',
@@ -65,20 +79,6 @@ export const features: Feature[] = [
       'Bài nghe–gõ với giọng đọc tiếng Anh',
     ],
     webPath: '/review',
-  },
-  {
-    id: 'assistant',
-    label: 'Trợ lý AI',
-    group: 'learn',
-    icon: 'assistant',
-    status: { desktop: 'soon', web: 'ready' },
-    summary: 'Hỏi trợ lý về tiếng Anh công sở và chuẩn bị cho cuộc họp (thử nghiệm).',
-    bullets: [
-      'Giải thích từ, câu và cách diễn đạt, có ví dụ',
-      'Nhấp đúp vào một từ để tra nghĩa, nghe và lưu vào Cụm từ',
-      'Tạo thẻ ghi nhớ, điền chỗ trống và câu hỏi trắc nghiệm ngay trong cuộc trò chuyện',
-    ],
-    webPath: '/assistant',
   },
   {
     id: 'phrases',
@@ -95,20 +95,6 @@ export const features: Feature[] = [
     webPath: '/phrases',
   },
   {
-    id: 'glossary',
-    label: 'Thuật ngữ',
-    group: 'learn',
-    icon: 'languages',
-    status: { desktop: 'ready', web: 'ready' },
-    summary: 'Thuật ngữ riêng của công việc, để caption nghe và dịch đúng.',
-    bullets: [
-      'Thêm từ viết tắt và tên sản phẩm như SLA, roadmap',
-      'Nhận dạng giọng nói sửa đúng các từ này',
-      'Chọn bộ thuật ngữ trước mỗi cuộc họp',
-    ],
-    webPath: '/glossary',
-  },
-  {
     id: 'progress',
     label: 'Tiến độ',
     group: 'learn',
@@ -121,6 +107,20 @@ export const features: Feature[] = [
       'Chuỗi ngày ôn tập liên tiếp',
     ],
     webPath: '/progress',
+  },
+  {
+    id: 'assistant',
+    label: 'Trợ lý AI',
+    group: 'learn',
+    icon: 'assistant',
+    status: { desktop: 'soon', web: 'ready' },
+    summary: 'Hỏi trợ lý về tiếng Anh công sở và chuẩn bị cho cuộc họp (thử nghiệm).',
+    bullets: [
+      'Giải thích từ, câu và cách diễn đạt, có ví dụ',
+      'Nhấp đúp vào một từ để tra nghĩa, nghe và lưu vào Cụm từ',
+      'Tạo thẻ ghi nhớ, điền chỗ trống và câu hỏi trắc nghiệm ngay trong cuộc trò chuyện',
+    ],
+    webPath: '/assistant',
   },
   {
     id: 'settings',

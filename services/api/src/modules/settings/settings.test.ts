@@ -14,6 +14,7 @@ async function setup() {
     assistDefault: 1,
     overlay: { fontSize: 22, opacity: 70, theme: 'light' },
     saveAudio: true,
+    ttsVoice: 'Puck',
   });
   const app = await buildTestApp({ repos: { settings } });
   return { app, settings };
@@ -46,6 +47,7 @@ describe('settings routes', () => {
     for (const payload of [
       { overlay: { fontSize: 99 } },
       { assistDefault: 2 },
+      { ttsVoice: 'Nobody' },
       { overlay: { theme: 'system' } },
       { unknown: true },
       { overlay: { opacity: 90, unknown: true } },

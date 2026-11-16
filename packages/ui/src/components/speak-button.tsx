@@ -7,19 +7,30 @@ export type SpeakStatus = 'idle' | 'loading' | 'playing' | 'error';
 /** Object URLs of audio already fetched, by text: hearing a phrase again never asks the network twice. */
 const audioUrls = new Map<string, Promise<string>>();
 
-function audioUrl(text: string, loadAudio: (text: string) => Promise<Blob>): Promise<string> {
-  let pending = audioUrls.get(text);
+/** Forget what was fetched, for when the reading voice changes and old audio would be the wrong voice. */
+export function forgetSpokenAudio() {
+  audioUrls.clear();
+}
+
+function audioUrl(
+  text: string,
+  loadAudio: (text: string) => Promise<Blob>,
+  scope: string,
+): Promise<string> {
+  const key = `${scope}|${text}`;
+  let pending = audioUrls.get(key);
   if (!pending) {
     pending = loadAudio(text).then((blob) => URL.createObjectURL(blob));
-    audioUrls.set(text, pending);
+    audioUrls.set(key, pending);
     // A failure must not be remembered, or the phrase could never be retried.
-    pending.catch(() => audioUrls.delete(text));
+    pending.catch(() => audioUrls.delete(key));
   }
   return pending;
 }
 
 /** Plays spoken audio for a text; `loadAudio` is how each client fetches it (its own auth, its own URL). */
-export function useSpeaker(loadAudio: (text: string) => Promise<Blob>) {
+/** `scope` separates audio of the same text that sounds different (a voice being tried). */
+export function useSpeaker(loadAudio: (text: string) => Promise<Blob>, scope = '') {
   const [status, setStatus] = useState<SpeakStatus>('idle');
   const player = useRef<HTMLAudioElement | null>(null);
   const run = useRef(0);
@@ -38,7 +49,7 @@ export function useSpeaker(loadAudio: (text: string) => Promise<Blob>) {
       player.current?.pause();
       setStatus('loading');
       try {
-        const url = await audioUrl(text, loadAudio);
+        const url = await audioUrl(text, loadAudio, scope);
         if (run.current !== mine) return;
         const audio = new Audio(url);
         audio.playbackRate = rate;
@@ -51,7 +62,7 @@ export function useSpeaker(loadAudio: (text: string) => Promise<Blob>) {
         if (run.current === mine) setStatus('error');
       }
     },
-    [loadAudio],
+    [loadAudio, scope],
   );
 
   useEffect(() => () => player.current?.pause(), []);
@@ -64,12 +75,14 @@ export function SpeakButton({
   text,
   loadAudio,
   className,
+  scope,
 }: {
   text: string;
   loadAudio: (text: string) => Promise<Blob>;
   className?: string;
+  scope?: string;
 }) {
-  const { status, play, stop } = useSpeaker(loadAudio);
+  const { status, play, stop } = useSpeaker(loadAudio, scope);
   const icon =
     status === 'loading' ? (
       <Loader2 aria-hidden="true" className="size-4 animate-spin" />

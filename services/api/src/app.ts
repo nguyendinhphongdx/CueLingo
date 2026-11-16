@@ -262,7 +262,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       createFollowupModule(deps.repos.sessions, deps.repos.debrief, deps.followup).routes,
     );
   }
-  if (deps.tts) await app.register(createTtsModule(deps.tts).routes, { prefix: '/v1/tts' });
+  if (deps.tts) {
+    const getVoice = async (userId: string) => (await deps.repos.settings.voice(userId)) ?? null;
+    await app.register(createTtsModule({ getVoice, ...deps.tts }).routes, { prefix: '/v1/tts' });
+  }
   const assist = deps.assist ? createAssistModule(deps.assist, usage.service) : undefined;
   if (assist) await app.register(assist.routes, { prefix: '/v1/assist' });
   if (deps.agent) {

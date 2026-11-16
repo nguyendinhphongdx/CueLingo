@@ -36,11 +36,18 @@ describe('settings on real Postgres (AC3)', () => {
         assistDefault: 3,
         overlay: { fontSize: 21, opacity: 76, theme: 'light' },
         saveAudio: true,
+        ttsVoice: 'Leda',
       },
       'en',
     );
 
-    expect(await repo.get(alice, 'en')).toMatchObject({ assistDefault: 3, saveAudio: true });
+    expect(await repo.get(alice, 'en')).toMatchObject({
+      assistDefault: 3,
+      saveAudio: true,
+      ttsVoice: 'Leda',
+    });
+    expect(await repo.voice(alice)).toBe('Leda');
+    expect(await repo.voice(bob)).toBeNull();
     expect(await repo.get(bob, 'en')).toEqual(DEFAULT_USER_SETTINGS);
   });
 

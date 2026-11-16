@@ -16,8 +16,7 @@ function actions(): QuickAssistActions {
     setComposeIntent: vi.fn(),
     submitCompose: vi.fn(),
     retryCompose: vi.fn(),
-    selectOption: vi.fn(),
-    copyOption: vi.fn(),
+    copyOption: vi.fn(async () => undefined),
     close: vi.fn(),
   };
 }

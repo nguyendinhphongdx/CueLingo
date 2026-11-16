@@ -5,7 +5,10 @@ import { LanguageSwitcher } from '@cuelingo/ui/components/language-switcher';
 import { Button } from '@cuelingo/ui/components/button';
 import { Section } from '@cuelingo/ui/components/section';
 import { Segmented } from '@cuelingo/ui/components/segmented';
+import { forgetSpokenAudio } from '@cuelingo/ui/components/speak-button';
+import { VoicePicker } from '@cuelingo/ui/components/voice-picker';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { client } from '../../lib/client';
 import { useLanguage } from '../../lib/language';
 import { usePreferences } from './use-preferences';
 
@@ -149,6 +152,18 @@ export function PreferencesForm({
               { value: 'dark', label: 'Tối' },
               { value: 'light', label: 'Sáng' },
             ]}
+          />
+        </div>
+
+        <div className="border-t pt-5">
+          <VoicePicker
+            voice={draft.ttsVoice}
+            disabled={loading || saving}
+            loadAudio={client.tts.speak}
+            onChange={(ttsVoice) => {
+              forgetSpokenAudio();
+              change({ ...draft, ttsVoice });
+            }}
           />
         </div>
 

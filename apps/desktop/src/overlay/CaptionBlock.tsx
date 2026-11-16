@@ -62,7 +62,8 @@ export function CaptionBlock({ segment, level, faded, showSpeaker, onLookup }: C
     <div
       data-slot="caption-line"
       data-partial={segment.partial ? 'true' : undefined}
-      className={`transition-opacity duration-300 ${faded ? 'opacity-50' : ''}`}
+      // The app turns text selection off for its chrome; the words of the meeting must stay copyable.
+      className={`cursor-text transition-opacity duration-300 select-text ${faded ? 'opacity-50' : ''}`}
     >
       {showSpeaker ? (
         <p className="mb-1 text-[0.7em]">
