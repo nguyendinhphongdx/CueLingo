@@ -3,7 +3,12 @@
 // machine? Runs `cuelingo-audio --file ... --bench` over a few English recordings and prints p50/p95 per
 // sentence, peak memory and model load time, to the log and to the job summary.
 //
-//   node scripts/stt-bench.mjs --exe <path to cuelingo-audio[.exe]> [--runs 2] [--enforce]
+//   node scripts/stt-bench.mjs --exe <path to cuelingo-audio[.exe]> [--runs 2] [--threads 2] [--realtime] [--enforce]
+//
+// --realtime feeds the audio at the speed it was recorded, so partials appear at their real cadence and share the
+// CPU with the finals, as in a meeting (slower: the run takes as long as the audio).
+// --threads sets CUELINGO_STT_THREADS (default: the sidecar's own choice, min(cores, 4)); a run with 2 stands in
+// for a weaker office laptop.
 //
 // Recordings (nothing is committed; all are made or fetched here):
 //   - one human sample from the model's own repository, pinned by revision and SHA-256;
@@ -23,6 +28,8 @@ const value = (flag, fallback) => (args.includes(flag) ? args[args.indexOf(flag)
 const exe = value('--exe');
 if (!exe) throw new Error('--exe <path to cuelingo-audio> is required');
 const runs = Number(value('--runs', '2'));
+const threads = value('--threads');
+const realtime = args.includes('--realtime');
 const enforce = args.includes('--enforce');
 
 const SAMPLE = {
@@ -86,10 +93,14 @@ if (process.platform === 'win32') {
 const order = Array.from({ length: runs }, () => recordings).flat();
 const fileArgs = order.flatMap((r) => ['--file', r.path]);
 const started = Date.now();
-const run = spawnSync(exe, [...fileArgs, '--bench'], {
+const run = spawnSync(exe, [...fileArgs, '--bench', ...(realtime ? ['--realtime'] : [])], {
   encoding: 'utf8',
   maxBuffer: 64 * 1024 * 1024,
-  env: { ...process.env, CUELINGO_LANGUAGE: 'en' },
+  env: {
+    ...process.env,
+    CUELINGO_LANGUAGE: 'en',
+    ...(threads ? { CUELINGO_STT_THREADS: threads } : {}),
+  },
 });
 const wallMs = Date.now() - started;
 if (run.status !== 0) {
@@ -138,6 +149,8 @@ const memoryOk = peakMb === null || peakMb <= 1536;
 const ok = speedOk && memoryOk;
 const rows = [
   ['CPU', `${cpu[0]?.model.trim()} x ${cpu.length}`],
+  ['Feeding', realtime ? 'real time' : 'as fast as it reads'],
+  ['Recognition threads', threads ?? `default (min(cores, 4) = ${Math.min(cpu.length, 4)})`],
   ['RAM of the machine', `${(os.totalmem() / 1024 ** 3).toFixed(1)} GB`],
   [
     'Recordings',
@@ -151,6 +164,10 @@ const rows = [
   [
     'All recognitions incl. partials',
     stats ? `${stats.count} calls, p50 ${stats.p50Ms} ms, p95 ${stats.p95Ms} ms` : 'n/a',
+  ],
+  [
+    'Partials recognised',
+    `${bench.partials.count} recognised, p50 ${bench.partials.p50Ms ?? 'n/a'} ms, p95 ${bench.partials.p95Ms ?? 'n/a'} ms`,
   ],
   ['Peak working set', peakMb === null ? 'n/a' : `${peakMb.toFixed(0)} MB (limit 1536 MB)`],
   [
@@ -169,12 +186,11 @@ const table = [
   '| --- | --- |',
   ...rows.map(([k, v]) => `| ${k} | ${v} |`),
 ].join('\n');
-console.log(`\nS2 speech recognition on this machine\n\n${table}\n`);
+const mode = [threads && `${threads} threads`, realtime && 'real time'].filter(Boolean).join(', ');
+const title = `S2 speech recognition on this machine${mode ? ` (${mode})` : ''}`;
+console.log(`\n${title}\n\n${table}\n`);
 console.log(JSON.stringify(bench));
 if (process.env.GITHUB_STEP_SUMMARY) {
-  appendFileSync(
-    process.env.GITHUB_STEP_SUMMARY,
-    `### S2: Parakeet int8 on this runner\n\n${table}\n`,
-  );
+  appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### ${title}\n\n${table}\n`);
 }
 if (enforce && !ok) process.exit(1);

@@ -16,11 +16,12 @@ use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::Instant;
 
-/// How long a finished sentence took to recognise, for the `--bench` summary.
+/// How long one recognition took, for the `--bench` summary.
 #[derive(Debug, Clone, Copy)]
-pub struct FinalTiming {
+pub struct Timing {
     pub audio_ms: i64,
     pub elapsed_ms: f64,
+    pub partial: bool,
 }
 
 /// Shared by every pipeline of a session.
@@ -30,7 +31,7 @@ pub struct Shared {
     pub transcriber: Arc<Transcriber>,
     /// Whether the meeting language is recognised in the cloud: then pipelines emit utterances, not text.
     pub cloud: Arc<AtomicBool>,
-    pub finals: Arc<Mutex<Vec<FinalTiming>>>,
+    pub timings: Arc<Mutex<Vec<Timing>>>,
 }
 
 struct Job {
@@ -171,13 +172,12 @@ fn recognise(stream: &str, shared: &Shared, job: &Job) {
     let u = &job.utterance;
     match shared.transcriber.transcribe(&u.samples) {
         Ok(result) => {
-            if !job.partial {
-                if let Ok(mut finals) = shared.finals.lock() {
-                    finals.push(FinalTiming {
-                        audio_ms: u.end_ms - u.start_ms,
-                        elapsed_ms: result.elapsed_ms,
-                    });
-                }
+            if let Ok(mut timings) = shared.timings.lock() {
+                timings.push(Timing {
+                    audio_ms: u.end_ms - u.start_ms,
+                    elapsed_ms: result.elapsed_ms,
+                    partial: job.partial,
+                });
             }
             if !result.text.is_empty() {
                 shared.out.emit(protocol::segment(

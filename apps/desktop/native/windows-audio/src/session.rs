@@ -1,14 +1,14 @@
 //! A run of the sidecar: model loading, the two pipelines, the stdin command loop, the closing report.
 //! Port of the second half of `Sources/Sidecar/main.swift`.
 use crate::capture::{Capture, CaptureError};
-use crate::pipeline::{FinalTiming, Pipeline, Shared};
+use crate::pipeline::{Pipeline, Shared, Timing};
 use crate::protocol::{self, Out, ProgressGate};
 use crate::stats::percentile;
 use crate::stt::{self, ModelProvider, Timings, Transcriber};
 use std::io::BufRead;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 /// The error a meeting reports while capture is not implemented. Not prefixed with `system audio`/
 /// `microphone`, so the app does not point the person at a privacy setting that would not help.
@@ -31,6 +31,9 @@ pub struct Session {
 pub struct FileOptions {
     /// Print one extra `bench` line at the end with numbers for the S2 measurement.
     pub bench: bool,
+    /// Feed the audio at the speed it was recorded at, so partials come at their real cadence and compete with
+    /// the finals for the CPU, as in a meeting. Without it the file is fed as fast as it can be read.
+    pub realtime: bool,
 }
 
 impl Session {
@@ -40,7 +43,7 @@ impl Session {
                 out,
                 transcriber: Arc::new(Transcriber::new(provider)),
                 cloud: Arc::new(AtomicBool::new(false)),
-                finals: Arc::new(Mutex::new(Vec::new())),
+                timings: Arc::new(Mutex::new(Vec::new())),
             },
             load: Arc::new(Mutex::new((Timings::default(), 0))),
         }
@@ -184,11 +187,13 @@ impl Session {
         out.status("ready", "");
         let mut audio_ms = 0i64;
         for samples in files {
-            for chunk in samples.chunks(3200) {
+            let silence = [0i16; 16_000]; // trailing silence closes the last sentence
+            for chunk in samples.chunks(3200).chain(silence.chunks(3200)) {
                 pipeline.feed(chunk);
+                if options.realtime {
+                    std::thread::sleep(Duration::from_millis((chunk.len() / 16) as u64));
+                }
             }
-            // Trailing silence closes the last sentence.
-            pipeline.feed(&[0i16; 16_000]);
             audio_ms += (samples.len() / 16) as i64;
         }
         pipeline.finish();
@@ -202,13 +207,13 @@ impl Session {
 
     /// Numbers for the S2 measurement; a development aid that the app never asks for.
     fn bench(&self, files: usize, audio_ms: i64) -> serde_json::Value {
-        let finals: Vec<FinalTiming> = self
+        let timings: Vec<Timing> = self
             .shared
-            .finals
+            .timings
             .lock()
-            .map(|f| f.clone())
+            .map(|t| t.clone())
             .unwrap_or_default();
-        let summary = |items: &[FinalTiming]| {
+        let summary = |items: &[Timing]| {
             let times: Vec<f64> = items.iter().map(|t| t.elapsed_ms).collect();
             serde_json::json!({
                 "count": items.len(),
@@ -217,7 +222,9 @@ impl Session {
                 "maxAudioMs": items.iter().map(|t| t.audio_ms).max(),
             })
         };
-        let sentences: Vec<FinalTiming> = finals
+        let finals: Vec<Timing> = timings.iter().copied().filter(|t| !t.partial).collect();
+        let partials: Vec<Timing> = timings.iter().copied().filter(|t| t.partial).collect();
+        let sentences: Vec<Timing> = finals
             .iter()
             .copied()
             .filter(|t| t.audio_ms <= SENTENCE_BUFFER_MS)
@@ -234,6 +241,7 @@ impl Session {
                 "createMs": timings.create_ms,
             },
             "finals": summary(&finals),
+            "partials": summary(&partials),
             "sentences": summary(&sentences),
             "peakWorkingSetMb": crate::memory::peak_working_set_mb(),
             "cpus": std::thread::available_parallelism().map_or(0, |n| n.get()),

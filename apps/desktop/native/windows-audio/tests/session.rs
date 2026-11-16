@@ -479,7 +479,10 @@ fn file_mode_with_bench_adds_one_summary_line() {
         "en",
         None,
         &[tone(2000), tone(2000), tone(2000)],
-        &FileOptions { bench: true },
+        &FileOptions {
+            bench: true,
+            realtime: false,
+        },
     );
     let lines = out.lines();
     let bench = of_type(&lines, "bench");
@@ -487,6 +490,7 @@ fn file_mode_with_bench_adds_one_summary_line() {
     assert_eq!(bench[0]["files"], 3);
     assert_eq!(bench[0]["finals"]["count"], 3);
     assert_eq!(bench[0]["sentences"]["count"], 3);
+    assert!(bench[0]["partials"]["count"].is_u64());
     assert!(bench[0]["load"]["totalMs"].is_u64());
     assert_eq!(lines.last().unwrap()["state"], "stopped");
 }

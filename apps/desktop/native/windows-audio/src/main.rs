@@ -84,6 +84,7 @@ fn main() {
         }
         let options = FileOptions {
             bench: args.iter().any(|a| a == "--bench"),
+            realtime: args.iter().any(|a| a == "--realtime"),
         };
         session.run_files(&language, vocabulary.as_deref(), &recordings, &options)
     };

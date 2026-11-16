@@ -94,7 +94,12 @@ jobs:
       - name: Measure speech recognition on this runner (S2)
         env:
           CUELINGO_MODELS_DIR: ${{ runner.temp }}/cuelingo-models
-        run: node scripts/stt-bench.mjs --exe native/windows-audio/target/release/cuelingo-audio.exe
+        run: |
+          node scripts/stt-bench.mjs --exe native/windows-audio/target/release/cuelingo-audio.exe
+          # Again with 2 threads, as a stand-in for a weaker office laptop (the model is on disk now).
+          node scripts/stt-bench.mjs --exe native/windows-audio/target/release/cuelingo-audio.exe --threads 2
+          # And at the speed of a real meeting: partials every 0.7 s compete with the finals for the CPU.
+          node scripts/stt-bench.mjs --exe native/windows-audio/target/release/cuelingo-audio.exe --realtime --runs 1
 
       - name: Build the app
         env:
