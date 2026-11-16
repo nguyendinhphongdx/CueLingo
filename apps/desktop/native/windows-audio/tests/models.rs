@@ -13,6 +13,8 @@ struct Server {
     requests: Arc<AtomicUsize>,
     /// How many of the next responses carry flipped bytes instead of the real content.
     corrupt: Arc<AtomicUsize>,
+    /// How many of the next responses send the headers and half the body, then go silent.
+    stall: Arc<AtomicUsize>,
 }
 
 fn serve(files: HashMap<String, Vec<u8>>) -> Server {
@@ -20,7 +22,8 @@ fn serve(files: HashMap<String, Vec<u8>>) -> Server {
     let base = format!("http://{}", listener.local_addr().unwrap());
     let requests = Arc::new(AtomicUsize::new(0));
     let corrupt = Arc::new(AtomicUsize::new(0));
-    let (r, c) = (requests.clone(), corrupt.clone());
+    let stall = Arc::new(AtomicUsize::new(0));
+    let (r, c, st) = (requests.clone(), corrupt.clone(), stall.clone());
     std::thread::spawn(move || {
         for stream in listener.incoming() {
             let Ok(mut stream) = stream else { continue };
@@ -43,6 +46,17 @@ fn serve(files: HashMap<String, Vec<u8>>) -> Server {
                 "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
                 body.len()
             );
+            if status == "200 OK" && st.load(Ordering::SeqCst) > 0 {
+                st.fetch_sub(1, Ordering::SeqCst);
+                let _ = stream.write_all(&body[..body.len() / 2]);
+                let _ = stream.flush();
+                // Hold the connection open and say nothing, like a dead proxy.
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_secs(30));
+                    drop(stream);
+                });
+                continue;
+            }
             let _ = stream.write_all(&body);
         }
     });
@@ -50,6 +64,7 @@ fn serve(files: HashMap<String, Vec<u8>>) -> Server {
         base,
         requests,
         corrupt,
+        stall,
     }
 }
 
@@ -233,5 +248,31 @@ fn a_verified_file_is_not_hashed_again_until_it_changes() {
     ensure(spec, &server.base, &root, &mut |_| {}).unwrap();
     assert_eq!(server.requests.load(Ordering::SeqCst), before + 1);
     assert_eq!(std::fs::read(dir.join("a.onnx")).unwrap(), contents[0].1);
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+fn a_connection_that_goes_silent_fails_the_attempt_and_the_retry_wins() {
+    let (spec, server, root, contents) = setup("stall");
+    cuelingo_audio::stt::models::set_stall_timeout(std::time::Duration::from_secs(1));
+    server.stall.store(1, Ordering::SeqCst);
+    let started = std::time::Instant::now();
+    let (dir, _) = ensure(spec, &server.base, &root, &mut |_| {}).unwrap();
+    assert_eq!(std::fs::read(dir.join("a.onnx")).unwrap(), contents[0].1);
+    assert!(started.elapsed() < std::time::Duration::from_secs(20));
+    assert_eq!(server.requests.load(Ordering::SeqCst), 4); // the stalled try plus three files
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+fn a_connection_that_stays_silent_for_every_try_is_an_error_not_a_hang() {
+    let (spec, server, root, _) = setup("stall-always");
+    cuelingo_audio::stt::models::set_stall_timeout(std::time::Duration::from_secs(1));
+    server.stall.store(100, Ordering::SeqCst);
+    let error = ensure(spec, &server.base, &root, &mut |_| {}).unwrap_err();
+    assert!(
+        error.contains("a.onnx") && error.contains("no data"),
+        "{error}"
+    );
     let _ = std::fs::remove_dir_all(root);
 }

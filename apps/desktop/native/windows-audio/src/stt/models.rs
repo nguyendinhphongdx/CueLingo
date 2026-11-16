@@ -7,6 +7,8 @@ use sha2::{Digest, Sha256};
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 pub struct ModelFile {
@@ -209,6 +211,17 @@ fn download(
     fs::rename(&part, path).map_err(|e| format!("cannot move the file into place: {e}"))
 }
 
+/// How long a download may go without a single byte before the attempt is given up (and retried).
+static STALL_MS: AtomicU64 = AtomicU64::new(30_000);
+
+/// Changes the stall limit; for tests, which cannot wait 30 s.
+pub fn set_stall_timeout(limit: Duration) {
+    STALL_MS.store(limit.as_millis() as u64, Ordering::Relaxed);
+}
+
+/// ureq has no read timeout, so a connection that goes quiet in the middle of the body would block forever.
+/// The body is read on its own thread and the caller waits for each piece with a limit; on a stall the attempt
+/// fails and the retry loop runs. The abandoned thread ends when its socket errors out or the process exits.
 fn fetch(
     url: &str,
     part: &Path,
@@ -222,29 +235,51 @@ fn fetch(
     let agent: ureq::Agent = ureq::Agent::config_builder()
         .tls_config(tls)
         .timeout_connect(Some(Duration::from_secs(30)))
+        .timeout_recv_response(Some(Duration::from_secs(60)))
         .build()
         .into();
     let response = agent.get(url).call().map_err(|e| e.to_string())?;
     let mut body = response.into_body().into_reader();
+    let (tx, rx) = mpsc::sync_channel::<Result<Vec<u8>, String>>(4);
+    std::thread::spawn(move || loop {
+        let mut chunk = vec![0u8; 1 << 20];
+        let piece = match body.read(&mut chunk) {
+            Ok(n) => {
+                chunk.truncate(n);
+                Ok(chunk)
+            }
+            Err(e) => Err(e.to_string()),
+        };
+        let done = !matches!(&piece, Ok(c) if !c.is_empty());
+        if tx.send(piece).is_err() || done {
+            return;
+        }
+    });
+
+    let stall = Duration::from_millis(STALL_MS.load(Ordering::Relaxed));
     let mut out = File::create(part).map_err(|e| format!("cannot write the model file: {e}"))?;
     let mut hasher = Sha256::new();
-    let mut chunk = vec![0u8; 1 << 20];
     let mut bytes = 0u64;
     loop {
-        let n = body.read(&mut chunk).map_err(|e| e.to_string())?;
-        if n == 0 {
+        let piece = match rx.recv_timeout(stall) {
+            Ok(piece) => piece?,
+            Err(_) => return Err(format!("no data for {} s", stall.as_secs().max(1))),
+        };
+        if piece.is_empty() {
             break;
         }
-        hasher.update(&chunk[..n]);
-        out.write_all(&chunk[..n])
+        hasher.update(&piece);
+        out.write_all(&piece)
             .map_err(|e| format!("cannot write the model file: {e}"))?;
-        bytes += n as u64;
+        bytes += piece.len() as u64;
         if bytes > file.size {
             return Err("the file is larger than expected".into());
         }
         progress(bytes);
     }
     out.flush().map_err(|e| e.to_string())?;
+    // On disk before the rename, so a power cut cannot leave a complete-looking file that is not.
+    out.sync_all().map_err(|e| e.to_string())?;
     if bytes != file.size {
         return Err(format!("expected {} bytes, got {bytes}", file.size));
     }
