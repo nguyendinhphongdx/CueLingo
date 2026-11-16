@@ -1,6 +1,6 @@
 /* eslint-disable no-console -- a build script: printing is its output */
 // Signs the macOS audio sidecar with a fixed identifier and the audio entitlements, so its signature stays the same
-// from one build to the next and macOS keeps the permissions it was given (ADR 0023).
+// from one build to the next and macOS keeps the permissions it was given (ADR 0026).
 import { spawnSync } from 'node:child_process';
 import { closeSync, openSync, readSync } from 'node:fs';
 import { join } from 'node:path';

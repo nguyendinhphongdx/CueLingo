@@ -47,7 +47,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # A fixed signing certificate keeps the permissions people granted across updates (ADR 0023). Without the
+      # A fixed signing certificate keeps the permissions people granted across updates (ADR 0026). Without the
       # secrets the build is still made, signed ad-hoc: it works, but macOS asks for the permissions again.
       - name: Import the signing certificate
         id: signing

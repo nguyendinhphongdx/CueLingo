@@ -8,4 +8,4 @@ node scripts/signing-requirements.mjs "<SHA-1 of the certificate>"   # from apps
 ```
 
 The release workflow compares them with `codesign -d -r-` of the built app and sidecar. Without the signing secrets
-the build is ad-hoc and this check is skipped (ADR 0023).
+the build is ad-hoc and this check is skipped (ADR 0026).

@@ -23,6 +23,9 @@ Thu audio hệ thống (người khác) và mic (người dùng) thành hai lu�
 - `start(sources: [.system, .mic])` / `stop()`
 - Callback `onFrame(stream, pcm, tsMs)` và `onSpeech(stream, .start|.end, tsMs)`
 - `permissionStatus() -> {system, mic}`
+- **Quyền micro:** sidecar có `--permissions` (đọc), `--request-microphone` (hiện hộp thoại lần đầu rồi in kết quả). Khi họp, trước khi mở `AVAudioEngine` sidecar đọc quyền: `authorized` thì thu; `denied` thì phát `status error "microphone: not authorized (denied)"`; `notDetermined` thì phát `…(undetermined)` rồi xin quyền tại chỗ, được cấp thì phát `status ready "microphone: authorized"` và thu. Ba chuỗi này cố định (app so khớp, xem `micPermissionOf`). Âm thanh hệ thống không phụ thuộc micro.
+- **Quyền âm thanh hệ thống:** không có API đọc, nên `--check-system-audio` bật tap, phát `Ping.aiff` mỗi 2 s tối đa 12 s (đủ để người dùng bấm Cho phép lần đầu) và trả `granted` ngay khi nghe được, hết giờ thì `silent`.
+- **Entitlements:** hardened runtime cần `com.apple.security.device.audio-input`, nếu thiếu macOS từ chối micro mà không hỏi (ADR [0026](../../08-adr/0026-macos-fixed-signing-certificate.md))
 - Được gọi từ `tauri-core` qua FFI (swift-rs) hoặc Tauri plugin
 
 ## Bản Windows (`native/windows-audio`)

@@ -29,3 +29,4 @@ Mỗi quyết định khó đảo ngược có một ADR: bối cảnh, quyết 
 | [0023](0023-payments-payos-vietqr.md)                 | Thanh toán VietQR qua PayOS, trả trước theo kỳ                                      | Accepted   |
 | [0024](0024-vi-offline-stt-fallback.md)               | Nhận dạng tiếng Việt ngoại tuyến làm dự phòng (Zipformer Apache-2.0, trong lõi app) | Accepted   |
 | [0025](0025-goal-lessons-shared-content.md)           | Bài học theo mục tiêu: nội dung AI dùng chung, câu luyện gửi tới Gemini             | Accepted   |
+| [0026](0026-macos-fixed-signing-certificate.md)       | Ký bản beta macOS bằng chứng chỉ self-signed cố định                                | Proposed   |

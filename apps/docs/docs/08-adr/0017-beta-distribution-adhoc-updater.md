@@ -1,6 +1,6 @@
 # 0017 · Phát hành beta: ký ad-hoc, GitHub Releases, tự cập nhật Tauri
 
-**Trạng thái:** Accepted · 2026-11-05 · Bổ sung bởi [0021](0021-windows-release-inno.md) (bản Windows, release chung hai nền tảng) (chủ sản phẩm chốt kênh GitHub Releases và chưa dùng Apple Developer trong hồ sơ [beta-readiness](../06-delivery/2026-11-05-beta-readiness/01-specs.md))
+**Trạng thái:** Accepted · 2026-11-05 · Bổ sung bởi [0021](0021-windows-release-inno.md) (bản Windows, release chung hai nền tảng). Mục ký ad-hoc được [0026](0026-macos-fixed-signing-certificate.md) thay (chủ sản phẩm chốt kênh GitHub Releases và chưa dùng Apple Developer trong hồ sơ [beta-readiness](../06-delivery/2026-11-05-beta-readiness/01-specs.md))
 
 ## Bối cảnh
 
@@ -17,7 +17,7 @@ Beta kín cho 30–50 người cần một bản `.dmg` tải được và tự 
 
 ## Hệ quả
 
-- Mỗi lần cập nhật đổi chữ ký ad-hoc nên macOS có thể hỏi lại quyền micro và ghi âm hệ thống; banner và `/download` báo trước.
+- ~~Mỗi lần cập nhật đổi chữ ký ad-hoc nên macOS hỏi lại quyền~~ → [0026](0026-macos-fixed-signing-certificate.md) ký bằng chứng chỉ cố định để giữ quyền; thiếu chứng chỉ thì vẫn ad-hoc và vẫn hỏi lại.
 - Mất khoá riêng updater nghĩa là mọi người phải tải lại bản cài tay. Giữ bản sao ở nơi an toàn.
 - Khi có Apple Developer: thay `signingIdentity`, thêm công chứng, viết ADR mới thay mục này.
 - Địa chỉ máy chủ lúc build chỉ là mặc định: người thử đổi được máy chủ trong app (đăng xuất, lưu trên máy, khởi động lại), nên đổi nơi đặt máy chủ không cần phát hành lại `.dmg`. Chữ ký bản cập nhật không phụ thuộc máy chủ API đã chọn. Xem [Máy chủ](../04-modules/01-desktop/server.md).

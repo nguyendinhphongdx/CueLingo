@@ -25,7 +25,8 @@ Sáu bước, mỗi bước thoát và tiếp lại được: Chào bạn, Quy�
 
 ## Interface
 
-- `<PermissionsStep />`: đọc trạng thái bằng TanStack Query, cho phép kiểm tra lại
+- `<PermissionsStep />`: đọc trạng thái bằng TanStack Query, cho phép kiểm tra lại. Micro chưa xác định → nút **Cho phép micro** (`native.requestMicrophone`, hộp thoại thật của macOS), bị từ chối → nút mở Cài đặt hệ thống. Âm thanh hệ thống: nút **Cho phép âm thanh hệ thống** (phát tiếng chuông, chờ tối đa 12 s) → "Đã nghe được" hoặc hướng dẫn
+- `<ModelStep />` (bước 3/5 "Mô hình nhận dạng"): tự tải và biên dịch model on-device của ngôn ngữ đã chọn qua `native.prewarmSpeech`, hiện dung lượng, `ModelStatusRow` (`@cuelingo/ui`) với tiến độ từ `audio-model`; lỗi mạng có nút Thử lại; Bỏ qua được (tải vẫn chạy nền). Ngôn ngữ đám mây (`modelStepPlan`) hiện một dòng và không tải. Cài đặt có cùng dòng trạng thái (`<ModelSetting />`, `modelState()` quyết định trạng thái)
 - `describePermission(name, state, os?)`: chuyển trạng thái quyền thành hướng dẫn tiếng Việt, theo hệ điều hành (mặc định là hệ điều hành đang chạy)
 - Theo hệ điều hành (`src/lib/platform.ts`, ADR [0020](../../08-adr/0020-windows-capture-stt.md)):
 
