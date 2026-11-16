@@ -316,7 +316,11 @@ export function createBillingService(repo: BillingRepository, options: BillingOp
 
       const { event } = verdict;
       const order = await repo.findByOrderCode(event.orderCode);
-      if (!order || order.provider === ADMIN_PROVIDER) {
+      if (order?.provider === ADMIN_PROVIDER) {
+        log.info({ orderCode: order.orderCode }, 'payment webhook for an admin grant, ignored');
+        return;
+      }
+      if (!order) {
         log.info({ orderCode: event.orderCode }, 'payment webhook for an unknown order, ignored');
         return;
       }

@@ -71,6 +71,14 @@ describe('plans', () => {
     expect((await plan(ALICE)).plan).toBe('free');
   });
 
+  it('checks the admin before reading the body: 403 for a stranger even with a bad body', async () => {
+    await build();
+    for (const payload of [{}, { email: 'alice@example.com', plan: 'gold' }, { plan: 'pro' }]) {
+      expect((await setPlan(ALICE, payload)).statusCode).toBe(403);
+    }
+    expect((await setPlan(OWNER, {})).statusCode).toBe(400);
+  });
+
   it('answers 404 for an unknown email and 400 for a bad plan', async () => {
     await build();
     const body = { email: 'alice@example.com', period: 'month' };

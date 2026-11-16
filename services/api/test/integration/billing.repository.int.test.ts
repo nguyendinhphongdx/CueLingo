@@ -97,6 +97,30 @@ describe('billing on real Postgres', () => {
     expect(plan!.expires_at.toISOString()).toBe('2027-01-15T03:00:00.000Z');
   });
 
+  it('serialises an admin grant and a payment of one new user: both periods count (no lost update)', async () => {
+    const repo = createPostgresBillingRepository(sql);
+    for (let round = 0; round < 5; round += 1) {
+      const user = await newUser(`grant-settle-${round}@example.com`);
+      const admin = await newUser(`grant-admin-${round}@example.com`);
+      const order = await open(user);
+      await Promise.all([
+        repo.settle(order.orderCode, { paidAt: now, now, prices: DEFAULT_PLAN_PRICES }),
+        repo.grant(user, {
+          adminId: admin,
+          plan: 'pro',
+          period: 'month',
+          now,
+          prices: DEFAULT_PLAN_PRICES,
+        }),
+      ]);
+      const [plan] = await sql`SELECT plan, expires_at FROM user_plans WHERE user_id = ${user}`;
+      expect(plan!.plan).toBe('pro');
+      expect(plan!.expires_at.toISOString()).toBe('2027-01-15T03:00:00.000Z');
+      const orders = await sql`SELECT status FROM billing_orders WHERE user_id = ${user}`;
+      expect(orders.map((o) => o.status)).toEqual(['paid', 'paid']);
+    }
+  });
+
   it('settles an order that was marked expired, and refuses a cancelled one', async () => {
     const repo = createPostgresBillingRepository(sql);
     const user = await newUser('expired@example.com');

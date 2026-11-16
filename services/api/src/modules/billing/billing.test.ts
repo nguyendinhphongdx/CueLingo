@@ -301,9 +301,16 @@ describe('billing module', () => {
         limits: DEFAULT_PLAN_LIMITS,
         isAdmin: async (id) => id === 'owner',
         webOrigin: 'http://web',
-        log: { info: () => {}, warn: () => {} },
+        log: { info: (f, m) => logs.push(JSON.stringify([f, m])), warn: () => {} },
         now: () => now,
       });
+      // A paid plan without a period (or Free with one) is a 400, never a crash.
+      await expect(service.grantByAdmin('owner', ALICE, { plan: 'pro' })).rejects.toMatchObject({
+        code: 'VALIDATION_ERROR',
+      });
+      await expect(
+        service.grantByAdmin('owner', ALICE, { plan: 'free', period: 'month' }),
+      ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
       await expect(
         service.grantByAdmin(ALICE, ALICE, { plan: 'pro', period: 'month' }),
       ).rejects.toMatchObject({ code: 'FORBIDDEN' });
@@ -315,6 +322,8 @@ describe('billing module', () => {
       const [granted] = (await service.listOrders(ALICE)).items;
       expect(granted).toMatchObject({ id: orderId, amount: 0, status: 'paid', byAdmin: true });
       await service.handleWebhook(provider.webhook({ orderCode: codeOf(granted!), amount: 0 }));
+      expect(logs.join('\n')).toContain('for an admin grant, ignored');
+      expect(logs.join('\n')).not.toContain('unknown order');
       expect((await service.getOrder(ALICE, orderId!)).status).toBe('paid');
       expect(JSON.stringify([...plans])).toBe(before);
     });

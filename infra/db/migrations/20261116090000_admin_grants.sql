@@ -6,7 +6,8 @@ ALTER TABLE billing_orders DROP CONSTRAINT billing_orders_amount_check;
 ALTER TABLE billing_orders ADD CONSTRAINT billing_orders_amount_check CHECK (amount >= 0);
 
 -- migrate:down
--- A 0 dong order cannot exist under the old rule, so the grants are removed first.
-DELETE FROM billing_orders WHERE amount = 0;
+-- A 0 dong order cannot exist under the old rule, so the admin grants are removed first. This LOSES the grant
+-- history (the plan rows stay). Fine while this migration has not run outside tests.
+DELETE FROM billing_orders WHERE provider = 'admin' AND amount = 0;
 ALTER TABLE billing_orders DROP CONSTRAINT billing_orders_amount_check;
 ALTER TABLE billing_orders ADD CONSTRAINT billing_orders_amount_check CHECK (amount > 0);

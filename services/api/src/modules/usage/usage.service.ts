@@ -9,12 +9,14 @@ import {
   type PlanLimitTable,
   type PlanRow,
   type QuotaExceededDetails,
+  SetPlanRequestSchema,
   type SetPlanResponse,
   type UsageItem,
   type UsageMetric,
   type UsageResponse,
 } from '@cuelingo/shared';
 import { AppError } from '../../lib/errors';
+import { parse } from '../../lib/http';
 import type { PeriodStarts, UsageRepository } from './usage.repository';
 
 export type UsageService = ReturnType<typeof createUsageService>;
@@ -164,16 +166,13 @@ export function createUsageService(repo: UsageRepository, options: UsageOptions)
     },
 
     /** AC2: admin picks the person by email; the plan applies from the next check. */
-    async setPlan(
-      adminId: string,
-      email: string,
-      plan: Plan,
-      period?: BillingPeriod,
-    ): Promise<SetPlanResponse> {
-      // Check first so a stranger cannot learn from 404 which emails exist.
+    async setPlan(adminId: string, body: unknown): Promise<SetPlanResponse> {
+      // Check first, before the body is read: a stranger gets 403 whatever they send, and cannot learn from
+      // 404 which emails exist.
       if (!(await options.isAdmin(adminId))) {
         throw new AppError(ErrorCode.Forbidden, 'Admin access required');
       }
+      const { email, plan, period } = parse(SetPlanRequestSchema, body);
       const target = await repo.userIdByEmail(email);
       if (!target) throw new AppError(ErrorCode.NotFound, 'No user has this email');
       const { current } = await options.grant(adminId, target, { plan, period });
