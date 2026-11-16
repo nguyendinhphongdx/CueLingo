@@ -16,14 +16,15 @@ Component React dùng chung cho desktop và web.
 
 ## Interface
 
-| Import                                 | Export                                                                                          |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `@cuelingo/ui/globals.css`             | CSS Tailwind và design token sáng/tối                                                           |
-| `@cuelingo/ui/lib/utils`               | `cn`                                                                                            |
-| `@cuelingo/ui/components/button`       | `Button`, `buttonVariants`                                                                      |
-| `@cuelingo/ui/components/input`        | `Input`                                                                                         |
-| `@cuelingo/ui/components/card`         | `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardAction`, `CardContent`, `CardFooter` |
-| `@cuelingo/ui/components/caption-line` | `CaptionLine`, `CaptionLineProps`                                                               |
+| Import                                 | Export                                                                                                         |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `@cuelingo/ui/globals.css`             | CSS Tailwind và design token sáng/tối                                                                          |
+| `@cuelingo/ui/brand.css`               | Màu thương hiệu và thanh cuộn chung cho mọi client: mảnh, rãnh trong suốt, chỉ hiện khi rê chuột vào vùng cuộn |
+| `@cuelingo/ui/lib/utils`               | `cn`                                                                                                           |
+| `@cuelingo/ui/components/button`       | `Button`, `buttonVariants`                                                                                     |
+| `@cuelingo/ui/components/input`        | `Input`                                                                                                        |
+| `@cuelingo/ui/components/card`         | `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardAction`, `CardContent`, `CardFooter`                |
+| `@cuelingo/ui/components/caption-line` | `CaptionLine`, `CaptionLineProps`                                                                              |
 
 `FeedbackForm` (`@cuelingo/ui/components/feedback-form`): chọn Báo lỗi/Góp ý, đếm ký tự trên 2000, dòng "Không gửi kèm transcript hay âm thanh". Nhận `send({kind, message})` từ client; component không biết phiên bản app hay OS và không có chỗ đính gì khác. `FeedbackFormView` là bản thuần markup để test.
 

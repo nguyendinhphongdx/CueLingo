@@ -65,7 +65,7 @@ export function AppFrame({
         onItemSelect={mobileNavigation.close}
       />
       <main
-        className={`scroll-auto-hide h-full min-w-0 flex-1 overflow-y-auto px-4 pb-9 md:px-10 ${dragRegion ? 'pt-14' : 'pt-20 md:pt-10'}`}
+        className={`h-full min-w-0 flex-1 overflow-y-auto px-4 pb-9 md:px-10 ${dragRegion ? 'pt-14' : 'pt-20 md:pt-10'}`}
       >
         <div className="mx-auto flex max-w-[640px] flex-col gap-6">{children}</div>
       </main>
