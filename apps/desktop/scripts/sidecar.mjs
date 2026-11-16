@@ -5,9 +5,14 @@
 //   node scripts/sidecar.mjs --rebuild  always rebuild (used for a release)
 //   node scripts/sidecar.mjs --placeholder  write an empty stand-in (CI jobs that only compile Rust)
 //
+// On macOS the sidecar is signed here with a fixed identifier (vn.cmcai.cuelingo.audio) and the audio entitlements.
+// CUELINGO_SIGN_IDENTITY picks the certificate (a SHA-1 from `security find-identity`); without it the signature
+// is ad-hoc, which is what a dev build and a build without the signing secrets get.
+//
 // Tauri's `externalBin` wants `binaries/cuelingo-audio-<target triple>[.exe]`; in the app it lands next to the
 // app executable (Contents/MacOS/cuelingo-audio, or cuelingo-audio.exe), which is where `audio_bridge.rs` looks first.
 import { spawnSync } from 'node:child_process';
+import { signSidecar } from './sidecar-sign.mjs';
 import { chmodSync, copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,6 +39,7 @@ if (args.includes('--placeholder')) {
 }
 
 if (existsSync(target) && !args.includes('--rebuild')) {
+  signSidecar(target, root, windows);
   console.log(`sidecar: using ${target}`);
   process.exit(0);
 }
@@ -59,4 +65,5 @@ if (build.status !== 0) process.exit(build.status ?? 1);
 
 copyFileSync(built, target);
 chmodSync(target, 0o755);
+signSidecar(target, root, windows);
 console.log(`sidecar: ${target}`);

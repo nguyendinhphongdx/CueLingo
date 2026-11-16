@@ -47,6 +47,33 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # A fixed signing certificate keeps the permissions people granted across updates (ADR 0023). Without the
+      # secrets the build is still made, signed ad-hoc: it works, but macOS asks for the permissions again.
+      - name: Import the signing certificate
+        id: signing
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          if [ -z "$MACOS_CERT_P12" ]; then
+            echo "::warning::MACOS_CERT_P12 is not set. This build is signed ad-hoc, so macOS will ask for the microphone and system-audio permissions again after updating."
+            exit 0
+          fi
+          KC="$RUNNER_TEMP/signing.keychain-db"; KCP=$(uuidgen)
+          security create-keychain -p "$KCP" "$KC"
+          security set-keychain-settings -lut 3600 "$KC"
+          security unlock-keychain -p "$KCP" "$KC"
+          echo "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/c.p12"
+          security import "$RUNNER_TEMP/c.p12" -k "$KC" -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
+          rm "$RUNNER_TEMP/c.p12"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KCP" "$KC"
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          ID=$(security find-identity -p codesigning "$KC" | awk '/CueLingo Code Signing/ {print $2; exit}')
+          test -n "$ID" || { echo "no CueLingo Code Signing identity in the certificate" >&2; exit 1; }
+          echo "APPLE_SIGNING_IDENTITY=$ID" >> "$GITHUB_ENV"
+          echo "CUELINGO_SIGN_IDENTITY=$ID" >> "$GITHUB_ENV"
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+
       - name: Build the audio sidecar
         working-directory: apps/desktop
         run: node scripts/sidecar.mjs --rebuild
@@ -76,6 +103,29 @@ jobs:
             }))')
           pnpm tauri build --target aarch64-apple-darwin --config "$config"
 
+      - name: The signature must be the fixed one
+        working-directory: apps/desktop
+        env:
+          SIGNED: ${{ steps.signing.outputs.signed }}
+        run: |
+          app=src-tauri/target/aarch64-apple-darwin/release/bundle/macos/CueLingo.app
+          side="$app/Contents/MacOS/cuelingo-audio"
+          codesign --verify --strict --deep --verbose=2 "$app"
+          # The hardened runtime refuses the microphone without this entitlement, with no dialog and no error.
+          codesign -d --entitlements - --xml "$side" 2>/dev/null | grep -q device.audio-input
+          codesign -d --entitlements - --xml "$app" 2>/dev/null | grep -q device.audio-input
+          codesign -dv --verbose=2 "$side" 2>&1 | grep -q "Identifier=vn.cmcai.cuelingo.audio"
+          dr() { codesign -d -r- "$1" 2>&1 | sed -n 's/^designated => //p'; }
+          if [ "$SIGNED" = "true" ]; then
+            test -f signing/app.requirement && test -f signing/sidecar.requirement || {
+              echo "signing/*.requirement are missing. Actual:" >&2; dr "$app" >&2; dr "$side" >&2
+              echo "Run: node scripts/signing-requirements.mjs <certificate SHA-1> and commit the files." >&2; exit 1; }
+            diff <(dr "$app") signing/app.requirement
+            diff <(dr "$side") signing/sidecar.requirement
+          else
+            echo "::warning::ad-hoc build: the fixed-certificate requirement was not checked"
+          fi
+
       - name: The bundle must not carry a development token
         working-directory: apps/desktop
         run: |
@@ -93,6 +143,10 @@ jobs:
           cp "$bundle_dir"/dmg/*.dmg "$out/CueLingo-macOS-arm64.dmg"
           cp "$bundle_dir"/macos/CueLingo.app.tar.gz "$out/CueLingo.app.tar.gz"
           cp "$bundle_dir"/macos/CueLingo.app.tar.gz.sig "$out/CueLingo.app.tar.gz.sig"
+
+      - name: Remove the signing keychain
+        if: always() && steps.signing.outputs.signed == 'true'
+        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true
 
       - uses: actions/upload-artifact@v4
         with:
@@ -191,6 +245,29 @@ jobs:
               } },
             }))'
           pnpm tauri build --no-bundle --config release.conf.json
+
+      - name: The signature must be the fixed one
+        working-directory: apps/desktop
+        env:
+          SIGNED: ${{ steps.signing.outputs.signed }}
+        run: |
+          app=src-tauri/target/aarch64-apple-darwin/release/bundle/macos/CueLingo.app
+          side="$app/Contents/MacOS/cuelingo-audio"
+          codesign --verify --strict --deep --verbose=2 "$app"
+          # The hardened runtime refuses the microphone without this entitlement, with no dialog and no error.
+          codesign -d --entitlements - --xml "$side" 2>/dev/null | grep -q device.audio-input
+          codesign -d --entitlements - --xml "$app" 2>/dev/null | grep -q device.audio-input
+          codesign -dv --verbose=2 "$side" 2>&1 | grep -q "Identifier=vn.cmcai.cuelingo.audio"
+          dr() { codesign -d -r- "$1" 2>&1 | sed -n 's/^designated => //p'; }
+          if [ "$SIGNED" = "true" ]; then
+            test -f signing/app.requirement && test -f signing/sidecar.requirement || {
+              echo "signing/*.requirement are missing. Actual:" >&2; dr "$app" >&2; dr "$side" >&2
+              echo "Run: node scripts/signing-requirements.mjs <certificate SHA-1> and commit the files." >&2; exit 1; }
+            diff <(dr "$app") signing/app.requirement
+            diff <(dr "$side") signing/sidecar.requirement
+          else
+            echo "::warning::ad-hoc build: the fixed-certificate requirement was not checked"
+          fi
 
       - name: The bundle must not carry a development token
         run: |

@@ -66,7 +66,8 @@
     "publisher": "CMC AI",
     "macOS": {
       "minimumSystemVersion": "14.2",
-      "signingIdentity": "-"
+      "signingIdentity": "-",
+      "entitlements": "entitlements.plist"
     },
     "externalBin": ["binaries/cuelingo-audio"]
   },
