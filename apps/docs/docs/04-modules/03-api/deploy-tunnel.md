@@ -86,6 +86,16 @@ Chỉ cần khi bật nâng gói bằng VietQR ([billing](./billing.md), [ADR 00
 
 Sửa `WEB_ORIGIN`, `BETTER_AUTH_URL` trong `infra/.env.tunnel`, đổi Public Hostname ở Cloudflare, rồi `tunnel.sh reload` (có nâng gói thì đăng ký lại webhook PayOS). Phía web: biến GitHub `CUELINGO_API_URL`. Danh sách đầy đủ: [Deploy Cloudflare](../02-web/deploy-cloudflare.md).
 
+## Dựng lại hoặc khôi phục DB với cùng khoá PayOS
+
+`billing_order_code_seq` khởi tạo ở 1000000 trong migration. DB dựng lại hoặc khôi phục từ bản cũ thì sequence chạy lại từ đó, `orderCode` trùng đơn đã gửi PayOS và PayOS từ chối (API trả 502 khi tạo đơn). Đặt lại sequence lên quá mã lớn nhất đã dùng:
+
+```sql
+SELECT setval('billing_order_code_seq', <max đã dùng + 1>);
+```
+
+Mã đã dùng xem ở dashboard PayOS (hoặc `SELECT max(order_code) FROM billing_orders` trên DB cũ).
+
 ## Khôi phục thử
 
 Nên thử một lần trước khi cần thật: `tunnel.sh backup`, rồi `tunnel.sh restore infra/backups/cuelingo-manual-….dump` (yêu cầu gõ `yes`; dừng API trong lúc khôi phục).

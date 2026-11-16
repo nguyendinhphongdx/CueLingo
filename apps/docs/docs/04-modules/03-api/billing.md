@@ -65,6 +65,8 @@ Kỳ tính theo tháng lịch giờ VN (31/1 + 1 tháng = 28/2); một năm = 12
 
 Đăng ký webhook: `pnpm --filter @cuelingo/api billing:confirm-webhook [url]` ([hướng dẫn](./deploy-tunnel.md#đăng-ký-webhook-payos)).
 
+Dựng lại hoặc khôi phục DB với cùng khoá PayOS: sequence `billing_order_code_seq` chạy lại từ 1000000 và PayOS từ chối `orderCode` trùng (502). Cách xử lý: [deploy-tunnel](./deploy-tunnel.md#dựng-lại-hoặc-khôi-phục-db-với-cùng-khoá-payos).
+
 ## Dữ liệu & quyền riêng tư
 
 - Bảng `billing_orders` ([data model](../../03-architecture/07-data-model.md)). Không có dữ liệu ngân hàng của người chuyển: adapter bỏ `counterAccount*`, `virtualAccount*` ngay khi nhận.
