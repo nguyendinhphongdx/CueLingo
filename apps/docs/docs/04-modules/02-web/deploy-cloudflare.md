@@ -25,7 +25,7 @@ Web được xuất thành file tĩnh (HTML/JS/CSS) và đưa lên Cloudflare Pa
 | Biến build (GitHub)     | `CUELINGO_API_URL` → `NEXT_PUBLIC_API_URL` (**bắt buộc**, https, không phải máy cục bộ) · tuỳ chọn: `CUELINGO_GOOGLE_ENABLED`, `CUELINGO_SANDBOX_ORIGIN`, `CUELINGO_AGENT_HTML_BLOCKS`                                                                 |
 | Biến deploy (GitHub)    | `CUELINGO_WEB_PROJECT` (tên dự án Pages)                                                                                                                                                                                                               |
 | Secret (GitHub)         | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`                                                                                                                                                                                                        |
-| `scripts/check-env.mjs` | Hỏng build nếu thiếu `NEXT_PUBLIC_API_URL`, không phải https hay trỏ về `localhost`; kiểm `SANDBOX_ORIGIN`, cờ `true/false`, `DOWNLOAD_URL`                                                                                                            |
+| `scripts/check-env.mjs` | Hỏng build nếu thiếu `NEXT_PUBLIC_API_URL`, không phải https hay trỏ về `localhost`; kiểm `SANDBOX_ORIGIN`, cờ `true/false`, `DOWNLOAD_URL` và `DOWNLOAD_URL_WINDOWS` (phải là địa chỉ http(s) nếu có)                                                 |
 | `scripts/scan-out.mjs`  | Quét `out/`: khoá riêng, token GitHub, khoá cloud, tên secret Cloudflare/ký app, `dev-token`, địa chỉ `localhost:cổng`, và các chuỗi trong `FORBIDDEN_STRINGS` (workflow đưa chính hai secret Cloudflare vào đó). In tên tệp và luật, không in giá trị |
 | Kích hoạt               | Push `main` đổi `apps/web`, `packages/{ui,shared,core-sdk}`, `pnpm-lock.yaml` hoặc workflow → build, quét, deploy. Pull request cùng đường dẫn → build và quét, không deploy. `workflow_dispatch` trên `main` → deploy                                 |
 
@@ -136,3 +136,7 @@ Sau khi đổi biến, chạy lại workflow **Web (Cloudflare Pages)** vì bi�
 ## Tên miền đang dùng
 
 Ghi một chỗ này để tra cứu, không dùng trong code: web `cuelingo.tutorial-aws.com`, API (dự kiến) `api-cuelingo.tutorial-aws.com`. Ghi chú ngày 2026-11-08.
+
+## Link tải theo hệ điều hành
+
+`web-cloudflare.yml` đặt `NEXT_PUBLIC_DOWNLOAD_URL` (macOS, `releases/latest/download/CueLingo-macOS-arm64.dmg`). `NEXT_PUBLIC_DOWNLOAD_URL_WINDOWS` (`CueLingo-Windows-x64-setup.exe`, cùng luật http(s)) **không đặt** cho tới khi mở bản Windows: rỗng thì trang `/download` không có nút Windows và người dùng Windows thấy "Windows sắp có". Trang tải chọn nút theo hệ điều hành của người xem (`DownloadLinks`), nút của họ lên đầu kèm link tới bản còn lại; cùng cách làm với [site GitHub Pages](../07-site/README.md). Mở nút Windows là thêm đúng một dòng vào `web-cloudflare.yml` (và một dòng `VITE_DOWNLOAD_URL_WINDOWS` vào `pages.yml`), sau khi đợt B của [windows-desktop](../../06-delivery/2026-11-13-windows-desktop/01-specs.md) xong.

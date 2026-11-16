@@ -14,6 +14,10 @@ Hai trang công khai (`/` và `/download`) nằm trong gói dùng chung `@cuelin
 | `stages.tsx`          | Thanh trượt bốn giai đoạn (`'use client'`)                                                    |
 | `landing.module.css`  | Token và kiểu của hai trang, sáng/tối theo hệ thống                                           |
 
+## Trang tải theo hệ điều hành
+
+`download-page.tsx` nhận `downloads` (`{macos, windows}`, mỗi giá trị là link hoặc `null`) từ client bọc nó: web đọc `NEXT_PUBLIC_DOWNLOAD_URL` và `NEXT_PUBLIC_DOWNLOAD_URL_WINDOWS`, site đọc `VITE_DOWNLOAD_URL` và `VITE_DOWNLOAD_URL_WINDOWS` ([site](../07-site/README.md), [deploy-cloudflare](./deploy-cloudflare.md)). Nút đúng hệ điều hành của người xem hiện trước, kèm link tới bản còn lại và yêu cầu hệ thống của từng bản. Biến Windows chưa đặt thì **không có nút Windows** (người dùng Windows thấy "Windows sắp có"); mở nút là đặt biến, không sửa code. Lời trên trang không còn nói "máy Mac" mà nói "máy của bạn", vì trang phục vụ cả hai hệ điều hành.
+
 ## Nguyên tắc thiết kế
 
 - **Một motif:** hai dòng caption trong logo (thanh dài trên thanh ngắn, đầu tròn) là hình ở hero, hình nút, dấu đầu dòng FAQ và dải quyền riêng tư. Một vai: nền, mực, màu nhấn indigo của thương hiệu; màu hổ phách của logo chỉ cho dòng ngắn.
