@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Button } from './button';
 import { Segmented } from './segmented';
 
-export type FeedbackFormKind = 'bug' | 'idea';
+export type FeedbackFormKind = 'bug' | 'idea' | 'other';
 
 export const FEEDBACK_LIMIT = 2000;
 export const FEEDBACK_PRIVACY_NOTE = 'Không gửi kèm transcript hay âm thanh.';
@@ -12,7 +12,14 @@ export const FEEDBACK_ERROR_TEXT = 'Chưa gửi được. Hãy thử lại sau �
 const KIND_OPTIONS: { value: FeedbackFormKind; label: string }[] = [
   { value: 'bug', label: 'Báo lỗi' },
   { value: 'idea', label: 'Góp ý' },
+  { value: 'other', label: 'Khác' },
 ];
+
+const PLACEHOLDERS: Record<FeedbackFormKind, string> = {
+  bug: 'Bạn đang làm gì, điều gì xảy ra, bạn mong đợi gì?',
+  idea: 'Bạn muốn CueLingo làm được gì thêm?',
+  other: 'Bạn gặp gì, mong muốn gì…',
+};
 
 export interface FeedbackFormViewProps {
   kind: FeedbackFormKind;
@@ -23,6 +30,8 @@ export interface FeedbackFormViewProps {
   onKind(kind: FeedbackFormKind): void;
   onMessage(message: string): void;
   onSubmit(): void;
+  /** Replaces the default privacy note, e.g. to say which app version is sent. */
+  note?: string;
 }
 
 /** The form as pure markup, so every state can be rendered and tested statically. */
@@ -35,6 +44,7 @@ export function FeedbackFormView({
   onKind,
   onMessage,
   onSubmit,
+  note = FEEDBACK_PRIVACY_NOTE,
 }: FeedbackFormViewProps) {
   const left = FEEDBACK_LIMIT - message.length;
   const submit = (event: FormEvent) => {
@@ -60,16 +70,12 @@ export function FeedbackFormView({
           maxLength={FEEDBACK_LIMIT}
           rows={6}
           disabled={sending}
-          placeholder={
-            kind === 'bug'
-              ? 'Bạn đang làm gì, điều gì xảy ra, bạn mong đợi gì?'
-              : 'Bạn muốn CueLingo làm được gì thêm?'
-          }
+          placeholder={PLACEHOLDERS[kind]}
           onChange={(event) => onMessage(event.target.value)}
           className="border-input bg-card placeholder:text-muted-foreground focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:ring-offset-2 w-full resize-y rounded-md border px-3 py-2 text-base shadow-xs outline-none focus-visible:ring-2 disabled:opacity-50 md:text-sm"
         />
         <div className="text-muted-foreground mt-1 flex justify-between text-xs">
-          <span>{FEEDBACK_PRIVACY_NOTE}</span>
+          <span>{note}</span>
           <span aria-live="polite" className={left < 100 ? 'text-destructive' : undefined}>
             {message.length}/{FEEDBACK_LIMIT}
           </span>
@@ -100,8 +106,10 @@ export function FeedbackFormView({
  */
 export function FeedbackForm({
   send,
+  note,
 }: {
   send(input: { kind: FeedbackFormKind; message: string }): Promise<void>;
+  note?: string;
 }) {
   const [kind, setKind] = useState<FeedbackFormKind>('bug');
   const [message, setMessage] = useState('');
@@ -126,6 +134,7 @@ export function FeedbackForm({
 
   return (
     <FeedbackFormView
+      note={note}
       kind={kind}
       message={message}
       sending={sending}

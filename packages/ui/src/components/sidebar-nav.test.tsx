@@ -60,6 +60,17 @@ afterEach(() => {
 });
 
 describe('SidebarNav groups', () => {
+  it.each(['web', 'desktop'] as const)(
+    'lists Nâng cấp in the Ứng dụng group on the %s client, without a "Sắp có" badge',
+    (client) => {
+      setup({ client });
+      const list = document.getElementById(header('Ứng dụng').getAttribute('aria-controls')!)!;
+      const upgrade = within(list).getByRole('link', { name: /Nâng cấp/ });
+      expect(upgrade.getAttribute('href')).toBe('/upgrade');
+      expect(upgrade.textContent).not.toContain('Sắp có');
+    },
+  );
+
   describe('collapse', () => {
     it.each(['web', 'desktop'] as const)(
       'folds and unfolds a group from its title on the %s client, with aria-expanded and aria-controls',

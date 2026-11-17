@@ -17,6 +17,12 @@ describe('roadmap', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it('puts Nâng cấp in the app group and points it at the web upgrade page', () => {
+    const upgrade = features.find((feature) => feature.id === 'upgrade');
+    expect(upgrade).toMatchObject({ label: 'Nâng cấp', group: 'app', webPath: '/upgrade' });
+    expect(upgrade?.status).toEqual({ desktop: 'ready', web: 'ready' });
+  });
+
   it('gives every feature a group that exists', () => {
     const groups = featureGroups.map((group) => group.id);
     for (const feature of features) expect(groups).toContain(feature.group);

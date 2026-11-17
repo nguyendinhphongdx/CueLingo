@@ -13,7 +13,8 @@ export type FeatureIconName =
   | 'progress'
   | 'settings'
   | 'feedback'
-  | 'assistant';
+  | 'assistant'
+  | 'upgrade';
 
 export interface Feature {
   id: string;
@@ -113,6 +114,17 @@ export const features: Feature[] = [
     summary: 'Báo lỗi hoặc góp ý cho đội CueLingo.',
     bullets: ['Chỉ gửi nội dung bạn gõ cùng phiên bản app', 'Không kèm transcript hay âm thanh'],
     webPath: '/feedback',
+  },
+  {
+    id: 'upgrade',
+    label: 'Nâng cấp',
+    group: 'app',
+    icon: 'upgrade',
+    // Plans are sold on the web only; the desktop entry opens that page in the browser.
+    status: { desktop: 'ready', web: 'ready' },
+    summary: 'Xem các gói và nâng cấp để dùng nhiều hơn.',
+    bullets: ['So sánh gói và hạn mức', 'Thanh toán trên web, áp dụng ngay cho cả app và web'],
+    webPath: '/upgrade',
   },
 ];
 

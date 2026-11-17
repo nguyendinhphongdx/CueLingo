@@ -25,13 +25,20 @@ const view = (overrides: Partial<FeedbackFormViewProps> = {}) =>
   );
 
 describe('FeedbackForm (AC6)', () => {
-  it('offers bug and idea, a counter out of 2000 and says nothing private is attached', () => {
+  it('offers bug, idea and other, a counter out of 2000 and says nothing private is attached', () => {
     const markup = view({ message: 'abc' });
     expect(markup).toContain('Báo lỗi');
     expect(markup).toContain('Góp ý');
+    expect(markup).toContain('Khác');
     expect(markup).toContain('3/2000');
     expect(markup).toContain(FEEDBACK_PRIVACY_NOTE);
     expect(markup).toContain('maxLength="2000"');
+  });
+
+  it('shows the note a client supplies instead of the default one', () => {
+    const markup = view({ note: 'Chỉ gửi nội dung bạn viết và phiên bản app (0.1.5).' });
+    expect(markup).toContain('phiên bản app (0.1.5)');
+    expect(markup).not.toContain(FEEDBACK_PRIVACY_NOTE);
   });
 
   it('cannot be sent empty, and is locked while sending', () => {
