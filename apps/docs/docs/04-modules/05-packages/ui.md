@@ -203,3 +203,7 @@ Cỡ chữ của thiết kế là class Tailwind đặt cùng lúc cỡ, độ c
 ## Logo duy nhất và token không bị khai lại
 
 `shared-ui.test.ts` kiểm hai luật: (AC2) CSS của `apps/web`, `apps/desktop` và `apps/site` không khai lại tên token có trong `:root` của `globals.css`; (AC5) không có file nguồn nào ngoài `components/logo.tsx` chứa đường vẽ của logo. Hai file ảnh được phép vì trình duyệt tải theo URL (favicon không là component React): `apps/desktop/src/assets/logo.svg` và `apps/site/public/favicon.svg`; test kiểm chúng vẫn đúng màu và đường vẽ của `Logo`.
+
+## Giao diện sáng/tối
+
+`ThemeSwitch` (`@cuelingo/ui/components/theme-switch`) là mục "Giao diện" của Cài đặt: Theo hệ thống (mặc định), Sáng, Tối. Lựa chọn lưu trên máy (`localStorage`, khoá `cuelingo.theme`; "Theo hệ thống" thì xoá khoá). Logic thuần ở `lib/theme.ts` (`followTheme`, `parseThemeMode`, `isDark`), hook `useThemeMode`; web, desktop và site đều gọi `followTheme()` nên cùng một nguồn. Cỡ chữ nền là 14px/20px, tiêu đề trang 24px.
