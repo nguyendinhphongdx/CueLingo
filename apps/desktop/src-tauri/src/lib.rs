@@ -50,6 +50,9 @@ pub fn run() {
             commands::calendar,
             commands::session_stop,
             commands::permissions_status,
+            commands::model_status,
+            commands::model_download,
+            commands::model_cancel,
             commands::check_system_audio,
             commands::open_external,
             commands::set_assist_level,
@@ -62,6 +65,15 @@ pub fn run() {
         ])
         .setup(|app| {
             hotkeys::register(app.handle())?;
+
+            // `tauri dev` has no installer to write the cuelingo:// registry key, so the browser could never hand
+            // the sign-in code back. Installed builds get the key from the installer (ADR 0021).
+            #[cfg(all(windows, debug_assertions))]
+            {
+                if let Err(error) = app.deep_link().register_all() {
+                    eprintln!("cuelingo:// registration failed: {error}");
+                }
+            }
 
             // Sign-in links: while running, and when a link is what launched the app.
             let handle = app.handle().clone();
@@ -125,6 +137,11 @@ pub fn run() {
         .run(|app, event| {
             // ⌘Q and Quit on the Dock arrive with no exit code; an exit we asked for carries one.
             // During a meeting they go through the same stop-then-quit path as the tray item.
+            if let RunEvent::Exit = event {
+                // A download in the background must not outlive the app.
+                app.state::<commands::AppState>().download.stop();
+                return;
+            }
             if let RunEvent::ExitRequested {
                 api, code: None, ..
             } = event

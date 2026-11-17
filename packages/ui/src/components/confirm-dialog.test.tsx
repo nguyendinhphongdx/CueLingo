@@ -30,6 +30,19 @@ describe('ConfirmDialog', () => {
     expect(markup).toContain('Huỷ');
   });
 
+  it('shows only the cancel button when there is nothing to confirm, and can hold more than text', () => {
+    const markup = renderToStaticMarkup(
+      <ConfirmDialog open title="Đang tải" cancelLabel="Huỷ" onCancel={noop}>
+        <div role="progressbar" />
+      </ConfirmDialog>,
+    );
+    expect(markup).toContain('role="progressbar"');
+    expect(markup).toContain('Huỷ');
+    expect(markup.match(/<button/g)).toHaveLength(1);
+    // A block inside the body is valid HTML: the body is a div, not a paragraph.
+    expect(markup).not.toMatch(/<p[^>]*id="confirm-dialog-body"/);
+  });
+
   it('can start on the cancel button with the confirm button disabled for a moment', () => {
     const markup = renderToStaticMarkup(
       <ConfirmDialog

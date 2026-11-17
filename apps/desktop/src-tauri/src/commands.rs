@@ -5,12 +5,13 @@ use std::sync::Mutex;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, State};
 
-use crate::audio_bridge::AudioBridge;
+use crate::audio_bridge::{AudioBridge, ModelDownload};
 use crate::windows;
 
 #[derive(Default)]
 pub struct AppState {
     pub audio: AudioBridge,
+    pub download: ModelDownload,
     session_id: Mutex<Option<String>>,
     assist_level: Mutex<u8>,
 }
@@ -88,6 +89,10 @@ pub fn session_start(
     if current.is_some() {
         return Err("session_already_running".into());
     }
+    // Two sidecars would write the same `.part` file; the screen shows the download and asks to wait.
+    if state.download.is_running() {
+        return Err("model_downloading".into());
+    }
     let id = format!(
         "local-{}",
         std::time::SystemTime::now()
@@ -136,6 +141,55 @@ pub fn session_stop(app: AppHandle, state: State<AppState>) -> Result<(), String
     let stopped = state.audio.stop();
     let _ = crate::tray::refresh(&app);
     stopped
+}
+
+/// Whether this build's sidecar knows `--model-status` and `--download-model`. A sidecar that does not know a
+/// flag ignores it and starts a meeting, which would download the model on its own: so this is a build
+/// decision, not a probe. macOS turns it on together with the Swift side (04-brief-macos-model.md).
+const MODEL_CONTROL: bool = cfg!(windows);
+
+/// Which on-device models are in place (`{type: "models", models: [...]}`), or `null` when this build cannot
+/// manage models from the app (the screens then keep the old flow: the model comes down with the first meeting).
+#[tauri::command]
+pub async fn model_status() -> Option<serde_json::Value> {
+    if !MODEL_CONTROL {
+        return None;
+    }
+    tauri::async_runtime::spawn_blocking(|| probe_sidecar("--model-status", "models"))
+        .await
+        .ok()
+        .flatten()
+}
+
+/// Starts downloading the model for `language`: one at a time, never during a meeting. Progress and the end
+/// arrive as `audio-model` events.
+#[tauri::command]
+pub fn model_download(
+    app: AppHandle,
+    state: State<AppState>,
+    language: String,
+) -> Result<(), String> {
+    if !MODEL_CONTROL {
+        return Err("model_control_unavailable".into());
+    }
+    if !valid_language(&language) {
+        return Err("invalid_language".into());
+    }
+    if state.is_running() {
+        return Err("session_already_running".into());
+    }
+    state.download.start(&app, &language)
+}
+
+/// Stops the download in progress (the person pressed ✕ or reload). The screens hear `error` with the message
+/// `cancelled` and go back to "not downloaded". Nothing happens when no download runs.
+#[tauri::command]
+pub fn model_cancel(state: State<AppState>) -> Result<(), String> {
+    if !MODEL_CONTROL {
+        return Err("model_control_unavailable".into());
+    }
+    state.download.cancel();
+    Ok(())
 }
 
 /// Runs the sidecar in a one-shot mode and returns the JSON line whose `type` is `kind`.
@@ -217,10 +271,14 @@ fn is_openable(url: &str) -> bool {
         )
 }
 
-/// The system opener: `open` on macOS; on Windows `explorer.exe` with the URL as one argument (no shell).
+/// The system opener: `open` on macOS; on Windows the shell's URL handler through `rundll32`, with the URL as
+/// one argument (no shell). `explorer.exe <url>` is not a URL opener: it can fall back to opening the
+/// Documents folder instead of the default browser.
 fn opener() -> std::process::Command {
     if cfg!(windows) {
-        std::process::Command::new("explorer.exe")
+        let mut command = std::process::Command::new("rundll32.exe");
+        command.arg("url.dll,FileProtocolHandler");
+        command
     } else {
         std::process::Command::new("/usr/bin/open")
     }

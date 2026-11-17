@@ -111,7 +111,7 @@ describe('one logo (AC5)', () => {
     ];
     for (const root of roots) {
       for (const file of filesMatching(join(ROOT, root), /\.(tsx?|jsx?|css|svg|html)$/)) {
-        const rel = relative(ROOT, file);
+        const rel = relative(ROOT, file).replaceAll('\\', '/');
         if (rel === 'packages/ui/src/components/logo.tsx' || IMAGE_FILES.includes(rel)) continue;
         if (readFileSync(file, 'utf8').includes(MARK_PATH)) offenders.push(rel);
       }
