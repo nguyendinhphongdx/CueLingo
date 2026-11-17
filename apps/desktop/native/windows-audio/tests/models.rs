@@ -276,3 +276,87 @@ fn a_connection_that_stays_silent_for_every_try_is_an_error_not_a_hang() {
     );
     let _ = std::fs::remove_dir_all(root);
 }
+
+// --- `modelctl`: the one-shot download the app runs from onboarding and Settings.
+
+use cuelingo_audio::modelctl::download_spec;
+use cuelingo_audio::protocol::Out;
+use serde_json::Value;
+
+#[derive(Clone, Default)]
+struct Captured(Arc<Mutex<Vec<u8>>>);
+
+impl Write for Captured {
+    fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
+        self.0.lock().unwrap().extend_from_slice(data);
+        Ok(data.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+impl Captured {
+    fn lines(&self) -> Vec<Value> {
+        let text = String::from_utf8(self.0.lock().unwrap().clone()).unwrap();
+        text.lines()
+            .map(|l| serde_json::from_str(l).unwrap())
+            .collect()
+    }
+}
+
+fn run_download(spec: &ModelSpec, hub: &str, root: &std::path::Path) -> (i32, Vec<Value>) {
+    let captured = Captured::default();
+    let out = Out::new(Box::new(captured.clone()));
+    let code = download_spec("en", spec, hub, root, &out);
+    (code, captured.lines())
+}
+
+#[test]
+fn a_download_reports_progress_then_ready_and_leaves_the_model_installed() {
+    let (spec, server, root, _) = setup("ctl-fresh");
+    let (code, lines) = run_download(spec, &server.base, &root);
+    assert_eq!(code, 0);
+    assert!(lines
+        .iter()
+        .all(|l| l["type"] == "model" && l["language"] == "en"));
+    let states: Vec<&str> = lines.iter().map(|l| l["state"].as_str().unwrap()).collect();
+    assert_eq!(*states.last().unwrap(), "ready");
+    assert!(states[..states.len() - 1]
+        .iter()
+        .all(|s| *s == "downloading"));
+    let progress: Vec<f64> = lines
+        .iter()
+        .filter_map(|l| l["progress"].as_f64())
+        .collect();
+    assert!(progress.windows(2).all(|w| w[0] <= w[1]));
+    assert!(cuelingo_audio::stt::models::is_installed(spec, &root));
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+fn a_model_already_in_place_answers_ready_without_touching_the_network() {
+    let (spec, server, root, _) = setup("ctl-cached");
+    assert_eq!(run_download(spec, &server.base, &root).0, 0);
+    let before = server.requests.load(Ordering::SeqCst);
+    let (code, lines) = run_download(spec, &server.base, &root);
+    assert_eq!(code, 0);
+    assert_eq!(lines.len(), 1, "one line: ready, no progress");
+    assert_eq!(lines[0]["state"], "ready");
+    assert_eq!(server.requests.load(Ordering::SeqCst), before);
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+fn a_failed_download_says_why_and_leaves_no_model_behind() {
+    let (spec, _server, root, _) = setup("ctl-fail");
+    // Nothing listens here: the connection is refused.
+    let (code, lines) = run_download(spec, "http://127.0.0.1:1", &root);
+    assert_eq!(code, 1);
+    let last = lines.last().unwrap();
+    assert_eq!(last["type"], "model");
+    assert_eq!(last["state"], "error");
+    assert!(!last["message"].as_str().unwrap().is_empty());
+    assert!(!cuelingo_audio::stt::models::is_installed(spec, &root));
+    let _ = std::fs::remove_dir_all(root);
+}

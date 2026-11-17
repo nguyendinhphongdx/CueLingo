@@ -9,6 +9,7 @@
 pub mod capture;
 pub mod level;
 pub mod memory;
+pub mod modelctl;
 pub mod pcm;
 pub mod permissions;
 pub mod pipeline;

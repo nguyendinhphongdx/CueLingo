@@ -75,6 +75,35 @@ pub fn models_root() -> PathBuf {
         .join("models")
 }
 
+/// `<root>/<id>-<first 12 of the revision>`: where the files of `spec` live.
+pub fn model_dir(spec: &ModelSpec, root: &Path) -> PathBuf {
+    let short = spec.revision.get(..12).unwrap_or(spec.revision);
+    root.join(format!("{}-{short}", spec.id))
+}
+
+/// Whether every file of `spec` is in place and matches its pin. Downloads nothing, and a file that was
+/// verified before is not hashed again (see `is_good`). A half-finished download (`<name>.part`) or a
+/// file of the wrong size counts as missing.
+pub fn is_installed(spec: &ModelSpec, root: &Path) -> bool {
+    let dir = model_dir(spec, root);
+    spec.files
+        .iter()
+        .all(|file| is_good(&dir.join(file.name), file))
+}
+
+/// Bytes the whole model takes on disk.
+pub fn total_bytes(spec: &ModelSpec) -> u64 {
+    spec.files.iter().map(|file| file.size).sum()
+}
+
+/// The model that recognises `language` on this machine, if there is one (cloud languages have none).
+pub fn spec_for(language: &str) -> Option<&'static ModelSpec> {
+    match language {
+        "en" => Some(&PARAKEET_TDT_V2_INT8),
+        _ => None,
+    }
+}
+
 /// Makes sure every file of `spec` is in `<root>/<id>-<revision>/` and matches its pin; returns that
 /// directory. `progress` gets 0...1 of the bytes in place (files that were already good count as done).
 pub fn ensure(
@@ -83,8 +112,7 @@ pub fn ensure(
     root: &Path,
     progress: &mut dyn FnMut(f64),
 ) -> Result<(PathBuf, Timings), String> {
-    let short = spec.revision.get(..12).unwrap_or(spec.revision);
-    let dir = root.join(format!("{}-{short}", spec.id));
+    let dir = model_dir(spec, root);
     fs::create_dir_all(&dir).map_err(|e| format!("cannot create the model folder: {e}"))?;
     let total: u64 = spec.files.iter().map(|f| f.size).sum();
     let mut done = 0u64;

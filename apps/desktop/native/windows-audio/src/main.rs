@@ -6,7 +6,8 @@
 //! real where Windows lets us: microphone consent, and whether the system output can be captured.
 use cuelingo_audio::protocol::Out;
 use cuelingo_audio::session::{FileOptions, Session};
-use cuelingo_audio::{capture, permissions, stt, wav};
+use cuelingo_audio::stt::models;
+use cuelingo_audio::{capture, modelctl, permissions, stt, wav};
 use std::io::{self, Write};
 
 fn line(value: serde_json::Value) -> String {
@@ -66,6 +67,17 @@ fn main() {
 
     let out = Out::stdout();
     let language = std::env::var("CUELINGO_LANGUAGE").unwrap_or_else(|_| "en".to_string());
+
+    // Model management without a meeting (onboarding, Settings): see `modelctl`.
+    if args.iter().any(|a| a == "--model-status") {
+        println!("{}", modelctl::status_line(&models::models_root()));
+        return;
+    }
+    if args.iter().any(|a| a == "--download-model") {
+        let code = modelctl::download(&language, models::DEFAULT_HUB, &models::models_root(), &out);
+        std::process::exit(code);
+    }
+
     let vocabulary = std::env::var("CUELINGO_VOCAB").ok();
     let session = Session::new(out.clone(), stt::default_provider());
 
