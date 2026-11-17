@@ -293,6 +293,8 @@ export const native = {
     ),
   setAssistLevel: (level: number) =>
     invoke('set_assist_level', { level: AssistLevel.parse(level) }).then(() => undefined),
+  /** Brings the caption overlay back (the ✕ on the overlay only hides it). */
+  showOverlay: () => invoke('show_overlay').then(() => undefined),
   hideOverlay: () => invoke('hide_overlay').then(() => undefined),
   /** What the menu-bar icon cannot know: a meeting still going, whole minutes, the stream that failed. Fixed codes only, never meeting content. */
   trayReport: (view: { active: boolean; minutes: number; problem?: 'mic' | 'system' | 'both' }) =>

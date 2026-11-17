@@ -306,6 +306,12 @@ pub fn set_assist_level(state: State<AppState>, level: u8) -> Result<(), String>
     Ok(())
 }
 
+/// Brings the caption overlay back: the "Hiện overlay" button of the main window. The ✕ on the overlay only hides it.
+#[tauri::command]
+pub fn show_overlay(app: AppHandle) {
+    windows::show_overlay(&app);
+}
+
 /// The overlay follows the meeting: it appears when a session starts and the client hides it when the session is over.
 #[tauri::command]
 pub fn hide_overlay(app: AppHandle) {

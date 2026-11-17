@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { useLanguage } from '../settings';
 import { describeNativeError, openDebrief } from './session-actions';
 import { native } from '../lib/native';
+import { ShowOverlayButton } from './ShowOverlayButton';
 import { shortcutLabel } from '../lib/platform';
 import type { LatestCaption, SessionStatus as Status } from './session-controller';
 import { SUPPORTED_LANGUAGES, type LanguageCode } from '@cuelingo/shared';
@@ -319,6 +320,7 @@ export function SessionPanel({ controls }: { controls: MeetingControls }) {
                   {controls.pending === 'stopping' ? 'Đang dừng…' : 'Dừng'}
                 </Button>
               </PressButton>
+              <ShowOverlayButton className="cursor-pointer text-white hover:bg-white/15 hover:text-white" />
             </div>
           </>
         ) : (
