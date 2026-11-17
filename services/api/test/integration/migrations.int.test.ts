@@ -84,12 +84,28 @@ describe('migrations (AC2)', () => {
         WHERE schemaname = 'public' AND indexname = 'agent_messages_streaming_idx'`
     ).map((r) => r.indexname);
 
+  // Counts below are "migrations back from admin_grants"; newer ones (feedback kind 'other') sit on top.
+  const NEWER_MIGRATIONS = 1;
   const rollback = (times: number) => {
-    for (let i = 0; i < times; i += 1) dbmate(db.url, 'rollback');
+    for (let i = 0; i < times + NEWER_MIGRATIONS; i += 1) dbmate(db.url, 'rollback');
   };
   const up = (times: number) => {
-    for (let i = 0; i < times; i += 1) dbmate(db.url, 'up');
+    for (let i = 0; i < times + NEWER_MIGRATIONS; i += 1) dbmate(db.url, 'up');
   };
+
+  it('widens the feedback kind check to "other" and rolls back by removing those rows', async () => {
+    const [user] = await sql<{ id: string }[]>`
+      INSERT INTO auth_user (name, email) VALUES ('F', 'feedback-kind@example.com') RETURNING id`;
+    await sql`INSERT INTO feedback (user_id, kind, message, client, app_version, os) VALUES (${user!.id}, 'other', 'hello', 'web', '0.0.0', 'test')`;
+    dbmate(db.url, 'rollback');
+    expect(await sql`SELECT 1 FROM feedback WHERE kind = 'other'`).toHaveLength(0);
+    await expect(
+      sql`INSERT INTO feedback (user_id, kind, message, client, app_version, os) VALUES (${user!.id}, 'other', 'again', 'web', '0.0.0', 'test')`,
+    ).rejects.toThrow();
+    dbmate(db.url, 'up');
+    await sql`INSERT INTO feedback (user_id, kind, message, client, app_version, os) VALUES (${user!.id}, 'other', 'again', 'web', '0.0.0', 'test')`;
+    await sql`DELETE FROM auth_user WHERE id = ${user!.id}`;
+  });
 
   const debriefSkippedColumn = async () =>
     (

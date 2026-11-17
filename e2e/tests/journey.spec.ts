@@ -17,7 +17,10 @@ test('sign in, read a debrief, save a phrase, review it and see the progress', a
   await page.getByRole('link', { name: /Họp roadmap E2E/ }).click();
   await expect(page).toHaveURL(new RegExp(`/sessions/${sessionId}`));
   await expect(page.getByText('Thống nhất xem lại lộ trình')).toBeVisible();
+  // The transcript sits on its own tab since the redesign.
+  await page.getByRole('tab', { name: /^Bản ghi/ }).click();
   await expect(page.getByText('Chúng ta quay lại lộ trình sau cuộc gọi nhé?')).toBeVisible();
+  await page.getByRole('tab', { name: 'Debrief' }).click();
 
   // Save the suggested phrase.
   const suggestions = page.getByRole('region', { name: 'Cụm từ nên lưu' });
