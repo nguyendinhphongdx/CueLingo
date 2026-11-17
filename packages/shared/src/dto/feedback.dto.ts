@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const FEEDBACK_MAX_LENGTH = 2000;
 
-export const FeedbackKindSchema = z.enum(['bug', 'idea']);
+export const FeedbackKindSchema = z.enum(['bug', 'idea', 'other']);
 export type FeedbackKind = z.infer<typeof FeedbackKindSchema>;
 
 /**

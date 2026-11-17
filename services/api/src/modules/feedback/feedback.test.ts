@@ -30,6 +30,12 @@ describe('feedback module', () => {
       payload,
     });
 
+  it('accepts the third kind "other"', async () => {
+    const res = await send(ALICE, { ...body, kind: 'other' });
+    expect(res.statusCode).toBe(201);
+    expect(repo.rows[0]).toMatchObject({ kind: 'other', userId: ALICE });
+  });
+
   // AC6
   it('stores the message with app version and OS for the signed-in person', async () => {
     const res = await send(ALICE, body);

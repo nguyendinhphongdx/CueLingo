@@ -127,7 +127,7 @@ describe('beta activation, feedback and metrics on real Postgres (AC6-AC9)', () 
       os: 'macOS 15',
     } as const;
     await feedback.create(u1, fb);
-    await feedback.create(u2, fb);
+    await feedback.create(u2, { ...fb, kind: 'other' });
 
     const { beta } = await createPostgresAdminRepository(sql).metrics(NOW);
     expect(beta.medianMinutesToFirstCaption).toBeCloseTo(7, 5);
