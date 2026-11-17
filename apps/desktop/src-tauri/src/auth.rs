@@ -8,7 +8,8 @@ const ACCOUNT: &str = "device-token";
 /// The one-time code from a `cuelingo://auth?code=…` link; anything else is ignored.
 pub fn code_from_url(url: &str) -> Option<String> {
     let rest = url.strip_prefix("cuelingo://auth")?;
-    let query = rest.strip_prefix('?')?;
+    // Windows hands the link over as `cuelingo://auth/?code=…`: the empty path is normalised to `/`.
+    let query = rest.strip_prefix('/').unwrap_or(rest).strip_prefix('?')?;
     query
         .split('&')
         .find_map(|pair| pair.strip_prefix("code="))
@@ -70,6 +71,23 @@ mod tests {
         assert_eq!(
             code_from_url(&format!("cuelingo://auth?x=1&code={CODE}")),
             Some(CODE.to_string())
+        );
+    }
+
+    #[test]
+    fn reads_the_code_when_windows_adds_a_slash_after_the_host() {
+        assert_eq!(
+            code_from_url(&format!("cuelingo://auth/?code={CODE}")),
+            Some(CODE.to_string())
+        );
+        // Still only the auth host: a longer path is not an auth link.
+        assert_eq!(
+            code_from_url(&format!("cuelingo://auth/x?code={CODE}")),
+            None
+        );
+        assert_eq!(
+            code_from_url(&format!("cuelingo://authx?code={CODE}")),
+            None
         );
     }
 

@@ -63,6 +63,15 @@ pub fn run() {
         .setup(|app| {
             hotkeys::register(app.handle())?;
 
+            // `tauri dev` has no installer to write the cuelingo:// registry key, so the browser could never hand
+            // the sign-in code back. Installed builds get the key from the installer (ADR 0021).
+            #[cfg(all(windows, debug_assertions))]
+            {
+                if let Err(error) = app.deep_link().register_all() {
+                    eprintln!("cuelingo:// registration failed: {error}");
+                }
+            }
+
             // Sign-in links: while running, and when a link is what launched the app.
             let handle = app.handle().clone();
             app.deep_link().on_open_url(move |event| {
