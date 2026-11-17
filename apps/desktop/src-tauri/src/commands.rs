@@ -217,10 +217,14 @@ fn is_openable(url: &str) -> bool {
         )
 }
 
-/// The system opener: `open` on macOS; on Windows `explorer.exe` with the URL as one argument (no shell).
+/// The system opener: `open` on macOS; on Windows the shell's URL handler through `rundll32`, with the URL as
+/// one argument (no shell). `explorer.exe <url>` is not a URL opener: it can fall back to opening the
+/// Documents folder instead of the default browser.
 fn opener() -> std::process::Command {
     if cfg!(windows) {
-        std::process::Command::new("explorer.exe")
+        let mut command = std::process::Command::new("rundll32.exe");
+        command.arg("url.dll,FileProtocolHandler");
+        command
     } else {
         std::process::Command::new("/usr/bin/open")
     }
