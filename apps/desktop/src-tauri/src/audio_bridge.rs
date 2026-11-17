@@ -65,6 +65,43 @@ pub(crate) fn forward_download_lines(
     }
 }
 
+/// Follows the `model` events of one sidecar run, to know when a download the screens were showing is gone.
+/// A meeting that is stopped while its sidecar is still fetching the model (it only reads `stop` after the
+/// model is loaded) is killed, and nothing else would tell the screens the download ended.
+#[derive(Default)]
+pub(crate) struct ModelWatch {
+    downloading: Option<String>,
+}
+
+impl ModelWatch {
+    pub(crate) fn observe(&mut self, event: &str, payload: &Value) {
+        if event != "audio-model" || payload.get("type").and_then(Value::as_str) != Some("model") {
+            return;
+        }
+        let language = payload
+            .get("language")
+            .and_then(Value::as_str)
+            .unwrap_or("");
+        match payload.get("state").and_then(Value::as_str) {
+            Some("downloading") => self.downloading = Some(language.to_string()),
+            Some("ready" | "error") => self.downloading = None,
+            _ => {}
+        }
+    }
+
+    /// The `error` event to send when the run ended in the middle of a download; `None` otherwise.
+    pub(crate) fn interrupted(&self) -> Option<Value> {
+        self.downloading.as_ref().map(|language| {
+            serde_json::json!({
+                "type": "model",
+                "language": language,
+                "state": "error",
+                "message": "download interrupted",
+            })
+        })
+    }
+}
+
 /// Whether the child is still running; one that has exited is reaped and its slot freed.
 fn alive(slot: &mut Option<Child>) -> bool {
     let exited = match slot.as_mut() {
@@ -231,8 +268,10 @@ impl AudioBridge {
 
         let app = app.clone();
         std::thread::spawn(move || {
+            let mut watch = ModelWatch::default();
             for line in BufReader::new(stdout).lines().map_while(Result::ok) {
                 if let Some((event, payload)) = route_line(&line) {
+                    watch.observe(event, &payload);
                     // Utterance audio is about 1 MB and levels arrive ~20 times a second: main window only.
                     let _ = if event == "audio-utterance" || event == "audio-level" {
                         app.emit_to("main", event, payload)
@@ -240,6 +279,10 @@ impl AudioBridge {
                         app.emit(event, payload)
                     };
                 }
+            }
+            // The meeting ended (or was stopped) while the model was still coming down.
+            if let Some(payload) = watch.interrupted() {
+                let _ = app.emit("audio-model", payload);
             }
         });
         *running = Some(Sidecar { child, stdin });
@@ -366,6 +409,42 @@ mod tests {
         let args: Vec<_> = command.get_args().collect();
         assert_eq!(args, ["--download-model"]);
         assert_eq!(env_of(&command, "CUELINGO_LANGUAGE").as_deref(), Some("en"));
+    }
+
+    fn watched(events: &[&str]) -> Option<Value> {
+        let mut watch = ModelWatch::default();
+        for line in events {
+            let (event, payload) = route_line(line).unwrap();
+            watch.observe(event, &payload);
+        }
+        watch.interrupted()
+    }
+
+    #[test]
+    fn a_run_that_ends_mid_download_reports_which_model_was_lost() {
+        let lost =
+            watched(&[r#"{"type":"model","language":"en","state":"downloading","progress":0.6}"#])
+                .unwrap();
+        assert_eq!(lost["type"], "model");
+        assert_eq!(lost["language"], "en");
+        assert_eq!(lost["state"], "error");
+    }
+
+    #[test]
+    fn a_download_that_finished_or_failed_loses_nothing() {
+        assert!(watched(&[
+            r#"{"type":"model","language":"en","state":"downloading","progress":0.6}"#,
+            r#"{"type":"model","language":"en","state":"ready"}"#,
+        ])
+        .is_none());
+        assert!(watched(&[
+            r#"{"type":"model","language":"en","state":"downloading","progress":0.6}"#,
+            r#"{"type":"model","language":"en","state":"error","message":"offline"}"#,
+        ])
+        .is_none());
+        // No model event at all, or only other events: nothing was being downloaded.
+        assert!(watched(&[]).is_none());
+        assert!(watched(&[r#"{"type":"level","stream":"mic","rms":0.1,"peak":0.2}"#]).is_none());
     }
 
     #[test]
