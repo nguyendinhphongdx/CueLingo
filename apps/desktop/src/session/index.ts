@@ -5,3 +5,5 @@
 export { SessionPanel } from './SessionPanel';
 export { useSession } from './use-session';
 export { RecentSessions } from './RecentSessions';
+export { useMeetingControls, type MeetingControls } from './use-meeting-controls';
+export { isMeetingLive } from './meeting-live';

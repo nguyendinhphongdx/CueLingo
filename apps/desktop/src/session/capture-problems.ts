@@ -58,6 +58,21 @@ export function describeCaptureProblems(
   return null;
 }
 
+/** The fix for one stream that failed to start, for the stream's own row; null when it did not fail. */
+export function describeStream(
+  stream: CaptureStream,
+  failures: CaptureFailures,
+  os: DesktopOs = currentOs(),
+): CaptureBanner | null {
+  const failed = stream === 'mic' ? failures.micFailed : failures.systemFailed;
+  if (!failed) return null;
+  // Asked about one stream only, so the answer never talks about the other one.
+  return describeCaptureProblems(
+    { micFailed: stream === 'mic', systemFailed: stream === 'system' },
+    os,
+  );
+}
+
 /** Windows has no "record system audio" permission: the system stream fails for a device reason, so the page is Sound. */
 function describeWindowsProblems({
   micFailed,

@@ -93,7 +93,7 @@ export function CaptionBlock({ segment, level, faded, showSpeaker, onLookup }: C
       {translation ? (
         <p
           data-role="translation"
-          className="text-foreground mt-0.5 leading-snug font-semibold"
+          className="text-translation mt-0.5 leading-snug font-semibold"
           style={{ fontSize: '1.08em' }}
         >
           {translation}

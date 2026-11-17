@@ -1,37 +1,38 @@
 import { Button as PressButton } from '@animate-ui/react/primitives/buttons/button';
+import { Badge } from '@cuelingo/ui/components/badge';
 import { Button } from '@cuelingo/ui/components/button';
 import { ConfirmDialog } from '@cuelingo/ui/components/confirm-dialog';
 import { LanguageSwitcher } from '@cuelingo/ui/components/language-switcher';
-import { CloudUpload, Play, Square } from 'lucide-react';
 import { LevelMeter } from '@cuelingo/ui/components/level-meter';
+import { CloudUpload, Mic, Play, Square, Volume2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useMe } from '../auth';
-import { useLanguage, useSettings } from '../settings';
-import { grantCloudConsent, hasCloudConsent, setConsentUser } from './cloud-consent';
+import { useLanguage } from '../settings';
 import { describeNativeError, openDebrief } from './session-actions';
-import { PRIVACY_PANES, native } from '../lib/native';
+import { native } from '../lib/native';
 import { shortcutLabel } from '../lib/platform';
-import type { SessionStatus } from './session-controller';
+import type { SessionStatus as Status } from './session-controller';
 import { SUPPORTED_LANGUAGES, type LanguageCode } from '@cuelingo/shared';
 import { describeModelProgress, useModelProgress } from './model-progress';
 import { debriefApi } from './debrief-api';
 import { PostMeetingCard } from './PostMeetingCard';
 import {
-  decideStart,
-  describeCaptureProblems,
+  describeStream,
   elapsedMs,
   formatDuration,
   meterNote,
-  MIC_BLOCKED_BUTTON,
-  MIC_BLOCKED_TEXT,
+  type CaptureStream,
 } from './capture-problems';
 import type { AudioLevelSnapshot } from './audio-level-store';
 import type { CaptureFailures } from './capture-problems';
+import { startLabel } from './readiness';
+import { ReadinessList } from './ReadinessList';
+import type { MeetingControls } from './use-meeting-controls';
 import { useAudioLevels } from './use-audio-levels';
 import { useDebriefBrief } from './use-debrief-brief';
+import { useReadiness } from './use-readiness';
 import { useSession } from './use-session';
 
-const statusText: Record<SessionStatus, string> = {
+const statusText: Record<Status, string> = {
   idle: 'Chưa bắt đầu',
   connecting: 'Đang kết nối…',
   running: 'Đang chạy',
@@ -39,15 +40,15 @@ const statusText: Record<SessionStatus, string> = {
   error: 'Có lỗi',
 };
 
-const statusTone: Record<SessionStatus, string> = {
+const statusTone: Record<Status, string> = {
   idle: 'bg-muted-foreground/40',
-  connecting: 'animate-pulse bg-amber-500',
-  running: 'bg-emerald-500',
-  reconnecting: 'animate-pulse bg-amber-500',
-  error: 'bg-red-500',
+  connecting: 'animate-pulse bg-warning',
+  running: 'bg-success',
+  reconnecting: 'animate-pulse bg-warning',
+  error: 'bg-destructive',
 };
 
-export function SessionStatus({ status }: { status: SessionStatus }) {
+export function SessionStatus({ status }: { status: Status }) {
   return (
     <p aria-live="polite" className="flex items-center gap-2 text-sm">
       <span className={`size-2.5 rounded-full ${statusTone[status]}`} aria-hidden="true" />
@@ -85,8 +86,18 @@ function useMeetingDuration(startedAt: number | null, endedAt: number | null): s
 
 export const NO_SIGNAL_TEXT = 'Chưa có âm thanh';
 export const CAPTURE_FAILED_TEXT = 'Không mở được';
+export const LISTENING_TEXT = 'Đang nghe';
 
-/** The two meters. Silence only gets a soft note; a red label appears only for a capture the sidecar reported as failed. */
+const STREAMS: { stream: CaptureStream; label: string; icon: typeof Mic }[] = [
+  { stream: 'system', label: 'Âm thanh hệ thống', icon: Volume2 },
+  { stream: 'mic', label: 'Micro', icon: Mic },
+];
+
+/**
+ * One card per stream, each with its own meter and state: a stream that failed shows its own fix and
+ * the other keeps listening. Silence only gets a soft note; a fault shows only for a capture the
+ * sidecar reported as failed.
+ */
 export function AudioLevelRows({
   levels,
   failures,
@@ -94,71 +105,52 @@ export function AudioLevelRows({
   levels: AudioLevelSnapshot;
   failures: CaptureFailures;
 }) {
-  const rows = [
-    { label: 'Micro', values: levels.mic, silent: levels.micSilent, failed: failures.micFailed },
-    {
-      label: 'Âm thanh hệ thống',
-      values: levels.system,
-      silent: levels.systemSilent,
-      failed: failures.systemFailed,
-    },
-  ];
   return (
-    <div className="mt-4 grid max-w-md gap-2">
-      {rows.map((row) => {
-        const note = meterNote(row.failed, row.silent);
+    <div className="mt-6 grid gap-3 sm:grid-cols-2">
+      {STREAMS.map(({ stream, label, icon: Icon }) => {
+        const failed = stream === 'mic' ? failures.micFailed : failures.systemFailed;
+        const silent = stream === 'mic' ? levels.micSilent : levels.systemSilent;
+        const note = meterNote(failed, silent);
+        const problem = describeStream(stream, failures);
         return (
-          <div key={row.label} className="flex items-center gap-3 text-sm">
-            <span className="w-36 shrink-0 text-white/80">{row.label}</span>
-            <LevelMeter levels={row.values} label={row.label} active={note === null} />
+          <div
+            key={stream}
+            data-stream={stream}
+            data-state={note ?? 'listening'}
+            className="flex flex-col gap-2 rounded-lg bg-white/15 px-4 py-3"
+          >
+            <div className="flex items-center gap-3">
+              <Icon aria-hidden="true" className="size-4 shrink-0" />
+              <span className="grow text-sm font-medium">{label}</span>
+              <LevelMeter
+                levels={stream === 'mic' ? levels.mic : levels.system}
+                label={label}
+                active={note === null}
+                className="w-24 shrink-0"
+              />
+            </div>
             {note === 'failed' ? (
-              <span className="font-medium text-red-300">{CAPTURE_FAILED_TEXT}</span>
-            ) : null}
-            {note === 'silent' ? <span className="text-white/70">{NO_SIGNAL_TEXT}</span> : null}
+              <div role="alert" className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="grow font-semibold">{CAPTURE_FAILED_TEXT}</span>
+                {problem ? (
+                  <Button
+                    size="sm"
+                    onClick={() => void native.openUrl(problem.pane)}
+                    className="text-brand cursor-pointer bg-white hover:bg-white/90"
+                  >
+                    {problem.buttonLabel}
+                  </Button>
+                ) : null}
+                {problem ? <p className="basis-full opacity-85">{problem.message}</p> : null}
+              </div>
+            ) : (
+              <p className="text-xs opacity-85">
+                {note === 'silent' ? NO_SIGNAL_TEXT : LISTENING_TEXT}
+              </p>
+            )}
           </div>
         );
       })}
-    </div>
-  );
-}
-
-/** Warning for a capture that could not start; the meeting is not stopped. */
-export function CaptureBanner({ failures }: { failures: CaptureFailures }) {
-  const banner = describeCaptureProblems(failures);
-  if (!banner) return null;
-  return (
-    <div
-      role="alert"
-      className="mt-4 flex flex-wrap items-center gap-2 rounded-lg bg-red-500/25 px-3 py-2 text-sm"
-    >
-      <span className="mr-auto">{banner.message}</span>
-      <Button
-        size="sm"
-        onClick={() => void native.openUrl(banner.pane)}
-        className="cursor-pointer bg-white text-slate-900 hover:bg-white/90"
-      >
-        {banner.buttonLabel}
-      </Button>
-    </div>
-  );
-}
-
-/** Shown instead of starting when the system has the microphone blocked for CueLingo. */
-export function MicBlockedNotice() {
-  return (
-    <div
-      role="alert"
-      className="mt-4 flex flex-wrap items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400"
-    >
-      <span className="mr-auto">{MIC_BLOCKED_TEXT}</span>
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={() => void native.openUrl(PRIVACY_PANES.microphone)}
-        className="cursor-pointer"
-      >
-        {MIC_BLOCKED_BUTTON}
-      </Button>
     </div>
   );
 }
@@ -193,13 +185,45 @@ export function CloudSendingBadge() {
   );
 }
 
-export function SessionPanel() {
-  const { me } = useMe();
-  const userId = me?.id ?? 'dev';
-  setConsentUser(userId);
-  const [askConsent, setAskConsent] = useState(false);
-  const assistLevel = useSettings((state) => state.assistLevel);
+/** The ready state: language, readiness of each input with its own fix, and the Start button. */
+function IdleCard({ controls }: { controls: MeetingControls }) {
   const { language, setLanguage, options } = useLanguage();
+  const { items, fix } = useReadiness(language, () => void controls.attempt());
+  const starting = controls.pending === 'starting';
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <h2 className="text-xl font-semibold tracking-tight">Sẵn sàng khi bạn cần</h2>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Bấm bắt đầu rồi mở Zoom, Meet hoặc Teams như bình thường.
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-medium">Ngôn ngữ đang nghe</span>
+        <LanguageSwitcher options={options} value={language} onChange={setLanguage} />
+      </div>
+      <ReadinessList items={items} onFix={fix} />
+      <div className="flex flex-wrap items-center gap-4">
+        <PressButton asChild hoverScale={1} tapScale={0.97}>
+          <Button
+            size="lg"
+            disabled={starting}
+            onClick={() => void controls.attempt()}
+            className="min-w-56 cursor-pointer"
+          >
+            <Play aria-hidden="true" className="size-4 fill-current" />
+            {starting ? 'Đang kiểm tra…' : startLabel(items)}
+          </Button>
+        </PressButton>
+        <p className="text-muted-foreground text-xs">
+          Overlay tự hiện khi bắt đầu và ẩn khi dừng. {shortcutLabel('L')} để ẩn/hiện tay.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export function SessionPanel({ controls }: { controls: MeetingControls }) {
   const session = useSession();
   const running = session.status !== 'idle' && session.status !== 'error';
   const busy = session.status === 'connecting';
@@ -211,40 +235,7 @@ export function SessionPanel() {
   const hasSentences = session.completedSegmentCount > 0;
   const brief = useDebriefBrief(hasSentences ? finishedId : null);
   const error = describeNativeError(session.error);
-  // Consent is asked for the picker's language; the badge follows the meeting that really runs.
-  const cloud = SUPPORTED_LANGUAGES[language].recognition === 'cloud';
   const sendsAudio = running && isCloudMeeting(session.meetingLanguage);
-  const [micBlocked, setMicBlocked] = useState(false);
-  // The microphone is checked first, so a blocked one never leads to a saved consent.
-  // Set on the click itself: the permission check, the native stop and the cloud drain each take
-  // a second or more, and the button must answer at once.
-  const [pending, setPending] = useState<'starting' | 'stopping' | null>(null);
-  const attempt = async () => {
-    if (pending) return;
-    setMicBlocked(false);
-    setPending('starting');
-    try {
-      const decision = await decideStart({
-        needsConsent: cloud && !hasCloudConsent(userId),
-        readPermissions: native.permissionsStatus,
-      });
-      if (decision === 'mic-denied') setMicBlocked(true);
-      else if (decision === 'ask-consent') setAskConsent(true);
-      else begin();
-    } finally {
-      setPending(null);
-    }
-  };
-  const halt = async () => {
-    if (pending) return;
-    setPending('stopping');
-    try {
-      await session.stop();
-    } finally {
-      setPending(null);
-    }
-  };
-  const begin = () => void session.start(assistLevel, language);
   const modelProgress = describeModelProgress(useModelProgress());
 
   return (
@@ -254,77 +245,55 @@ export function SessionPanel() {
         running ? 'surface-live border-transparent text-white' : 'bg-card'
       }`}
     >
-      <div className="flex items-start justify-between gap-6">
-        <div className="min-w-0">
-          <p
-            className={`flex items-center gap-2 text-sm font-medium ${
-              running ? 'text-white/80' : 'text-muted-foreground'
-            }`}
-          >
-            <span className="relative flex size-2.5" aria-hidden="true">
-              {live ? (
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-white/70" />
-              ) : null}
-              <span
-                className={`relative inline-flex size-2.5 rounded-full ${
-                  running ? 'bg-white' : statusTone[session.status]
-                }`}
-              />
-            </span>
-            {statusText[session.status]}
-          </p>
-          <h2 className="mt-3 text-2xl font-semibold tracking-tight">
-            {live ? 'Đang nghe cuộc họp' : running ? 'Đang chuẩn bị…' : 'Sẵn sàng khi bạn cần'}
-          </h2>
-          <p className={`mt-1.5 text-sm ${running ? 'text-white/80' : 'text-muted-foreground'}`}>
-            {live
-              ? 'Caption và bản dịch đang hiện trên overlay nổi.'
-              : 'Bấm bắt đầu rồi mở Zoom, Meet hoặc Teams như bình thường.'}
-          </p>
-          <p className={`mt-1 text-xs ${running ? 'text-white/70' : 'text-muted-foreground'}`}>
-            Overlay tự hiện khi bắt đầu và ẩn khi dừng. {shortcutLabel('L')} để ẩn/hiện tay.
-          </p>
-        </div>
-        {running && session.startedAt !== null ? (
-          <p className="text-3xl font-light tabular-nums" aria-label="Thời gian đã chạy">
-            {duration}
-          </p>
-        ) : null}
-      </div>
-
-      <div className="mt-6 flex flex-wrap items-center gap-2">
-        {running ? null : (
-          <LanguageSwitcher options={options} value={language} onChange={setLanguage} />
-        )}
-        {running ? (
-          <PressButton asChild hoverScale={1} tapScale={0.97}>
-            <Button
-              size="lg"
-              disabled={busy || pending === 'stopping'}
-              onClick={() => void halt()}
-              className="cursor-pointer bg-white text-slate-900 hover:bg-white/90"
-            >
-              <Square aria-hidden="true" className="size-4 fill-current" />
-              {pending === 'stopping' ? 'Đang dừng…' : 'Dừng'}
-            </Button>
-          </PressButton>
-        ) : (
-          <PressButton asChild hoverScale={1} tapScale={0.97}>
-            <Button
-              size="lg"
-              disabled={busy || pending === 'starting'}
-              onClick={() => void attempt()}
-              className="cursor-pointer"
-            >
-              <Play aria-hidden="true" className="size-4 fill-current" />
-              {pending === 'starting' ? 'Đang kiểm tra…' : 'Bắt đầu'}
-            </Button>
-          </PressButton>
-        )}
-      </div>
-      {metering ? <AudioLevels failures={session} /> : null}
-      {running ? <CaptureBanner failures={session} /> : null}
-      {micBlocked ? <MicBlockedNotice /> : null}
+      {running ? (
+        <>
+          <div className="flex items-start justify-between gap-6">
+            <div className="min-w-0">
+              <Badge className="bg-white/20 text-white">
+                <span className="relative flex size-2" aria-hidden="true">
+                  {live ? (
+                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-white/70" />
+                  ) : null}
+                  <span className="relative inline-flex size-2 rounded-full bg-white" />
+                </span>
+                {statusText[session.status]}
+              </Badge>
+              <h2 className="mt-3 text-2xl font-semibold tracking-tight">
+                {live ? 'Đang nghe cuộc họp' : 'Đang chuẩn bị…'}
+              </h2>
+              <p className="mt-1.5 text-sm text-white/80">
+                {live
+                  ? 'Caption và bản dịch đang hiện trên overlay nổi.'
+                  : 'Bấm bắt đầu rồi mở Zoom, Meet hoặc Teams như bình thường.'}
+              </p>
+              <p className="mt-1 text-xs text-white/70">
+                Overlay tự hiện khi bắt đầu và ẩn khi dừng. {shortcutLabel('L')} để ẩn/hiện tay.
+              </p>
+            </div>
+            {session.startedAt !== null ? (
+              <p className="font-mono text-3xl tabular-nums" aria-label="Thời gian đã chạy">
+                {duration}
+              </p>
+            ) : null}
+          </div>
+          {metering ? <AudioLevels failures={session} /> : null}
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            <PressButton asChild hoverScale={1} tapScale={0.97}>
+              <Button
+                size="lg"
+                disabled={busy || controls.pending === 'stopping'}
+                onClick={() => void controls.halt()}
+                className="text-brand cursor-pointer bg-white hover:bg-white/90"
+              >
+                <Square aria-hidden="true" className="size-4 fill-current" />
+                {controls.pending === 'stopping' ? 'Đang dừng…' : 'Dừng'}
+              </Button>
+            </PressButton>
+          </div>
+        </>
+      ) : (
+        <IdleCard controls={controls} />
+      )}
       {finishedId ? (
         <PostMeetingCard
           duration={duration}
@@ -336,16 +305,12 @@ export function SessionPanel() {
       ) : null}
       {sendsAudio ? <CloudSendingBadge /> : null}
       <ConfirmDialog
-        open={askConsent}
+        open={controls.consent.open}
         title="Gửi âm thanh để nhận dạng"
         confirmLabel="Đồng ý và bắt đầu"
         cancelLabel="Huỷ"
-        onCancel={() => setAskConsent(false)}
-        onConfirm={() => {
-          setAskConsent(false);
-          grantCloudConsent(userId);
-          begin();
-        }}
+        onCancel={controls.consent.cancel}
+        onConfirm={controls.consent.confirm}
       >
         {CLOUD_CONSENT_TEXT}
       </ConfirmDialog>
@@ -369,7 +334,7 @@ export function SessionPanel() {
           <Button
             size="sm"
             onClick={() => void session.acceptSuggestedLanguage()}
-            className="cursor-pointer bg-white text-slate-900 hover:bg-white/90"
+            className="text-brand cursor-pointer bg-white hover:bg-white/90"
           >
             Đổi
           </Button>
@@ -389,7 +354,7 @@ export function SessionPanel() {
       {error ? (
         <p
           role="alert"
-          className="mt-4 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400"
+          className="bg-destructive/10 text-destructive mt-4 rounded-lg px-3 py-2 text-sm"
         >
           {error}
         </p>

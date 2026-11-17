@@ -7,38 +7,25 @@ import {
   completeOnboarding,
   type OnboardingMode,
   OnboardingFlow,
-  PermissionsStep,
   shouldShowOnboarding,
 } from '../onboarding';
 import { FeedbackPage } from '../feedback';
-import { UpdateBanner } from '../updater';
-import { PrivacyPanel } from '../privacy';
-import { UsagePanel } from '../usage';
-import { ServerLink, ServerSettings } from '../server-picker';
+import { ServerLink } from '../server-picker';
 import { useActivationTelemetry } from '../telemetry';
-import { RecentSessions, SessionPanel } from '../session';
-import { PlacementSection } from '../study';
-import { CalendarHintCard, CalendarSettings } from '../calendar';
-import { hasCalendar } from '../lib/platform';
-import {
-  AssistSettings,
-  VoiceSettings,
-  AssistSuggestionBanner,
-  useLearnLanguage,
-  useSettingsSync,
-} from '../settings';
+import { RecentSessions } from '../session';
+import { useLearnLanguage, useSettingsSync } from '../settings';
 import { useSyncAssistLevel } from '../settings/use-assist-settings';
-import { AboutCard, ShortcutList } from './AboutCard';
 import { Button } from '@cuelingo/ui/components/button';
 import { ComingSoon } from '@cuelingo/ui/components/coming-soon';
 import { LanguageSwitcher } from '@cuelingo/ui/components/language-switcher';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
-import { ListCard, Section } from '@cuelingo/ui/components/section';
-import { SoonBadge } from '@cuelingo/ui/components/soon-badge';
-import { features, upcoming } from '@cuelingo/ui/lib/roadmap';
+import { features } from '@cuelingo/ui/lib/roadmap';
 import { ExternalLink } from 'lucide-react';
-import { AccountCard, isDevToken, LoginScreen, useAuth, useMe } from '../auth';
+import { isDevToken, LoginScreen, useAuth, useMe } from '../auth';
 import { AppShell } from './AppShell';
+import { HomePage } from './HomePage';
+import { tabForView } from './ReviewTabs';
+import { SettingsPage } from './SettingsPage';
 import { views } from './views';
 import { openWeb } from './open-web';
 
@@ -50,10 +37,23 @@ export function App() {
   useSyncAssistLevel();
   useActivationTelemetry(account.me?.id ?? null);
   const [view, setView] = useState('home');
+  // Hôm nay, Kho cụm từ and Tiến độ are tabs of one view; the old ids open the matching tab.
+  const [reviewTab, setReviewTab] = useState('today');
+  const navigate = (id: string) => {
+    const tab = tabForView(id);
+    if (tab) {
+      setReviewTab(tab);
+      setView('review');
+    } else setView(id);
+  };
   const [onboardingMode, setOnboardingMode] = useState<OnboardingMode>('auto');
+  const [onboardingStep, setOnboardingStep] = useState<number | undefined>(undefined);
 
   const userId = account.me?.id ?? 'dev';
-  useEffect(() => setOnboardingMode('auto'), [userId]);
+  useEffect(() => {
+    setOnboardingMode('auto');
+    setOnboardingStep(undefined);
+  }, [userId]);
 
   // A token the server rejects (revoked, expired, or from another server) signs this device out.
   const { signOut } = auth;
@@ -79,7 +79,14 @@ export function App() {
   if (showOnboarding) {
     return (
       <OnboardingFlow
+        userId={userId}
+        initialStep={onboardingStep}
         onFinish={() => {
+          completeOnboarding(userId);
+          setOnboardingMode('complete');
+        }}
+        // Leaving keeps the open steps as cards on the home page, so the guide does not return on its own.
+        onExit={() => {
           completeOnboarding(userId);
           setOnboardingMode('complete');
         }}
@@ -89,12 +96,17 @@ export function App() {
 
   const reviewOnboarding = () => {
     clearOnboarding(userId);
+    setOnboardingStep(0);
+    setOnboardingMode('open');
+  };
+  const resumeOnboarding = (step: number) => {
+    setOnboardingStep(step);
     setOnboardingMode('open');
   };
 
   return (
     <MotionConfig reducedMotion="user">
-      <AppShell view={view} onNavigate={setView} onSignOut={() => void auth.signOut()}>
+      <AppShell view={view} onNavigate={navigate} onSignOut={() => void auth.signOut()}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={view}
@@ -105,6 +117,9 @@ export function App() {
           >
             <CurrentView
               view={view}
+              reviewTab={reviewTab}
+              onReviewTab={setReviewTab}
+              onResumeOnboarding={resumeOnboarding}
               onSignOut={() => void auth.signOut()}
               onReviewOnboarding={reviewOnboarding}
             />
@@ -117,10 +132,16 @@ export function App() {
 
 function CurrentView({
   view,
+  reviewTab,
+  onReviewTab,
+  onResumeOnboarding,
   onSignOut,
   onReviewOnboarding,
 }: {
   view: string;
+  reviewTab: string;
+  onReviewTab(tab: string): void;
+  onResumeOnboarding(step: number): void;
   onSignOut(): void;
   onReviewOnboarding(): void;
 }) {
@@ -134,30 +155,12 @@ function CurrentView({
           title={feature.label}
           action={<LanguageSwitcher options={options} value={language} onChange={setLanguage} />}
         />
-        <Page />
+        <Page tab={reviewTab} onTab={onReviewTab} />
       </>
     );
   }
 
-  if (view === 'home') {
-    return (
-      <>
-        <PageHeader title="Phiên họp" />
-        <UpdateBanner />
-        <AssistSuggestionBanner />
-        {hasCalendar() ? <CalendarHintCard /> : null}
-        <SessionPanel />
-        <AssistSettings />
-        <VoiceSettings />
-        <RecentSessions />
-        <Section title="Phím tắt">
-          <div className="bg-card rounded-xl border px-4 py-3">
-            <ShortcutList />
-          </div>
-        </Section>
-      </>
-    );
-  }
+  if (view === 'home') return <HomePage onResumeOnboarding={onResumeOnboarding} />;
   if (view === 'meetings') {
     return (
       <>
@@ -168,45 +171,7 @@ function CurrentView({
   }
   if (view === 'feedback') return <FeedbackPage />;
   if (view === 'settings') {
-    return (
-      <>
-        <PageHeader title="Cài đặt" />
-        <AccountCard onSignOut={onSignOut} />
-        <UsagePanel />
-        <PermissionsStep />
-        {hasCalendar() ? <CalendarSettings /> : null}
-        <PlacementSection />
-        <Section title="Hướng dẫn">
-          <div className="bg-card flex items-center justify-between gap-4 rounded-xl border px-4 py-3">
-            <div>
-              <p className="text-sm font-medium">Làm quen với CueLingo</p>
-              <p className="text-muted-foreground mt-0.5 text-sm">
-                Xem lại bốn bước về quyền, caption và mức hỗ trợ.
-              </p>
-            </div>
-            <Button variant="outline" className="shrink-0" onClick={onReviewOnboarding}>
-              Xem lại hướng dẫn
-            </Button>
-          </div>
-        </Section>
-        <PrivacyPanel />
-        <ServerSettings />
-        <AboutCard />
-        <Section title="Đang trên lộ trình">
-          <ListCard>
-            {upcoming.map((item) => (
-              <li key={item.title} className="flex items-start justify-between gap-4 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{item.title}</p>
-                  <p className="text-muted-foreground mt-0.5 text-sm">{item.description}</p>
-                </div>
-                <SoonBadge />
-              </li>
-            ))}
-          </ListCard>
-        </Section>
-      </>
-    );
+    return <SettingsPage onSignOut={onSignOut} onReviewOnboarding={onReviewOnboarding} />;
   }
   return (
     <>

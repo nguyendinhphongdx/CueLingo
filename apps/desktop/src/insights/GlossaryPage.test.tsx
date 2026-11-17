@@ -29,7 +29,7 @@ describe('GlossaryView', () => {
 
     expect(markup).toContain('Caption sẽ nghe và dịch đúng các từ này');
     expect(markup).toContain('Nghĩa tiếng Việt');
-    expect(markup).toContain('Ghi chú');
+    expect(markup).toContain('Thêm ghi chú');
     expect(markup).toContain('aria-label="Tìm thuật ngữ"');
     expect(markup).toContain('aria-label="Sửa Product discovery"');
     expect(markup).toContain('aria-label="Xoá Product discovery"');

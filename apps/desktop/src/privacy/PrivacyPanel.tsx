@@ -1,16 +1,17 @@
 import { Button } from '@cuelingo/ui/components/button';
-import { Input } from '@cuelingo/ui/components/input';
+import {
+  DELETE_DATA_ITEMS,
+  DELETE_DATA_PHRASE,
+  DeleteDataSteps,
+} from '@cuelingo/ui/components/delete-data-steps';
 import { Section } from '@cuelingo/ui/components/section';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { privacyApi } from './privacy-api';
 
-export const canConfirmDelete = (value: string) => value === 'XOA DU LIEU';
-
 export function PrivacyPanel() {
   const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
-  const [confirmation, setConfirmation] = useState('');
   const [success, setSuccess] = useState<string | null>(null);
   const exportData = useMutation({
     mutationFn: () => privacyApi.exportData(),
@@ -27,11 +28,10 @@ export function PrivacyPanel() {
     },
   });
   const deleteData = useMutation({
-    mutationFn: () => privacyApi.deleteMyData({ confirm: 'XOA DU LIEU' }),
+    mutationFn: () => privacyApi.deleteMyData({ confirm: DELETE_DATA_PHRASE }),
     onSuccess: async () => {
       await queryClient.invalidateQueries();
       setConfirming(false);
-      setConfirmation('');
       setSuccess('Đã xoá toàn bộ dữ liệu. Tài khoản của bạn vẫn được giữ lại.');
     },
   });
@@ -70,41 +70,12 @@ export function PrivacyPanel() {
               Xoá toàn bộ dữ liệu
             </Button>
           ) : (
-            <div className="mt-4 space-y-3 rounded-lg border p-4">
-              <label
-                htmlFor="desktop-delete-data-confirmation"
-                className="block text-sm font-medium"
-              >
-                Gõ XOA DU LIEU để xác nhận
-              </label>
-              <Input
-                id="desktop-delete-data-confirmation"
-                autoFocus
-                value={confirmation}
-                disabled={deleteData.isPending}
-                aria-invalid={confirmation.length > 0 && !canConfirmDelete(confirmation)}
-                onChange={(event) => setConfirmation(event.target.value)}
-              />
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="destructive"
-                  disabled={!canConfirmDelete(confirmation) || deleteData.isPending}
-                  onClick={() => deleteData.mutate()}
-                >
-                  {deleteData.isPending ? 'Đang xoá…' : 'Xác nhận xoá'}
-                </Button>
-                <Button
-                  variant="outline"
-                  disabled={deleteData.isPending}
-                  onClick={() => {
-                    setConfirming(false);
-                    setConfirmation('');
-                  }}
-                >
-                  Huỷ
-                </Button>
-              </div>
-            </div>
+            <DeleteDataSteps
+              items={DELETE_DATA_ITEMS}
+              pending={deleteData.isPending}
+              onCancel={() => setConfirming(false)}
+              onConfirm={() => deleteData.mutate()}
+            />
           )}
         </div>
         {error && (

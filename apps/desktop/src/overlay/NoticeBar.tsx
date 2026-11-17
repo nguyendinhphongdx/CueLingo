@@ -20,7 +20,7 @@ export function NoticeBar({
           className={`flex items-start gap-2 rounded-md border px-3 py-2 text-sm ${
             notice.tone === 'error'
               ? 'border-destructive/40 bg-destructive/10 text-destructive'
-              : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400'
+              : 'border-warning/40 bg-warning/10 text-warning'
           }`}
         >
           <span className="min-w-0 flex-1">{notice.text}</span>

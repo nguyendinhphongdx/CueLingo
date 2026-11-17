@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { canConfirmDelete } from './PrivacyPanel';
+import { canConfirmDeleteData } from '@cuelingo/ui/components/delete-data-steps';
 import { createPrivacyApi } from './privacy-api';
 
 describe('desktop privacy', () => {
@@ -31,8 +31,8 @@ describe('desktop privacy', () => {
   });
 
   it('requires the exact second-step confirmation phrase', () => {
-    expect(canConfirmDelete('XOA DU LIEU')).toBe(true);
-    expect(canConfirmDelete('xoa du lieu')).toBe(false);
-    expect(canConfirmDelete('')).toBe(false);
+    expect(canConfirmDeleteData('XOA DU LIEU')).toBe(true);
+    expect(canConfirmDeleteData('xoa du lieu')).toBe(false);
+    expect(canConfirmDeleteData('')).toBe(false);
   });
 });
