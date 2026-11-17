@@ -8,7 +8,14 @@ import {
   readProgress,
   writeProgress,
 } from './onboarding-storage';
-import { nextOnboardingStep, OnboardingFlow, saveSelectedAssistLevel } from './OnboardingFlow';
+import {
+  footerFor,
+  MODEL_STEP,
+  ModelStepView,
+  nextOnboardingStep,
+  OnboardingFlow,
+  saveSelectedAssistLevel,
+} from './OnboardingFlow';
 import {
   clearOnboarding,
   completeOnboarding,
@@ -89,7 +96,7 @@ describe('OnboardingFlow', () => {
   });
 
   it('starts with the welcome step and marks it as current', () => {
-    const markup = renderToStaticMarkup(<OnboardingFlow onFinish={() => undefined} />);
+    const markup = renderFlow(0);
 
     expect(markup).toContain('Theo kịp cuộc họp bằng tiếng Anh');
     expect(markup).toContain('aria-current="step"');
@@ -97,9 +104,7 @@ describe('OnboardingFlow', () => {
   });
 
   it('shows two real sample caption blocks and the overlay action', () => {
-    const markup = renderToStaticMarkup(
-      <OnboardingFlow initialStep={5} onFinish={() => undefined} />,
-    );
+    const markup = renderFlow(5);
 
     expect(markup.match(/data-slot="caption-line"/g)).toHaveLength(2);
     expect(markup).toContain('Hãy cùng xem lại kế hoạch cho tuần này.');
@@ -131,16 +136,33 @@ describe('OnboardingFlow', () => {
   it('offers to skip the steps that can wait, but not the welcome or the last', () => {
     const at = renderFlow;
     expect(at(1)).toContain('Để sau');
-    expect(at(2)).toContain('Bỏ qua, tải sau');
     expect(at(4)).toContain('Để sau');
     expect(at(0)).not.toContain('Để sau');
     expect(at(5)).not.toContain('Để sau');
   });
 
+  it('puts the exit in a corner button and keeps the footer to back, skip and the main button', () => {
+    const markup = renderFlow(1);
+    expect(markup).toMatch(/<button[^>]*aria-label="Thoát, làm tiếp sau"/);
+    // The exit is no longer a text button in the footer.
+    expect(markup).not.toMatch(/<button[^>]*>Thoát, làm tiếp sau<\/button>/);
+    expect(markup).toContain('Quay lại');
+  });
+
+  it('keeps the model step first in line with the step the footer guards', () => {
+    expect(ONBOARDING_STEPS[MODEL_STEP]?.id).toBe('model');
+  });
+
+  it('blocks the model step until the model is checked and in place', () => {
+    // The first answer has not come yet in a static render: the main button is locked, with no skip.
+    const markup = renderFlow(MODEL_STEP);
+    expect(markup).toContain('Đang kiểm tra');
+    expect(markup).toMatch(/<button[^>]*disabled[^>]*>Tiếp tục<\/button>/);
+    expect(markup).not.toContain('Bỏ qua, tải sau');
+  });
+
   it('offers every selectable assist level on the last step', () => {
-    const markup = renderToStaticMarkup(
-      <OnboardingFlow initialStep={3} onFinish={() => undefined} />,
-    );
+    const markup = renderFlow(3);
 
     expect(markup).toContain('4 · Đầy đủ');
     expect(markup).toContain('3 · Gợi ý');
@@ -185,5 +207,73 @@ describe('onboarding progress', () => {
     expect(readProgress('a', storage)).toEqual({ step: 5, done: [1, 2] });
     values.set('cuelingo.onboarding-progress.a', 'not json');
     expect(readProgress('a', storage)).toBeNull();
+  });
+});
+
+describe('footerFor', () => {
+  const missing = { kind: 'missing', sizeBytes: 661_288_526 } as const;
+
+  it('locks the model step and drops its skip until the model is ready', () => {
+    for (const view of [
+      missing,
+      { kind: 'checking' },
+      { kind: 'downloading', sizeBytes: 1, progress: 0.3 },
+      { kind: 'error', sizeBytes: 1, message: 'x' },
+    ] as const) {
+      expect(footerFor(MODEL_STEP, view)).toEqual({
+        forward: 'Tiếp tục',
+        skip: null,
+        blocked: true,
+      });
+    }
+  });
+
+  it('opens the model step at once when the model is already there', () => {
+    expect(footerFor(MODEL_STEP, { kind: 'ready', sizeBytes: 1 })).toEqual({
+      forward: 'Tiếp tục',
+      skip: null,
+      blocked: false,
+    });
+  });
+
+  it('keeps the old flow when the app cannot manage models: skip stays, nothing is locked', () => {
+    expect(footerFor(MODEL_STEP, null)).toEqual({
+      forward: 'Tiếp tục',
+      skip: 'Bỏ qua, tải sau',
+      blocked: false,
+    });
+  });
+
+  it('never locks the other steps', () => {
+    for (const step of [0, 1, 3, 4, 5]) {
+      expect(footerFor(step, missing).blocked).toBe(false);
+    }
+    expect(footerFor(1, missing).skip).toBe('Để sau');
+    expect(footerFor(0, missing).skip).toBeNull();
+  });
+});
+
+describe('ModelStepView', () => {
+  const html = (view: Parameters<typeof ModelStepView>[0]['view']) =>
+    renderToStaticMarkup(<ModelStepView view={view} onDownload={() => undefined} />);
+
+  it('offers the download with the size when the model is missing', () => {
+    const out = html({ kind: 'missing', sizeBytes: 661_288_526 });
+    expect(out).toContain('Tải mô hình ngay');
+    expect(out).toContain('631 MB');
+    expect(out).toContain('Cần tải xong mô hình để tiếp tục.');
+  });
+
+  it('says the model is there and no download is needed', () => {
+    const out = html({ kind: 'ready', sizeBytes: 661_288_526 });
+    expect(out).toContain('Đã sẵn sàng');
+    expect(out).toContain('Bạn có thể tiếp tục.');
+    expect(out).not.toContain('Tải mô hình ngay');
+  });
+
+  it('shows the progress while downloading', () => {
+    const out = html({ kind: 'downloading', sizeBytes: 661_288_526, progress: 0.5 });
+    expect(out).toContain('role="progressbar"');
+    expect(out).toContain('50%');
   });
 });

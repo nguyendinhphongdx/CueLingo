@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@cuelingo/ui/components/button';
 import { Segmented } from '@cuelingo/ui/components/segmented';
-import { ArrowLeft, Captions, Languages, MessageSquareText } from 'lucide-react';
+import { ArrowLeft, Captions, Languages, MessageSquareText, X } from 'lucide-react';
+import { IconButton } from '@cuelingo/ui/components/icon-button';
 import { Logo } from '@cuelingo/ui/components/logo';
 import { native } from '../lib/native';
 import { shortcutLabel } from '../lib/platform';
@@ -12,6 +13,9 @@ import type { SelectableAssistLevel } from '../settings/settings-store';
 import { ShortcutList } from '../app/AboutCard';
 import { PlacementSection } from '../study/PlacementSection';
 import { describeModelProgress, useModelProgress } from '../session/model-progress';
+import { ModelDownloadControl } from '../models/ModelDownloadControl';
+import { canContinue, formatSize, type ModelView } from '../models/model-state';
+import { useLocalModels } from '../models/use-local-models';
 import { PermissionsStep } from './PermissionsStep';
 import {
   advanceProgress,
@@ -125,8 +129,14 @@ function SampleCaptionStep() {
   );
 }
 
-/** The speech model comes down the first time a meeting starts; this step says so and shows progress if it is running. */
-function ModelStep() {
+/** The model the first step downloads: English, the only one that runs on this machine. */
+const MODEL_LANGUAGE = 'en';
+
+/** The step that downloads the speech model. */
+export const MODEL_STEP = 2;
+
+/** A build that cannot manage models from the app: the model comes down with the first meeting, as before. */
+function LegacyModelStep() {
   const progress = describeModelProgress(useModelProgress());
   return (
     <div>
@@ -143,6 +153,39 @@ function ModelStep() {
         {progress ?? 'Chưa tải gì lúc này. Mô hình sẽ tự tải nếu máy chưa có.'}
       </p>
     </div>
+  );
+}
+
+/** The model step when the app can download it: the person cannot go on until the model is in place. */
+export function ModelStepView({ view, onDownload }: { view: ModelView; onDownload(): void }) {
+  const size =
+    'sizeBytes' in view && view.sizeBytes > 0 ? ` (khoảng ${formatSize(view.sizeBytes)})` : '';
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold tracking-tight">Mô hình nhận dạng</h1>
+      <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+        Mô hình chạy ngay trên máy bạn nên caption tiếng Anh nhanh và âm thanh không rời khỏi máy.
+        CueLingo cần tải nó về một lần{size} trước khi họp. Bạn chỉ phải tải khi máy chưa có.
+      </p>
+      <div role="status" className="bg-card mt-6 space-y-3 rounded-xl border px-4 py-4">
+        <ModelDownloadControl view={view} name="tiếng Anh" onDownload={onDownload} />
+        {canContinue(view) ? (
+          <p className="text-muted-foreground text-sm">
+            Mô hình đã có trên máy. Bạn có thể tiếp tục.
+          </p>
+        ) : (
+          <p className="text-muted-foreground text-sm">Cần tải xong mô hình để tiếp tục.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ModelStep({ view, onDownload }: { view: ModelView | null; onDownload(): void }) {
+  return view === null ? (
+    <LegacyModelStep />
+  ) : (
+    <ModelStepView view={view} onDownload={onDownload} />
   );
 }
 
@@ -220,6 +263,21 @@ const FORWARD: Record<number, string> = {
   5: 'Vào CueLingo',
 };
 
+/** What the footer offers on a step: the forward button, the skip button, and whether going on is blocked. */
+export function footerFor(
+  step: number,
+  modelView: ModelView | null,
+): { forward: string; skip: string | null; blocked: boolean } {
+  const onModelStep = step === MODEL_STEP;
+  // With a model manager the model step is mandatory: no skip, and no way forward until it is in place.
+  const managed = onModelStep && modelView !== null;
+  return {
+    forward: FORWARD[step] ?? 'Tiếp tục',
+    skip: managed ? null : (SKIPPABLE[step] ?? null),
+    blocked: onModelStep && !canContinue(modelView),
+  };
+}
+
 /** The steps a person may leave for later; their cards come back on the home page. */
 const SKIPPABLE: Record<number, string> = {
   1: 'Để sau',
@@ -246,6 +304,9 @@ export function OnboardingFlow({
     Math.min(Math.max(initialStep ?? progress?.step ?? 0, 0), steps.length - 1),
   );
   const last = steps.length - 1;
+  const models = useLocalModels();
+  const modelView = models.view(MODEL_LANGUAGE);
+  const footer = footerFor(step, modelView);
 
   const go = (target: number, finished: boolean) => {
     const to = Math.min(Math.max(target, 0), last);
@@ -258,6 +319,7 @@ export function OnboardingFlow({
   };
   const back = () => go(step - 1, false);
   const next = () => {
+    if (footer.blocked) return;
     if (step === last) {
       writeProgress(userId, advanceProgress(progress, step, step));
       onFinish();
@@ -292,7 +354,13 @@ export function OnboardingFlow({
 
   return (
     <main className="bg-background flex min-h-screen items-center justify-center px-6 py-8">
-      <div className="bg-card w-full max-w-2xl rounded-xl border p-8 shadow-lg">
+      <div className="bg-card relative w-full max-w-2xl rounded-xl border p-8 shadow-lg">
+        <IconButton
+          className="absolute top-4 right-4"
+          label="Thoát, làm tiếp sau"
+          icon={<X aria-hidden="true" className="size-4" />}
+          onClick={exit}
+        />
         <nav aria-label={`Bước ${step + 1} trên ${steps.length}`}>
           <ol className="flex gap-2">
             {steps.map((label, index) => (
@@ -328,31 +396,32 @@ export function OnboardingFlow({
               <PermissionsStep />
             </div>
           ) : null}
-          {step === 2 ? <ModelStep /> : null}
+          {step === MODEL_STEP ? (
+            <ModelStep view={modelView} onDownload={() => void models.download(MODEL_LANGUAGE)} />
+          ) : null}
           {step === 3 ? <AssistLevelStep /> : null}
           {step === 4 ? <ListeningStep /> : null}
           {step === 5 ? <SampleCaptionStep /> : null}
         </section>
 
         <footer className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t pt-4">
-          <div className="flex items-center gap-1">
+          <div>
             {step > 0 ? (
               <Button variant="ghost" onClick={back}>
                 <ArrowLeft aria-hidden="true" className="size-4" />
                 Quay lại
               </Button>
             ) : null}
-            <Button variant="ghost" className="text-muted-foreground" onClick={exit}>
-              Thoát, làm tiếp sau
-            </Button>
           </div>
           <div className="flex items-center gap-2">
-            {SKIPPABLE[step] ? (
-              <Button variant="outline" onClick={skip}>
-                {SKIPPABLE[step]}
+            {footer.skip ? (
+              <Button variant="ghost" className="text-muted-foreground" onClick={skip}>
+                {footer.skip}
               </Button>
             ) : null}
-            <Button onClick={next}>{FORWARD[step]}</Button>
+            <Button onClick={next} disabled={footer.blocked}>
+              {footer.forward}
+            </Button>
           </div>
         </footer>
       </div>
