@@ -57,6 +57,7 @@ pub fn run() {
             commands::open_external,
             commands::set_assist_level,
             commands::toggle_overlay,
+            commands::show_overlay,
             commands::hide_overlay,
             commands::tray_report,
             auth::auth_token_get,
