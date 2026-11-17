@@ -64,20 +64,18 @@ describe('web config: interactive blocks', () => {
 
 describe('web config: downloads', () => {
   afterEach(() => vi.unstubAllEnvs());
+  const base = 'https://github.com/owner/repo/releases/latest/download';
 
-  it('offers no Windows download until NEXT_PUBLIC_DOWNLOAD_URL_WINDOWS is set', async () => {
-    const mac = 'https://example.com/CueLingo-macOS-arm64.dmg';
-    const gated = await load({
-      NEXT_PUBLIC_DOWNLOAD_URL: mac,
-      NEXT_PUBLIC_DOWNLOAD_URL_WINDOWS: undefined,
+  it('derives every download from one base, ignoring spaces and a trailing slash', async () => {
+    const config = await load({ NEXT_PUBLIC_DOWNLOAD_BASE_URL: `  ${base}/ ` });
+    expect(config.DOWNLOADS).toEqual({
+      macos: `${base}/CueLingo-macOS-arm64.dmg`,
+      windows: `${base}/CueLingo-Windows-x64-setup.exe`,
     });
-    expect(gated.DOWNLOADS).toEqual({ macos: mac, windows: null });
+  });
 
-    const windows = 'https://example.com/CueLingo-Windows-x64-setup.exe';
-    const open = await load({
-      NEXT_PUBLIC_DOWNLOAD_URL: mac,
-      NEXT_PUBLIC_DOWNLOAD_URL_WINDOWS: `  ${windows} `,
-    });
-    expect(open.DOWNLOADS.windows).toBe(windows);
+  it('offers nothing without a base', async () => {
+    const config = await load({ NEXT_PUBLIC_DOWNLOAD_BASE_URL: undefined });
+    expect(config.DOWNLOADS).toEqual({ macos: null, windows: null });
   });
 });

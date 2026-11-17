@@ -39,8 +39,8 @@ jobs:
         env:
           REPO: ${{ github.repository }}
         run: |
-          echo "VITE_DOWNLOAD_URL=https://github.com/${REPO}/releases/latest/download/CueLingo-macOS-arm64.dmg" >> "$GITHUB_ENV"
-          echo "VITE_DOWNLOAD_URL_WINDOWS=https://github.com/${REPO}/releases/latest/download/CueLingo-Windows-x64-setup.exe" >> "$GITHUB_ENV"
+          # One base for every system: the folder of the newest release. The page adds each system's file name.
+          echo "VITE_DOWNLOAD_BASE_URL=https://github.com/${REPO}/releases/latest/download" >> "$GITHUB_ENV"
           # A project site lives at /<repository name>/ unless that repository is <user>.github.io.
           name="${REPO#*/}"
           case "$name" in

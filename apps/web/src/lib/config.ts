@@ -1,17 +1,16 @@
-import type { DownloadLinks } from '@cuelingo/ui/components/landing/detect-os';
+import { downloadLinks, type DownloadLinks } from '@cuelingo/ui/components/landing/detect-os';
 import { sandboxOriginOf } from './csp';
 
 /** The only place the web app reads environment variables. NEXT_PUBLIC_* are inlined at build time. */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 export const GOOGLE_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_ENABLED === 'true';
 /**
- * Where each desktop build is downloaded from. Unset means "not offered": no Windows variable yet keeps the
- * public download page without a Windows button (it tells Windows visitors that Windows is coming).
+ * Where the desktop builds are downloaded from: one shared base (the folder of the newest release), and
+ * `downloadLinks` adds each system's file name. Unset means "not offered": the page shows no download button.
  */
-export const DOWNLOADS: DownloadLinks = {
-  macos: process.env.NEXT_PUBLIC_DOWNLOAD_URL?.trim() || null,
-  windows: process.env.NEXT_PUBLIC_DOWNLOAD_URL_WINDOWS?.trim() || null,
-};
+export const DOWNLOADS: DownloadLinks = downloadLinks(
+  process.env.NEXT_PUBLIC_DOWNLOAD_BASE_URL?.trim() || null,
+);
 export const IS_DEV = process.env.NODE_ENV !== 'production';
 
 /**

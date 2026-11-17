@@ -63,21 +63,25 @@ describe('SiteDownload button', () => {
   });
 });
 
-describe('Windows download gate', () => {
-  it('offers no Windows download unless VITE_DOWNLOAD_URL_WINDOWS is set to an https address', async () => {
-    vi.resetModules();
-    vi.stubEnv('VITE_DOWNLOAD_URL', RELEASE_URL);
-    vi.stubEnv('VITE_DOWNLOAD_URL_WINDOWS', '');
-    expect((await import('./config')).DOWNLOADS).toEqual({ macos: RELEASE_URL, windows: null });
+describe('download links from one base', () => {
+  const BASE = 'https://github.com/owner/repo/releases/latest/download';
 
+  it('gives every system its installer from one https base', async () => {
     vi.resetModules();
-    vi.stubEnv('VITE_DOWNLOAD_URL_WINDOWS', 'http://example.com/setup.exe');
-    expect((await import('./config')).DOWNLOADS.windows).toBeNull();
+    vi.stubEnv('VITE_DOWNLOAD_BASE_URL', `${BASE}/`);
+    expect((await import('./config')).DOWNLOADS).toEqual({
+      macos: `${BASE}/CueLingo-macOS-arm64.dmg`,
+      windows: `${BASE}/CueLingo-Windows-x64-setup.exe`,
+    });
+    vi.unstubAllEnvs();
+  });
 
-    vi.resetModules();
-    const windows = 'https://example.com/CueLingo-Windows-x64-setup.exe';
-    vi.stubEnv('VITE_DOWNLOAD_URL_WINDOWS', windows);
-    expect((await import('./config')).DOWNLOADS.windows).toBe(windows);
+  it('offers nothing for an unset, empty or non-https base', async () => {
+    for (const value of ['', 'http://example.com/download', 'not a url']) {
+      vi.resetModules();
+      vi.stubEnv('VITE_DOWNLOAD_BASE_URL', value);
+      expect((await import('./config')).DOWNLOADS).toEqual({ macos: null, windows: null });
+    }
     vi.unstubAllEnvs();
   });
 });

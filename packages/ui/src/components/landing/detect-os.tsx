@@ -8,6 +8,22 @@ export type DownloadLinks = { macos: string | null; windows: string | null };
 
 export const NO_DOWNLOADS: DownloadLinks = { macos: null, windows: null };
 
+/** The installer of each system, named the same in every release (release.yml). */
+export const DOWNLOAD_FILES = {
+  macos: 'CueLingo-macOS-arm64.dmg',
+  windows: 'CueLingo-Windows-x64-setup.exe',
+} as const;
+
+/**
+ * Every system's link from one shared base: the folder the release files are in
+ * (`https://github.com/<owner>/<repo>/releases/latest/download`). No base means nothing is offered.
+ */
+export function downloadLinks(base: string | null): DownloadLinks {
+  if (!base) return NO_DOWNLOADS;
+  const root = base.replace(/\/+$/, '');
+  return { macos: `${root}/${DOWNLOAD_FILES.macos}`, windows: `${root}/${DOWNLOAD_FILES.windows}` };
+}
+
 /**
  * Guesses the system from the browser's own words. `platformHint` is `navigator.userAgentData.platform` or
  * `navigator.platform`; `touchPoints` is `navigator.maxTouchPoints`, the only way to tell an iPad that asks for

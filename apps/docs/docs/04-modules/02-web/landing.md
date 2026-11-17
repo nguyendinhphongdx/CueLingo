@@ -16,7 +16,7 @@ Hai trang công khai (`/` và `/download`) nằm trong gói dùng chung `@cuelin
 
 ## Trang tải theo hệ điều hành
 
-`download-page.tsx` nhận `downloads` (`{macos, windows}`, mỗi giá trị là link hoặc `null`) từ client bọc nó: web đọc `NEXT_PUBLIC_DOWNLOAD_URL` và `NEXT_PUBLIC_DOWNLOAD_URL_WINDOWS`, site đọc `VITE_DOWNLOAD_URL` và `VITE_DOWNLOAD_URL_WINDOWS` ([site](../07-site/README.md), [deploy-cloudflare](./deploy-cloudflare.md)). Nút đúng hệ điều hành của người xem hiện trước, kèm link tới bản còn lại và yêu cầu hệ thống của từng bản. Biến Windows chưa đặt thì **không có nút Windows** (người dùng Windows thấy "Windows sắp có"); mở nút là đặt biến, không sửa code. Lời trên trang không còn nói "máy Mac" mà nói "máy của bạn", vì trang phục vụ cả hai hệ điều hành.
+`download-page.tsx` nhận `downloads` (`{macos, windows}`, mỗi giá trị là link hoặc `null`) từ client bọc nó: web đọc `NEXT_PUBLIC_DOWNLOAD_BASE_URL`, site đọc `VITE_DOWNLOAD_BASE_URL` (một biến chung cho mọi hệ điều hành; `downloadLinks` ghép tên tệp của từng hệ điều hành) ([site](../07-site/README.md), [deploy-cloudflare](./deploy-cloudflare.md)). Nút đúng hệ điều hành của người xem hiện trước, kèm link tới bản còn lại và yêu cầu hệ thống của từng bản. Biến chung chưa đặt (hoặc không hợp lệ) thì **không có nút tải nào** và trang hiện "Sắp có bản tải". Lời trên trang không còn nói "máy Mac" mà nói "máy của bạn", vì trang phục vụ cả hai hệ điều hành.
 
 ## Nguyên tắc thiết kế
 

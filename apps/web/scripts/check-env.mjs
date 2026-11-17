@@ -63,9 +63,9 @@ export function checkEnv(env, { production }) {
       problems.push(`${name} must be true or false.`);
   }
 
-  for (const name of ['NEXT_PUBLIC_DOWNLOAD_URL', 'NEXT_PUBLIC_DOWNLOAD_URL_WINDOWS']) {
-    const download = env[name]?.trim();
-    if (download && !parseUrl(download)) problems.push(`${name} must be an http(s) address.`);
+  const download = env.NEXT_PUBLIC_DOWNLOAD_BASE_URL?.trim();
+  if (download && !parseUrl(download)) {
+    problems.push('NEXT_PUBLIC_DOWNLOAD_BASE_URL must be an http(s) address.');
   }
 
   return problems;

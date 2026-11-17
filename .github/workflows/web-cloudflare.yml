@@ -42,9 +42,9 @@ jobs:
       # Written into the files at build time (NEXT_PUBLIC_*). Until the API is online the variable may be unset:
       # the placeholder is a name that never resolves, so every screen that needs the API says it cannot connect.
       NEXT_PUBLIC_API_URL: ${{ vars.CUELINGO_API_URL || 'https://api.invalid' }}
-      # Same link as the public site (pages.yml): the newest release of this repository (release.yml).
-      NEXT_PUBLIC_DOWNLOAD_URL: https://github.com/${{ github.repository }}/releases/latest/download/CueLingo-macOS-arm64.dmg
-      NEXT_PUBLIC_DOWNLOAD_URL_WINDOWS: https://github.com/${{ github.repository }}/releases/latest/download/CueLingo-Windows-x64-setup.exe
+      # One base for every system, the same as the public site (pages.yml): the folder of the newest release of
+      # this repository (release.yml). The download page adds the file name of each system.
+      NEXT_PUBLIC_DOWNLOAD_BASE_URL: https://github.com/${{ github.repository }}/releases/latest/download
       NEXT_PUBLIC_GOOGLE_ENABLED: ${{ vars.CUELINGO_GOOGLE_ENABLED }}
       NEXT_PUBLIC_SANDBOX_ORIGIN: ${{ vars.CUELINGO_SANDBOX_ORIGIN }}
       NEXT_PUBLIC_AGENT_HTML_BLOCKS: ${{ vars.CUELINGO_AGENT_HTML_BLOCKS }}

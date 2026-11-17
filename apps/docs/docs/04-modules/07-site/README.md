@@ -13,18 +13,17 @@ Hai trang tĩnh để gửi cho người thử bên ngoài: giới thiệu và h
 ## Phạm vi MVP
 
 - Hai trang, tiếng Việt. Không tên miền riêng, không Linux, không đổi cơ chế tự cập nhật.
-- Windows: trang đã biết chọn nút theo hệ điều hành (`DownloadLinks`), và `pages.yml` đặt `VITE_DOWNLOAD_URL_WINDOWS` ngang hàng với macOS (link tới bản mới nhất của `releases`), nên người dùng Windows thấy nút tải như người dùng Mac. Bản cài chưa ký mã ([ADR 0021](../../08-adr/0021-windows-release-inno.md)): trang giữ hướng dẫn qua SmartScreen. Biến rỗng thì quay về "Windows sắp có".
+- Windows: trang chọn nút theo hệ điều hành (`DownloadLinks`) và `pages.yml` đặt **một biến chung** `VITE_DOWNLOAD_BASE_URL` (thư mục tệp của bản mới nhất); `downloadLinks` ghép tên tệp macOS và Windows, nên người dùng Windows thấy nút tải như người dùng Mac. Bản cài chưa ký mã ([ADR 0021](../../08-adr/0021-windows-release-inno.md)): trang giữ hướng dẫn qua SmartScreen. Biến rỗng hoặc sai thì nút khoá.
 
 ## Interface
 
-| Thứ                         | Nội dung                                                                                                                                           |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VITE_DOWNLOAD_URL`         | Link tải macOS, chỉ nhận `https:`; rỗng hoặc sai thì nút khoá. Chỉ đọc ở `src/config.ts`                                                           |
-| `VITE_DOWNLOAD_URL_WINDOWS` | Link tải Windows (`CueLingo-Windows-x64-setup.exe`), cùng luật `https:`. `pages.yml` đặt nó như `VITE_DOWNLOAD_URL`; rỗng thì không có nút Windows |
-| `SITE_BASE`                 | Đường dẫn gốc khi build, ví dụ `/<repo>/` (mặc định `/`). Workflow tính từ tên repo                                                                |
-| `src/config.ts`             | `parseDownloadUrl`, `DOWNLOADS` (`{macos, windows}`), `sitePaths(base)` (trả `LandingPaths`, không có `login`)                                     |
-| `src/pages.tsx`             | `SiteHome`, `SiteDownload`: gắn `LandingView`, `DownloadPage` của `@cuelingo/ui` với `paths` và `downloads`                                        |
-| `scripts/scan-dist.mjs`     | `scanDist(dir, forbidden)`: quét bản build tìm khoá, token, host dev, địa chỉ riêng; in tên tệp và luật, không in giá trị                          |
+| Thứ                      | Nội dung                                                                                                                                                              |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_DOWNLOAD_BASE_URL` | Thư mục tệp của bản mới nhất (`https://github.com/<owner>/<repo>/releases/latest/download`), chỉ nhận `https:`; rỗng hoặc sai thì nút khoá. Chỉ đọc ở `src/config.ts` |
+| `SITE_BASE`              | Đường dẫn gốc khi build, ví dụ `/<repo>/` (mặc định `/`). Workflow tính từ tên repo                                                                                   |
+| `src/config.ts`          | `parseDownloadUrl`, `DOWNLOADS` (`{macos, windows}`), `sitePaths(base)` (trả `LandingPaths`, không có `login`)                                                        |
+| `src/pages.tsx`          | `SiteHome`, `SiteDownload`: gắn `LandingView`, `DownloadPage` của `@cuelingo/ui` với `paths` và `downloads`                                                           |
+| `scripts/scan-dist.mjs`  | `scanDist(dir, forbidden)`: quét bản build tìm khoá, token, host dev, địa chỉ riêng; in tên tệp và luật, không in giá trị                                             |
 
 Site nhận token và phông từ `@cuelingo/ui/globals.css`, logo từ `Logo` (favicon là file ảnh cùng hình). Component dùng chung nhận `link` và `paths` qua props, xem [UI](../05-packages/ui.md#trang-giới-thiệu-và-tải-về).
 
@@ -33,7 +32,7 @@ Site nhận token và phông từ `@cuelingo/ui/globals.css`, logo từ `Logo` (
 Chạy khi push lên `main` có đổi `apps/site`, `packages/ui`, `pnpm-lock.yaml` hoặc chính workflow; có thể chạy tay.
 
 1. Tính `SITE_BASE` từ tên repo (`/<tên repo>/`, hoặc `/` với repo `<user>.github.io`).
-2. Tính `VITE_DOWNLOAD_URL = https://github.com/<owner>/<repo>/releases/latest/download/CueLingo-macOS-arm64.dmg` từ `github.repository`.
+2. Tính `VITE_DOWNLOAD_BASE_URL = https://github.com/<owner>/<repo>/releases/latest/download` từ `github.repository`.
 3. Build, kiểm cả hai trang tồn tại.
 4. Quét bản build (AC7), thêm hai địa chỉ riêng `CUELINGO_API_URL`, `CUELINGO_WEB_URL` vào danh sách cấm.
 5. `upload-pages-artifact` rồi `deploy-pages` (job `deploy`, môi trường `github-pages`). Các action ghim theo SHA commit.
