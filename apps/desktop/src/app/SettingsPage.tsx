@@ -6,6 +6,8 @@ import { upcoming } from '@cuelingo/ui/lib/roadmap';
 import { useState, type ReactNode } from 'react';
 import { AccountCard } from '../auth';
 import { CalendarSettings } from '../calendar';
+import { LanguageModels } from '../models/LanguageModels';
+import { useLocalModels } from '../models/use-local-models';
 import { PermissionsStep } from '../onboarding';
 import { PrivacyPanel } from '../privacy';
 import { ServerSettings } from '../server-picker';
@@ -16,7 +18,7 @@ import { hasCalendar } from '../lib/platform';
 import { AboutCard } from './AboutCard';
 
 export type SettingsSectionId =
-  'account' | 'meeting' | 'voice' | 'calendar' | 'privacy' | 'device' | 'about';
+  'account' | 'meeting' | 'models' | 'voice' | 'calendar' | 'privacy' | 'device' | 'about';
 
 interface SectionDef {
   id: SettingsSectionId;
@@ -29,6 +31,7 @@ interface SectionDef {
 export const SETTINGS_SECTIONS: SectionDef[] = [
   { id: 'account', label: 'Tài khoản và gói' },
   { id: 'meeting', label: 'Họp và caption' },
+  { id: 'models', label: 'Mô hình' },
   { id: 'voice', label: 'Giọng đọc' },
   { id: 'calendar', label: 'Lịch', available: hasCalendar },
   { id: 'privacy', label: 'Quyền riêng tư' },
@@ -134,6 +137,8 @@ function SectionBody({
           <PlacementSection />
         </>
       );
+    case 'models':
+      return <LanguageModels />;
     case 'voice':
       return <VoiceSettings />;
     case 'calendar':
@@ -161,7 +166,11 @@ export function SettingsPage({
   onSignOut(): void;
   onReviewOnboarding(): void;
 }) {
-  const sections = visibleSections();
+  const models = useLocalModels();
+  // Only where the app can download models (the list would be a half truth otherwise).
+  const sections = visibleSections().filter(
+    (section) => section.id !== 'models' || models.supported,
+  );
   const [active, setActive] = useState<SettingsSectionId>('account');
   return (
     <>
