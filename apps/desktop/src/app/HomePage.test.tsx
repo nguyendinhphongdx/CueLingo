@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import type { PermissionsStatus } from '../lib/native';
 import { PRIVACY_PANES } from '../lib/native';
+import type { ModelView } from '../models/model-state';
 import { describeReadiness, startLabel } from '../session/readiness';
 import { ReadinessList } from '../session/ReadinessList';
 
@@ -79,6 +80,57 @@ describe('meeting readiness', () => {
     // An event about another language says nothing about this one.
     const other = items({ model: { type: 'model', language: 'ja', state: 'error' } });
     expect(other[2]!.status).toBe('ok');
+  });
+
+  describe('the model row with a model manager', () => {
+    const MB = 661_288_526;
+    const row = (modelView: ModelView | null, language: 'en' | 'ja' = 'en') =>
+      items({ modelView, language })[2]!;
+
+    it('warns when the model is missing, with its size and a way to download it', () => {
+      const missing = row({ kind: 'missing', sizeBytes: MB });
+      expect(missing).toMatchObject({
+        status: 'warn',
+        fix: { kind: 'download-model', label: 'Tải ngay' },
+      });
+      expect(missing.detail).toContain('631 MB');
+      expect(missing.detail).toContain('tải xong');
+    });
+
+    it('still lets the meeting start: only the microphone changes the start button', () => {
+      expect(startLabel(items({ modelView: { kind: 'missing', sizeBytes: MB } }))).toBe(
+        'Bắt đầu họp',
+      );
+    });
+
+    it('shows a running download, a failed one with retry, and a ready model', () => {
+      expect(row({ kind: 'downloading', sizeBytes: MB, progress: 0.42 })).toMatchObject({
+        status: 'warn',
+        detail: 'Đang tải 42%',
+      });
+      expect(row({ kind: 'error', sizeBytes: MB, message: 'Không tải được.' })).toMatchObject({
+        status: 'error',
+        detail: 'Không tải được.',
+        fix: { kind: 'download-model', label: 'Thử lại' },
+      });
+      expect(row({ kind: 'ready', sizeBytes: MB })).toMatchObject({
+        status: 'ok',
+        detail: 'Đã có trên máy.',
+      });
+    });
+
+    it('does not warn about a model for a language recognised in the cloud', () => {
+      const cloud = row({ kind: 'missing', sizeBytes: MB }, 'ja');
+      expect(cloud.status).toBe('ok');
+      expect(cloud.fix).toBeUndefined();
+    });
+
+    it('keeps the old behaviour when the app cannot manage models', () => {
+      expect(row(null)).toMatchObject({
+        status: 'ok',
+        detail: 'Tự tải về lần đầu nếu máy chưa có.',
+      });
+    });
   });
 
   it('shows a pending row while permissions are still being read', () => {

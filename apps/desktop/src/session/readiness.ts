@@ -3,15 +3,17 @@ import type { Status } from '@cuelingo/ui/components/status-row';
 import { PRIVACY_PANES, type AudioModelEvent, type PermissionsStatus } from '../lib/native';
 import type { SystemAudioCheck } from '../lib/native';
 import { currentOs, privacyPanes, type DesktopOs } from '../lib/platform';
+import { formatSize, type ModelView } from '../models/model-state';
 
 type ModelEvent = Extract<AudioModelEvent, { type: 'model' }>;
 
 export type ReadinessId = 'microphone' | 'systemAudio' | 'model';
 
-/** What a fix button does: open a system settings page, play the test sound, or start again. */
+/** What a fix button does: open a system settings page, play the test sound, download the model, or start again. */
 export type ReadinessFix =
   | { kind: 'pane'; label: string; pane: string }
   | { kind: 'test-audio'; label: string }
+  | { kind: 'download-model'; label: string }
   | { kind: 'retry'; label: string };
 
 export interface ReadinessItem {
@@ -28,6 +30,8 @@ export interface ReadinessInput {
   /** The result of the "thử nghe" test, if one was run. */
   systemCheck: SystemAudioCheck | 'checking' | null;
   model: ModelEvent | null;
+  /** The state of this language's model from the model manager; null/absent when the app cannot manage models. */
+  modelView?: ModelView | null;
   language: LanguageCode;
   os?: DesktopOs;
 }
@@ -121,6 +125,36 @@ function model(input: ReadinessInput): ReadinessItem {
     };
   }
   const title = `Mô hình nhận dạng ${info.name.toLowerCase()}`;
+  const managed = input.modelView;
+  if (managed?.kind === 'missing') {
+    return {
+      id: 'model',
+      status: 'warn',
+      title,
+      detail: `Chưa tải (${formatSize(managed.sizeBytes)}). Caption sẽ chờ mô hình tải xong khi bạn bắt đầu họp.`,
+      fix: { kind: 'download-model', label: 'Tải ngay' },
+    };
+  }
+  if (managed?.kind === 'downloading') {
+    return {
+      id: 'model',
+      status: 'warn',
+      title,
+      detail: `Đang tải ${Math.round(managed.progress * 100)}%`,
+    };
+  }
+  if (managed?.kind === 'error') {
+    return {
+      id: 'model',
+      status: 'error',
+      title,
+      detail: managed.message,
+      fix: { kind: 'download-model', label: 'Thử lại' },
+    };
+  }
+  if (managed?.kind === 'ready') {
+    return { id: 'model', status: 'ok', title, detail: 'Đã có trên máy.' };
+  }
   const forThisLanguage = event && isLanguageCode(event.language) && event.language === language;
   if (forThisLanguage && event.state === 'downloading') {
     return {

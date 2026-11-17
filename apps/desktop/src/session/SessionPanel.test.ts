@@ -45,6 +45,7 @@ describe('SessionPanel', () => {
     const { describeNativeError } = await import('./session-actions');
 
     expect(describeNativeError('session_already_running')).toContain('Một phiên đang chạy');
+    expect(describeNativeError('model_downloading')).toContain('đang tải');
     expect(describeNativeError(new Error('invalid_assist_level'))).toContain('không hợp lệ');
     expect(describeNativeError('unexpected')).toBe('CueLingo gặp lỗi. Vui lòng thử lại.');
   });

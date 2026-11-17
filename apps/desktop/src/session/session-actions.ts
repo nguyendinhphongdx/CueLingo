@@ -19,6 +19,8 @@ export function describeNativeError(error: unknown) {
       return 'Một phiên đang chạy. Hãy dừng phiên đó trước khi bắt đầu phiên mới.';
     case 'invalid_assist_level':
       return 'Mức hỗ trợ không hợp lệ. Hãy chọn lại mức hỗ trợ.';
+    case 'model_downloading':
+      return 'Mô hình nhận dạng đang tải. Hãy chờ tải xong rồi bắt đầu họp.';
     case 'cloud_consent_required_switch':
       return 'Cần bạn đồng ý gửi âm thanh tới Google trước khi đổi sang ngôn ngữ này. Dừng họp, chọn ngôn ngữ đó và bấm Bắt đầu để xác nhận.';
     case 'cloud_consent_required':
