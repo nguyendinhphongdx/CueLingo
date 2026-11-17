@@ -61,7 +61,34 @@ impl Capture for Unavailable {
     }
 }
 
-/// The captures for a meeting: system audio and the microphone. Step 7 returns WASAPI ones on Windows.
-pub fn platform() -> (Box<dyn Capture>, Box<dyn Capture>) {
+/// The captures for a meeting: system audio and the microphone. WASAPI on Windows; elsewhere the stand-in.
+/// Problems after a start (a device that vanished and could not be reopened) are printed as `error` status
+/// lines through `out`, with the same `system audio:` / `microphone:` prefixes `start` errors get.
+#[cfg(windows)]
+pub fn platform(out: &crate::protocol::Out) -> (Box<dyn Capture>, Box<dyn Capture>) {
+    use crate::wasapi::{Source, Wasapi};
+    let reporter = || -> crate::wasapi::Reporter {
+        let out = out.clone();
+        std::sync::Arc::new(move |message: &str| out.status("error", message))
+    };
+    (
+        Box::new(Wasapi::new(Source::System, reporter())),
+        Box::new(Wasapi::new(Source::Microphone, reporter())),
+    )
+}
+
+#[cfg(not(windows))]
+pub fn platform(_out: &crate::protocol::Out) -> (Box<dyn Capture>, Box<dyn Capture>) {
     (Box::new(Unavailable), Box::new(Unavailable))
+}
+
+/// `--check-system-audio`: can the system output be captured at all.
+#[cfg(windows)]
+pub fn check_system_audio() -> Result<(), String> {
+    crate::wasapi::check_system_audio()
+}
+
+#[cfg(not(windows))]
+pub fn check_system_audio() -> Result<(), String> {
+    Err(CaptureError::Unavailable.to_string())
 }

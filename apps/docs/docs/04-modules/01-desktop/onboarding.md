@@ -19,9 +19,9 @@
 
 Sáu bước, mỗi bước thoát và tiếp lại được: Chào bạn, Quyền truy cập, Mô hình, Mức hỗ trợ (hồ sơ), Bài nghe đánh giá, Phím tắt (kèm caption mẫu). Đăng nhập diễn ra trước, ở màn đăng nhập.
 
-- Tiến độ lưu theo người dùng ở `localStorage` (`cuelingo.onboarding-progress.<userId>`: `{step, done}`); mở lại hướng dẫn thì tiếp từ bước đang dở. "Thoát, làm tiếp sau" đóng hướng dẫn và giữ nguyên chỗ dừng
+- Tiến độ lưu theo người dùng ở `localStorage` (`cuelingo.onboarding-progress.<userId>`: `{step, done}`); mở lại hướng dẫn thì tiếp từ bước đang dở. Nút ✕ ở góc thẻ ("Thoát, làm tiếp sau") đóng hướng dẫn và giữ nguyên chỗ dừng; footer chỉ còn Quay lại, "Để sau" (dạng chữ, ở bước bỏ qua được) và nút chính
 - "Tiếp tục" đánh dấu bước xong; "Để sau" hoặc "Bỏ qua, tải sau" không đánh dấu. Bước chưa xong (trừ Chào bạn) quay lại thành thẻ ở trang Phiên họp (`<OnboardingCards />`), có nút "Làm ngay" mở hướng dẫn đúng bước đó và "Ẩn". Từ 3 bước chưa xong trở lên các thẻ gộp thành một thẻ "Còn N bước để làm quen" ("Làm ngay" mở bước đầu, "Ẩn" ẩn tất cả). Mỗi bước hiện chữ "Bước N trên 6"; đổi người dùng thì bước đang mở được đặt lại. Người đã xong hướng dẫn cũ (chưa có tiến độ lưu) không thấy thẻ
-- Bước Mô hình chỉ giải thích và hiện tiến độ nếu đang tải: model tải ở cuộc họp đầu tiên, không có lệnh tải riêng. Bước Mức hỗ trợ dùng mức sẵn có, chưa có form nghề và mục tiêu vì chưa có API hồ sơ
+- **Bước Mô hình bắt buộc** khi app quản lý được model (Windows; macOS khi có bản Swift): vào bước thì hỏi `model_status`; model đã đủ thì hiện "Đã sẵn sàng" và bật "Tiếp tục" ngay, không tải lại; thiếu thì hiện "Tải mô hình ngay · 631 MB" kèm tiến trình (có ✕ hủy và ↻ tải lại phòng lỗi giữa chừng), lỗi tiếng Việt và "Thử lại". Chưa sẵn sàng (chưa tải, đang tải, lỗi, đang kiểm tra) thì khoá "Tiếp tục" (cả phím Enter) và không có "Bỏ qua"; Quay lại và ✕ vẫn dùng được, nên máy offline vẫn thoát được và dùng app (thẻ ở trang Phiên họp nhắc làm tiếp). Tải đang chạy vẫn tiếp tục khi thoát khỏi màn, vì trạng thái nằm ở store dùng chung (`src/models/`). Khi app chưa quản lý được model thì giữ cách cũ: chỉ giải thích, model tải ở cuộc họp đầu tiên và có "Bỏ qua, tải sau". Bước Mức hỗ trợ dùng mức sẵn có, chưa có form nghề và mục tiêu vì chưa có API hồ sơ
 
 ## Interface
 

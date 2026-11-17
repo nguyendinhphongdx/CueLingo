@@ -13,6 +13,11 @@ const h = vi.hoisted(() => ({
   mic: 'granted',
   setLanguage: vi.fn(),
   start: vi.fn(),
+  /** What the model manager says about the picked language; null = this build cannot manage models. */
+  modelView: null as { kind: string } | null,
+  download: vi.fn(),
+  restart: vi.fn(),
+  cancel: vi.fn(),
 }));
 
 vi.mock('../auth', () => ({ useMe: () => ({ me: { id: h.userId } }) }));
@@ -23,6 +28,14 @@ vi.mock('../settings', () => ({
   useLanguage: () => ({ language: h.picked, setLanguage: h.setLanguage }),
   useSettings: (select: (state: { assistLevel: string }) => unknown) =>
     select({ assistLevel: 'standard' }),
+}));
+vi.mock('../models/use-local-models', () => ({
+  useLocalModels: () => ({
+    view: () => h.modelView,
+    download: h.download,
+    restart: h.restart,
+    cancel: h.cancel,
+  }),
 }));
 vi.mock('./use-session', () => ({
   useSession: () => ({ start: h.start, stop: vi.fn() }),
@@ -48,6 +61,10 @@ beforeEach(() => {
   h.mic = 'granted';
   h.setLanguage.mockReset();
   h.start.mockReset();
+  h.modelView = null;
+  h.download.mockReset();
+  h.restart.mockReset();
+  h.cancel.mockReset();
   host = document.createElement('div');
   document.body.append(host);
   root = createRoot(host);
@@ -108,5 +125,93 @@ describe('useMeetingControls', () => {
     act(() => controls.consent.confirm());
     expect(h.start).not.toHaveBeenCalled();
     expect(h.setLanguage).not.toHaveBeenCalled();
+  });
+});
+
+describe('the model dialog', () => {
+  const rerender = () => act(() => root.render(<Probe />));
+
+  it('opens instead of starting when the model is missing, and starts the download once', async () => {
+    h.modelView = { kind: 'missing' };
+    await act(() => controls.attempt());
+    expect(h.start).not.toHaveBeenCalled();
+    expect(controls.gate.open).toBe(true);
+    expect(controls.gate.languageName).toBe('tiếng anh');
+    expect(h.download).toHaveBeenCalledTimes(1);
+    expect(h.download).toHaveBeenCalledWith('en');
+    // More renders while it waits do not start more downloads.
+    await rerender();
+    await rerender();
+    expect(h.download).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts the meeting by itself, and closes, once the model is ready', async () => {
+    h.modelView = { kind: 'missing' };
+    await act(() => controls.attempt());
+    h.modelView = { kind: 'downloading' };
+    await rerender();
+    expect(h.start).not.toHaveBeenCalled();
+    h.modelView = { kind: 'ready' };
+    await rerender();
+    expect(h.start).toHaveBeenCalledWith('standard', 'en');
+    expect(controls.gate.open).toBe(false);
+  });
+
+  it('waits without downloading again when a download is already running', async () => {
+    h.modelView = { kind: 'downloading' };
+    await act(() => controls.attempt());
+    expect(controls.gate.open).toBe(true);
+    expect(h.download).not.toHaveBeenCalled();
+    h.modelView = { kind: 'ready' };
+    await rerender();
+    expect(h.start).toHaveBeenCalledTimes(1);
+  });
+
+  it('after a failure the person decides: nothing restarts by itself, retry does', async () => {
+    h.modelView = { kind: 'error' };
+    await act(() => controls.attempt());
+    expect(controls.gate.open).toBe(true);
+    expect(h.download).not.toHaveBeenCalled();
+    act(() => controls.gate.download());
+    expect(h.download).toHaveBeenCalledWith('en');
+  });
+
+  it('gives up on the meeting when the person closes it, and a later Start asks again', async () => {
+    h.modelView = { kind: 'missing' };
+    await act(() => controls.attempt());
+    act(() => controls.gate.close());
+    expect(controls.gate.open).toBe(false);
+    h.modelView = { kind: 'ready' };
+    await rerender();
+    expect(h.start).not.toHaveBeenCalled();
+    h.modelView = { kind: 'missing' };
+    await act(() => controls.attempt());
+    expect(controls.gate.open).toBe(true);
+    expect(h.download).toHaveBeenCalledTimes(2);
+  });
+
+  it('hands ✕ and reload to the model manager for the language of the dialog', async () => {
+    h.modelView = { kind: 'downloading' };
+    await act(() => controls.attempt());
+    act(() => controls.gate.cancelDownload());
+    act(() => controls.gate.restart());
+    expect(h.cancel).toHaveBeenCalledWith('en');
+    expect(h.restart).toHaveBeenCalledWith('en');
+  });
+
+  it('never opens for a model that is ready, or for a build that cannot manage models', async () => {
+    h.modelView = { kind: 'ready' };
+    await act(() => controls.attempt());
+    expect(h.start).toHaveBeenCalledTimes(1);
+    expect(controls.gate.open).toBe(false);
+  });
+
+  it('does not open for a cloud language: consent comes first, then it starts', async () => {
+    h.modelView = { kind: 'cloud' };
+    await act(() => controls.attempt('ja'));
+    expect(controls.gate.open).toBe(false);
+    expect(controls.consent.open).toBe(true);
+    await act(async () => controls.consent.confirm());
+    expect(h.start).toHaveBeenCalledWith('standard', 'ja');
   });
 });

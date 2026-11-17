@@ -2,6 +2,7 @@ import { Button as PressButton } from '@animate-ui/react/primitives/buttons/butt
 import { Badge } from '@cuelingo/ui/components/badge';
 import { Button } from '@cuelingo/ui/components/button';
 import { ConfirmDialog } from '@cuelingo/ui/components/confirm-dialog';
+import { ModelGateDialog } from '../models/ModelGateDialog';
 import { LanguageSwitcher } from '@cuelingo/ui/components/language-switcher';
 import { LevelMeter } from '@cuelingo/ui/components/level-meter';
 import { CloudUpload, Mic, Play, Square, Volume2 } from 'lucide-react';
@@ -9,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { useLanguage } from '../settings';
 import { describeNativeError, openDebrief } from './session-actions';
 import { native } from '../lib/native';
+import { ShowOverlayButton } from './ShowOverlayButton';
 import { shortcutLabel } from '../lib/platform';
 import type { LatestCaption, SessionStatus as Status } from './session-controller';
 import { SUPPORTED_LANGUAGES, type LanguageCode } from '@cuelingo/shared';
@@ -318,6 +320,7 @@ export function SessionPanel({ controls }: { controls: MeetingControls }) {
                   {controls.pending === 'stopping' ? 'Đang dừng…' : 'Dừng'}
                 </Button>
               </PressButton>
+              <ShowOverlayButton className="cursor-pointer text-white hover:bg-white/15 hover:text-white" />
             </div>
           </>
         ) : (
@@ -343,6 +346,15 @@ export function SessionPanel({ controls }: { controls: MeetingControls }) {
         >
           {CLOUD_CONSENT_TEXT}
         </ConfirmDialog>
+        <ModelGateDialog
+          open={controls.gate.open}
+          languageName={controls.gate.languageName}
+          view={controls.gate.view}
+          onDownload={controls.gate.download}
+          onCancelDownload={controls.gate.cancelDownload}
+          onRestart={controls.gate.restart}
+          onClose={controls.gate.close}
+        />
         {modelProgress && busy ? (
           <p className="mt-4 text-sm text-white/80" aria-live="polite">
             {modelProgress}

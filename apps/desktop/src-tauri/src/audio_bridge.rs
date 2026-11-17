@@ -3,7 +3,8 @@
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{Child, ChildStdin, Command, Stdio};
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 
 use serde_json::Value;
 use tauri::{AppHandle, Emitter};
@@ -16,6 +17,190 @@ pub struct Sidecar {
 #[derive(Default)]
 pub struct AudioBridge {
     running: Mutex<Option<Sidecar>>,
+}
+
+/// The sidecar run that only downloads a model (onboarding, Settings). It never runs at the same time as a
+/// meeting, and there is at most one of it.
+#[derive(Default)]
+pub struct ModelDownload {
+    running: Arc<Mutex<Option<Run>>>,
+}
+
+/// One download: its process, and whether the person cancelled it (then its end is a cancel, not a failure).
+struct Run {
+    child: Child,
+    cancelled: Arc<AtomicBool>,
+}
+
+pub(crate) fn download_command(path: PathBuf, language: &str) -> Command {
+    let mut command = hidden_command(path);
+    command
+        .arg("--download-model")
+        .env("CUELINGO_LANGUAGE", language);
+    command
+}
+
+/// Routes the lines of one download run. A run that ends without saying `ready` or `error` (the sidecar
+/// crashed or was killed) gets one `error` event, so a screen never waits for a download that is gone.
+pub(crate) fn forward_download_lines(
+    lines: impl Iterator<Item = String>,
+    language: &str,
+    emit: &mut dyn FnMut(&'static str, Value),
+) {
+    let mut finished = false;
+    for line in lines {
+        let Some((event, payload)) = route_line(&line) else {
+            continue;
+        };
+        let is_model = payload.get("type").and_then(Value::as_str) == Some("model");
+        let state = payload.get("state").and_then(Value::as_str);
+        if event == "audio-model" && is_model && matches!(state, Some("ready" | "error")) {
+            finished = true;
+        }
+        emit(event, payload);
+    }
+    if !finished {
+        emit(
+            "audio-model",
+            serde_json::json!({
+                "type": "model",
+                "language": language,
+                "state": "error",
+                "message": "download interrupted",
+            }),
+        );
+    }
+}
+
+/// Follows the `model` events of one sidecar run, to know when a download the screens were showing is gone.
+/// A meeting that is stopped while its sidecar is still fetching the model (it only reads `stop` after the
+/// model is loaded) is killed, and nothing else would tell the screens the download ended.
+#[derive(Default)]
+pub(crate) struct ModelWatch {
+    downloading: Option<String>,
+}
+
+impl ModelWatch {
+    pub(crate) fn observe(&mut self, event: &str, payload: &Value) {
+        if event != "audio-model" || payload.get("type").and_then(Value::as_str) != Some("model") {
+            return;
+        }
+        let language = payload
+            .get("language")
+            .and_then(Value::as_str)
+            .unwrap_or("");
+        match payload.get("state").and_then(Value::as_str) {
+            Some("downloading") => self.downloading = Some(language.to_string()),
+            Some("ready" | "error") => self.downloading = None,
+            _ => {}
+        }
+    }
+
+    /// The `error` event to send when the run ended in the middle of a download; `None` otherwise.
+    pub(crate) fn interrupted(&self) -> Option<Value> {
+        self.downloading.as_ref().map(|language| {
+            serde_json::json!({
+                "type": "model",
+                "language": language,
+                "state": "error",
+                "message": "download interrupted",
+            })
+        })
+    }
+}
+
+/// Whether the download is still running; one that has exited is reaped and its slot freed.
+fn alive(slot: &mut Option<Run>) -> bool {
+    let exited = match slot.as_mut() {
+        None => return false,
+        Some(run) => !matches!(run.child.try_wait(), Ok(None)),
+    };
+    if exited {
+        *slot = None;
+    }
+    !exited
+}
+
+/// What the screens hear about a download's end: a failure that follows a cancel is reported as `cancelled`
+/// (the screens go back to "not downloaded" instead of showing an error the person asked for).
+pub(crate) fn mark_cancelled(mut payload: Value, cancelled: bool) -> Value {
+    let failed = payload.get("state").and_then(Value::as_str) == Some("error");
+    if cancelled && failed {
+        payload["message"] = Value::String("cancelled".into());
+    }
+    payload
+}
+
+impl ModelDownload {
+    pub fn is_running(&self) -> bool {
+        self.running
+            .lock()
+            .map(|mut slot| alive(&mut slot))
+            .unwrap_or(false)
+    }
+
+    /// Starts downloading the model for `language`; progress and the end arrive as `audio-model` events.
+    pub fn start(&self, app: &AppHandle, language: &str) -> Result<(), String> {
+        let mut slot = self.running.lock().map_err(|e| e.to_string())?;
+        if alive(&mut slot) {
+            return Err("model_downloading".into());
+        }
+        let path = sidecar_path().ok_or("audio_sidecar_missing")?;
+        let mut child = download_command(path, language)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .map_err(|e| format!("audio_sidecar_failed: {e}"))?;
+        let stdout = child.stdout.take().ok_or("audio_sidecar_failed")?;
+        let pid = child.id();
+        let cancelled = Arc::new(AtomicBool::new(false));
+        *slot = Some(Run {
+            child,
+            cancelled: cancelled.clone(),
+        });
+        drop(slot);
+
+        let (app, running, language) = (app.clone(), self.running.clone(), language.to_string());
+        std::thread::spawn(move || {
+            let lines = BufReader::new(stdout).lines().map_while(Result::ok);
+            forward_download_lines(lines, &language, &mut |event, payload| {
+                let payload = mark_cancelled(payload, cancelled.load(Ordering::Acquire));
+                let _ = app.emit(event, payload);
+            });
+            if let Ok(mut slot) = running.lock() {
+                // Only this run's own process: after a cancel and a retry a newer download may be in the slot.
+                if slot.as_ref().is_some_and(|run| run.child.id() == pid) {
+                    if let Some(mut run) = slot.take() {
+                        let _ = run.child.wait();
+                    }
+                }
+            }
+        });
+        Ok(())
+    }
+
+    /// Ends the download in progress, if any. A half-finished file is only ever a `.part`, so nothing
+    /// half-written is ever taken for a model. Returns whether a download was running.
+    pub fn cancel(&self) -> bool {
+        let Ok(mut slot) = self.running.lock() else {
+            return false;
+        };
+        match slot.take() {
+            Some(mut run) => {
+                // Before the kill, so the reader that sees the process end already knows why.
+                run.cancelled.store(true, Ordering::Release);
+                let _ = run.child.kill();
+                let _ = run.child.wait();
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// The app is quitting: a download in the background must not outlive it.
+    pub fn stop(&self) {
+        self.cancel();
+    }
 }
 
 /// Where the sidecar binary lives: `CUELINGO_AUDIO_BIN`, next to the app executable (bundled), or the dev build.
@@ -122,8 +307,10 @@ impl AudioBridge {
 
         let app = app.clone();
         std::thread::spawn(move || {
+            let mut watch = ModelWatch::default();
             for line in BufReader::new(stdout).lines().map_while(Result::ok) {
                 if let Some((event, payload)) = route_line(&line) {
+                    watch.observe(event, &payload);
                     // Utterance audio is about 1 MB and levels arrive ~20 times a second: main window only.
                     let _ = if event == "audio-utterance" || event == "audio-level" {
                         app.emit_to("main", event, payload)
@@ -131,6 +318,10 @@ impl AudioBridge {
                         app.emit(event, payload)
                     };
                 }
+            }
+            // The meeting ended (or was stopped) while the model was still coming down.
+            if let Some(payload) = watch.interrupted() {
+                let _ = app.emit("audio-model", payload);
             }
         });
         *running = Some(Sidecar { child, stdin });
@@ -196,6 +387,130 @@ mod tests {
     }
 
     use super::*;
+
+    fn run(lines: &[&str]) -> Vec<(&'static str, Value)> {
+        let mut seen = Vec::new();
+        let lines = lines.iter().map(|l| l.to_string());
+        forward_download_lines(lines, "en", &mut |event, payload| {
+            seen.push((event, payload))
+        });
+        seen
+    }
+
+    #[test]
+    fn a_download_that_says_ready_adds_nothing() {
+        let seen = run(&[
+            r#"{"type":"model","language":"en","state":"downloading","progress":0.5}"#,
+            r#"{"type":"model","language":"en","state":"ready"}"#,
+        ]);
+        assert_eq!(seen.len(), 2);
+        assert!(seen.iter().all(|(event, _)| *event == "audio-model"));
+    }
+
+    #[test]
+    fn a_download_that_ends_without_a_verdict_reports_an_error() {
+        let seen =
+            run(&[r#"{"type":"model","language":"en","state":"downloading","progress":0.2}"#]);
+        let (event, last) = seen.last().unwrap();
+        assert_eq!(*event, "audio-model");
+        assert_eq!(last["state"], "error");
+        assert_eq!(last["language"], "en");
+        // A silent crash is the same.
+        assert_eq!(run(&[]).len(), 1);
+    }
+
+    #[test]
+    fn an_error_from_the_sidecar_is_the_verdict_and_nothing_is_added() {
+        let seen =
+            run(&[r#"{"type":"model","language":"en","state":"error","message":"offline"}"#]);
+        assert_eq!(seen.len(), 1);
+        assert_eq!(seen[0].1["message"], "offline");
+    }
+
+    #[test]
+    fn lines_that_are_not_events_are_ignored() {
+        let seen = run(&[
+            "not json",
+            r#"{"type":"level"}"#,
+            r#"{"type":"model","state":"ready"}"#,
+        ]);
+        // The level line is a real event for the app (audio-level); only the verdict decides the end.
+        assert!(seen.iter().any(|(_, p)| p["state"] == "ready"));
+        assert_eq!(
+            seen.iter().filter(|(_, p)| p["state"] == "error").count(),
+            0
+        );
+    }
+
+    #[test]
+    fn the_download_command_asks_for_one_language_and_a_download_only() {
+        let command = download_command("x".into(), "en");
+        let args: Vec<_> = command.get_args().collect();
+        assert_eq!(args, ["--download-model"]);
+        assert_eq!(env_of(&command, "CUELINGO_LANGUAGE").as_deref(), Some("en"));
+    }
+
+    fn watched(events: &[&str]) -> Option<Value> {
+        let mut watch = ModelWatch::default();
+        for line in events {
+            let (event, payload) = route_line(line).unwrap();
+            watch.observe(event, &payload);
+        }
+        watch.interrupted()
+    }
+
+    #[test]
+    fn a_run_that_ends_mid_download_reports_which_model_was_lost() {
+        let lost =
+            watched(&[r#"{"type":"model","language":"en","state":"downloading","progress":0.6}"#])
+                .unwrap();
+        assert_eq!(lost["type"], "model");
+        assert_eq!(lost["language"], "en");
+        assert_eq!(lost["state"], "error");
+    }
+
+    #[test]
+    fn a_download_that_finished_or_failed_loses_nothing() {
+        assert!(watched(&[
+            r#"{"type":"model","language":"en","state":"downloading","progress":0.6}"#,
+            r#"{"type":"model","language":"en","state":"ready"}"#,
+        ])
+        .is_none());
+        assert!(watched(&[
+            r#"{"type":"model","language":"en","state":"downloading","progress":0.6}"#,
+            r#"{"type":"model","language":"en","state":"error","message":"offline"}"#,
+        ])
+        .is_none());
+        // No model event at all, or only other events: nothing was being downloaded.
+        assert!(watched(&[]).is_none());
+        assert!(watched(&[r#"{"type":"level","stream":"mic","rms":0.1,"peak":0.2}"#]).is_none());
+    }
+
+    #[test]
+    fn a_failure_after_a_cancel_is_reported_as_cancelled() {
+        let failed = serde_json::json!({"type":"model","language":"en","state":"error","message":"download interrupted"});
+        let out = mark_cancelled(failed.clone(), true);
+        assert_eq!(out["message"], "cancelled");
+        assert_eq!(out["state"], "error");
+        // Without a cancel the message is untouched, and other states never change.
+        assert_eq!(
+            mark_cancelled(failed, false)["message"],
+            "download interrupted"
+        );
+        let ready = serde_json::json!({"type":"model","language":"en","state":"ready"});
+        assert_eq!(mark_cancelled(ready.clone(), true), ready);
+    }
+
+    #[test]
+    fn nothing_to_cancel_when_nothing_runs() {
+        assert!(!ModelDownload::default().cancel());
+        assert!(!ModelDownload::default().is_running());
+    }
+
+    #[test]
+    fn nothing_running_is_not_alive() {
+        assert!(!alive(&mut None));
+    }
 
     #[test]
     fn routes_segments_and_status() {

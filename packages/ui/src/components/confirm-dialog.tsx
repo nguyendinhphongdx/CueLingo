@@ -5,9 +5,10 @@ interface ConfirmDialogProps {
   open: boolean;
   title: string;
   children: ReactNode;
-  confirmLabel: string;
+  /** Leave out for a dialog that closes by itself (a progress dialog): only the cancel button shows. */
+  confirmLabel?: string;
   cancelLabel: string;
-  onConfirm(): void;
+  onConfirm?(): void;
   onCancel(): void;
   /**
    * Where the focus starts. `confirm` (default) suits a person's own action; use `cancel` when the question comes
@@ -63,16 +64,18 @@ function OpenDialog({
         <h2 id="confirm-dialog-title" className="text-lg font-semibold">
           {title}
         </h2>
-        <p id="confirm-dialog-body" className="text-muted-foreground mt-2 text-sm">
+        <div id="confirm-dialog-body" className="text-muted-foreground mt-2 text-sm">
           {children}
-        </p>
+        </div>
         <div className="mt-6 flex justify-end gap-2">
           <Button ref={cancelRef} variant="ghost" onClick={onCancel}>
             {cancelLabel}
           </Button>
-          <Button autoFocus={initialFocus === 'confirm'} disabled={!armed} onClick={onConfirm}>
-            {confirmLabel}
-          </Button>
+          {confirmLabel ? (
+            <Button autoFocus={initialFocus === 'confirm'} disabled={!armed} onClick={onConfirm}>
+              {confirmLabel}
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

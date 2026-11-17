@@ -9,14 +9,19 @@
 pub mod capture;
 pub mod level;
 pub mod memory;
+pub mod modelctl;
 pub mod pcm;
 pub mod permissions;
 pub mod pipeline;
 pub mod protocol;
+pub mod pump;
+pub mod reopen;
 pub mod resample;
 pub mod segmenter;
 pub mod session;
 pub mod stats;
 pub mod stt;
 pub mod vocabulary;
+#[cfg(windows)]
+pub mod wasapi;
 pub mod wav;
