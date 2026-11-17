@@ -5,12 +5,13 @@ use std::sync::Mutex;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, State};
 
-use crate::audio_bridge::AudioBridge;
+use crate::audio_bridge::{AudioBridge, ModelDownload};
 use crate::windows;
 
 #[derive(Default)]
 pub struct AppState {
     pub audio: AudioBridge,
+    pub download: ModelDownload,
     session_id: Mutex<Option<String>>,
     assist_level: Mutex<u8>,
 }
@@ -88,6 +89,10 @@ pub fn session_start(
     if current.is_some() {
         return Err("session_already_running".into());
     }
+    // Two sidecars would write the same `.part` file; the screen shows the download and asks to wait.
+    if state.download.is_running() {
+        return Err("model_downloading".into());
+    }
     let id = format!(
         "local-{}",
         std::time::SystemTime::now()
@@ -136,6 +141,44 @@ pub fn session_stop(app: AppHandle, state: State<AppState>) -> Result<(), String
     let stopped = state.audio.stop();
     let _ = crate::tray::refresh(&app);
     stopped
+}
+
+/// Whether this build's sidecar knows `--model-status` and `--download-model`. A sidecar that does not know a
+/// flag ignores it and starts a meeting, which would download the model on its own: so this is a build
+/// decision, not a probe. macOS turns it on together with the Swift side (04-brief-macos-model.md).
+const MODEL_CONTROL: bool = cfg!(windows);
+
+/// Which on-device models are in place (`{type: "models", models: [...]}`), or `null` when this build cannot
+/// manage models from the app (the screens then keep the old flow: the model comes down with the first meeting).
+#[tauri::command]
+pub async fn model_status() -> Option<serde_json::Value> {
+    if !MODEL_CONTROL {
+        return None;
+    }
+    tauri::async_runtime::spawn_blocking(|| probe_sidecar("--model-status", "models"))
+        .await
+        .ok()
+        .flatten()
+}
+
+/// Starts downloading the model for `language`: one at a time, never during a meeting. Progress and the end
+/// arrive as `audio-model` events.
+#[tauri::command]
+pub fn model_download(
+    app: AppHandle,
+    state: State<AppState>,
+    language: String,
+) -> Result<(), String> {
+    if !MODEL_CONTROL {
+        return Err("model_control_unavailable".into());
+    }
+    if !valid_language(&language) {
+        return Err("invalid_language".into());
+    }
+    if state.is_running() {
+        return Err("session_already_running".into());
+    }
+    state.download.start(&app, &language)
 }
 
 /// Runs the sidecar in a one-shot mode and returns the JSON line whose `type` is `kind`.

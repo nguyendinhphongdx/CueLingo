@@ -19,6 +19,7 @@ Lớp Rust của app: cửa sổ, phím tắt toàn cục, cầu nối native �
 ## Interface
 
 - Tauri commands: `session_start`, `session_stop`, `session_set_language`, `session_set_vocabulary`, `permissions_status`, `set_assist_level`
+- Quản lý model không cần họp: `model_status` (trả `{type:"models", models:[{language, state: ready|missing, sizeBytes}]}` hoặc `null`) và `model_download(language)` (tải ở nền, tiến trình và kết quả đến qua sự kiện `audio-model`). Mỗi lúc chỉ một lần tải; `session_start` trả `model_downloading` khi đang tải, `model_download` trả `session_already_running` khi đang họp. Cờ biên dịch `MODEL_CONTROL` (`commands.rs`) chỉ bật cho Windows: sidecar không biết cờ lạ sẽ chạy như một cuộc họp và tự tải model, nên macOS trả `null` và `model_control_unavailable` cho tới khi có bản Swift ([brief](../../06-delivery/2026-11-17-onboarding-model-download/04-brief-macos-model.md)). Một lần tải kết thúc mà không có `ready` hay `error` (sidecar chết) thì lõi tự phát một `error`; thoát app dừng tải.
 - Tauri commands khác: `hide_overlay`, `toggle_overlay`, `tray_report` (`active`, `minutes`, `problem` = `mic`/`system`/`both`)
 - `session_start` nhận `vocabulary` (danh sách thuật ngữ, xem dưới); `session_set_vocabulary(terms)` thay danh sách khi đang họp
 - Tauri events: `notice` (JS `emit`/`listen`, cửa sổ chính → overlay, thông báo hạn mức và lỗi micro, có thể kèm `action`; không qua Rust), `open-settings` (overlay → cửa sổ chính, JS `emit`/`listen`), `transcript`, `speech`, `hotkey`, `tray-stop` (mục "Dừng họp" ở menu bar; chỉ gửi tới `main`)

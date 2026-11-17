@@ -50,6 +50,8 @@ pub fn run() {
             commands::calendar,
             commands::session_stop,
             commands::permissions_status,
+            commands::model_status,
+            commands::model_download,
             commands::check_system_audio,
             commands::open_external,
             commands::set_assist_level,
@@ -134,6 +136,11 @@ pub fn run() {
         .run(|app, event| {
             // ⌘Q and Quit on the Dock arrive with no exit code; an exit we asked for carries one.
             // During a meeting they go through the same stop-then-quit path as the tray item.
+            if let RunEvent::Exit = event {
+                // A download in the background must not outlive the app.
+                app.state::<commands::AppState>().download.stop();
+                return;
+            }
             if let RunEvent::ExitRequested {
                 api, code: None, ..
             } = event
