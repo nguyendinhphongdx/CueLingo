@@ -32,7 +32,9 @@ Component React dùng chung cho desktop và web.
 | `@cuelingo/ui/components/notice-strip` | `NoticeStrip` (info, warning, error; có chỗ cho nút hành động)                                                 |
 | `@cuelingo/ui/components/empty-state`  | `EmptyState`                                                                                                   |
 
-`FeedbackForm` (`@cuelingo/ui/components/feedback-form`): chọn Báo lỗi/Góp ý, đếm ký tự trên 2000, dòng "Không gửi kèm transcript hay âm thanh". Nhận `send({kind, message})` từ client; component không biết phiên bản app hay OS và không có chỗ đính gì khác. `FeedbackFormView` là bản thuần markup để test.
+`FeedbackForm` (`@cuelingo/ui/components/feedback-form`): chọn Báo lỗi/Góp ý/Khác, đếm ký tự trên 2000, dòng "Không gửi kèm transcript hay âm thanh" (client đổi được bằng `note`, ví dụ desktop nêu phiên bản app). Nhận `send({kind, message})` từ client; component không biết phiên bản app hay OS và không có chỗ đính gì khác. `FeedbackFormView` là bản thuần markup để test.
+
+Tìm trong cuộc họp dùng chung web và desktop: `lib/meeting-search` (`searchSessions`, `findSnippets`, `highlight`, `monthsOf`, `speakersOf`, `SEARCH_SCOPE`…, thuần), `components/highlighted-text` (`HighlightedText`) và `hooks/use-debounced` (`useDebounced`).
 
 `CaptionLine` nhận `text`, `translation?`, `hardWords?`, `partial?` và `className?`; component không gọi API.
 
@@ -116,6 +118,7 @@ Các thành phần chỉ trình bày và nhận callback; không gọi API, khô
 - **`ThinkingIndicator`**: chấm nhảy chỉ khi người dùng không tắt chuyển động (`motion-safe:`); `role="status"`.
 - **`ServerDialog({open, current, defaultChoice, devMode, signedIn, validate, onCheck, onSave, onClose, saveError?})`**: hộp thoại chọn máy chủ cho desktop, thuần hiển thị (không gọi mạng, không biết `localStorage`; app truyền hàm). Danh sách "CueLingo Beta (mặc định)", "Tuỳ chỉnh…" (ô địa chỉ API và địa chỉ web, lỗi từ `validate`) và mục `localhost` chỉ khi `devMode`; "Kiểm tra kết nối" gọi `onCheck(api)`; kết quả gắn với địa chỉ đã kiểm và bị bỏ khi địa chỉ đổi; cảnh báo nêu tên miền đích; kiểm tra thất bại thì "Lưu" chỉ hỏi lại, phải bấm "Vẫn lưu". Xem [Máy chủ](../01-desktop/server.md).
 - Roadmap có mục `assistant` ("Trợ lý AI", nhóm Học); trạng thái từng client ở `lib/roadmap.ts`.
+- Roadmap có mục `upgrade` ("Nâng cấp", nhóm Ứng dụng, biểu tượng `upgrade`, `webPath` `/upgrade`). Web là liên kết tới trang đó; desktop không đổi trang mà mở `/upgrade` trên web qua `openWeb` (không kèm token)
 
 ### Khối giao diện HTML/JS (lớp 2, [ADR 0019](../../08-adr/0019-ai-generated-ui.md), sau cờ `AGENT_HTML_BLOCKS`)
 
@@ -154,7 +157,7 @@ Code: `components/sidebar-nav.tsx`, `hooks/use-collapsed-groups.ts`, `components
 - **Lưu theo thiết bị:** khoá `cuelingo.sidebar.collapsed.v1`, giá trị là mảng JSON các id nhóm đang thu gọn. Đọc ghi bọc `try/catch` (storage bị chặn thì vẫn thu gọn được trong lần xem đó); giá trị hỏng hay id lạ thì bỏ qua; id của nhóm không hiện (ví dụ Quản trị với người thường) giữ nguyên trong storage. Mặc định mọi nhóm mở.
 - Khi trang đang mở thuộc một nhóm đang thu gọn (mở app, bấm link, nút back) thì nhóm đó tự mở. Người dùng vẫn thu gọn lại được bằng tay.
 - `extraGroups?: NavGroup[]` thêm nhóm sau các nhóm roadmap, thu gọn và lưu như chúng. Chỉ web truyền nhóm Quản trị (Q1); desktop không truyền nên không đổi. `renderItem` khai báo dạng method nên desktop vẫn gõ tham số là `Feature`.
-- `AppFrame` `wide` đổi chiều rộng nội dung từ 640px sang `max-w-6xl` (bảng, biểu đồ).
+- `AppFrame` cho nội dung chiếm hết chiều rộng khung (không còn giới hạn 640px hay `max-w-6xl`); khối chữ dài tự giới hạn bằng `max-w-*` riêng.
 - Test: `sidebar-nav.test.tsx` (collapse, persist, admin group, logo mặc định, phiên bản, id cũ).
 
 ### Roadmap và Ôn tập ba tab

@@ -30,8 +30,10 @@ Máy trạng thái của một cuộc họp phía client: nhận segment từ ST
 - `startSession(assistLevel)`, `stopSession()`, `toggleOverlay()`: action gọi duy nhất qua cầu nối native
 - `describeNativeError(error)`: chuyển mã lỗi native thành thông báo tiếng Việt
 - `createSessionController({ native, createRealtime, glossary, now })`: controller inject dependency để test không cần Tauri/WebSocket; `glossary.list(language)` là tuỳ chọn
-- `useSession()`: snapshot `{status, error}` và action `start()`, `stop()`, `runDemo()`
-- `<RecentSessions />`: mở debrief hoặc xoá mềm cuộc họp sau bước xác nhận
+- `useSession()`: snapshot `{status, error, latestCaption, …}` và action `start()`, `stop()`, `runDemo()`
+- `latestCaption` (`{segmentId, speaker, text, translation}`): câu đã xong gần nhất của cuộc họp đang chạy, chỉ trong bộ nhớ; đặt lại khi bắt đầu và khi dừng, không ghi log. Bản dịch cập nhật khi tới. `<LatestCaptionCard />` trong `SessionPanel` hiện thẻ "Câu mới nhất" (người nói, câu gốc, bản dịch; ghi chú "bản đầy đủ nằm trong cửa sổ caption") khi cuộc họp đang chạy
+- `<RecentSessions />`: mở debrief hoặc xoá mềm cuộc họp sau bước xác nhận; phần hàng là `<SessionRows hits query? />` dùng lại ở trang Cuộc họp
+- `<MeetingsPage />` (trang Cuộc họp): ô tìm trong tiêu đề và lời thoại (từ 2 ký tự, đoạn khớp được tô bằng `HighlightedText`), lọc theo người nói và theo tháng (AC10). Logic thuần dùng chung với web ở `@cuelingo/ui/lib/meeting-search`. API chưa có endpoint tìm, nên tìm chạy trên máy: đọc `GET /v1/sessions/:id` (`sessionsApi.get`) của **30 cuộc họp gần nhất** sau khi người dùng ngừng gõ 300 ms (`useDebounced`); cuộc họp cũ hơn chỉ khớp theo tiêu đề và trang nói rõ. Không đọc lời thoại khi chưa tìm hay lọc người nói
 - Trang Cài đặt, mục Quyền riêng tư: tải JSON, hoặc xoá toàn bộ dữ liệu qua hai bước: dùng `DeleteDataSteps` chung của `@cuelingo/ui` (cùng bản với web): bước 1 liệt kê cái sẽ mất (khớp `deleteMyData` ở API), bước 2 yêu cầu gõ `XOA DU LIEU`, nút xoá chỉ bật khi khớp đúng và focus đầu vào nút Huỷ
 - Cấu hình: địa chỉ WebSocket lấy từ `serverConfig().wsUrl` (xem [Máy chủ](./server.md); mặc định lúc build `ws://localhost:4000`) và `VITE_REALTIME_TOKEN` (mặc định `dev-token`)
 
@@ -57,7 +59,7 @@ Máy trạng thái của một cuộc họp phía client: nhận segment từ ST
 
 ## Hạn mức của gói (W2-02)
 
-Controller mở WebSocket với `features: ['usage']`, nên server báo khi giờ dịch sắp hết hoặc đã hết. Thông báo đi sang overlay bằng `native.publishNotice` (xem [overlay](./overlay.md)); mọi thông báo chỉ là chữ cố định, không chứa nội dung cuộc họp. Logic chữ nằm ở `session/usage-notices.ts` (thuần, có test), dùng định dạng của `@cuelingo/ui/lib/usage`.
+Controller mở WebSocket với `features: ['usage']`, nên server báo khi giờ dịch sắp hết hoặc đã hết. Thông báo đi sang overlay bằng `native.publishNotice` (xem [overlay](./overlay.md)); hết hạn mức kèm `action: 'upgrade'` khi `canUpgrade()` (tuỳ chọn của controller, đọc `GET /v1/billing`, lỗi coi như không) trả true, micro bị chặn (`capture:mic`) kèm `action: 'open-settings'`; mọi thông báo chỉ là chữ cố định, không chứa nội dung cuộc họp. Logic chữ nằm ở `session/usage-notices.ts` (thuần, có test), dùng định dạng của `@cuelingo/ui/lib/usage`.
 
 | Tình huống                                            | Hành vi                                                                                                                                                                                                                                                    |
 | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
