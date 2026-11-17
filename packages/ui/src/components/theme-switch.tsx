@@ -1,3 +1,5 @@
+'use client';
+
 import { useThemeMode } from '../hooks/use-theme-mode';
 import { THEME_MODES } from '../lib/theme';
 import { Segmented } from './segmented';
