@@ -138,21 +138,45 @@ Hàm định dạng ở `lib/usage` để web và desktop dùng chung câu chữ
 
 ## Thanh bên chia nhóm thu gọn được
 
-Code: `components/sidebar-nav.tsx`, `hooks/use-collapsed-groups.ts`, `components/app-frame.tsx`. Spec: `06-delivery/2026-11-16-admin-console`.
+Code: `components/sidebar-nav.tsx`, `hooks/use-collapsed-groups.ts`, `components/app-frame.tsx`. Spec: `06-delivery/2026-11-16-admin-console`, thiết kế: `06-delivery/2026-11-16-ui-redesign`.
 
-| Import                       | Export                                                     |
-| ---------------------------- | ---------------------------------------------------------- |
-| `components/sidebar-nav`     | `SidebarNav`, `NavItem`, `NavGroup`, `SidebarNavProps`     |
-| `hooks/use-collapsed-groups` | `useCollapsedGroups`, `COLLAPSED_GROUPS_KEY`               |
-| `components/feature-icon`    | `FeatureIcon`, `NavIconName` (thêm icon cho nhóm Quản trị) |
-| `components/app-frame`       | `AppFrame({nav, footer?, dragRegion?, wide?, children})`   |
+| Import                       | Export                                                                               |
+| ---------------------------- | ------------------------------------------------------------------------------------ |
+| `components/sidebar-nav`     | `SidebarNav`, `NavItem`, `NavGroup`, `SidebarNavProps`                               |
+| `hooks/use-collapsed-groups` | `useCollapsedGroups`, `COLLAPSED_GROUPS_KEY`                                         |
+| `components/feature-icon`    | `FeatureIcon`, `NavIconName` (thêm icon cho nhóm Quản trị)                           |
+| `components/app-frame`       | `AppFrame({nav, footer?, dragRegion?, wide?, children})`                             |
+| `components/logo`            | `Logo({size?, className?})`, `LogoLockup({size?})` (logo kèm chữ, 12px giữa hai bên) |
 
+- **Một thanh bên cho cả hai client.** Nền `sidebar`, rộng 240px, đầu là `LogoLockup` (đổi được bằng `brand?`), ba nhóm Họp, Học, Ứng dụng, chân gồm `footer?` (thường là `AccountChip`) và `version?` ("Phiên bản x.y.z"). Hàng cao 36px (44px trên điện thoại); trang đang mở nền `sidebar-accent`, chữ `primary`, đậm; mục chưa có là huy hiệu "Sắp có" (đọc là "Sắp ra mắt"). Tiêu đề nhóm cỡ `text-overline`.
+- `activeId` nhận cả id cũ `phrases` và `progress`: chúng sáng ở mục Ôn tập (`currentFeatureId` ở `lib/roadmap`).
 - Mỗi nhóm có một nút tiêu đề (`<button>` thật nên Enter và Space chạy sẵn) với `aria-expanded` và `aria-controls` trỏ tới danh sách. Danh sách thu gọn dùng `hidden`, nên rời khỏi cây truy cập nhưng id vẫn còn. Desktop và web dùng chung nên cùng có thu gọn.
 - **Lưu theo thiết bị:** khoá `cuelingo.sidebar.collapsed.v1`, giá trị là mảng JSON các id nhóm đang thu gọn. Đọc ghi bọc `try/catch` (storage bị chặn thì vẫn thu gọn được trong lần xem đó); giá trị hỏng hay id lạ thì bỏ qua; id của nhóm không hiện (ví dụ Quản trị với người thường) giữ nguyên trong storage. Mặc định mọi nhóm mở.
 - Khi trang đang mở thuộc một nhóm đang thu gọn (mở app, bấm link, nút back) thì nhóm đó tự mở. Người dùng vẫn thu gọn lại được bằng tay.
 - `extraGroups?: NavGroup[]` thêm nhóm sau các nhóm roadmap, thu gọn và lưu như chúng. Chỉ web truyền nhóm Quản trị (Q1); desktop không truyền nên không đổi. `renderItem` khai báo dạng method nên desktop vẫn gõ tham số là `Feature`.
 - `AppFrame` `wide` đổi chiều rộng nội dung từ 640px sang `max-w-6xl` (bảng, biểu đồ).
-- Test: `sidebar-nav.test.tsx` (collapse, persist, admin group).
+- Test: `sidebar-nav.test.tsx` (collapse, persist, admin group, logo mặc định, phiên bản, id cũ).
+
+### Roadmap và Ôn tập ba tab
+
+`lib/roadmap.ts` chỉ còn một mục `review` ("Ôn tập", nhóm Học) thay cho Hôm nay, Kho cụm từ và Tiến độ. Client vẽ ba tab từ danh sách chung:
+
+| Export (`lib/roadmap`)       | Nội dung                                                                             |
+| ---------------------------- | ------------------------------------------------------------------------------------ |
+| `REVIEW_TABS`, `ReviewTabId` | `[{id: 'today'\|'phrases'\|'progress', label}]`: Hôm nay, Kho cụm từ, Tiến độ        |
+| `parseReviewTab(value)`      | Đọc `?tab=`; giá trị lạ hoặc rỗng thì về `today`                                     |
+| `reviewTabForView(id)`       | `phrases` → `phrases`, `progress` → `progress`, `review` → `today`, id khác → `null` |
+| `currentFeatureId(id)`       | id cũ `phrases`/`progress` → `review`, còn lại giữ nguyên                            |
+
+## Thẻ số liệu, thẻ lọc, Card, Kbd
+
+- `Card` theo thiết kế: `radius-lg`, `shadow-sm`, đệm 20px; `CardTitle` là `text-heading`.
+- `StatCard`: nhãn `text-body-sm`, số `text-title` + `tabular-nums`, ghi chú `text-caption`.
+- `FilterCard({label, value, hint?, selected, onSelect})` (`components/filter-card`): thẻ số liệu bấm được để lọc danh sách; là `<button aria-pressed>`, đã chọn thì viền `primary` và nền `secondary`. Không có số thì "Chưa đủ dữ liệu".
+- `DeleteDataSteps({items, pending, onConfirm, onCancel})` (`components/delete-data-steps`): xoá toàn bộ dữ liệu hai bước (liệt kê `DELETE_DATA_ITEMS`, rồi gõ `XOA DU LIEU`, focus ở Huỷ). Web và desktop cùng dùng; danh sách phải khớp `deleteMyData` ở API.
+- `ReviewTabsFrame({tab, onTab, className?, children})` (`components/review-tabs-frame`): ba tab Ôn tập và `tabpanel` của tab đang mở, vẽ từ `REVIEW_TABS`; web và desktop cùng dùng.
+- `Kbd`: phông mono, `radius-sm`, viền dưới 2px.
+- `ChatMessage`: tin của người dùng bong bóng `primary` bo góc 16/16/4/16, tối đa 80%; trả lời của trợ lý nằm trong thẻ (`card`, viền, 16px), bước dùng công cụ là dòng nhỏ phía trên.
 
 ## Biểu đồ và thẻ số liệu
 
@@ -170,3 +194,9 @@ Dùng cho các trang admin. Code: `components/chart-card.tsx`, `components/stat-
 ## Token và chuyển động
 
 Mọi token (màu sáng/tối, `success`, `warning`, `translation`, `brand`, bo góc, bóng, `--duration-fast|base|slow`, `--ease-out|in-out`) định nghĩa một lần trong `globals.css`; phông Be Vietnam Pro và JetBrains Mono tải kèm app (`@fontsource`), không gọi Google Fonts. Có khối `prefers-reduced-motion` tắt animation. Component dùng chung chỉ dùng token: không hex, không `dark:`, không `text-white`/`bg-black` (trừ `Logo`); `shared-ui.test.ts` quét.
+
+Cỡ chữ của thiết kế là class Tailwind đặt cùng lúc cỡ, độ cao dòng, độ đậm và giãn chữ: `text-display` (40), `text-title` (28), `text-heading` (18), `text-body` (15), `text-body-strong`, `text-body-sm` (13), `text-caption` (12), `text-overline` (11, hoa, giãn 0,06em), `text-caption-original` (17), `text-caption-translation` (19), `text-mono` (13, dùng với `font-mono`). `globals.test.ts` kiểm đủ biến.
+
+## Logo duy nhất và token không bị khai lại
+
+`shared-ui.test.ts` kiểm hai luật: (AC2) CSS của `apps/web`, `apps/desktop` và `apps/site` không khai lại tên token có trong `:root` của `globals.css`; (AC5) không có file nguồn nào ngoài `components/logo.tsx` chứa đường vẽ của logo. Hai file ảnh được phép vì trình duyệt tải theo URL (favicon không là component React): `apps/desktop/src/assets/logo.svg` và `apps/site/public/favicon.svg`; test kiểm chúng vẫn đúng màu và đường vẽ của `Logo`.

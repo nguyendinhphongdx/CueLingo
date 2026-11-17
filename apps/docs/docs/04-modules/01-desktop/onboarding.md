@@ -15,6 +15,14 @@
 
 - US-01, US-02 (F1)
 
+## Các bước
+
+Sáu bước, mỗi bước thoát và tiếp lại được: Chào bạn, Quyền truy cập, Mô hình, Mức hỗ trợ (hồ sơ), Bài nghe đánh giá, Phím tắt (kèm caption mẫu). Đăng nhập diễn ra trước, ở màn đăng nhập.
+
+- Tiến độ lưu theo người dùng ở `localStorage` (`cuelingo.onboarding-progress.<userId>`: `{step, done}`); mở lại hướng dẫn thì tiếp từ bước đang dở. "Thoát, làm tiếp sau" đóng hướng dẫn và giữ nguyên chỗ dừng
+- "Tiếp tục" đánh dấu bước xong; "Để sau" hoặc "Bỏ qua, tải sau" không đánh dấu. Bước chưa xong (trừ Chào bạn) quay lại thành thẻ ở trang Phiên họp (`<OnboardingCards />`), có nút "Làm ngay" mở hướng dẫn đúng bước đó và "Ẩn". Từ 3 bước chưa xong trở lên các thẻ gộp thành một thẻ "Còn N bước để làm quen" ("Làm ngay" mở bước đầu, "Ẩn" ẩn tất cả). Mỗi bước hiện chữ "Bước N trên 6"; đổi người dùng thì bước đang mở được đặt lại. Người đã xong hướng dẫn cũ (chưa có tiến độ lưu) không thấy thẻ
+- Bước Mô hình chỉ giải thích và hiện tiến độ nếu đang tải: model tải ở cuộc họp đầu tiên, không có lệnh tải riêng. Bước Mức hỗ trợ dùng mức sẵn có, chưa có form nghề và mục tiêu vì chưa có API hồ sơ
+
 ## Interface
 
 - `<PermissionsStep />`: đọc trạng thái bằng TanStack Query, cho phép kiểm tra lại

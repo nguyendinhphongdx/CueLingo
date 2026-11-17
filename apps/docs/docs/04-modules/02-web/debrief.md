@@ -62,3 +62,7 @@ Trang dùng hai cờ của registry độc lập: `translates` quyết định c
 ## Sao chép cả debrief
 
 "Sao chép cả debrief" cho Markdown của cả cuộc họp (`buildDebriefMarkdown`): tóm tắt, quyết định, việc cần làm, và transcript khi ô "Kèm transcript" được chọn. Không có audio và không có link tới phiên.
+
+## Hai tab
+
+Trang chi tiết cuộc họp có hai tab: **Debrief** (tóm tắt, việc cần làm, đoạn khó, cụm từ, câu nên nói) và **Bản ghi song ngữ** (transcript, lọc theo người nói). Cả hai panel luôn nằm trong DOM, panel không mở bị `hidden`; phím J/K/C chỉ chạy ở tab Debrief. Bấm một "đoạn khó" chuyển sang tab bản ghi rồi cuộn tới câu đó.

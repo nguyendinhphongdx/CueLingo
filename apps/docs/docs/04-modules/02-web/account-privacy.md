@@ -31,3 +31,7 @@ Cài đặt tài khoản, quyền riêng tư, xoá dữ liệu.
 ## Câu hỏi mở
 
 - (chưa có)
+
+## Xoá toàn bộ dữ liệu: hai bước
+
+Nút "Xoá toàn bộ dữ liệu" mở `DeleteDataSteps` (`@cuelingo/ui/components/delete-data-steps`, dùng chung với desktop). Bước 1 trên 2 liệt kê những gì sẽ mất (`DELETE_DATA_ITEMS`, khớp `deleteMyData` ở API: cuộc họp, cụm từ và lịch ôn, thuật ngữ, hội thoại với trợ lý AI, số liệu); bước 2 trên 2 yêu cầu gõ đúng `XOA DU LIEU`, nút xoá chỉ bật khi khớp từng ký tự, và focus bắt đầu ở nút **Huỷ** để một lần Enter lỡ tay không xoá. Test: `packages/ui/src/components/delete-data-steps.test.tsx`.

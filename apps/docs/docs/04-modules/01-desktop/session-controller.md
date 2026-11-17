@@ -20,13 +20,19 @@ Máy trạng thái của một cuộc họp phía client: nhận segment từ ST
 
 ## Interface
 
-- `<SessionPanel />`: bắt đầu/dừng phiên, hiện trạng thái kết nối, hiện/ẩn overlay và nút demo trong môi trường dev
+- `<HomePage />` (`src/app/`): trang Phiên họp, ghép theo thứ tự: banner cập nhật, thẻ việc còn lại của onboarding, thanh hạn mức, gợi ý mức hỗ trợ, thẻ lịch, `<SessionPanel />`, cuộc họp gần đây, phím tắt. `AssistSettings` và `VoiceSettings` nằm ở Cài đặt, không ở trang này
+- `<SessionPanel controls />`: hai trạng thái. **Sẵn sàng:** chọn ngôn ngữ, danh sách sẵn sàng (`<ReadinessList />`, mỗi dòng một `StatusRow` với nút sửa riêng cho micro, âm thanh hệ thống, model) và nút Bắt đầu họp. **Đang họp:** hai thẻ riêng cho âm thanh hệ thống và micro (mỗi thẻ có thanh mức, trạng thái "Đang nghe", "Chưa có âm thanh" hoặc "Không mở được" kèm nút sửa của đúng luồng đó), nút Dừng
+- `describeReadiness({permissions, systemCheck, model, language, os})` (`session/readiness.ts`): trả ba mục `{id, status, title, detail, fix}`; `fix` là mở trang cài đặt, phát tiếng chuông thử, hoặc thử lại. Bắt đầu họp luôn bật được (trừ lúc đang kiểm tra hoặc kết nối); khi micro bị chặn nút ghi "Bắt đầu họp, không dùng micro" và cuộc họp chạy với âm thanh hệ thống
+- `useMeetingControls()` (`session/use-meeting-controls.ts`): `attempt(language?)`, `halt()`, `pending`, hộp thoại đồng ý đám mây; dùng chung cho nút Bắt đầu và thẻ lịch
+- `describeStream(stream, failures, os?)`: lời giải thích và trang cài đặt cho một luồng thu âm lỗi; một luồng lỗi không dừng luồng kia
+- `<UsageNotice />` (`src/usage/`): thanh vàng từ 80% hạn mức giờ dịch hoặc debrief ("Còn khoảng … dịch tháng này"); ở 100% nói cái gì vẫn chạy (caption gốc, hoặc caption không có debrief) và có nút Nâng cấp khi thanh toán đang bật. `pickUsageNotice(usage)` là hàm thuần
+- `<CalendarHintCard onStart />` (`src/calendar/`): khi một cuộc họp trong lịch bắt đầu trong 15 phút tới (hoặc đang diễn ra) hiện tên, giờ, "Còn N phút", nút "Bắt đầu cho cuộc họp này" và "Bỏ qua". Nếu tiêu đề trỏ tới ngôn ngữ khác thì bắt đầu sẽ chuyển sang ngôn ngữ đó, và ngôn ngữ chỉ đổi khi cuộc họp thật sự bắt đầu (`useMeetingControls`; hủy hộp thoại đồng ý hoặc đang họp thì không đổi). Thẻ ẩn khi đang họp (`isMeetingLive`) `pickUpcoming()` là hàm thuần; chỉ có khi người dùng đã bật gợi ý từ lịch (macOS)
 - `startSession(assistLevel)`, `stopSession()`, `toggleOverlay()`: action gọi duy nhất qua cầu nối native
 - `describeNativeError(error)`: chuyển mã lỗi native thành thông báo tiếng Việt
 - `createSessionController({ native, createRealtime, glossary, now })`: controller inject dependency để test không cần Tauri/WebSocket; `glossary.list(language)` là tuỳ chọn
 - `useSession()`: snapshot `{status, error}` và action `start()`, `stop()`, `runDemo()`
 - `<RecentSessions />`: mở debrief hoặc xoá mềm cuộc họp sau bước xác nhận
-- Trang Cài đặt: tải JSON hoặc xoá toàn bộ dữ liệu sau khi gõ `XOA DU LIEU`
+- Trang Cài đặt, mục Quyền riêng tư: tải JSON, hoặc xoá toàn bộ dữ liệu qua hai bước: dùng `DeleteDataSteps` chung của `@cuelingo/ui` (cùng bản với web): bước 1 liệt kê cái sẽ mất (khớp `deleteMyData` ở API), bước 2 yêu cầu gõ `XOA DU LIEU`, nút xoá chỉ bật khi khớp đúng và focus đầu vào nút Huỷ
 - Cấu hình: địa chỉ WebSocket lấy từ `serverConfig().wsUrl` (xem [Máy chủ](./server.md); mặc định lúc build `ws://localhost:4000`) và `VITE_REALTIME_TOKEN` (mặc định `dev-token`)
 
 ## Phụ thuộc
@@ -47,7 +53,7 @@ Máy trạng thái của một cuộc họp phía client: nhận segment từ ST
 - **Câu nói:** nghe sự kiện `audio-utterance` của cả hai luồng, tải lên `POST /v1/sessions/:id/transcribe` (hàng đợi 3, hạn 16 giây; thử lại một lần chỉ với lỗi mạng, hết hạn, 5xx và 429, không thử lại 400/404/413). Thành công thì hiện caption và gửi `segment.final` cho cả hai luồng; im lặng bị bỏ; lỗi hai lần thì hiện "[không nhận dạng được]" tại chỗ và không gửi lên server.
 - **Dừng:** `stop()` gửi lệnh dừng cho native rồi **xả hàng đợi**: nhận thêm câu trong 3 giây (sidecar xả câu cuối), các câu đã vào hàng đợi vẫn được tải lên, hạn tổng 15 giây (quá hạn thì huỷ và bỏ, không bắt đầu tải lên mới). Chỉ sau đó mới kết thúc phiên, đóng socket và ẩn overlay; chỉ báo "đang gửi âm thanh" ở lại tới lúc đó. Cuộc họp bằng ngôn ngữ nhận dạng trên máy giữ nguyên hành vi cũ.
 - **Ngôn ngữ cuộc họp:** snapshot có `meetingLanguage` (đặt lúc bắt đầu, xoá khi phiên kết thúc); chỉ báo và kiểm tra đồng ý khi đổi ngôn ngữ dùng nó, không dùng ô cài đặt.
-- **Overlay:** câu không có bản dịch hiện chữ gốc, không có dòng "Đang dịch…"; nhãn "đang im lặng" chờ 25 giây (thay vì 6 giây) vì caption đám mây cách nhau xa hơn. Overlay hiện khi bắt đầu và ẩn khi phiên kết thúc hẳn (`native.hideOverlay`); panel không còn nút hiện/ẩn overlay và không còn nút "Chạy thử caption".
+- **Overlay:** câu không có bản dịch hiện chữ gốc, không có dòng "Đang dịch…"; nhãn "đang im lặng" chờ 25 giây (thay vì 6 giây) vì caption đám mây cách nhau xa hơn. Overlay hiện khi bắt đầu và ẩn khi phiên kết thúc hẳn (`native.hideOverlay`); panel không còn nút hiện/ẩn overlay (dòng nhắc phím tắt thay cho nút) và không còn nút "Chạy thử caption".
 
 ## Hạn mức của gói (W2-02)
 

@@ -29,3 +29,5 @@ Hai trang công khai (`/` và `/download`) nằm trong gói dùng chung `@cuelin
 ## Kiểm
 
 `pnpm verify`; build `apps/site` (`pnpm --filter @cuelingo/site build`) và `apps/web` (`build:static` + `scan:static`); mở ở 375/768/1024/1440, sáng và tối.
+
+- **Logo:** trang chủ, tải về và site tĩnh chỉ dùng `Logo` của `@cuelingo/ui` (qua `PublicHeader`); không chép SVG. Favicon của site (`apps/site/public/favicon.svg`) là file ảnh cùng hình, được `shared-ui.test.ts` kiểm. Bảng màu riêng của `landing.module.css` giữ nguyên; token cỡ chữ và phông Be Vietnam Pro đến từ `globals.css`.

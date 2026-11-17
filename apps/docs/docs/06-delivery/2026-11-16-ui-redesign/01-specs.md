@@ -47,13 +47,13 @@ Chia làm các đợt có thể ship riêng; mỗi AC thuộc một đợt.
 
 **Đợt 2: nhóm Họp**
 
-| #    | AC                                                                                                                                                                                                | Test                                |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| AC6  | WHEN mở Phiên họp THE SYSTEM SHALL hiện danh sách sẵn sàng (micro, âm thanh hệ thống, model) với trạng thái từng mục; mục thiếu có nút sửa riêng và Bắt đầu họp vẫn dùng được khi chỉ thiếu micro | `HomePage.test.tsx` (desktop)       |
-| AC7  | IF một cuộc họp trong lịch bắt đầu trong 15 phút tới THEN THE SYSTEM SHALL hiện thẻ nhắc có nút Bắt đầu cho cuộc họp đó và nút Bỏ qua                                                             | `CalendarHintCard.test.tsx`         |
-| AC8  | WHEN hạn mức giờ dịch hoặc debrief từ 80% trở lên THE SYSTEM SHALL hiện thanh vàng với số còn lại; ở 100% THE SYSTEM SHALL nói cái gì vẫn chạy và hiện nút Nâng cấp                               | `usage` › test hiển thị theo ngưỡng |
-| AC9  | WHILE đang họp THE SYSTEM SHALL hiện trạng thái riêng của micro và âm thanh hệ thống, và khi một luồng lỗi luồng kia vẫn chạy                                                                     | `LiveSession.test.tsx`              |
-| AC10 | WHEN tìm trong Cuộc họp THE SYSTEM SHALL hiện đoạn khớp có đánh dấu và có bộ lọc người nói, tháng                                                                                                 | `LibraryPage.test.tsx`              |
+| #    | AC                                                                                                                                                                                                | Test                                  |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| AC6  | WHEN mở Phiên họp THE SYSTEM SHALL hiện danh sách sẵn sàng (micro, âm thanh hệ thống, model) với trạng thái từng mục; mục thiếu có nút sửa riêng và Bắt đầu họp vẫn dùng được khi chỉ thiếu micro | `HomePage.test.tsx` (desktop)         |
+| AC7  | IF một cuộc họp trong lịch bắt đầu trong 15 phút tới THEN THE SYSTEM SHALL hiện thẻ nhắc có nút Bắt đầu cho cuộc họp đó và nút Bỏ qua                                                             | `CalendarHintCard.test.tsx`           |
+| AC8  | WHEN hạn mức giờ dịch hoặc debrief từ 80% trở lên THE SYSTEM SHALL hiện thanh vàng với số còn lại; ở 100% THE SYSTEM SHALL nói cái gì vẫn chạy và hiện nút Nâng cấp                               | `usage` › test hiển thị theo ngưỡng   |
+| AC9  | WHILE đang họp THE SYSTEM SHALL hiện trạng thái riêng của micro và âm thanh hệ thống, và khi một luồng lỗi luồng kia vẫn chạy                                                                     | `capture-problems.test.tsx` (desktop) |
+| AC10 | WHEN tìm trong Cuộc họp THE SYSTEM SHALL hiện đoạn khớp có đánh dấu và có bộ lọc người nói, tháng                                                                                                 | `LibraryPage.test.tsx`                |
 
 **Đợt 3: nhóm Học và Ứng dụng**
 

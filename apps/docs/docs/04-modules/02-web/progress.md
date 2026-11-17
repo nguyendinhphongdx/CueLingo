@@ -29,3 +29,7 @@ Tiến bộ theo tuần: % hiểu, số cụm đã học, streak.
 ## Câu hỏi mở
 
 - (chưa có)
+
+## Là một tab của Ôn tập
+
+Hiện là tab **Tiến độ** của [Ôn tập](./review.md#ba-tab-hôm-nay-kho-cụm-từ-tiến-độ); `/progress` chuyển hướng tới `/review?tab=progress`. Feature xuất `ProgressPanel({ language })`, các số tổng quan dùng `StatCard`/`StatGrid` của `@cuelingo/ui`.

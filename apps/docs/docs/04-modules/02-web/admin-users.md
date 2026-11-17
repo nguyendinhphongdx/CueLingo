@@ -17,12 +17,12 @@ Trang cho admin (`ADMIN_EMAILS`) xem ai đang ở gói nào, doanh thu và gói 
 
 ## Interface
 
-| Thành phần                             | Nội dung                                                                                                                                              |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AdminUsersPage`                       | Container: hai query (`client.admin.dashboard`, `client.admin.users.list`), gọi `notFound()` khi một trong hai trả `401/403`                          |
-| `AdminDashboardView`, `AdminUserTable` | Thuần, nhận dữ liệu qua props (test bằng `renderToStaticMarkup`)                                                                                      |
-| `use-admin-users.ts`                   | `useAdminDashboard`, `useAdminUsers(filters)` (khoá cache theo bộ lọc), `queryFor` (chỉ gửi tham số có giá trị), `useDebounced`                       |
-| `admin-users-format.ts`                | `sourceLabel` (Gán tay / Thanh toán), `expiryText`: gói đã hết hạn hiện `Free` kèm "Hết hạn dd/mm/yyyy" để phân biệt với tài khoản Free chưa từng trả |
+| Thành phần                             | Nội dung                                                                                                                                                                                                                                                                                                                                                                                      |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AdminUsersPage`                       | Container: hai query (`client.admin.dashboard`, `client.admin.users.list`), gọi `notFound()` khi một trong hai trả `401/403`                                                                                                                                                                                                                                                                  |
+| `AdminDashboardView`, `AdminUserTable` | Thuần, nhận dữ liệu qua props (test bằng `renderToStaticMarkup`). `AdminDashboardView` nhận `dashboard: AdminDashboard \| null`: khi dashboard đang tải hoặc lỗi, các thẻ nhóm người (Tổng, Free, Pro, Ultra, sắp hết hạn) vẫn hiện và vẫn lọc được, chỉ không có số. Thẻ lọc là `FilterCard` chung. Thanh đo ở từng hàng dùng `DEFAULT_PLAN_LIMITS` vì DTO của hàng không mang hạn mức riêng |
+| `use-admin-users.ts`                   | `useAdminDashboard`, `useAdminUsers(filters)` (khoá cache theo bộ lọc), `queryFor` (chỉ gửi tham số có giá trị), `useDebounced`                                                                                                                                                                                                                                                               |
+| `admin-users-format.ts`                | `sourceLabel` (Gán tay / Thanh toán), `expiryText`: gói đã hết hạn hiện `Free` kèm "Hết hạn dd/mm/yyyy" để phân biệt với tài khoản Free chưa từng trả                                                                                                                                                                                                                                         |
 
 Cột: email (liên kết tới chi tiết) và tên, ngày đăng ký, gói, nguồn, hết hạn, giờ dịch tháng này, hoạt động gần nhất (phiên họp gần nhất, "Chưa có" nếu chưa họp).
 
@@ -52,3 +52,7 @@ Route `/admin/users/<id>` là một trang giữ chỗ `_` (như `/sessions/<id>`
 Cảnh báo chỉ cho việc **hạ hạng** gói đã trả (Ultra → Pro, → Free); lên hạng, cùng hạng, gói gán tay hoặc gói đã hết hạn thì không cảnh báo. Vẫn cho làm: hoàn tiền (nếu cần) làm tay ngoài hệ thống.
 
 Test: `AdminUsersPage.test.tsx`, `AdminUserDetail.test.tsx`, `lib/client.test.ts`.
+
+## Giao diện mới (UI redesign, AC15 và AC16)
+
+Các ô thống kê Tổng, Free, Pro, Ultra và Sắp hết hạn là nút lọc (`aria-pressed`, viền đậm khi đang chọn) và đồng bộ với bộ lọc của danh sách; ô Đăng ký mới và Doanh thu là số thuần. Mỗi dòng có `UsageMeter` giờ dịch tháng này so với hạn mức mặc định của gói (`DEFAULT_PLAN_LIMITS`; bảng chỉ có số giờ dịch, hạn mức do `PLAN_LIMITS` ghi đè chỉ hiện đúng ở trang chi tiết). Hộp xác nhận đổi gói nêu gói cũ → gói mới, ngày hết hạn dự kiến, đơn 0đ "Admin tặng" và cảnh báo khi hạ gói đã trả tiền; focus bắt đầu ở Huỷ.

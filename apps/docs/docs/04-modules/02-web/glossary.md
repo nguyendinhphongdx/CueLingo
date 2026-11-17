@@ -30,3 +30,7 @@ Quản lý thuật ngữ và tên riêng dùng cho STT và dịch.
 ## Câu hỏi mở
 
 - (chưa có)
+
+## Thêm nhanh và dán hàng loạt
+
+Nút **Dán nhiều thuật ngữ** mở một ô văn bản: mỗi dòng một thuật ngữ, cách dịch (tuỳ chọn) đứng sau Tab, `-`, `|`, `=` hoặc `;`. `parseBulkTerms` (`bulk.ts`, hàm thuần) bỏ dòng trống, trùng (kể cả với thuật ngữ đã có) hoặc quá giới hạn độ dài, và chỉ lấy tối đa 50 dòng mỗi lần. Thêm lần lượt bằng `POST /v1/glossary` (không có endpoint hàng loạt); lỗi dừng ở dòng lỗi và giữ lại phần chưa thêm trong ô.
