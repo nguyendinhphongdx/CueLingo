@@ -1,7 +1,6 @@
-/** The shared tokens switch on `.dark`; this keeps that class in step with the browser's preferred appearance. */
+import { followTheme } from '@cuelingo/ui/lib/theme';
+
+/** The shared tokens switch on `.dark`; this keeps that class in step with the saved choice or the system. */
 export function followColorScheme(): void {
-  const query = window.matchMedia('(prefers-color-scheme: dark)');
-  const apply = () => document.documentElement.classList.toggle('dark', query.matches);
-  apply();
-  query.addEventListener('change', apply);
+  followTheme();
 }
