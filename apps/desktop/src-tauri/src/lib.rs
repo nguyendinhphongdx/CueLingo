@@ -52,6 +52,7 @@ pub fn run() {
             commands::permissions_status,
             commands::model_status,
             commands::model_download,
+            commands::model_cancel,
             commands::check_system_audio,
             commands::open_external,
             commands::set_assist_level,

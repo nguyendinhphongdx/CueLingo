@@ -3,6 +3,7 @@
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{Child, ChildStdin, Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use serde_json::Value;
@@ -22,7 +23,13 @@ pub struct AudioBridge {
 /// meeting, and there is at most one of it.
 #[derive(Default)]
 pub struct ModelDownload {
-    running: Arc<Mutex<Option<Child>>>,
+    running: Arc<Mutex<Option<Run>>>,
+}
+
+/// One download: its process, and whether the person cancelled it (then its end is a cancel, not a failure).
+struct Run {
+    child: Child,
+    cancelled: Arc<AtomicBool>,
 }
 
 pub(crate) fn download_command(path: PathBuf, language: &str) -> Command {
@@ -102,16 +109,26 @@ impl ModelWatch {
     }
 }
 
-/// Whether the child is still running; one that has exited is reaped and its slot freed.
-fn alive(slot: &mut Option<Child>) -> bool {
+/// Whether the download is still running; one that has exited is reaped and its slot freed.
+fn alive(slot: &mut Option<Run>) -> bool {
     let exited = match slot.as_mut() {
         None => return false,
-        Some(child) => !matches!(child.try_wait(), Ok(None)),
+        Some(run) => !matches!(run.child.try_wait(), Ok(None)),
     };
     if exited {
         *slot = None;
     }
     !exited
+}
+
+/// What the screens hear about a download's end: a failure that follows a cancel is reported as `cancelled`
+/// (the screens go back to "not downloaded" instead of showing an error the person asked for).
+pub(crate) fn mark_cancelled(mut payload: Value, cancelled: bool) -> Value {
+    let failed = payload.get("state").and_then(Value::as_str) == Some("error");
+    if cancelled && failed {
+        payload["message"] = Value::String("cancelled".into());
+    }
+    payload
 }
 
 impl ModelDownload {
@@ -135,32 +152,54 @@ impl ModelDownload {
             .spawn()
             .map_err(|e| format!("audio_sidecar_failed: {e}"))?;
         let stdout = child.stdout.take().ok_or("audio_sidecar_failed")?;
-        *slot = Some(child);
+        let pid = child.id();
+        let cancelled = Arc::new(AtomicBool::new(false));
+        *slot = Some(Run {
+            child,
+            cancelled: cancelled.clone(),
+        });
         drop(slot);
 
         let (app, running, language) = (app.clone(), self.running.clone(), language.to_string());
         std::thread::spawn(move || {
             let lines = BufReader::new(stdout).lines().map_while(Result::ok);
             forward_download_lines(lines, &language, &mut |event, payload| {
+                let payload = mark_cancelled(payload, cancelled.load(Ordering::Acquire));
                 let _ = app.emit(event, payload);
             });
             if let Ok(mut slot) = running.lock() {
-                if let Some(mut child) = slot.take() {
-                    let _ = child.wait();
+                // Only this run's own process: after a cancel and a retry a newer download may be in the slot.
+                if slot.as_ref().is_some_and(|run| run.child.id() == pid) {
+                    if let Some(mut run) = slot.take() {
+                        let _ = run.child.wait();
+                    }
                 }
             }
         });
         Ok(())
     }
 
-    /// Ends a download in progress (the app is quitting). A half-finished file is only ever a `.part`.
-    pub fn stop(&self) {
-        if let Ok(mut slot) = self.running.lock() {
-            if let Some(mut child) = slot.take() {
-                let _ = child.kill();
-                let _ = child.wait();
+    /// Ends the download in progress, if any. A half-finished file is only ever a `.part`, so nothing
+    /// half-written is ever taken for a model. Returns whether a download was running.
+    pub fn cancel(&self) -> bool {
+        let Ok(mut slot) = self.running.lock() else {
+            return false;
+        };
+        match slot.take() {
+            Some(mut run) => {
+                // Before the kill, so the reader that sees the process end already knows why.
+                run.cancelled.store(true, Ordering::Release);
+                let _ = run.child.kill();
+                let _ = run.child.wait();
+                true
             }
+            None => false,
         }
+    }
+
+    /// The app is quitting: a download in the background must not outlive it.
+    pub fn stop(&self) {
+        self.cancel();
     }
 }
 
@@ -445,6 +484,27 @@ mod tests {
         // No model event at all, or only other events: nothing was being downloaded.
         assert!(watched(&[]).is_none());
         assert!(watched(&[r#"{"type":"level","stream":"mic","rms":0.1,"peak":0.2}"#]).is_none());
+    }
+
+    #[test]
+    fn a_failure_after_a_cancel_is_reported_as_cancelled() {
+        let failed = serde_json::json!({"type":"model","language":"en","state":"error","message":"download interrupted"});
+        let out = mark_cancelled(failed.clone(), true);
+        assert_eq!(out["message"], "cancelled");
+        assert_eq!(out["state"], "error");
+        // Without a cancel the message is untouched, and other states never change.
+        assert_eq!(
+            mark_cancelled(failed, false)["message"],
+            "download interrupted"
+        );
+        let ready = serde_json::json!({"type":"model","language":"en","state":"ready"});
+        assert_eq!(mark_cancelled(ready.clone(), true), ready);
+    }
+
+    #[test]
+    fn nothing_to_cancel_when_nothing_runs() {
+        assert!(!ModelDownload::default().cancel());
+        assert!(!ModelDownload::default().is_running());
     }
 
     #[test]

@@ -181,6 +181,17 @@ pub fn model_download(
     state.download.start(&app, &language)
 }
 
+/// Stops the download in progress (the person pressed ✕ or reload). The screens hear `error` with the message
+/// `cancelled` and go back to "not downloaded". Nothing happens when no download runs.
+#[tauri::command]
+pub fn model_cancel(state: State<AppState>) -> Result<(), String> {
+    if !MODEL_CONTROL {
+        return Err("model_control_unavailable".into());
+    }
+    state.download.cancel();
+    Ok(())
+}
+
 /// Runs the sidecar in a one-shot mode and returns the JSON line whose `type` is `kind`.
 fn probe_sidecar(flag: &str, kind: &str) -> Option<serde_json::Value> {
     let path = crate::audio_bridge::sidecar_path()?;
