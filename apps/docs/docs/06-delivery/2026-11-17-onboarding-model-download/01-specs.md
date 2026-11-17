@@ -1,0 +1,56 @@
+# onboarding-model-download — Nút tải mô hình và footer gọn hơn ở onboarding
+
+| Trạng thái | Loại    | Nhánh / PR                              | Ước lượng → thực tế |
+| ---------- | ------- | --------------------------------------- | ------------------- |
+| Plan       | feature | `feat/onboarding-model-download` / _PR_ | _2–3 ngày → ?_      |
+
+**Phạm vi:** trong: bước "Mô hình" của onboarding (bắt buộc tải, tiến trình, lỗi), footer onboarding, **danh sách ngôn ngữ và trạng thái model** ở Cài đặt, **cảnh báo khi họp bằng ngôn ngữ chưa có model**, chế độ sidecar mới "trạng thái / chỉ tải model" cho Windows (Rust) và macOS (Swift), lệnh Tauri nối hai phía · ngoài: model mới hay nguồn model mới, xoá model đã tải, hủy giữa chừng, tải tiếp từ chỗ đứt.
+
+## 1. Vấn đề
+
+Bước 3 của onboarding nói "CueLingo tải nó một lần, khi bạn bắt đầu cuộc họp đầu tiên" và hiện "Chưa tải gì lúc này". Người dùng không có cách tải trước: sidecar chỉ tải model khi có một phiên họp, nên lần đầu bấm **Bắt đầu họp** (thường đang sát giờ họp) phải chờ model khoảng 630 MB trên Windows mà không có caption. Người dùng cũng hỏi thẳng "không tải được luôn ở đây à?".
+
+Footer cùng màn có 4 nút ngang hàng: **Quay lại**, **Thoát, làm tiếp sau**, **Bỏ qua, tải sau**, **Tiếp tục**. "Thoát" là hành động hiếm nhưng chiếm chỗ như hành động thường xuyên, làm khó thấy nút chính.
+
+- **Spec liên quan:** `04-modules/01-desktop/onboarding.md`, `04-modules/01-desktop/tauri-core.md`, `04-modules/01-desktop/local-stt.md`, `08-adr/0020-windows-capture-stt.md`
+- **Module chạm tới:** `apps/desktop/src/onboarding`, `apps/desktop/src-tauri` (lệnh mới), `apps/desktop/native/windows-audio`, `apps/desktop/native/macos-audio`
+
+## 2. Tiêu chí chấp nhận (EARS)
+
+| #    | AC                                                                                                                                                                                                                                                      | Test                                                  |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| AC1  | WHEN bước Mô hình mở và model chưa có THE SYSTEM SHALL hiện nút "Tải mô hình ngay" kèm dung lượng; WHEN người dùng bấm THE SYSTEM SHALL tải model tiếng Anh về máy mà không mở cuộc họp và không thu âm, và hiện phần trăm tiến trình                   | `OnboardingFlow.test.tsx`; `cargo test` (sidecar)     |
+| AC2  | WHEN bước Mô hình mở THE SYSTEM SHALL kiểm model đã có trên máy chưa (đủ tệp, đúng SHA-256); IF đã có THEN THE SYSTEM SHALL hiện "Đã sẵn sàng", không tải lại, và bật "Tiếp tục" ngay                                                                   | `OnboardingFlow.test.tsx`; `cargo test`; `swift test` |
+| AC3  | WHILE model chưa sẵn sàng (chưa tải, đang tải, hoặc lỗi) THE SYSTEM SHALL khoá "Tiếp tục" (cả phím Enter) và không có "Bỏ qua" ở bước này; WHEN model sẵn sàng THE SYSTEM SHALL bật "Tiếp tục"; "Quay lại" và ✕ luôn dùng được                          | `OnboardingFlow.test.tsx`                             |
+| AC4  | IF tải thất bại (mất mạng, SHA-256 sai) THEN THE SYSTEM SHALL hiện lý do ngắn bằng tiếng Việt và nút "Thử lại", giữ "Tiếp tục" khoá, không để lại tệp model hỏng                                                                                        | `OnboardingFlow.test.tsx`; `cargo test` (sidecar)     |
+| AC5  | WHEN người dùng bấm Bắt đầu họp trong lúc model đang tải THE SYSTEM SHALL không chạy hai tiến trình cùng tải một tệp, và báo "Mô hình đang tải" thay vì lỗi chung                                                                                       | `tauri-core` test; test `session-controller`          |
+| AC6  | THE SYSTEM SHALL giữ ở footer chỉ Quay lại, Bỏ qua (ở các bước được bỏ qua, **không** gồm bước Mô hình) và nút chính; "Thoát, làm tiếp sau" là một nút ✕ ở góc thẻ có nhãn truy cập đúng chữ đó, và vẫn lưu bước hiện tại như cũ                        | `OnboardingFlow.test.tsx`                             |
+| AC7  | THE SYSTEM SHALL giữ nguyên phím Enter (tiếp) và Esc (lùi) của onboarding                                                                                                                                                                               | `OnboardingFlow.test.tsx`                             |
+| AC8  | WHERE sidecar của bản cài chưa hỗ trợ chế độ tải model (ví dụ bản macOS cũ) THE SYSTEM SHALL giữ hành vi cũ của bước này (chữ cũ, "Tiếp tục" mở, tải khi họp) để không chặn người dùng khỏi onboarding                                                  | test khả năng của sidecar trong `native.ts`           |
+| AC9  | THE SYSTEM SHALL chỉ tải từ nguồn đã ghim (cùng revision và SHA-256 như khi họp) và không ghi tên tệp người dùng, âm thanh hay token vào log                                                                                                            | review quyền riêng tư; `cargo test`                   |
+| AC10 | THE SYSTEM SHALL có ở Cài đặt, trong một mục riêng "Mô hình", một danh sách mọi ngôn ngữ hỗ trợ; mỗi dòng nêu tên, nơi chạy ("Trên máy" hoặc "Đám mây") và trạng thái model: "Đã tải" kèm dung lượng, "Chưa tải" kèm dung lượng, hoặc "Không cần model" | `LanguageModels.test.tsx`                             |
+| AC11 | WHEN một dòng "Trên máy" chưa tải THE SYSTEM SHALL hiện nút "Tải ngay" với cùng tiến trình, lỗi và thử lại như ở onboarding; dòng đã tải thì không có nút                                                                                               | `LanguageModels.test.tsx`                             |
+| AC12 | WHEN người dùng chọn ở trang Phiên họp một ngôn ngữ "Trên máy" mà model chưa tải THE SYSTEM SHALL hiện cảnh báo nêu dung lượng và rằng caption sẽ chờ model tải xong, kèm nút "Tải ngay"; bắt đầu họp vẫn được phép                                     | `SessionPanel.test.tsx`                               |
+| AC13 | WHEN ngôn ngữ chạy đám mây THE SYSTEM SHALL ghi "Không cần tải model" và giữ nguyên bước đồng ý gửi âm thanh sẵn có (`cloud_consent_required`), không thêm cảnh báo model                                                                               | `SessionPanel.test.tsx`; test `cloud-consent` hiện có |
+| AC14 | THE SYSTEM SHALL lấy trạng thái từ sidecar (một chế độ một lần in mỗi ngôn ngữ "Trên máy": có/chưa có, dung lượng), cùng giao thức trên macOS và Windows, và bản sidecar không hỗ trợ thì ẩn danh sách model (AC8)                                      | `cargo test`; `swift test`; `native.test.ts`          |
+
+## 3. Câu hỏi mở
+
+- [x] **Chỉ model tiếng Anh?** (Registry hiện chỉ có `en` chạy trên máy, bốn ngôn ngữ còn lại chạy đám mây, nên danh sách AC10 có 1 dòng "Trên máy" và 4 dòng "Đám mây".) Onboarding hiện không chọn ngôn ngữ; đề xuất tải đúng model mặc định (`en`), các ngôn ngữ khác tải khi họp như cũ. Trên macOS còn model tiếng Nhật chạy trên máy: để sau?
+- [x] **Tải đang chạy mà bấm Bắt đầu họp (AC5):** đề xuất lõi Tauri từ chối `session_start` với mã `model_downloading` và UI hiện chữ riêng; cách khác là cho họp chờ tải xong. Chọn cách nào?
+- [x] **macOS:** Swift không build hay test được trên PC Windows này. Đề xuất giao `04-brief.md` cho máy Mac; trong lúc chờ, nút tự ẩn theo AC8. Đồng ý?
+- [x] **Thoát (✕) khi đang tải:** đề xuất tải tiếp ở nền; lần sau mở lại onboarding thấy trạng thái thật (đang tải hoặc đã sẵn sàng).
+- [x] **Bắt buộc có thể kẹt:** máy offline hoặc mạng công ty chặn Hugging Face thì không qua được onboarding. Đề xuất: ✕ vẫn thoát được và dùng app, các thẻ trên trang chủ nhắc làm tiếp; người dùng đã xong onboarding từ trước không bị ảnh hưởng. Đồng ý?
+- [x] **Cảnh báo AC12 chặn hay chỉ nhắc?** Bạn nói "cảnh báo", nên đề xuất chỉ nhắc và vẫn cho bắt đầu (model tải trong lúc "đang nạp"). Chặn hẳn bắt người dùng sát giờ họp phải chờ.
+- [x] **Tự tải hay bấm mới tải:** đề xuất bấm mới tải (630 MB, có thể mạng tính cước). Hay muốn tự tải khi vào bước?
+
+## Decision log
+
+| Ngày       | Pha  | Quyết định / lý do bị từ chối                                                                                                                                                                                                                                                                                             |
+| ---------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-17 | Spec | Mở hồ sơ từ yêu cầu của người dùng                                                                                                                                                                                                                                                                                        |
+| 2026-11-17 | Spec | Người dùng chọn: "Thoát" thành nút ✕ (không gom vào menu ⋯, không giữ 3 nút); làm cho **cả hai nền tảng**                                                                                                                                                                                                                 |
+| 2026-11-17 | Spec | Người dùng: bước Mô hình **bắt buộc** (không qua onboarding nếu chưa tải); nếu model đã có thì không tải lại và bật "Tiếp tục" ngay. Cập nhật AC1, AC2, AC3, AC4, AC6, AC8; bỏ "Bỏ qua, tải sau" ở bước này                                                                                                               |
+| 2026-11-17 | Spec | Người dùng: nếu không ép tải ở onboarding thì phải có một màn liệt kê ngôn ngữ và model đã tải, và cảnh báo khi họp bằng ngôn ngữ chưa tải. Thêm AC10 đến AC14; mở rộng phạm vi, ước lượng 2–3 ngày                                                                                                                       |
+| 2026-11-17 | Spec | **Duyệt cổng Spec** theo mọi đề xuất: chỉ model `en`; từ chối `session_start` khi đang tải (`model_downloading`); macOS giao brief cho máy Mac, nút ẩn đến khi có (AC8); thoát (✕) khi đang tải thì tải tiếp ở nền; ✕ vẫn thoát được khi offline; bấm mới tải (không tự tải); cảnh báo AC12 chỉ nhắc, vẫn cho bắt đầu họp |
+| 2026-11-17 | Làm  | Người dùng muốn thấy "trang models": danh sách đặt ở **mục riêng "Mô hình"** của thanh bên Cài đặt (AC10 sửa theo). AC8 thực hiện bằng cờ biên dịch thay vì dò sidecar (xem 02-plan mục 11)                                                                                                                               |
