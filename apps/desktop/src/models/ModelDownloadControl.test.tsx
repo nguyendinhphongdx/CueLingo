@@ -38,4 +38,32 @@ describe('ModelDownloadControl', () => {
     expect(html({ kind: 'cloud' })).toContain('Không cần tải mô hình');
     expect(html({ kind: 'checking' })).toContain('Đang kiểm tra');
   });
+
+  it('offers ✕ and reload while downloading when the screen allows stopping', () => {
+    const out = renderToStaticMarkup(
+      <ModelDownloadControl
+        view={{ kind: 'downloading', sizeBytes: 1, progress: 0.3 }}
+        name="tiếng Anh"
+        onDownload={() => {}}
+        onCancel={() => {}}
+        onRestart={() => {}}
+      />,
+    );
+    expect(out).toContain('aria-label="Hủy tải"');
+    expect(out).toContain('aria-label="Tải lại"');
+  });
+
+  it('shows no stop buttons for a screen that did not ask for them, or outside a download', () => {
+    expect(html({ kind: 'downloading', sizeBytes: 1, progress: 0.3 })).not.toContain('Hủy tải');
+    const missing = renderToStaticMarkup(
+      <ModelDownloadControl
+        view={{ kind: 'missing', sizeBytes: 1 }}
+        name="x"
+        onDownload={() => {}}
+        onCancel={() => {}}
+        onRestart={() => {}}
+      />,
+    );
+    expect(missing).not.toContain('Hủy tải');
+  });
 });

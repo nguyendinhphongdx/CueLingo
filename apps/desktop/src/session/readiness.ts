@@ -131,7 +131,7 @@ function model(input: ReadinessInput): ReadinessItem {
       id: 'model',
       status: 'warn',
       title,
-      detail: `Chưa tải (${formatSize(managed.sizeBytes)}). Caption sẽ chờ mô hình tải xong khi bạn bắt đầu họp.`,
+      detail: `Chưa tải (${formatSize(managed.sizeBytes)}). Cần tải xong trước khi họp; sẽ hỏi khi bạn bấm Bắt đầu.`,
       fix: { kind: 'download-model', label: 'Tải ngay' },
     };
   }

@@ -45,11 +45,28 @@ export function useLocalModels() {
     }
   }, []);
 
+  /** ✕: stop the download; the row goes back to "not downloaded" at once, the end event confirms it. */
+  const cancel = useCallback(async (language: string) => {
+    useModelStore.getState().clear(language);
+    await native.cancelModelDownload().catch(() => undefined);
+  }, []);
+
+  /** Reload: stop and start again, for a download that seems stuck or failed half way. */
+  const restart = useCallback(
+    async (language: string) => {
+      await cancel(language);
+      await download(language);
+    },
+    [cancel, download],
+  );
+
   return {
     /** The model manager is available in this build. */
     supported: data !== null && data !== undefined,
     loading: data === undefined,
     view: (language: string): ModelView | null => viewOf(language, data, transient[language]),
     download,
+    cancel,
+    restart,
   };
 }

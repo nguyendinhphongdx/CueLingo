@@ -47,7 +47,7 @@ Cài đặt trong app và bản đồng bộ theo tài khoản: Assist mặc đ�
 - Các khoá `cuelingo.overlay.{fontSize,opacity,theme}` nằm trong `localStorage` chung origin
 - Khoá `cuelingo.server.v1` (máy chủ đã chọn) cũng nằm trong `localStorage`, thuộc module [Máy chủ](./server.md)
 - Nguồn lưu bền là `UserSettings` ở API; mặc định Assist 4, chữ 18 px, nền 88%, giao diện tối, không lưu audio, giọng đọc `Kore`
-- **Mô hình** (`<LanguageModels />`, `src/models/`): danh sách mọi ngôn ngữ hỗ trợ, sinh từ `SUPPORTED_LANGUAGES`. Mỗi dòng nêu tên, nơi chạy ("Trên máy" hoặc "Đám mây") và trạng thái: "Đã sẵn sàng", nút "Tải mô hình ngay · 631 MB" (kèm tiến trình, lỗi và "Thử lại"), hoặc "Không cần tải mô hình" cho ngôn ngữ chạy đám mây (vẫn theo bước đồng ý gửi âm thanh sẵn có). Dùng chung `useLocalModels` với onboarding và trang Phiên họp nên một lần tải hiện ở cả ba nơi. Mục ẩn khi `model_status` trả `null`
+- **Mô hình** (`<LanguageModels />`, `src/models/`): danh sách mọi ngôn ngữ hỗ trợ, sinh từ `SUPPORTED_LANGUAGES`. Mỗi dòng nêu tên, nơi chạy ("Trên máy" hoặc "Đám mây") và trạng thái: "Đã sẵn sàng", nút "Tải mô hình ngay · 631 MB" (kèm tiến trình có ✕ hủy và ↻ tải lại, lỗi và "Thử lại"), hoặc "Không cần tải mô hình" cho ngôn ngữ chạy đám mây (vẫn theo bước đồng ý gửi âm thanh sẵn có). Dùng chung `useLocalModels` với onboarding và trang Phiên họp nên một lần tải hiện ở cả ba nơi. Mục ẩn khi `model_status` trả `null`
 - **Giọng đọc** (`VoiceSettings`, dùng `VoicePicker` của `@cuelingo/ui`): chọn một trong 6 giọng, có nút nghe thử câu mẫu cố định. Đổi giọng thì lưu cùng tài khoản và xoá bộ nhớ âm thanh đã tải, nên Ôn tập, tra từ và Nói giúp đọc bằng giọng mới ngay. Web có cùng mục này trong Tuỳ chọn
 
 ## Quyền riêng tư

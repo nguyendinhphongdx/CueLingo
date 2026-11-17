@@ -157,7 +157,17 @@ function LegacyModelStep() {
 }
 
 /** The model step when the app can download it: the person cannot go on until the model is in place. */
-export function ModelStepView({ view, onDownload }: { view: ModelView; onDownload(): void }) {
+export function ModelStepView({
+  view,
+  onDownload,
+  onCancel,
+  onRestart,
+}: {
+  view: ModelView;
+  onDownload(): void;
+  onCancel?(): void;
+  onRestart?(): void;
+}) {
   const size =
     'sizeBytes' in view && view.sizeBytes > 0 ? ` (khoảng ${formatSize(view.sizeBytes)})` : '';
   return (
@@ -168,7 +178,13 @@ export function ModelStepView({ view, onDownload }: { view: ModelView; onDownloa
         CueLingo cần tải nó về một lần{size} trước khi họp. Bạn chỉ phải tải khi máy chưa có.
       </p>
       <div role="status" className="bg-card mt-6 space-y-3 rounded-xl border px-4 py-4">
-        <ModelDownloadControl view={view} name="tiếng Anh" onDownload={onDownload} />
+        <ModelDownloadControl
+          view={view}
+          name="tiếng Anh"
+          onDownload={onDownload}
+          onCancel={onCancel}
+          onRestart={onRestart}
+        />
         {canContinue(view) ? (
           <p className="text-muted-foreground text-sm">
             Mô hình đã có trên máy. Bạn có thể tiếp tục.
@@ -181,11 +197,21 @@ export function ModelStepView({ view, onDownload }: { view: ModelView; onDownloa
   );
 }
 
-function ModelStep({ view, onDownload }: { view: ModelView | null; onDownload(): void }) {
+function ModelStep({
+  view,
+  onDownload,
+  onCancel,
+  onRestart,
+}: {
+  view: ModelView | null;
+  onDownload(): void;
+  onCancel(): void;
+  onRestart(): void;
+}) {
   return view === null ? (
     <LegacyModelStep />
   ) : (
-    <ModelStepView view={view} onDownload={onDownload} />
+    <ModelStepView view={view} onDownload={onDownload} onCancel={onCancel} onRestart={onRestart} />
   );
 }
 
@@ -397,7 +423,12 @@ export function OnboardingFlow({
             </div>
           ) : null}
           {step === MODEL_STEP ? (
-            <ModelStep view={modelView} onDownload={() => void models.download(MODEL_LANGUAGE)} />
+            <ModelStep
+              view={modelView}
+              onDownload={() => void models.download(MODEL_LANGUAGE)}
+              onCancel={() => void models.cancel(MODEL_LANGUAGE)}
+              onRestart={() => void models.restart(MODEL_LANGUAGE)}
+            />
           ) : null}
           {step === 3 ? <AssistLevelStep /> : null}
           {step === 4 ? <ListeningStep /> : null}

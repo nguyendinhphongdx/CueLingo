@@ -1,17 +1,26 @@
 import { create } from 'zustand';
 import { native } from '../lib/native';
-import { transientOf, type Transient } from './model-state';
+import { applyModelEvent, type ModelEventLike, type Transient } from './model-state';
 
 interface ModelStore {
   /** What the native side last said per language while a model came down (or failed to). */
   transient: Record<string, Transient>;
   set(language: string, value: Transient): void;
+  clear(language: string): void;
+  apply(event: ModelEventLike): void;
 }
 
 export const useModelStore = create<ModelStore>((set) => ({
   transient: {},
   set: (language, value) =>
     set((state) => ({ transient: { ...state.transient, [language]: value } })),
+  clear: (language) =>
+    set((state) => ({
+      transient: Object.fromEntries(
+        Object.entries(state.transient).filter(([code]) => code !== language),
+      ),
+    })),
+  apply: (event) => set((state) => ({ transient: applyModelEvent(state.transient, event) })),
 }));
 
 let listening: Promise<void> | null = null;
@@ -23,7 +32,7 @@ let listening: Promise<void> | null = null;
 export function listenForModelEvents(): Promise<void> {
   listening ??= native
     .onAudioModel((event) => {
-      if (event.type === 'model') useModelStore.getState().set(event.language, transientOf(event));
+      if (event.type === 'model') useModelStore.getState().apply(event);
     })
     .then(() => undefined)
     // Outside the Tauri shell (a browser preview) there is nothing to hear.

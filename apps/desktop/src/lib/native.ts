@@ -284,6 +284,8 @@ export const native = {
   permissionsStatus: () => invoke('permissions_status').then((v) => PermissionsStatus.parse(v)),
   /** Which on-device models are downloaded; null when this build cannot tell (the screens keep the old flow). */
   modelStatus: () => invoke('model_status').then((v) => ModelStatus.nullable().parse(v)),
+  /** Stops the download in progress (✕ and reload); the screens hear it end as `cancelled`. */
+  cancelModelDownload: () => invoke('model_cancel').then(() => undefined),
   /** Starts downloading the model for `language` in the background; progress arrives as `audio-model` events. */
   downloadModel: (language: string) =>
     invoke('model_download', { language: z.string().min(2).max(3).parse(language) }).then(

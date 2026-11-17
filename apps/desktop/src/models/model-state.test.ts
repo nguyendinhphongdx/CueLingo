@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { ModelStatus } from '../lib/native';
 import {
+  applyModelEvent,
   canContinue,
+  gateAction,
   deviceLanguages,
   describeDownloadError,
   formatSize,
@@ -106,5 +108,47 @@ describe('transientOf and the registry', () => {
 
   it('lists only the languages that run on this machine', () => {
     expect(deviceLanguages()).toEqual(['en']);
+  });
+});
+
+describe('applyModelEvent', () => {
+  it('keeps the last thing said per language', () => {
+    const next = applyModelEvent({}, { language: 'en', state: 'downloading', progress: 0.3 });
+    expect(next.en).toMatchObject({ state: 'downloading', progress: 0.3 });
+    expect(applyModelEvent(next, { language: 'en', state: 'ready' }).en?.state).toBe('ready');
+  });
+
+  it('forgets a cancelled download: it goes back to what is on disk, not to an error', () => {
+    const before = { en: { state: 'downloading', progress: 0.6 }, vi: { state: 'ready' } } as const;
+    const next = applyModelEvent(before, {
+      language: 'en',
+      state: 'error',
+      message: 'cancelled',
+    });
+    expect(next).toEqual({ vi: { state: 'ready' } });
+  });
+
+  it('still shows a real failure', () => {
+    const next = applyModelEvent({}, { language: 'en', state: 'error', message: 'offline' });
+    expect(next.en?.state).toBe('error');
+  });
+});
+
+describe('gateAction (starting a meeting)', () => {
+  it('goes on when the model is there, needs none, or the app does not manage models', () => {
+    expect(gateAction({ kind: 'ready', sizeBytes: 1 }, false)).toBe('begin');
+    expect(gateAction({ kind: 'cloud' }, false)).toBe('begin');
+    expect(gateAction(null, false)).toBe('begin');
+  });
+
+  it('begins the download once when the model is missing', () => {
+    expect(gateAction({ kind: 'missing', sizeBytes: 1 }, false)).toBe('download');
+    expect(gateAction({ kind: 'missing', sizeBytes: 1 }, true)).toBe('wait');
+  });
+
+  it('waits while a download runs, the status is read, or a failure is left to the person', () => {
+    expect(gateAction({ kind: 'downloading', sizeBytes: 1, progress: 0.1 }, false)).toBe('wait');
+    expect(gateAction({ kind: 'checking' }, false)).toBe('wait');
+    expect(gateAction({ kind: 'error', sizeBytes: 1, message: 'x' }, false)).toBe('wait');
   });
 });

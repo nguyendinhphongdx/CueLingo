@@ -30,6 +30,20 @@ export function transientOf(event: ModelEventLike): Transient {
   return { state: event.state, progress: event.progress, message: event.message };
 }
 
+/** The `error` event a cancelled download ends with: the person asked for it, so it is not a failure. */
+export const CANCELLED = 'cancelled';
+
+/** The per-language state after an event; a cancelled download goes back to what is on disk. */
+export function applyModelEvent(
+  current: Record<string, Transient>,
+  event: ModelEventLike,
+): Record<string, Transient> {
+  if (event.state === 'error' && event.message === CANCELLED) {
+    return Object.fromEntries(Object.entries(current).filter(([code]) => code !== event.language));
+  }
+  return { ...current, [event.language]: transientOf(event) };
+}
+
 /** Fixed Vietnamese text for a failed download; the sidecar's own message never reaches the screen. */
 export function describeDownloadError(message?: string): string {
   const text = (message ?? '').toLowerCase();
@@ -79,6 +93,18 @@ export function formatSize(bytes: number): string {
 /** Whether the person may go on: the model is in place, or this build does not manage models at all. */
 export function canContinue(view: ModelView | null): boolean {
   return view === null || view.kind === 'ready' || view.kind === 'cloud';
+}
+
+/**
+ * What starting a meeting does about the model: go on, begin the download (once, because the person pressed
+ * Start), or wait (a download is running, the status is being read, or it failed and they decide).
+ */
+export function gateAction(
+  view: ModelView | null,
+  alreadyStarted: boolean,
+): 'begin' | 'download' | 'wait' {
+  if (canContinue(view)) return 'begin';
+  return view?.kind === 'missing' && !alreadyStarted ? 'download' : 'wait';
 }
 
 /** The on-device languages in the registry order, as `LanguageCode`s. */

@@ -18,9 +18,13 @@ export interface LanguageModelRow {
 export function LanguageModelsView({
   rows,
   onDownload,
+  onCancel,
+  onRestart,
 }: {
   rows: readonly LanguageModelRow[];
   onDownload(code: string): void;
+  onCancel?(code: string): void;
+  onRestart?(code: string): void;
 }) {
   return (
     <Section
@@ -42,6 +46,8 @@ export function LanguageModelsView({
               view={row.view}
               name={row.name.toLowerCase()}
               onDownload={() => onDownload(row.code)}
+              onCancel={onCancel ? () => onCancel(row.code) : undefined}
+              onRestart={onRestart ? () => onRestart(row.code) : undefined}
             />
           </li>
         ))}
@@ -72,5 +78,12 @@ export function languageModelRows(view: (code: string) => ModelView | null): Lan
 export function LanguageModels() {
   const models = useLocalModels();
   const rows = languageModelRows(models.view);
-  return <LanguageModelsView rows={rows} onDownload={(code) => void models.download(code)} />;
+  return (
+    <LanguageModelsView
+      rows={rows}
+      onDownload={(code) => void models.download(code)}
+      onCancel={(code) => void models.cancel(code)}
+      onRestart={(code) => void models.restart(code)}
+    />
+  );
 }
