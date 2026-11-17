@@ -13,18 +13,18 @@ Hai trang tĩnh để gửi cho người thử bên ngoài: giới thiệu và h
 ## Phạm vi MVP
 
 - Hai trang, tiếng Việt. Không tên miền riêng, không Linux, không đổi cơ chế tự cập nhật.
-- Windows: trang đã biết chọn nút theo hệ điều hành (`DownloadLinks`), nhưng bản Windows đang là **beta** nên **chưa có nút tải công khai**: `pages.yml` chưa đặt `VITE_DOWNLOAD_URL_WINDOWS`, người dùng Windows thấy "Windows sắp có". Mở nút là thêm đúng một dòng vào `pages.yml` (và một dòng vào `web-cloudflare.yml`), sau khi đợt B của [windows-desktop](../../06-delivery/2026-11-13-windows-desktop/01-specs.md) xong.
+- Windows: trang đã biết chọn nút theo hệ điều hành (`DownloadLinks`), và `pages.yml` đặt `VITE_DOWNLOAD_URL_WINDOWS` ngang hàng với macOS (link tới bản mới nhất của `releases`), nên người dùng Windows thấy nút tải như người dùng Mac. Bản cài chưa ký mã ([ADR 0021](../../08-adr/0021-windows-release-inno.md)): trang giữ hướng dẫn qua SmartScreen. Biến rỗng thì quay về "Windows sắp có".
 
 ## Interface
 
-| Thứ                         | Nội dung                                                                                                                                         |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `VITE_DOWNLOAD_URL`         | Link tải macOS, chỉ nhận `https:`; rỗng hoặc sai thì nút khoá. Chỉ đọc ở `src/config.ts`                                                         |
-| `VITE_DOWNLOAD_URL_WINDOWS` | Link tải Windows (`CueLingo-Windows-x64-setup.exe`), cùng luật `https:`. **Không đặt** cho tới khi mở bản Windows; rỗng thì không có nút Windows |
-| `SITE_BASE`                 | Đường dẫn gốc khi build, ví dụ `/<repo>/` (mặc định `/`). Workflow tính từ tên repo                                                              |
-| `src/config.ts`             | `parseDownloadUrl`, `DOWNLOADS` (`{macos, windows}`), `sitePaths(base)` (trả `LandingPaths`, không có `login`)                                   |
-| `src/pages.tsx`             | `SiteHome`, `SiteDownload`: gắn `LandingView`, `DownloadPage` của `@cuelingo/ui` với `paths` và `downloads`                                      |
-| `scripts/scan-dist.mjs`     | `scanDist(dir, forbidden)`: quét bản build tìm khoá, token, host dev, địa chỉ riêng; in tên tệp và luật, không in giá trị                        |
+| Thứ                         | Nội dung                                                                                                                                           |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_DOWNLOAD_URL`         | Link tải macOS, chỉ nhận `https:`; rỗng hoặc sai thì nút khoá. Chỉ đọc ở `src/config.ts`                                                           |
+| `VITE_DOWNLOAD_URL_WINDOWS` | Link tải Windows (`CueLingo-Windows-x64-setup.exe`), cùng luật `https:`. `pages.yml` đặt nó như `VITE_DOWNLOAD_URL`; rỗng thì không có nút Windows |
+| `SITE_BASE`                 | Đường dẫn gốc khi build, ví dụ `/<repo>/` (mặc định `/`). Workflow tính từ tên repo                                                                |
+| `src/config.ts`             | `parseDownloadUrl`, `DOWNLOADS` (`{macos, windows}`), `sitePaths(base)` (trả `LandingPaths`, không có `login`)                                     |
+| `src/pages.tsx`             | `SiteHome`, `SiteDownload`: gắn `LandingView`, `DownloadPage` của `@cuelingo/ui` với `paths` và `downloads`                                        |
+| `scripts/scan-dist.mjs`     | `scanDist(dir, forbidden)`: quét bản build tìm khoá, token, host dev, địa chỉ riêng; in tên tệp và luật, không in giá trị                          |
 
 Site nhận token và phông từ `@cuelingo/ui/globals.css`, logo từ `Logo` (favicon là file ảnh cùng hình). Component dùng chung nhận `link` và `paths` qua props, xem [UI](../05-packages/ui.md#trang-giới-thiệu-và-tải-về).
 
