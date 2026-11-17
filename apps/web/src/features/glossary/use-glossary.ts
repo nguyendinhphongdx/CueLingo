@@ -24,12 +24,27 @@ export function useGlossary(language: LanguageCode) {
     onSuccess: refresh,
   });
 
+  /** Adds one term after another and reports how many went in; stops at the first error (shown as `error`). */
+  const addMany = async (entries: Omit<CreateGlossaryTermInput, 'language'>[]) => {
+    let added = 0;
+    try {
+      for (const entry of entries) {
+        await add.mutateAsync(entry);
+        added += 1;
+      }
+    } catch {
+      // `add.error` carries the message.
+    }
+    return added;
+  };
+
   return {
     items: list.data ?? [],
     loading: list.isPending,
     error: describeError(list.error) ?? describeError(add.error) ?? describeError(remove.error),
     adding: add.isPending,
     add: add.mutateAsync,
+    addMany,
     remove: remove.mutate,
   };
 }

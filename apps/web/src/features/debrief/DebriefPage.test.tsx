@@ -238,6 +238,15 @@ describe('DebriefPageView', () => {
     expect(markup).toContain('Xoá cuộc họp');
   });
 
+  it('splits the meeting into a Debrief tab and a bilingual transcript tab, opening on the debrief', () => {
+    const markup = renderToStaticMarkup(<DebriefPageView {...defaultProps} />);
+    expect(markup).toContain('role="tablist"');
+    expect(markup).toMatch(/aria-selected="true"[^>]*>Debrief</);
+    expect(markup).toContain('>Bản ghi song ngữ<');
+    expect(markup).toMatch(/id="debrief-panel-transcript"[^>]*hidden/);
+    expect(markup).not.toMatch(/id="debrief-panel-debrief"[^>]*hidden/);
+  });
+
   it('shows a Vietnamese meeting without learning blocks, score or translations', () => {
     const viSession: SessionDetail = {
       ...session,

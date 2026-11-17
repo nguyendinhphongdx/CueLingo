@@ -1,4 +1,5 @@
 import type { BillingOrder, BillingOrderStatus } from '@cuelingo/shared';
+import { EmptyState } from '@cuelingo/ui/components/empty-state';
 import { ListCard } from '@cuelingo/ui/components/section';
 import { formatDateVn, formatVnd, planName } from '@cuelingo/ui/lib/usage';
 import Link from 'next/link';
@@ -13,7 +14,7 @@ const STATUS_LABEL: Record<BillingOrderStatus, string> = {
 /** The user's own orders (AC9): plan, period, amount, status and date. A pending one links back to its QR. */
 export function OrderHistory({ orders }: { orders: BillingOrder[] }) {
   if (orders.length === 0) {
-    return <p className="text-muted-foreground text-sm">Chưa có giao dịch nào.</p>;
+    return <EmptyState title="Chưa có giao dịch nào" />;
   }
   return (
     <ListCard>

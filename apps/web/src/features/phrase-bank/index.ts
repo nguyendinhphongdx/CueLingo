@@ -1,1 +1,1 @@
-export { PhraseBankPage } from './PhraseBankPage';
+export { PhraseBankPanel } from './PhraseBankPage';

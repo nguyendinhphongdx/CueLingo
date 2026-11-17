@@ -1,7 +1,9 @@
 'use client';
 
 import { Button } from '@cuelingo/ui/components/button';
+import { NoticeStrip } from '@cuelingo/ui/components/notice-strip';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
+import { Skeleton } from '@cuelingo/ui/components/skeleton';
 import type { ReactNode } from 'react';
 import { generatedAtText } from './analytics-format';
 
@@ -32,14 +34,20 @@ export function AnalyticsFrame({
     <>
       <PageHeader title={title} description={description} />
       {loading ? (
-        <p className="text-muted-foreground text-sm" aria-live="polite">
-          Đang tải số liệu…
-        </p>
+        <div className="space-y-3" aria-busy="true">
+          <p className="sr-only" aria-live="polite">
+            Đang tải số liệu…
+          </p>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {Array.from({ length: 4 }, (_, i) => (
+              <Skeleton key={i} className="h-24 rounded-xl" />
+            ))}
+          </div>
+          <Skeleton className="h-64 rounded-xl" />
+        </div>
       ) : error ? (
         <div className="flex flex-col items-start gap-3">
-          <p role="alert" className="text-destructive text-sm">
-            {error}
-          </p>
+          <NoticeStrip tone="error">{error}</NoticeStrip>
           <Button variant="outline" onClick={onReload}>
             Tải lại
           </Button>

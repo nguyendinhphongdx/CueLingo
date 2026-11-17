@@ -11,6 +11,10 @@ import type {
 import { Button } from '@cuelingo/ui/components/button';
 import { Card, CardContent } from '@cuelingo/ui/components/card';
 import { ConfirmDialog } from '@cuelingo/ui/components/confirm-dialog';
+import { Badge } from '@cuelingo/ui/components/badge';
+import { NoticeStrip } from '@cuelingo/ui/components/notice-strip';
+import { Skeleton } from '@cuelingo/ui/components/skeleton';
+import { EmptyState } from '@cuelingo/ui/components/empty-state';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { ListCard, Section } from '@cuelingo/ui/components/section';
 import { Segmented } from '@cuelingo/ui/components/segmented';
@@ -45,7 +49,7 @@ const STATUS_LABEL: Record<AdminUserOrder['status'], string> = {
 /** Payment history (AC4): plan, period, amount, status and date. No QR, no payment link. */
 export function AdminOrderList({ orders }: { orders: AdminUserOrder[] }) {
   if (orders.length === 0) {
-    return <p className="text-muted-foreground text-sm">Chưa có giao dịch nào.</p>;
+    return <EmptyState title="Chưa có giao dịch nào" />;
   }
   return (
     <ListCard>
@@ -112,7 +116,12 @@ export function PlanChangeConfirm({
       onCancel={onCancel}
     >
       {`${user.email}: ${planName(user.plan)} → ${planName(plan)}${detail}. `}
-      {warning ? <strong>{warning}</strong> : null}
+      {warning ? (
+        // The dialog puts its body in a paragraph, so the callout is a block-level span, not a NoticeStrip.
+        <strong className="border-warning/40 bg-warning/10 text-foreground mt-3 block rounded-lg border px-4 py-3">
+          {warning}
+        </strong>
+      ) : null}
     </ConfirmDialog>
   );
 }
@@ -157,11 +166,7 @@ export function PlanForm({
           </p>
         </>
       )}
-      {error && (
-        <p role="alert" className="text-destructive text-sm">
-          {error}
-        </p>
-      )}
+      {error && <NoticeStrip tone="error">{error}</NoticeStrip>}
       <Button type="submit" disabled={saving}>
         Lưu gói
       </Button>
@@ -208,8 +213,13 @@ export function AdminUserDetailView({
       <Section title="Gói và lượng dùng tháng này">
         <Card>
           <CardContent className="space-y-3 pt-5">
-            <p className="text-muted-foreground text-sm">
-              Nguồn: {sourceLabel(user.source)} · Hết hạn: {expiryText(user)}
+            <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
+              <Badge variant={user.plan === 'free' ? 'outline' : 'default'}>
+                {planName(user.plan)}
+              </Badge>
+              <span>
+                Nguồn: {sourceLabel(user.source)} · Hết hạn: {expiryText(user)}
+              </span>
             </p>
             <UsageSummary
               plan={detail.usage.plan}
@@ -226,7 +236,7 @@ export function AdminUserDetailView({
         >
           <PlanForm user={user} saving={saving} error={saveError} onSave={onSave} />
           {saved && (
-            <p role="status" className="text-sm text-emerald-700 dark:text-emerald-400">
+            <p role="status" className="text-success text-sm">
               Đã đổi gói.{saved.expiresAt ? ` Hết hạn ${formatDateVn(saved.expiresAt)}.` : ''}
             </p>
           )}
@@ -255,16 +265,13 @@ export function AdminUserDetail({ id }: { id: string }) {
     <>
       {back}
       {state.loading && (
-        <p className="text-muted-foreground text-sm" aria-live="polite">
-          Đang tải…
-        </p>
+        <div className="space-y-3" aria-busy="true">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-40" />
+        </div>
       )}
-      {state.missing && <p role="alert">Không tìm thấy người dùng này.</p>}
-      {state.error && (
-        <p role="alert" className="text-destructive text-sm">
-          {state.error}
-        </p>
-      )}
+      {state.missing && <NoticeStrip tone="error">Không tìm thấy người dùng này.</NoticeStrip>}
+      {state.error && <NoticeStrip tone="error">{state.error}</NoticeStrip>}
       {state.detail && (
         <AdminUserDetailView
           key={state.detail.user.id}

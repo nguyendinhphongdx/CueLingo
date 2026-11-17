@@ -1,12 +1,23 @@
 'use client';
 
-import { AdminUserListQuerySchema, type AdminDashboard, type AdminUserRow } from '@cuelingo/shared';
+import {
+  AdminUserListQuerySchema,
+  DEFAULT_PLAN_LIMITS,
+  type AdminDashboard,
+  type AdminUserRow,
+} from '@cuelingo/shared';
 import { Button } from '@cuelingo/ui/components/button';
 import { Card, CardContent } from '@cuelingo/ui/components/card';
+import { FilterCard } from '@cuelingo/ui/components/filter-card';
 import { Input } from '@cuelingo/ui/components/input';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { Section } from '@cuelingo/ui/components/section';
-import { Segmented } from '@cuelingo/ui/components/segmented';
+import { Skeleton } from '@cuelingo/ui/components/skeleton';
+import { StatCard } from '@cuelingo/ui/components/stat-card';
+import { UsageMeter } from '@cuelingo/ui/components/usage-meter';
+import { EmptyState } from '@cuelingo/ui/components/empty-state';
+import { NoticeStrip } from '@cuelingo/ui/components/notice-strip';
+import { Badge } from '@cuelingo/ui/components/badge';
 import {
   formatDateVn,
   formatDurationMs,
@@ -28,45 +39,83 @@ import {
 
 const number = new Intl.NumberFormat('vi-VN');
 
-const FILTERS: { value: PlanFilter; label: string }[] = [
-  { value: 'all', label: 'Tất cả' },
-  { value: 'free', label: 'Free' },
-  { value: 'pro', label: 'Pro' },
-  { value: 'ultra', label: 'Ultra' },
-  { value: 'expiring', label: 'Sắp hết hạn' },
-];
-
-/** The numbers at the top (AC1). Plans count only while they are in force. */
-export function AdminDashboardView({ dashboard }: { dashboard: AdminDashboard }) {
-  const stats: [string, string][] = [
-    ['Tổng người dùng', number.format(dashboard.totalUsers)],
-    ['Free', number.format(dashboard.byPlan.free)],
-    ['Pro', number.format(dashboard.byPlan.pro)],
-    ['Ultra', number.format(dashboard.byPlan.ultra)],
-    ['Đăng ký mới · 7 ngày', number.format(dashboard.newUsers7d)],
-    ['Doanh thu tháng này', formatVnd(dashboard.revenueThisMonth)],
-    ['Gói trả phí hết hạn · 7 ngày tới', number.format(dashboard.expiringIn7d)],
+/**
+ * The numbers at the top (AC1). Plans count only while they are in force. Without `dashboard` (loading
+ * or failed) the people-group cards still show and still filter the list, just without counts (AC15).
+ */
+export function AdminDashboardView({
+  dashboard,
+  selected = 'all',
+  onSelect,
+}: {
+  dashboard: AdminDashboard | null;
+  /** The filter in force: the card for it is marked as pressed (AC15). */
+  selected?: PlanFilter;
+  /** Pressing a card that can filter the list; without it the cards are plain numbers. */
+  onSelect?: (filter: PlanFilter) => void;
+}) {
+  const count = (value: number | undefined) => (value === undefined ? null : number.format(value));
+  const stats: { label: string; value: string | null; filter?: PlanFilter }[] = [
+    { label: 'Tổng người dùng', value: count(dashboard?.totalUsers), filter: 'all' },
+    { label: 'Free', value: count(dashboard?.byPlan.free), filter: 'free' },
+    { label: 'Pro', value: count(dashboard?.byPlan.pro), filter: 'pro' },
+    { label: 'Ultra', value: count(dashboard?.byPlan.ultra), filter: 'ultra' },
+    ...(dashboard
+      ? [
+          { label: 'Đăng ký mới · 7 ngày', value: number.format(dashboard.newUsers7d) },
+          { label: 'Doanh thu tháng này', value: formatVnd(dashboard.revenueThisMonth) },
+        ]
+      : []),
+    {
+      label: 'Gói trả phí hết hạn · 7 ngày tới',
+      value: count(dashboard?.expiringIn7d),
+      filter: 'expiring',
+    },
   ];
   return (
-    <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {stats.map(([label, value]) => (
-        <Card key={label}>
-          <CardContent className="pt-5">
-            <dt className="text-muted-foreground text-sm leading-5">{label}</dt>
-            <dd className="mt-2 text-2xl leading-none font-semibold tracking-tight tabular-nums">
-              {value}
-            </dd>
-          </CardContent>
-        </Card>
-      ))}
-    </dl>
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {stats.map(({ label, value, filter }) =>
+        filter && onSelect ? (
+          <FilterCard
+            key={label}
+            label={label}
+            value={value}
+            selected={selected === filter}
+            onSelect={() => onSelect(filter)}
+          />
+        ) : (
+          <StatCard key={label} label={label} value={value} />
+        ),
+      )}
+    </div>
   );
+}
+
+/**
+ * Where the month's translation hours stand against the plan's allowance (the table has no other usage).
+ * The row DTO carries no limits, so the meter uses `DEFAULT_PLAN_LIMITS`; a per-user override is not reflected here.
+ */
+export function rowUsage(user: Pick<AdminUserRow, 'plan' | 'translationMsThisMonth'>) {
+  const limit = DEFAULT_PLAN_LIMITS[user.plan].translation_ms;
+  const used = user.translationMsThisMonth;
+  const state: 'ok' | 'low' | 'exhausted' =
+    limit !== null && used >= limit
+      ? 'exhausted'
+      : limit !== null && used >= limit * 0.8
+        ? 'low'
+        : 'ok';
+  return { used, limit, state };
 }
 
 /** One row per person (AC2). The email links to the detail page. */
 export function AdminUserTable({ users }: { users: AdminUserRow[] }) {
   if (users.length === 0) {
-    return <p className="text-muted-foreground text-sm">Không có người dùng nào khớp.</p>;
+    return (
+      <EmptyState
+        title="Không có người dùng nào khớp"
+        description="Thử bỏ bớt bộ lọc hoặc tìm bằng từ khác."
+      />
+    );
   }
   const head = 'text-muted-foreground px-4 py-3 text-left font-medium';
   return (
@@ -91,7 +140,7 @@ export function AdminUserTable({ users }: { users: AdminUserRow[] }) {
               <th scope="col" className={head}>
                 Hết hạn
               </th>
-              <th scope="col" className={`${head} text-right`}>
+              <th scope="col" className={head}>
                 Giờ dịch tháng này
               </th>
               <th scope="col" className={head}>
@@ -112,11 +161,18 @@ export function AdminUserTable({ users }: { users: AdminUserRow[] }) {
                   <span className="text-muted-foreground block text-xs">{user.name}</span>
                 </th>
                 <td className="px-4 py-3">{formatDateVn(user.createdAt)}</td>
-                <td className="px-4 py-3 font-medium">{planName(user.plan)}</td>
+                <td className="px-4 py-3">
+                  <Badge variant={user.plan === 'free' ? 'outline' : 'default'}>
+                    {planName(user.plan)}
+                  </Badge>
+                </td>
                 <td className="px-4 py-3">{sourceLabel(user.source)}</td>
                 <td className="px-4 py-3">{expiryText(user)}</td>
-                <td className="px-4 py-3 text-right tabular-nums">
-                  {formatDurationMs(user.translationMsThisMonth)}
+                <td className="w-56 px-4 py-3">
+                  <UsageMeter metric="translation_ms" {...rowUsage(user)} />
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Đã dùng {formatDurationMs(user.translationMsThisMonth)}
+                  </p>
                 </td>
                 <td className="px-4 py-3">
                   {user.lastActiveAt ? formatDateVn(user.lastActiveAt) : 'Chưa có'}
@@ -160,17 +216,10 @@ export function AdminUsersPage() {
         description="Ai đang ở gói nào, doanh thu tháng này và gói sắp hết hạn. Chỉ thấy email, gói và lượng dùng, không thấy nội dung cuộc họp."
       />
       <Section title="Tổng quan">
-        {dashboard.dashboard ? (
-          <AdminDashboardView dashboard={dashboard.dashboard} />
-        ) : dashboard.error ? (
-          <p role="alert" className="text-destructive text-sm">
-            {dashboard.error}
-          </p>
-        ) : (
-          <p className="text-muted-foreground text-sm" aria-live="polite">
-            Đang tải số liệu…
-          </p>
-        )}
+        {dashboard.error && <NoticeStrip tone="error">{dashboard.error}</NoticeStrip>}
+        <div aria-busy={dashboard.loading}>
+          <AdminDashboardView dashboard={dashboard.dashboard} selected={plan} onSelect={setPlan} />
+        </div>
       </Section>
       <div className="mt-8">
         <Section title="Danh sách">
@@ -184,7 +233,6 @@ export function AdminUsersPage() {
               value={text}
               onChange={(event) => setText(event.target.value)}
             />
-            <Segmented label="Lọc theo gói" options={FILTERS} value={plan} onChange={setPlan} />
             {quota && (
               <span className="bg-muted inline-flex items-center gap-2 rounded-full py-1 pr-1 pl-3 text-sm">
                 {quota.atLeast === '100' ? 'Hết' : 'Từ 80% của'} hạn mức {usageLabel(quota.metric)}
@@ -202,15 +250,13 @@ export function AdminUsersPage() {
               </span>
             )}
           </div>
-          {list.error && (
-            <p role="alert" className="text-destructive text-sm">
-              {list.error}
-            </p>
-          )}
+          {list.error && <NoticeStrip tone="error">{list.error}</NoticeStrip>}
           {list.loading ? (
-            <p className="text-muted-foreground text-sm" aria-live="polite">
-              Đang tải…
-            </p>
+            <div className="space-y-2" aria-busy="true">
+              {Array.from({ length: 5 }, (_, i) => (
+                <Skeleton key={i} className="h-12" />
+              ))}
+            </div>
           ) : (
             list.ready && <AdminUserTable users={list.users} />
           )}

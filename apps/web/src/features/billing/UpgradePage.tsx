@@ -1,7 +1,9 @@
 'use client';
 
 import type { BillingPeriod, PaidPlan } from '@cuelingo/shared';
+import { NoticeStrip } from '@cuelingo/ui/components/notice-strip';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
+import { Skeleton } from '@cuelingo/ui/components/skeleton';
 import { Section } from '@cuelingo/ui/components/section';
 import { formatDateVn, planName } from '@cuelingo/ui/lib/usage';
 import { useRouter } from 'next/navigation';
@@ -37,23 +39,22 @@ export function UpgradePage() {
   return (
     <>
       <PageHeader title="Nâng gói" description="Chọn gói và kỳ thanh toán." />
-      {loading ? <p className="text-muted-foreground text-sm">Đang tải…</p> : null}
-      {error ? (
-        <p role="alert" className="text-destructive text-sm">
-          {error}
-        </p>
+      {loading ? (
+        <div className="space-y-3" aria-busy="true">
+          <p className="sr-only" aria-live="polite">
+            Đang tải…
+          </p>
+          <Skeleton className="h-48 rounded-xl" />
+        </div>
       ) : null}
+      {error ? <NoticeStrip tone="error">{error}</NoticeStrip> : null}
       {overview && !overview.enabled ? (
-        <p className="text-muted-foreground text-sm">Tính năng nâng gói chưa mở.</p>
+        <NoticeStrip>Tính năng nâng gói chưa mở.</NoticeStrip>
       ) : null}
       {overview?.enabled ? (
         <Section title="Chọn gói" description={ends ?? undefined}>
           <PlanPicker overview={overview} busy={busy} onSelect={(p, k) => void select(p, k)} />
-          {createError ? (
-            <p role="alert" className="text-destructive text-sm">
-              {createError}
-            </p>
-          ) : null}
+          {createError ? <NoticeStrip tone="error">{createError}</NoticeStrip> : null}
         </Section>
       ) : null}
       {overview?.enabled || orders.length > 0 ? (

@@ -15,6 +15,8 @@ import { FollowupComposer, type FollowupDraft } from '@cuelingo/ui/components/fo
 import { Kbd } from '@cuelingo/ui/components/kbd';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { Section } from '@cuelingo/ui/components/section';
+import { Skeleton } from '@cuelingo/ui/components/skeleton';
+import { Tabs } from '@cuelingo/ui/components/tabs';
 import { Segmented } from '@cuelingo/ui/components/segmented';
 import { SpeakerTag } from '@cuelingo/ui/components/speaker-tag';
 import { speakerDisplayName } from '@cuelingo/ui/lib/speaker';
@@ -309,6 +311,8 @@ function SegmentSpeaker({
   );
 }
 
+type DebriefTab = 'debrief' | 'transcript';
+
 export interface DebriefPageViewProps {
   session?: SessionDetail;
   debrief?: Debrief;
@@ -400,6 +404,8 @@ export function DebriefPageView({
   const [includeTranscript, setIncludeTranscript] = useState(false);
   const [transcriptFilter, setTranscriptFilter] = useState<TranscriptFilter>('all');
   const [renaming, setRenaming] = useState<RenameTarget | null>(null);
+  // Two views of one meeting: what the debrief says, and the bilingual transcript.
+  const [tab, setTab] = useState<DebriefTab>('debrief');
   const [selectedBlockIndex, setSelectedBlockIndex] = useState(0);
   // The outline marks the block J/K and C act on; before anyone picks one it is just noise.
   const [blockPicked, setBlockPicked] = useState(false);
@@ -421,7 +427,7 @@ export function DebriefPageView({
   }, [debrief]);
 
   useEffect(() => {
-    if (!debrief) return;
+    if (!debrief || tab !== 'debrief') return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
         event.defaultPrevented ||
@@ -452,7 +458,7 @@ export function DebriefPageView({
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [blocks, copyTexts, debrief, onCopy, selectedBlockIndex]);
+  }, [blocks, copyTexts, debrief, onCopy, selectedBlockIndex, tab]);
 
   useEffect(
     () => () => {
@@ -465,7 +471,13 @@ export function DebriefPageView({
     return (
       <>
         <PageHeader title="Chi tiết cuộc họp" />
-        <p className="text-muted-foreground text-sm">Đang tải debrief…</p>
+        <div className="space-y-3" aria-busy="true">
+          <p className="sr-only" aria-live="polite">
+            Đang tải debrief…
+          </p>
+          <Skeleton className="h-8 w-72" />
+          <Skeleton className="h-40 rounded-xl" />
+        </div>
       </>
     );
 
@@ -577,6 +589,7 @@ export function DebriefPageView({
   const showSegment = (segmentId: string) => {
     const segment = session?.segments.find((item) => item.id === segmentId);
     if (segment) setTranscriptFilter(segmentSpeaker(segment, speakers).key);
+    setTab('transcript');
     setHighlightedSegmentId(segmentId);
     requestAnimationFrame(() => focusTranscriptSegment(segmentId));
     if (highlightTimer.current) clearTimeout(highlightTimer.current);
@@ -696,7 +709,10 @@ export function DebriefPageView({
         />
       </div>
 
-      <p className="text-muted-foreground hidden items-center gap-2 text-xs sm:flex">
+      <p
+        hidden={tab !== 'debrief'}
+        className="text-muted-foreground hidden items-center gap-2 text-xs sm:flex"
+      >
         Phím tắt: <Kbd>J</Kbd>/<Kbd>K</Kbd> chuyển khối, <Kbd>C</Kbd> sao chép khối đang chọn.
       </p>
 
@@ -721,190 +737,216 @@ export function DebriefPageView({
         </KeepMounted>
       )}
 
-      <DebriefBlock title="Tóm tắt" {...blockProps('summary')}>
-        <h2 className="font-medium">{debrief.summary.headlineVi}</h2>
-        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm">
-          {debrief.summary.bulletsVi.map((bullet) => (
-            <li key={bullet}>{bullet}</li>
-          ))}
-        </ul>
-      </DebriefBlock>
+      <Tabs
+        aria-label="Nội dung cuộc họp"
+        idPrefix="debrief"
+        tabs={[
+          { id: 'debrief', label: 'Debrief' },
+          { id: 'transcript', label: translates ? 'Bản ghi song ngữ' : 'Bản ghi' },
+        ]}
+        value={tab}
+        onChange={(id) => setTab(id as DebriefTab)}
+      />
 
-      <DebriefBlock title="Quyết định & việc cần làm" {...blockProps('actionItems')}>
-        {debrief.actionItems.length ? (
-          <ul className="space-y-3 text-sm">
-            {debrief.actionItems.map((item, index) => (
-              <li key={`${item.kind}-${index}`}>
-                <strong>{item.kind === 'decision' ? 'Quyết định' : 'Việc cần làm'}:</strong>{' '}
-                {item.textVi}
-                {item.owner && <span className="text-muted-foreground"> — {item.owner}</span>}
-              </li>
+      <div
+        role="tabpanel"
+        id="debrief-panel-debrief"
+        aria-labelledby="debrief-tab-debrief"
+        hidden={tab !== 'debrief'}
+        className="space-y-4"
+      >
+        <DebriefBlock title="Tóm tắt" {...blockProps('summary')}>
+          <h2 className="font-medium">{debrief.summary.headlineVi}</h2>
+          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm">
+            {debrief.summary.bulletsVi.map((bullet) => (
+              <li key={bullet}>{bullet}</li>
             ))}
           </ul>
-        ) : (
-          <p className="text-muted-foreground text-sm">Không có mục nào.</p>
-        )}
-      </DebriefBlock>
+        </DebriefBlock>
 
-      {learns && (
-        <DebriefBlock title="Đoạn khó" {...blockProps('hardSegments')}>
-          {hardSegments.length ? (
-            <ul className="space-y-2">
-              {hardSegments.map(({ id, segment }, index) => (
-                <li key={id}>
-                  <a
-                    href={`#segment-${id}`}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      showSegment(id);
-                    }}
-                    className="focus-visible:ring-ring flex min-h-11 cursor-pointer items-center rounded-md px-2 text-sm underline-offset-4 hover:bg-accent hover:underline focus-visible:ring-2 focus-visible:outline-none"
-                  >
-                    {segment?.textEn || `Mở đoạn khó ${index + 1} trong transcript`}
-                  </a>
+        <DebriefBlock title="Quyết định & việc cần làm" {...blockProps('actionItems')}>
+          {debrief.actionItems.length ? (
+            <ul className="space-y-3 text-sm">
+              {debrief.actionItems.map((item, index) => (
+                <li key={`${item.kind}-${index}`}>
+                  <strong>{item.kind === 'decision' ? 'Quyết định' : 'Việc cần làm'}:</strong>{' '}
+                  {item.textVi}
+                  {item.owner && <span className="text-muted-foreground"> — {item.owner}</span>}
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-muted-foreground text-sm">Không có đoạn khó nào.</p>
+            <p className="text-muted-foreground text-sm">Không có mục nào.</p>
           )}
         </DebriefBlock>
-      )}
 
-      {learns && (
-        <DebriefBlock title="Cụm từ nên lưu" {...blockProps('phraseSuggestions')}>
-          {debrief.phraseSuggestions.length ? (
-            <ul className="divide-y">
-              {debrief.phraseSuggestions.map((suggestion) => {
-                const input = {
-                  phrase: suggestion.phrase,
-                  meaningVi: suggestion.meaningVi,
-                  sessionId: debrief.sessionId,
-                };
-                const key = phraseKey(input);
-                const saved = savedPhraseKeys.has(key);
-                return (
-                  <li key={key} className="flex items-start justify-between gap-4 py-3">
-                    <span className="min-w-0 text-sm">
-                      <strong className="flex items-center gap-1">
-                        {suggestion.phrase}
-                        <SpeakButton text={suggestion.phrase} loadAudio={client.tts.speak} />
-                      </strong>
-                      <span className="text-muted-foreground block">{suggestion.meaningVi}</span>
-                      {suggestion.exampleEn && (
-                        <span className="mt-1 block">{suggestion.exampleEn}</span>
-                      )}
-                    </span>
-                    <SavePhraseButton
-                      input={input}
-                      saved={saved}
-                      saving={savingPhraseKey === key}
-                      onSave={onSavePhrase}
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground text-sm">Không có cụm từ gợi ý.</p>
-          )}
-        </DebriefBlock>
-      )}
-
-      {learns && (
-        <DebriefBlock title="Câu bạn nói → câu nên nói" {...blockProps('rephrase')}>
-          {debrief.rephrase.length ? (
-            <ul className="space-y-4 text-sm">
-              {debrief.rephrase.map((item, index) => (
-                <li key={`${item.said}-${index}`}>
-                  <p className="text-muted-foreground line-through">{item.said}</p>
-                  <p className="mt-1 font-medium">{item.better}</p>
-                  {item.noteVi && <p className="text-muted-foreground mt-1">{item.noteVi}</p>}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground text-sm">Không có câu gợi ý.</p>
-          )}
-        </DebriefBlock>
-      )}
-
-      <Section
-        title={translates ? 'Transcript song ngữ' : 'Transcript'}
-        description={`${totalSegments} câu`}
-      >
-        <Card>
-          <CardContent className="space-y-5 pt-6">
-            <Segmented
-              label="Lọc transcript theo người nói"
-              value={transcriptFilter}
-              onChange={setTranscriptFilter}
-              options={filterOptions}
-            />
-            {(regeneratePrompt === 'ask' || regeneratePrompt === 'retry') && (
-              <div
-                role="status"
-                className="bg-accent flex flex-wrap items-center gap-3 rounded-md p-3 text-sm"
-              >
-                <span>
-                  {regeneratePrompt === 'retry'
-                    ? 'Chưa xong, thử lại.'
-                    : 'Bạn vừa đổi tên người nói. Debrief hiện tại vẫn dùng tên cũ.'}
-                </span>
-                <Button
-                  variant="outline"
-                  className="min-h-11"
-                  disabled={regenerating}
-                  onClick={onRegenerate}
-                >
-                  {regenerating ? 'Đang gửi…' : 'Tạo lại debrief với tên mới'}
-                </Button>
-              </div>
-            )}
-            {regeneratePrompt === 'waiting' && (
-              <p role="status" className="text-muted-foreground text-sm">
-                Đang tạo lại debrief với tên mới. Trang sẽ tự cập nhật khi xong.
-              </p>
-            )}
-            {visibleSegments.length ? (
-              <ol className="space-y-4">
-                {visibleSegments.map((segment) => (
-                  <li
-                    key={segment.id}
-                    id={`segment-${segment.id}`}
-                    tabIndex={-1}
-                    className={`scroll-mt-4 rounded-md border-l-4 pl-4 outline-none motion-safe:transition-colors motion-safe:duration-300 ${
-                      highlightedSegmentId === segment.id
-                        ? 'border-primary bg-accent'
-                        : 'border-transparent focus:border-primary focus:bg-accent'
-                    }`}
-                  >
-                    <SegmentSpeaker
-                      segment={segment}
-                      speakers={speakers}
-                      renaming={renaming}
-                      onStartRename={setRenaming}
-                      onRename={onRenameSpeaker}
-                    />
-                    <p className="mt-1 text-sm">{segment.textEn}</p>
-                    {translates && (
-                      <p className="text-muted-foreground mt-1 text-sm">
-                        {segment.textVi || 'Chưa có bản dịch'}
-                      </p>
-                    )}
+        {learns && (
+          <DebriefBlock title="Đoạn khó" {...blockProps('hardSegments')}>
+            {hardSegments.length ? (
+              <ul className="space-y-2">
+                {hardSegments.map(({ id, segment }, index) => (
+                  <li key={id}>
+                    <a
+                      href={`#segment-${id}`}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        showSegment(id);
+                      }}
+                      className="focus-visible:ring-ring flex min-h-11 cursor-pointer items-center rounded-md px-2 text-sm underline-offset-4 hover:bg-accent hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                      {segment?.textEn || `Mở đoạn khó ${index + 1} trong transcript`}
+                    </a>
                   </li>
                 ))}
-              </ol>
+              </ul>
             ) : (
-              <p className="text-muted-foreground text-sm">
-                {totalSegments
-                  ? 'Không có câu nào trong bộ lọc này.'
-                  : 'Chưa có transcript cho cuộc họp này.'}
-              </p>
+              <p className="text-muted-foreground text-sm">Không có đoạn khó nào.</p>
             )}
-          </CardContent>
-        </Card>
-      </Section>
+          </DebriefBlock>
+        )}
+
+        {learns && (
+          <DebriefBlock title="Cụm từ nên lưu" {...blockProps('phraseSuggestions')}>
+            {debrief.phraseSuggestions.length ? (
+              <ul className="divide-y">
+                {debrief.phraseSuggestions.map((suggestion) => {
+                  const input = {
+                    phrase: suggestion.phrase,
+                    meaningVi: suggestion.meaningVi,
+                    sessionId: debrief.sessionId,
+                  };
+                  const key = phraseKey(input);
+                  const saved = savedPhraseKeys.has(key);
+                  return (
+                    <li key={key} className="flex items-start justify-between gap-4 py-3">
+                      <span className="min-w-0 text-sm">
+                        <strong className="flex items-center gap-1">
+                          {suggestion.phrase}
+                          <SpeakButton text={suggestion.phrase} loadAudio={client.tts.speak} />
+                        </strong>
+                        <span className="text-muted-foreground block">{suggestion.meaningVi}</span>
+                        {suggestion.exampleEn && (
+                          <span className="mt-1 block">{suggestion.exampleEn}</span>
+                        )}
+                      </span>
+                      <SavePhraseButton
+                        input={input}
+                        saved={saved}
+                        saving={savingPhraseKey === key}
+                        onSave={onSavePhrase}
+                      />
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground text-sm">Không có cụm từ gợi ý.</p>
+            )}
+          </DebriefBlock>
+        )}
+
+        {learns && (
+          <DebriefBlock title="Câu bạn nói → câu nên nói" {...blockProps('rephrase')}>
+            {debrief.rephrase.length ? (
+              <ul className="space-y-4 text-sm">
+                {debrief.rephrase.map((item, index) => (
+                  <li key={`${item.said}-${index}`}>
+                    <p className="text-muted-foreground line-through">{item.said}</p>
+                    <p className="mt-1 font-medium">{item.better}</p>
+                    {item.noteVi && <p className="text-muted-foreground mt-1">{item.noteVi}</p>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground text-sm">Không có câu gợi ý.</p>
+            )}
+          </DebriefBlock>
+        )}
+      </div>
+
+      <div
+        role="tabpanel"
+        id="debrief-panel-transcript"
+        aria-labelledby="debrief-tab-transcript"
+        hidden={tab !== 'transcript'}
+      >
+        <Section
+          title={translates ? 'Transcript song ngữ' : 'Transcript'}
+          description={`${totalSegments} câu`}
+        >
+          <Card>
+            <CardContent className="space-y-5 pt-6">
+              <Segmented
+                label="Lọc transcript theo người nói"
+                value={transcriptFilter}
+                onChange={setTranscriptFilter}
+                options={filterOptions}
+              />
+              {(regeneratePrompt === 'ask' || regeneratePrompt === 'retry') && (
+                <div
+                  role="status"
+                  className="bg-accent flex flex-wrap items-center gap-3 rounded-md p-3 text-sm"
+                >
+                  <span>
+                    {regeneratePrompt === 'retry'
+                      ? 'Chưa xong, thử lại.'
+                      : 'Bạn vừa đổi tên người nói. Debrief hiện tại vẫn dùng tên cũ.'}
+                  </span>
+                  <Button
+                    variant="outline"
+                    className="min-h-11"
+                    disabled={regenerating}
+                    onClick={onRegenerate}
+                  >
+                    {regenerating ? 'Đang gửi…' : 'Tạo lại debrief với tên mới'}
+                  </Button>
+                </div>
+              )}
+              {regeneratePrompt === 'waiting' && (
+                <p role="status" className="text-muted-foreground text-sm">
+                  Đang tạo lại debrief với tên mới. Trang sẽ tự cập nhật khi xong.
+                </p>
+              )}
+              {visibleSegments.length ? (
+                <ol className="space-y-4">
+                  {visibleSegments.map((segment) => (
+                    <li
+                      key={segment.id}
+                      id={`segment-${segment.id}`}
+                      tabIndex={-1}
+                      className={`scroll-mt-4 rounded-md border-l-4 pl-4 outline-none motion-safe:transition-colors motion-safe:duration-300 ${
+                        highlightedSegmentId === segment.id
+                          ? 'border-primary bg-accent'
+                          : 'border-transparent focus:border-primary focus:bg-accent'
+                      }`}
+                    >
+                      <SegmentSpeaker
+                        segment={segment}
+                        speakers={speakers}
+                        renaming={renaming}
+                        onStartRename={setRenaming}
+                        onRename={onRenameSpeaker}
+                      />
+                      <p className="mt-1 text-sm">{segment.textEn}</p>
+                      {translates && (
+                        <p className="text-muted-foreground mt-1 text-sm">
+                          {segment.textVi || 'Chưa có bản dịch'}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  {totalSegments
+                    ? 'Không có câu nào trong bộ lọc này.'
+                    : 'Chưa có transcript cho cuộc họp này.'}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </Section>
+      </div>
     </div>
   );
 }

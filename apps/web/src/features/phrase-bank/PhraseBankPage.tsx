@@ -1,15 +1,14 @@
 'use client';
 
-import type { Phrase } from '@cuelingo/shared';
+import type { LanguageCode, Phrase } from '@cuelingo/shared';
 import { Button } from '@cuelingo/ui/components/button';
 import { Card, CardContent } from '@cuelingo/ui/components/card';
-import { LanguageSwitcher } from '@cuelingo/ui/components/language-switcher';
-import { PageHeader } from '@cuelingo/ui/components/page-header';
-import { Section } from '@cuelingo/ui/components/section';
+import { EmptyState } from '@cuelingo/ui/components/empty-state';
+import { NoticeStrip } from '@cuelingo/ui/components/notice-strip';
+import { Skeleton } from '@cuelingo/ui/components/skeleton';
 import { SpeakButton } from '@cuelingo/ui/components/speak-button';
 import Link from 'next/link';
 import { client } from '../../lib/client';
-import { useLanguage } from '../../lib/language';
 import { usePhrases } from './use-phrases';
 
 export function PhraseList({
@@ -23,15 +22,18 @@ export function PhraseList({
 }) {
   if (phrases.length === 0) {
     return (
-      <div className="space-y-3">
-        <p className="text-muted-foreground text-sm">Chưa có cụm từ nào được lưu.</p>
-        <Link
-          href="/sessions"
-          className="focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium hover:bg-accent focus-visible:ring-2 focus-visible:outline-none"
-        >
-          Xem Cuộc họp
-        </Link>
-      </div>
+      <EmptyState
+        title="Chưa có cụm từ nào được lưu"
+        description="Lưu cụm từ ở debrief sau mỗi cuộc họp, chúng sẽ hiện ở đây."
+        action={
+          <Link
+            href="/sessions"
+            className="focus-visible:ring-ring hover:bg-accent inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
+          >
+            Xem Cuộc họp
+          </Link>
+        }
+      />
     );
   }
   return (
@@ -63,32 +65,27 @@ export function PhraseList({
   );
 }
 
-export function PhraseBankPage() {
-  const { language, setLanguage, options } = useLanguage();
+/** The Kho cụm từ tab of Ôn tập: the phrases saved for one language. */
+export function PhraseBankPanel({ language }: { language: LanguageCode }) {
   const { phrases, loading, removingId, error, remove } = usePhrases(language);
   return (
-    <>
-      <PageHeader
-        title="Cụm từ"
-        description="Những cụm từ bạn đã lưu từ các cuộc họp."
-        action={<LanguageSwitcher options={options} value={language} onChange={setLanguage} />}
-      />
-      <Section title="Kho cụm từ">
+    <div className="space-y-3">
+      {error && <NoticeStrip tone="error">{error}</NoticeStrip>}
+      {loading ? (
+        <div className="space-y-2" aria-busy="true">
+          <p className="sr-only" aria-live="polite">
+            Đang tải cụm từ…
+          </p>
+          <Skeleton className="h-14" />
+          <Skeleton className="h-14" />
+        </div>
+      ) : (
         <Card>
           <CardContent className="pt-6">
-            {error && (
-              <p role="alert" className="text-destructive mb-3 text-sm">
-                {error}
-              </p>
-            )}
-            {loading ? (
-              <p className="text-muted-foreground text-sm">Đang tải cụm từ…</p>
-            ) : (
-              <PhraseList phrases={phrases} removingId={removingId} onRemove={remove} />
-            )}
+            <PhraseList phrases={phrases} removingId={removingId} onRemove={remove} />
           </CardContent>
         </Card>
-      </Section>
-    </>
+      )}
+    </div>
   );
 }

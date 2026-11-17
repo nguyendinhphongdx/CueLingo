@@ -4,12 +4,12 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   AccountSettingsView,
   canConfirmDeleteAccount,
-  canConfirmDeleteData,
   deleteAccountAndSignOut,
   isValidAccountName,
   relativeTimeVi,
   shouldShowNamePrompt,
 } from './AccountSettingsPage';
+import { canConfirmDeleteData } from '@cuelingo/ui/components/delete-data-steps';
 
 const me = {
   id: '11111111-1111-4111-8111-111111111111',

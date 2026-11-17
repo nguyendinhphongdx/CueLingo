@@ -2,6 +2,10 @@
 
 import type { CreatedInvite, Invite } from '@cuelingo/shared';
 import { Button } from '@cuelingo/ui/components/button';
+import { Badge } from '@cuelingo/ui/components/badge';
+import { EmptyState } from '@cuelingo/ui/components/empty-state';
+import { NoticeStrip } from '@cuelingo/ui/components/notice-strip';
+import { Skeleton } from '@cuelingo/ui/components/skeleton';
 import { Card, CardContent } from '@cuelingo/ui/components/card';
 import { Input } from '@cuelingo/ui/components/input';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
@@ -67,7 +71,9 @@ export function InvitesView({
   onRevoke(id: string): void;
 }) {
   if (invites.length === 0) {
-    return <p className="text-muted-foreground text-sm">Chưa có mã mời nào.</p>;
+    return (
+      <EmptyState title="Chưa có mã mời nào" description="Tạo mã ở trên để mời người thử mới." />
+    );
   }
   return (
     <Card>
@@ -103,7 +109,11 @@ export function InvitesView({
                     {invite.usedCount}/{invite.maxUses}
                   </td>
                   <td className="px-5 py-3">{date.format(new Date(invite.expiresAt))}</td>
-                  <td className="px-5 py-3">{status}</td>
+                  <td className="px-5 py-3">
+                    <Badge variant={status === 'Còn dùng được' ? 'success' : 'outline'}>
+                      {status}
+                    </Badge>
+                  </td>
                   <td className="px-5 py-3 text-right">
                     {status === 'Còn dùng được' && (
                       <Button
@@ -182,15 +192,12 @@ export function InvitesPage() {
         {created && <CreatedInviteCard invite={created} onDismiss={dismissCreated} />}
       </Section>
       <Section title="Các mã đã tạo">
-        {error && (
-          <p role="alert" className="text-destructive text-sm">
-            {error}
-          </p>
-        )}
+        {error && <NoticeStrip tone="error">{error}</NoticeStrip>}
         {loading ? (
-          <p className="text-muted-foreground text-sm" aria-live="polite">
-            Đang tải…
-          </p>
+          <div className="space-y-2" aria-busy="true">
+            <Skeleton className="h-12" />
+            <Skeleton className="h-12" />
+          </div>
         ) : (
           <InvitesView invites={invites} onRevoke={revoke} />
         )}
