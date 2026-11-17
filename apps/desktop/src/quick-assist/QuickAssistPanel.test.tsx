@@ -52,6 +52,33 @@ describe('Quick Assist in a Vietnamese meeting', () => {
   });
 });
 
+describe('Nói giúp context line', () => {
+  const compose: QuickAssistState = { view: 'compose', status: 'idle', intent: '' };
+
+  it('shows what they just asked above the box', () => {
+    const markup = renderToStaticMarkup(
+      <QuickAssistPanel
+        state={compose}
+        actions={actions()}
+        asked="Can you share the timeline by Friday?"
+      />,
+    );
+    expect(markup).toContain('Họ vừa hỏi: “Can you share the timeline by Friday?”');
+  });
+
+  it('shows nothing without a sentence, and only in Nói giúp', () => {
+    expect(renderPanel(compose)).not.toContain('Họ vừa hỏi');
+    const recap = renderToStaticMarkup(
+      <QuickAssistPanel
+        state={{ view: 'recap', status: 'loading' }}
+        actions={actions()}
+        asked="Hello there"
+      />,
+    );
+    expect(recap).not.toContain('Họ vừa hỏi');
+  });
+});
+
 describe('Quick Assist UI', () => {
   it('renders each English word as a lookup target with its sentence retained by the caller', () => {
     const markup = renderToStaticMarkup(
@@ -136,6 +163,9 @@ describe('Quick Assist UI', () => {
     expect(compose).toContain('text-base');
     expect(compose).toContain('border-l');
     expect(compose).toContain('I agree with the plan.');
+    expect(compose.match(/Hiện chữ lớn/g)).toHaveLength(2);
+    expect(compose).toContain('Sao chép');
+    expect(compose).toContain('Nghe thử');
   });
 
   it('splits Japanese captions into tappable words', () => {

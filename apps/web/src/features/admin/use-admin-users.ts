@@ -1,7 +1,6 @@
 import { ApiError } from '@cuelingo/core-sdk';
 import type { AdminUsageMetric, AdminUserListQuery, Plan } from '@cuelingo/shared';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
 import { client } from '../../lib/client';
 import { describeError } from '../../lib/errors';
 import { isAuthRefusal } from './admin-users-format';
@@ -35,15 +34,7 @@ export function queryFor({ q, plan, quota }: UserFilters): AdminUserListQuery {
   return query;
 }
 
-/** The value after it stopped changing for `ms`, so typing does not send a request per key. */
-export function useDebounced<T>(value: T, ms = 300): T {
-  const [settled, setSettled] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setSettled(value), ms);
-    return () => clearTimeout(timer);
-  }, [value, ms]);
-  return settled;
-}
+export { useDebounced } from '../../lib/use-debounced';
 
 const refused = (error: unknown) => error instanceof ApiError && isAuthRefusal(error.status);
 

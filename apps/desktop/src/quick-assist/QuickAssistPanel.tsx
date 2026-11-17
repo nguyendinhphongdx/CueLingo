@@ -1,15 +1,19 @@
 import { SUPPORTED_LANGUAGES } from '@cuelingo/shared';
 import { IconButton } from '@cuelingo/ui/components/icon-button';
 import { SpeakableOption } from '@cuelingo/ui/components/speakable-option';
-import { ChevronRight, X } from 'lucide-react';
+import { ChevronRight, Maximize2, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { studyApi } from '../study/study-api';
+import { Teleprompter } from './Teleprompter';
 import { meetingLanguage, meetingLearnable } from './use-quick-assist';
 import type { QuickAssistActions, QuickAssistState } from './use-quick-assist';
 
 interface QuickAssistPanelProps {
   state: QuickAssistState;
   actions: QuickAssistActions;
+  /** The newest sentence the other side said; Nói giúp shows it so the reply fits. Never stored or logged. */
+  asked?: string | null;
   /** Only the title bar shows; what the person typed and the results are kept. */
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
@@ -39,6 +43,9 @@ function PanelFrame({
       aria-label={title}
       className="bg-card flex h-full shrink-0 flex-col border-l"
       style={{ width: DRAWER_WIDTH }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') close();
+      }}
     >
       <div className="flex h-11 shrink-0 items-center gap-1 pr-2 pl-4">
         <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">{title}</h2>
@@ -78,10 +85,21 @@ export const DRAWER_WIDTH = 320;
 export function QuickAssistPanel({
   state,
   actions,
+  asked,
   collapsed,
   onToggleCollapsed,
 }: QuickAssistPanelProps) {
   const frame = { collapsed, onToggleCollapsed };
+  // Which drafted sentence is shown in large type; the options themselves stay in `state`.
+  const [bigIndex, setBigIndex] = useState<number | null>(null);
+  const intentInput = useRef<HTMLInputElement>(null);
+  const composeIdle = state.view === 'compose' && state.status === 'idle';
+  useEffect(() => {
+    if (composeIdle && !collapsed) intentInput.current?.focus();
+  }, [composeIdle, collapsed]);
+  useEffect(() => {
+    if (state.view !== 'compose') setBigIndex(null);
+  }, [state.view]);
   const languageName = SUPPORTED_LANGUAGES[meetingLanguage()].name.toLowerCase();
   // Slid away: nothing renders, but the hook keeps what was typed.
   if (collapsed) return null;
@@ -165,6 +183,9 @@ export function QuickAssistPanel({
 
   return (
     <PanelFrame title="Nói giúp" close={actions.close} {...frame}>
+      {asked ? (
+        <p className="text-muted-foreground mb-3 line-clamp-3 text-sm">Họ vừa hỏi: “{asked}”</p>
+      ) : null}
       <form className="space-y-2" onSubmit={submit}>
         <label htmlFor="compose-intent" className="text-muted-foreground block text-sm">
           Bạn muốn nói gì bằng {languageName}?
@@ -172,6 +193,7 @@ export function QuickAssistPanel({
         <div className="flex gap-2">
           <input
             id="compose-intent"
+            ref={intentInput}
             aria-label="Ý muốn nói bằng tiếng Việt"
             className="border-input bg-background focus-visible:ring-ring min-h-9 min-w-0 flex-1 rounded-lg border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
             placeholder="Ví dụ: Tôi cần thêm một ngày để hoàn thành"
@@ -202,15 +224,32 @@ export function QuickAssistPanel({
         <div aria-live="polite" className="mt-4 space-y-2.5">
           <p className="text-muted-foreground text-xs">Nghe thử, rồi sao chép câu bạn muốn nói:</p>
           {state.result.options.map((option, index) => (
-            <SpeakableOption
-              key={`${index}-${option.en}`}
-              text={option.en}
-              note={option.noteVi ?? undefined}
-              loadAudio={studyApi.speak}
-              onCopy={(text) => actions.copyOption(index, text)}
-            />
+            <div key={`${index}-${option.en}`} className="space-y-1">
+              <SpeakableOption
+                text={option.en}
+                note={option.noteVi ?? undefined}
+                loadAudio={studyApi.speak}
+                onCopy={(text) => actions.copyOption(index, text)}
+              />
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs font-medium focus-visible:ring-2 focus-visible:outline-none"
+                onClick={() => setBigIndex(index)}
+              >
+                <Maximize2 aria-hidden="true" className="size-3.5" />
+                Hiện chữ lớn
+              </button>
+            </div>
           ))}
         </div>
+      ) : null}
+      {bigIndex !== null && state.status === 'success' && state.result?.options[bigIndex] ? (
+        <Teleprompter
+          text={state.result.options[bigIndex].en}
+          note={state.result.options[bigIndex].noteVi ?? undefined}
+          onBack={() => setBigIndex(null)}
+          onCopy={(text) => actions.copyOption(bigIndex, text)}
+        />
       ) : null}
     </PanelFrame>
   );

@@ -68,6 +68,7 @@ function setup(
     now?: () => number;
     onFirstCaption?: (sessionId: string) => void;
     usage?: () => Promise<UsageResponse>;
+    canUpgrade?: () => Promise<boolean>;
   } = {},
 ) {
   let onUtterance: ((event: UtteranceEvent) => void) | undefined;
@@ -162,6 +163,7 @@ function setup(
     sessions,
     hasCloudConsent: () => options.consent ?? true,
     usage: options.usage ? { get: options.usage } : undefined,
+    canUpgrade: options.canUpgrade,
     glossary: glossaryList ? { list: glossaryList } : undefined,
     createRealtime: (options) => {
       calls.push('realtime.create');
@@ -283,6 +285,39 @@ describe('session controller', () => {
       partial: false,
       language: 'en',
     });
+  });
+
+  it('keeps the newest final sentence with its speaker and translation, and drops it on stop', async () => {
+    const context = setup();
+    await context.controller.start(4);
+    expect(context.controller.getSnapshot().latestCaption).toBeNull();
+
+    context.emitSegment(segment({ partial: true, text: 'Still talking' }));
+    expect(context.controller.getSnapshot().latestCaption).toBeNull();
+
+    context.emitSegment(segment());
+    expect(context.controller.getSnapshot().latestCaption).toEqual({
+      segmentId,
+      speaker: 'Người khác',
+      text: 'Original text',
+      translation: null,
+    });
+    context.emitSegment(segment({ stream: 'mic', text: 'My turn' }));
+    expect(context.controller.getSnapshot().latestCaption).toMatchObject({
+      speaker: 'Tôi',
+      text: 'My turn',
+    });
+
+    context.getRealtimeOptions()?.onMessage({
+      type: 'translation',
+      segmentId,
+      textVi: 'Bản dịch',
+      hardWords: [],
+    });
+    expect(context.controller.getSnapshot().latestCaption?.translation).toBe('Bản dịch');
+
+    await context.controller.stop();
+    expect(context.controller.getSnapshot().latestCaption).toBeNull();
   });
 
   it("publishes captions in the meeting's language", async () => {
@@ -641,6 +676,18 @@ describe('session controller', () => {
       expect(ctx.controller.getSnapshot()).toMatchObject({ micFailed: true, systemFailed: false });
       ctx.emitStatus(error('system audio: x'));
       expect(ctx.controller.getSnapshot()).toMatchObject({ micFailed: true, systemFailed: true });
+    });
+
+    it('tells the overlay once that the microphone is blocked, with a way to Cài đặt', async () => {
+      const ctx = setup();
+      await ctx.controller.start(3, 'en');
+      ctx.emitStatus(error('microphone: denied'));
+      ctx.emitStatus(error('microphone: denied'));
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(ctx.notices).toEqual([
+        expect.objectContaining({ id: 'capture:mic', tone: 'error', action: 'open-settings' }),
+      ]);
     });
 
     it('clears on stop, unlistens, and starts clean next time', async () => {
@@ -1889,6 +1936,37 @@ describe('session controller', () => {
         'Còn 1 lần debrief tháng này',
         'Đã hết lượt tra từ và nói giúp hôm nay',
       ]);
+    });
+
+    it('offers Nâng cấp on a used-up allowance only when there is a plan to buy', async () => {
+      const exhausted = () =>
+        usageResponse({ translation_ms: item(7_200_000, 7_200_000, 'exhausted') });
+      const buyable = setup(undefined, {
+        usage: async () => exhausted(),
+        canUpgrade: async () => true,
+      });
+      await buyable.controller.start(3, 'en');
+      await flush();
+      expect(buyable.notices).toEqual([expect.objectContaining({ action: 'upgrade' })]);
+
+      for (const canUpgrade of [async () => false, async () => Promise.reject(new Error('x'))]) {
+        const ctx = setup(undefined, { usage: async () => exhausted(), canUpgrade });
+        await ctx.controller.start(3, 'en');
+        await flush();
+        expect(ctx.notices).toHaveLength(1);
+        expect(ctx.notices[0]).not.toHaveProperty('action');
+      }
+    });
+
+    it('never offers Nâng cấp on a warning that only says what is left', async () => {
+      const ctx = setup(undefined, {
+        usage: async () => usageResponse({ debriefs: item(7, 8, 'low') }),
+        canUpgrade: async () => true,
+      });
+      await ctx.controller.start(3, 'en');
+      await flush();
+      expect(ctx.notices).toHaveLength(1);
+      expect(ctx.notices[0]).not.toHaveProperty('action');
     });
 
     it('skips the cloud recognition allowance in a meeting that recognises on the device', async () => {

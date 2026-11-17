@@ -1,4 +1,5 @@
 import type { GlossaryTerm } from '@cuelingo/shared';
+import { EmptyState } from '@cuelingo/ui/components/empty-state';
 import { Button } from '@cuelingo/ui/components/button';
 
 /** Pure presentation of the user's terms: no data fetching, easy to test. */
@@ -11,9 +12,10 @@ export function GlossaryList({
 }) {
   if (items.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">
-        Chưa có thuật ngữ nào. Thêm tên khách hàng, sản phẩm hoặc từ chuyên ngành ở trên.
-      </p>
+      <EmptyState
+        title="Chưa có thuật ngữ nào"
+        description="Thêm tên khách hàng, sản phẩm hoặc từ chuyên ngành ở trên."
+      />
     );
   }
   return (

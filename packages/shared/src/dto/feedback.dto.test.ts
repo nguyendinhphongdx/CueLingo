@@ -32,7 +32,9 @@ describe('feedback contract', () => {
     },
   );
 
-  it('only knows bug and idea, desktop and web', () => {
+  it('knows bug, idea and other, desktop and web', () => {
+    for (const kind of ['bug', 'idea', 'other'])
+      expect(CreateFeedbackRequestSchema.safeParse({ ...ok, kind }).success).toBe(true);
     expect(CreateFeedbackRequestSchema.safeParse({ ...ok, kind: 'praise' }).success).toBe(false);
     expect(CreateFeedbackRequestSchema.safeParse({ ...ok, client: 'ios' }).success).toBe(false);
   });

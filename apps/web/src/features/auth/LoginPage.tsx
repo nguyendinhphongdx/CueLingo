@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from '@cuelingo/ui/components/card';
 import { Input } from '@cuelingo/ui/components/input';
+import { NoticeStrip } from '@cuelingo/ui/components/notice-strip';
 import { Logo } from '@cuelingo/ui/components/logo';
 import { useEffect, useState, type FormEvent } from 'react';
 import { GOOGLE_ENABLED, IS_DEV } from '../../lib/config';
@@ -75,7 +76,7 @@ export function LoginPage() {
             </form>
 
             {sent && (
-              <p role="status" className="text-sm">
+              <NoticeStrip>
                 Đã gửi liên kết tới <strong>{email}</strong>. Mở email và bấm vào liên kết để vào
                 ứng dụng.
                 {IS_DEV && (
@@ -83,13 +84,9 @@ export function LoginPage() {
                     (Môi trường dev: liên kết được in trong log của API, không gửi email thật.)
                   </span>
                 )}
-              </p>
+              </NoticeStrip>
             )}
-            {(error ?? refused) && (
-              <p role="alert" className="text-destructive text-sm">
-                {error ?? refused}
-              </p>
-            )}
+            {(error ?? refused) && <NoticeStrip tone="error">{error ?? refused}</NoticeStrip>}
 
             {GOOGLE_ENABLED && (
               <Button

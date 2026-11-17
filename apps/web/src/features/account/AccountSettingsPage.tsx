@@ -3,6 +3,7 @@
 import { DELETE_ACCOUNT_CONFIRMATION, type DeviceToken, type Me } from '@cuelingo/shared';
 import { Avatar } from '@cuelingo/ui/components/avatar';
 import { Button } from '@cuelingo/ui/components/button';
+import { DELETE_DATA_ITEMS, DeleteDataSteps } from '@cuelingo/ui/components/delete-data-steps';
 import { Input } from '@cuelingo/ui/components/input';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { ListCard, Section } from '@cuelingo/ui/components/section';
@@ -15,10 +16,8 @@ import { authClient } from '../../lib/auth-client';
 import { useAccount } from './use-account';
 import { usePrivacy } from './use-privacy';
 
-const DELETE_DATA_CONFIRMATION = 'XOA DU LIEU';
 const NAME_PROMPT_STORAGE_PREFIX = 'cuelingo:name-prompt-skipped:';
 
-export const canConfirmDeleteData = (value: string) => value === DELETE_DATA_CONFIRMATION;
 export const canConfirmDeleteAccount = (value: string) => value === DELETE_ACCOUNT_CONFIRMATION;
 export const isValidAccountName = (value: string) => {
   const length = value.trim().length;
@@ -97,7 +96,6 @@ export function AccountSettingsView({
   const [nameSaved, setNameSaved] = useState(false);
   const [confirmingDeviceId, setConfirmingDeviceId] = useState<string | null>(null);
   const [confirmingData, setConfirmingData] = useState(false);
-  const [dataConfirmation, setDataConfirmation] = useState('');
   const [confirmingAccount, setConfirmingAccount] = useState(false);
   const [accountConfirmation, setAccountConfirmation] = useState('');
   const [sessionMessage, setSessionMessage] = useState<string | null>(null);
@@ -390,40 +388,12 @@ export function AccountSettingsView({
                 Xoá toàn bộ dữ liệu
               </Button>
             ) : (
-              <div className="mt-4 max-w-md space-y-3 rounded-lg border p-4">
-                <label htmlFor="delete-data-confirmation" className="block text-sm font-medium">
-                  Gõ {DELETE_DATA_CONFIRMATION} để xác nhận
-                </label>
-                <Input
-                  id="delete-data-confirmation"
-                  autoFocus
-                  value={dataConfirmation}
-                  disabled={privacy.deleting}
-                  aria-invalid={
-                    dataConfirmation.length > 0 && !canConfirmDeleteData(dataConfirmation)
-                  }
-                  onChange={(event) => setDataConfirmation(event.target.value)}
-                />
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="destructive"
-                    disabled={!canConfirmDeleteData(dataConfirmation) || privacy.deleting}
-                    onClick={privacy.onDelete}
-                  >
-                    {privacy.deleting ? 'Đang xoá…' : 'Xác nhận xoá'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    disabled={privacy.deleting}
-                    onClick={() => {
-                      setConfirmingData(false);
-                      setDataConfirmation('');
-                    }}
-                  >
-                    Huỷ
-                  </Button>
-                </div>
-              </div>
+              <DeleteDataSteps
+                items={DELETE_DATA_ITEMS}
+                pending={privacy.deleting}
+                onConfirm={privacy.onDelete}
+                onCancel={() => setConfirmingData(false)}
+              />
             )}
           </div>
           <div className="border-destructive/30 border-t pt-4">

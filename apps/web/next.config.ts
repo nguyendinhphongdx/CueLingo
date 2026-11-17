@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import { securityHeaders } from './src/lib/csp';
+import { LEGACY_REDIRECTS } from './src/lib/legacy-redirects';
 
 // `pnpm build:static` sets this: the app is exported as plain files in `out/` for Cloudflare Pages (no Node runtime).
 // Plain `next dev` / `next build` do not, so local development and the server build stay as they were.
@@ -9,6 +10,10 @@ const config: NextConfig = {
   ...(STATIC_EXPORT ? { output: 'export' as const } : {}),
   // Workspace packages ship TypeScript source (no build step), so Next must compile them.
   transpilePackages: ['@cuelingo/ui', '@cuelingo/shared', '@cuelingo/core-sdk'],
+  // Permanent redirects do not run in a static export: `public/_redirects` carries the same list there.
+  redirects: STATIC_EXPORT
+    ? undefined
+    : async () => LEGACY_REDIRECTS.map((rule) => ({ ...rule, permanent: true })),
   // `headers()` does not run in a static export: `scripts/write-headers.mjs` writes the same headers to `out/_headers`.
   headers: STATIC_EXPORT
     ? undefined

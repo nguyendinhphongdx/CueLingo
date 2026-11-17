@@ -1,4 +1,5 @@
 import type { Conversation } from '@cuelingo/shared';
+import { EmptyState } from '@cuelingo/ui/components/empty-state';
 import { Button } from '@cuelingo/ui/components/button';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -22,7 +23,12 @@ export function ConversationList({
   const [editingId, setEditingId] = useState<string | null>(null);
 
   if (items.length === 0) {
-    return <p className="text-muted-foreground text-sm">Chưa có cuộc trò chuyện nào.</p>;
+    return (
+      <EmptyState
+        title="Chưa có cuộc trò chuyện nào"
+        description="Hỏi trợ lý ở ô phía trên để bắt đầu."
+      />
+    );
   }
   return (
     <ul className="divide-y">

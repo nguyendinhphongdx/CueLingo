@@ -39,8 +39,8 @@ export function LanguageSwitcher<T extends string>({
           if (next) onChange(next.value);
         }}
         className={cn(
-          'dark:bg-input/30 border-input h-9 min-w-0 cursor-pointer appearance-none rounded-md border bg-transparent py-1 pr-9 pl-3 text-base shadow-xs transition-colors outline-none md:text-sm',
-          'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+          'border-input h-10 min-w-0 cursor-pointer appearance-none rounded-md border bg-background py-1 pr-9 pl-3 text-base shadow-xs transition-colors outline-none md:text-sm',
+          'focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2',
           'disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
         )}
       >

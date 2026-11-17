@@ -21,7 +21,7 @@ Lớp Rust của app: cửa sổ, phím tắt toàn cục, cầu nối native �
 - Tauri commands: `session_start`, `session_stop`, `session_set_language`, `session_set_vocabulary`, `permissions_status`, `set_assist_level`
 - Tauri commands khác: `hide_overlay`, `toggle_overlay`, `tray_report` (`active`, `minutes`, `problem` = `mic`/`system`/`both`)
 - `session_start` nhận `vocabulary` (danh sách thuật ngữ, xem dưới); `session_set_vocabulary(terms)` thay danh sách khi đang họp
-- Tauri events: `notice` (JS `emit`/`listen`, cửa sổ chính → overlay, thông báo hạn mức; không qua Rust), `transcript`, `speech`, `hotkey`, `tray-stop` (mục "Dừng họp" ở menu bar; chỉ gửi tới `main`)
+- Tauri events: `notice` (JS `emit`/`listen`, cửa sổ chính → overlay, thông báo hạn mức và lỗi micro, có thể kèm `action`; không qua Rust), `open-settings` (overlay → cửa sổ chính, JS `emit`/`listen`), `transcript`, `speech`, `hotkey`, `tray-stop` (mục "Dừng họp" ở menu bar; chỉ gửi tới `main`)
 
 ## Phụ thuộc
 

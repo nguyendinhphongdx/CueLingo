@@ -2,3 +2,6 @@
 /sessions/*  /sessions/_  200
 /assistant/*  /assistant/_  200
 /admin/users/*  /admin/users/_  200
+# The Ôn tập tabs replaced these pages (src/lib/legacy-redirects.ts).
+/phrases  /review?tab=phrases  301
+/progress  /review?tab=progress  301

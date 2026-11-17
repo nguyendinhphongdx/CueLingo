@@ -72,12 +72,10 @@ function StateIcon({ state }: { state: PermissionState | SystemAudioCheck | 'che
     return <Loader2 aria-hidden="true" className="text-muted-foreground size-5 animate-spin" />;
   }
   if (state === 'granted') {
-    return (
-      <CheckCircle2 aria-hidden="true" className="size-5 text-emerald-600 dark:text-emerald-400" />
-    );
+    return <CheckCircle2 aria-hidden="true" className="text-success size-5" />;
   }
   if (state === 'denied' || state === 'silent' || state === 'error') {
-    return <XCircle aria-hidden="true" className="size-5 text-red-600 dark:text-red-400" />;
+    return <XCircle aria-hidden="true" className="text-destructive size-5" />;
   }
   return <CircleHelp aria-hidden="true" className="text-muted-foreground size-5" />;
 }

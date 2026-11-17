@@ -21,7 +21,9 @@ Cài đặt trong app và bản đồng bộ theo tài khoản: Assist mặc đ�
 
 ## Interface
 
+- `<SettingsPage />` (`src/app/`): danh sách mục bên trái, mỗi lần một mục bên phải: Tài khoản và gói (`AccountCard`, `UsagePanel`), Họp và caption (`<AssistSettings />`, quyền, bài nghe đánh giá), Giọng đọc (`VoiceSettings`), Lịch (chỉ macOS), Quyền riêng tư (`PrivacyPanel`), Thiết bị và máy chủ, Cập nhật và giới thiệu (kèm "Xem lại hướng dẫn" và lộ trình)
 - `<AssistSettings />`: chọn Assist level `4`, `3`, `1` hoặc `0`
+- `<SavedIndicator saved />` và `useSavedFlash()`: chữ "Đã lưu" (vùng `role=status`, `aria-live=polite`, luôn có trong trang) hiện 2,5 giây sau khi một mục tự lưu xong: mức hỗ trợ (sau khi native nhận) và giọng đọc (đã lưu trên máy; đồng bộ lên tài khoản chạy nền sau 800 ms nên chỉ báo không chờ API)
 - `<UsagePanel />` (`src/usage/`): mục "Gói và lượng dùng" ở trang Cài đặt, gọi `client.usage.get()` (`GET /v1/me/usage`) và `client.billing.overview()` (`GET /v1/billing`, qua `billing-api.ts`), hiện `UsageSummary` của `@cuelingo/ui` (tên gói + một thanh cho từng hạn mức); lỗi tải hiện "Không tải được lượng dùng"
   - Nút **"Nâng gói"** gọi `openWeb('/upgrade')` → `native.openUrl(webUrl + '/upgrade')` mở trình duyệt mặc định. **Không truyền token** trên URL: nếu chưa đăng nhập trên web thì đăng nhập lại ở đó. Mua và hiện QR đều ở web, desktop không tạo đơn
   - Nút **ẩn** khi `enabled: false`, khi không còn gói nào để nâng (`canUpgrade` trong `upgrade.ts`), hoặc khi đọc `/v1/billing` lỗi

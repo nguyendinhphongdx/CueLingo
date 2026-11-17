@@ -17,17 +17,17 @@ export function StatCard({ label, value, hint, className }: StatCardProps) {
   return (
     <div
       className={cn(
-        'bg-card text-card-foreground flex flex-col gap-1 rounded-xl border p-4 shadow-sm',
+        'bg-card text-card-foreground flex flex-col gap-1 rounded-lg border p-4 shadow-sm md:p-5',
         className,
       )}
     >
-      <p className="text-muted-foreground text-xs font-medium">{label}</p>
+      <p className="text-muted-foreground text-body-sm font-medium">{label}</p>
       {value === null ? (
-        <p className="text-muted-foreground text-sm font-medium">{NO_DATA_TEXT}</p>
+        <p className="text-muted-foreground text-body-sm font-medium">{NO_DATA_TEXT}</p>
       ) : (
-        <p className="text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
+        <p className="text-title tabular-nums">{value}</p>
       )}
-      {hint ? <p className="text-muted-foreground text-xs">{hint}</p> : null}
+      {hint ? <p className="text-muted-foreground text-caption">{hint}</p> : null}
     </div>
   );
 }

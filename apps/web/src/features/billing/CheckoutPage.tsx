@@ -3,7 +3,9 @@
 import type { BillingOrder } from '@cuelingo/shared';
 import { Button, buttonVariants } from '@cuelingo/ui/components/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@cuelingo/ui/components/card';
+import { NoticeStrip } from '@cuelingo/ui/components/notice-strip';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
+import { Skeleton } from '@cuelingo/ui/components/skeleton';
 import { formatDateVn, formatVnd, planName } from '@cuelingo/ui/lib/usage';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -36,15 +38,14 @@ export interface CheckoutViewProps {
   onRetry: () => void;
 }
 
-function Notice({ children, tone = 'muted' }: { children: string; tone?: 'muted' | 'error' }) {
-  return (
-    <p
-      role={tone === 'error' ? 'alert' : 'status'}
-      className={tone === 'error' ? 'text-destructive text-sm' : 'text-muted-foreground text-sm'}
-    >
-      {children}
-    </p>
-  );
+function Notice({
+  children,
+  tone = 'info',
+}: {
+  children: string;
+  tone?: 'info' | 'warning' | 'error';
+}) {
+  return <NoticeStrip tone={tone}>{children}</NoticeStrip>;
 }
 
 function Pending({ order, now }: { order: BillingOrder; now: number }) {
@@ -106,7 +107,16 @@ export function CheckoutView({
     (order?.status === 'pending' && new Date(order.expiresAt).getTime() <= now);
 
   let body;
-  if (loading) body = <Notice>Đang tải đơn…</Notice>;
+  if (loading)
+    body = (
+      <div className="space-y-3" aria-busy="true">
+        <p className="sr-only" role="status">
+          Đang tải đơn…
+        </p>
+        <Skeleton className="mx-auto size-48" />
+        <Skeleton className="h-16" />
+      </div>
+    );
   else if (!order) {
     body = (
       <div className="space-y-3">
@@ -142,14 +152,14 @@ export function CheckoutView({
   } else if (order.status === 'cancelled' || (cancelled && expired)) {
     body = (
       <div className="space-y-3">
-        <Notice>Bạn đã huỷ thanh toán. Chưa có khoản nào bị trừ.</Notice>
+        <Notice tone="warning">Bạn đã huỷ thanh toán. Chưa có khoản nào bị trừ.</Notice>
         {retry}
       </div>
     );
   } else if (expired) {
     body = (
       <div className="space-y-3">
-        <Notice>Đơn đã hết hạn thanh toán. Hãy tạo đơn mới.</Notice>
+        <Notice tone="warning">Đơn đã hết hạn thanh toán. Hãy tạo đơn mới.</Notice>
         <Notice>
           Nếu bạn đã chuyển khoản, gói sẽ tự lên khi hệ thống nhận được tiền; cần hỗ trợ hãy gửi
           phản hồi kèm nội dung chuyển khoản.

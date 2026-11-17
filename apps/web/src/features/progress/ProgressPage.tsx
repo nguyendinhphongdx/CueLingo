@@ -1,13 +1,13 @@
 'use client';
 
-import type { Progress } from '@cuelingo/shared';
-import type { ReactNode } from 'react';
+import type { LanguageCode, Progress } from '@cuelingo/shared';
 import { Card, CardContent } from '@cuelingo/ui/components/card';
-import { LanguageSwitcher } from '@cuelingo/ui/components/language-switcher';
-import { PageHeader } from '@cuelingo/ui/components/page-header';
+import { EmptyState } from '@cuelingo/ui/components/empty-state';
+import { NoticeStrip } from '@cuelingo/ui/components/notice-strip';
+import { Skeleton } from '@cuelingo/ui/components/skeleton';
+import { StatCard, StatGrid } from '@cuelingo/ui/components/stat-card';
 import { Section } from '@cuelingo/ui/components/section';
 import { AssistSuggestion } from '../assist-suggestion';
-import { useLanguage } from '../../lib/language';
 import { useProgress } from './use-progress';
 
 const dateLabel = (value: string, options: Intl.DateTimeFormatOptions) =>
@@ -67,7 +67,7 @@ function BarChart({
   );
 }
 
-export function ProgressView({ progress, action }: { progress: Progress; action?: ReactNode }) {
+export function ProgressView({ progress }: { progress: Progress }) {
   const stats = [
     ['Cụm đã lưu', progress.phrasesSaved],
     ['Đang ôn', progress.phrasesInReview],
@@ -94,16 +94,12 @@ export function ProgressView({ progress, action }: { progress: Progress; action?
 
   return (
     <>
-      <PageHeader title="Tiến độ" description="Theo dõi việc học qua từng tuần." action={action} />
       <Section title="Tổng quan">
-        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <StatGrid>
           {stats.map(([label, value]) => (
-            <div key={label} className="bg-card rounded-xl border p-4 shadow-sm">
-              <dt className="text-muted-foreground text-sm">{label}</dt>
-              <dd className="mt-1 text-2xl font-semibold">{value}</dd>
-            </div>
+            <StatCard key={label} label={label} value={value} />
           ))}
-        </dl>
+        </StatGrid>
       </Section>
       <Section title="Ôn tập trong 7 ngày">
         <Card>
@@ -134,37 +130,25 @@ export function ProgressView({ progress, action }: { progress: Progress; action?
   );
 }
 
-export function ProgressPage() {
-  const { language, setLanguage, options } = useLanguage();
+/** The Tiến độ tab of Ôn tập: the numbers and charts for one language. */
+export function ProgressPanel({ language }: { language: LanguageCode }) {
   const { progress, loading, error } = useProgress(language);
-  const switcher = <LanguageSwitcher options={options} value={language} onChange={setLanguage} />;
   if (loading)
     return (
-      <>
-        <PageHeader title="Tiến độ" action={switcher} />
-        <p className="text-muted-foreground text-sm">Đang tải tiến độ…</p>
-      </>
-    );
-  if (error)
-    return (
-      <>
-        <PageHeader title="Tiến độ" action={switcher} />
-        <p role="alert" className="text-destructive text-sm">
-          {error}
+      <div className="space-y-3" aria-busy="true">
+        <p className="sr-only" aria-live="polite">
+          Đang tải tiến độ…
         </p>
-      </>
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-48 rounded-xl" />
+      </div>
     );
-  if (!progress)
-    return (
-      <>
-        <PageHeader title="Tiến độ" action={switcher} />
-        <p className="text-muted-foreground text-sm">Chưa có dữ liệu tiến độ.</p>
-      </>
-    );
+  if (error) return <NoticeStrip tone="error">{error}</NoticeStrip>;
+  if (!progress) return <EmptyState title="Chưa có dữ liệu tiến độ" />;
   return (
-    <>
+    <div className="space-y-6">
       <AssistSuggestion language={language} />
-      <ProgressView progress={progress} action={switcher} />
-    </>
+      <ProgressView progress={progress} />
+    </div>
   );
 }

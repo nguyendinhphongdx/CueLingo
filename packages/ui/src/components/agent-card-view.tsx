@@ -88,7 +88,7 @@ function ClozeItem({ item }: { item: CardOf<'cloze'>['items'][number] }) {
           role="status"
           className={cn(
             'flex items-center gap-1.5 text-xs font-medium',
-            correct ? 'text-green-700 dark:text-green-400' : 'text-destructive',
+            correct ? 'text-success' : 'text-destructive',
           )}
         >
           {correct ? (
@@ -135,9 +135,7 @@ function QuizChoice({ data }: { data: CardOf<'quiz_choice'> }) {
                 onClick={() => setPicked(index)}
                 className={cn(
                   'border-input hover:bg-muted focus-visible:ring-ring flex min-h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-lg border px-3 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:cursor-default',
-                  answered &&
-                    isAnswer &&
-                    'border-green-600 bg-green-500/10 text-green-900 dark:text-green-100',
+                  answered && isAnswer && 'border-success bg-success/10 text-foreground',
                   answered && isPicked && !isAnswer && 'border-destructive bg-destructive/10',
                 )}
               >

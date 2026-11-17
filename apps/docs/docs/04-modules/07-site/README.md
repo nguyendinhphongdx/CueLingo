@@ -26,7 +26,7 @@ Hai trang tĩnh để gửi cho người thử bên ngoài: giới thiệu và h
 | `src/pages.tsx`             | `SiteHome`, `SiteDownload`: gắn `LandingView`, `DownloadPage` của `@cuelingo/ui` với `paths` và `downloads`                                      |
 | `scripts/scan-dist.mjs`     | `scanDist(dir, forbidden)`: quét bản build tìm khoá, token, host dev, địa chỉ riêng; in tên tệp và luật, không in giá trị                        |
 
-Component dùng chung nhận `link` và `paths` qua props, xem [UI](../05-packages/ui.md#trang-giới-thiệu-và-tải-về).
+Site nhận token và phông từ `@cuelingo/ui/globals.css`, logo từ `Logo` (favicon là file ảnh cùng hình). Component dùng chung nhận `link` và `paths` qua props, xem [UI](../05-packages/ui.md#trang-giới-thiệu-và-tải-về).
 
 ## Workflow `pages.yml`
 

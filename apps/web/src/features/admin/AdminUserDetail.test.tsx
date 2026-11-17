@@ -219,3 +219,25 @@ describe('plan form (AC5)', () => {
     expect(markup).not.toContain('Đã thanh toán');
   });
 });
+
+describe('plan change confirmation (AC16)', () => {
+  it('names the old and new plan, the expected end date, the 0 dong order and the downgrade warning, and refuses by default', () => {
+    const text = renderToStaticMarkup(
+      <PlanChangeConfirm
+        user={{ ...paidPro, plan: 'ultra' }}
+        plan="pro"
+        period="month"
+        expiresAt="2026-12-15T05:00:00.000Z"
+        now={NOW}
+        open
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(text).toContain('Ultra → Pro');
+    expect(text).toContain('hết hạn 15/12/2026 (dự kiến)');
+    expect(text).toContain('đơn 0đ');
+    expect(text).toContain('Người này đã trả tiền đến 05/12/2026');
+    expect(text).toContain('Hạ gói không hoàn tiền');
+  });
+});

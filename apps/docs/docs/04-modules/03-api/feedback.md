@@ -14,7 +14,7 @@ Người thử beta gửi lỗi hoặc góp ý. **Chỉ ghi, không có route đ
 | ------ | -------------- | --------------------------------------------------------------------------- |
 | POST   | `/v1/feedback` | `201` `{ id, createdAt }`; `400` nếu sai schema; `429` quá 10 tin/giờ/người |
 
-Body (`CreateFeedbackRequestSchema`, `.strict()`): `kind` (`bug`/`idea`), `message` (1–2000 ký tự), `client` (`desktop`/`web`), `appVersion` (≤ 40), `os` (≤ 80). Không có trường nào chứa transcript, audio, token hay `userId`; trường thừa bị từ chối.
+Body (`CreateFeedbackRequestSchema`, `.strict()`): `kind` (`bug`/`idea`/`other`), `message` (1–2000 ký tự), `client` (`desktop`/`web`), `appVersion` (≤ 40), `os` (≤ 80). Không có trường nào chứa transcript, audio, token hay `userId`; trường thừa bị từ chối.
 
 ## Dữ liệu & quyền riêng tư
 

@@ -32,7 +32,7 @@ export function LoginScreen({
           role={phase === 'failed' ? 'alert' : undefined}
           aria-live="polite"
           className={`mt-2 text-sm leading-relaxed ${
-            phase === 'failed' ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'
+            phase === 'failed' ? 'text-destructive' : 'text-muted-foreground'
           }`}
         >
           {messages[phase]}

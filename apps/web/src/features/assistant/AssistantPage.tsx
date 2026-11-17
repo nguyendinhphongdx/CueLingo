@@ -4,6 +4,7 @@ import type { Conversation } from '@cuelingo/shared';
 import { Button } from '@cuelingo/ui/components/button';
 import { Card, CardContent } from '@cuelingo/ui/components/card';
 import { ConfirmDialog } from '@cuelingo/ui/components/confirm-dialog';
+import { Skeleton } from '@cuelingo/ui/components/skeleton';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { Section } from '@cuelingo/ui/components/section';
 import { WordActionsMenu } from '@cuelingo/ui/components/word-actions-menu';
@@ -133,7 +134,13 @@ export function AssistantPage({ conversationId }: { conversationId?: string }) {
           <Card>
             <CardContent className="pt-6">
               {conversations.loading ? (
-                <p className="text-muted-foreground text-sm">Đang tải…</p>
+                <div className="space-y-2" aria-busy="true">
+                  <p className="sr-only" aria-live="polite">
+                    Đang tải…
+                  </p>
+                  <Skeleton className="h-12" />
+                  <Skeleton className="h-12" />
+                </div>
               ) : (
                 <ConversationList
                   items={conversations.conversations}

@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Sparkles,
   Mic,
+  Rocket,
   Settings,
   TrendingUp,
   type LucideIcon,
@@ -38,6 +39,7 @@ const icons: Record<NavIconName, LucideIcon> = {
   settings: Settings,
   feedback: MessageSquare,
   assistant: Sparkles,
+  upgrade: Rocket,
 };
 
 export function FeatureIcon({ name, className }: { name: NavIconName; className?: string }) {

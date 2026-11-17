@@ -129,7 +129,7 @@ export function FollowupComposerView({
               rows={10}
               value={draft.body}
               onChange={(event) => onBody(event.target.value)}
-              className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+              className="border-input placeholder:text-muted-foreground focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:ring-offset-2 w-full rounded-md border bg-background px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-2"
             />
             <div className="flex flex-wrap items-center gap-3">
               <Button variant="outline" onClick={onCopy}>

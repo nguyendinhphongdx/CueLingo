@@ -110,9 +110,9 @@ export function PlacementTest({
               <li key={item.id} className="bg-card rounded-lg border px-4 py-3 text-sm">
                 <p className="flex items-center gap-2 font-medium">
                   {ok ? (
-                    <Check aria-hidden="true" className="size-4 text-emerald-600" />
+                    <Check aria-hidden="true" className="size-4 text-success" />
                   ) : (
-                    <X aria-hidden="true" className="size-4 text-red-600" />
+                    <X aria-hidden="true" className="size-4 text-destructive" />
                   )}
                   Đoạn {i + 1}
                 </p>

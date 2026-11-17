@@ -22,3 +22,18 @@ export function Logo({ size = 36, className }: { size?: number; className?: stri
     </svg>
   );
 }
+
+/** Mark, 12px gap, then the word: the lockup for the sidebar header and auth screens. */
+export function LogoLockup({ size = 32, className }: { size?: number; className?: string }) {
+  return (
+    <span className={`inline-flex items-center gap-3 ${className ?? ''}`}>
+      <Logo size={size} />
+      <span
+        className="text-foreground font-bold tracking-[-0.03em]"
+        style={{ fontSize: Math.round(size * 0.56 * 1.4) }}
+      >
+        CueLingo
+      </span>
+    </span>
+  );
+}

@@ -3,6 +3,10 @@
 import type { AdminAgentPlugin, AdminAgentStatus } from '@cuelingo/shared';
 import { Button } from '@cuelingo/ui/components/button';
 import { Card, CardContent } from '@cuelingo/ui/components/card';
+import { Badge } from '@cuelingo/ui/components/badge';
+import { EmptyState } from '@cuelingo/ui/components/empty-state';
+import { NoticeStrip } from '@cuelingo/ui/components/notice-strip';
+import { Skeleton } from '@cuelingo/ui/components/skeleton';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { Section } from '@cuelingo/ui/components/section';
 import { notFound } from 'next/navigation';
@@ -61,7 +65,7 @@ export function AdminAgentView({
       </Section>
       <Section title="Plugin">
         {status.plugins.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Chưa có plugin nào.</p>
+          <EmptyState title="Chưa có plugin nào" />
         ) : (
           <Card>
             <CardContent className="overflow-x-auto px-0 py-0">
@@ -97,7 +101,19 @@ export function AdminAgentView({
                       </th>
                       <td className="px-5 py-3">{plugin.tools.join(', ') || '—'}</td>
                       <td className="px-5 py-3">{plugin.permissions.join(', ') || '—'}</td>
-                      <td className="px-5 py-3">{pluginStateLabel(plugin)}</td>
+                      <td className="px-5 py-3">
+                        <Badge
+                          variant={
+                            plugin.state === 'loaded'
+                              ? 'success'
+                              : plugin.state === 'failed'
+                                ? 'destructive'
+                                : 'warning'
+                          }
+                        >
+                          {pluginStateLabel(plugin)}
+                        </Badge>
+                      </td>
                       <td className="px-5 py-3 text-right">
                         {plugin.state !== 'failed' && (
                           <Button
@@ -134,14 +150,15 @@ export function AdminAgentPage() {
         description="Bật hoặc tắt trợ lý và từng plugin. Thay đổi có hiệu lực từ lượt trò chuyện kế tiếp."
       />
       {error && (
-        <p role="alert" className="text-destructive mb-4 text-sm">
+        <NoticeStrip tone="error" className="mb-4">
           {error}
-        </p>
+        </NoticeStrip>
       )}
       {loading ? (
-        <p className="text-muted-foreground text-sm" aria-live="polite">
-          Đang tải…
-        </p>
+        <div className="space-y-3" aria-busy="true">
+          <Skeleton className="h-24 rounded-xl" />
+          <Skeleton className="h-40 rounded-xl" />
+        </div>
       ) : (
         status && (
           <AdminAgentView

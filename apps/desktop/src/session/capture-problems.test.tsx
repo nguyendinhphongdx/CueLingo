@@ -7,6 +7,7 @@ import {
   captureProblemOf,
   decideStart,
   describeCaptureProblems,
+  describeStream,
   elapsedMs,
   formatDuration,
   meterNote,
@@ -14,8 +15,7 @@ import {
 import {
   AudioLevelRows,
   CAPTURE_FAILED_TEXT,
-  CaptureBanner,
-  MicBlockedNotice,
+  LISTENING_TEXT,
   NO_SIGNAL_TEXT,
 } from './SessionPanel';
 
@@ -41,12 +41,10 @@ describe('preflight', () => {
     expect(await canStartMeeting(() => Promise.reject(new Error('no native')))).toBe('ok');
   });
 
-  it('offers the microphone settings pane when blocked', () => {
-    const markup = renderToStaticMarkup(<MicBlockedNotice />);
-    expect(markup).toContain(
-      'Micro đang bị chặn cho CueLingo. Hãy cấp quyền Micro rồi bắt đầu lại.',
-    );
-    expect(markup).toContain('Mở cài đặt Micro');
+  it('names the microphone settings pane as the fix for a blocked microphone', () => {
+    const fix = describeStream('mic', { micFailed: true, systemFailed: false }, 'macos')!;
+    expect(fix.buttonLabel).toBe('Mở cài đặt Micro');
+    expect(fix.pane).toBe(PRIVACY_PANES.microphone);
     expect(PRIVACY_PANES.microphone).toBe(
       'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone',
     );
@@ -97,16 +95,29 @@ describe('capture problems', () => {
   const base = { mic: [], system: [], micSilent: false, systemSilent: false };
   const ok = { micFailed: false, systemFailed: false };
 
-  it('renders a red label for a failed stream and a soft one for silence', () => {
+  it('gives each stream its own state: a failed one shows a fix, the other keeps listening', () => {
     const markup = renderToStaticMarkup(
       <AudioLevelRows
         levels={{ ...base, systemSilent: true }}
         failures={{ micFailed: true, systemFailed: false }}
       />,
     );
-    expect(markup).toContain(`text-red-300">${CAPTURE_FAILED_TEXT}`);
-    expect(markup).toContain(`text-white/70">${NO_SIGNAL_TEXT}`);
+    expect(markup).toMatch(/data-stream="mic" data-state="failed"/);
+    expect(markup).toMatch(/data-stream="system" data-state="silent"/);
+    expect(markup).toContain(CAPTURE_FAILED_TEXT);
+    expect(markup).toContain('Mở cài đặt Micro');
+    expect(markup.match(/role="alert"/g)).toHaveLength(1);
     expect(NO_SIGNAL_TEXT).toBe('Chưa có âm thanh');
+  });
+
+  it('shows the system stream failing while the microphone keeps listening', () => {
+    const markup = renderToStaticMarkup(
+      <AudioLevelRows levels={base} failures={{ micFailed: false, systemFailed: true }} />,
+    );
+    expect(markup).toMatch(/data-stream="system" data-state="failed"/);
+    expect(markup).toMatch(/data-stream="mic" data-state="listening"/);
+    expect(markup).toContain(LISTENING_TEXT);
+    expect(markup).toContain('Không thu được âm thanh hệ thống');
   });
 
   it('shows only the soft label when the streams are merely silent', () => {
@@ -114,16 +125,16 @@ describe('capture problems', () => {
       <AudioLevelRows levels={{ ...base, micSilent: true, systemSilent: true }} failures={ok} />,
     );
     expect(markup).not.toContain(CAPTURE_FAILED_TEXT);
+    expect(markup).not.toContain('role="alert"');
     expect(markup.match(/Chưa có âm thanh/g)).toHaveLength(2);
   });
 
-  it('renders no banner without a failure, and an alert with one', () => {
-    expect(renderToStaticMarkup(<CaptureBanner failures={ok} />)).toBe('');
-    const failed = renderToStaticMarkup(
-      <CaptureBanner failures={{ micFailed: false, systemFailed: true }} />,
+  it('describes a stream only when it failed', () => {
+    expect(describeStream('mic', ok)).toBeNull();
+    expect(describeStream('system', { micFailed: true, systemFailed: false })).toBeNull();
+    expect(describeStream('system', { micFailed: false, systemFailed: true })!.pane).toBe(
+      PRIVACY_PANES.systemAudio,
     );
-    expect(failed).toContain('role="alert"');
-    expect(failed).toContain('Mở cài đặt');
   });
 });
 

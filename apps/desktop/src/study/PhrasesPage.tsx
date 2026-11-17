@@ -50,7 +50,7 @@ export function PhraseList({
               {phrase.meaningVi || 'Chưa có nghĩa tiếng Việt'}
             </p>
             {phrase.inReview ? (
-              <span className="mt-1 inline-flex rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-900 dark:bg-green-950 dark:text-green-100">
+              <span className="mt-1 inline-flex rounded-full bg-success/8 text-success px-2 py-0.5 text-xs font-medium">
                 Đang ôn
               </span>
             ) : null}

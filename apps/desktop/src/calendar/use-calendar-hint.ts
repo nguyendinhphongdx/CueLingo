@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 import { native } from '../lib/native';
 import { useLanguage } from '../settings';
-import { pickHint } from './calendar-hint';
+import { pickUpcoming } from './calendar-hint';
 import {
   readCalendarEnabled,
   readDismissed,
@@ -12,9 +12,9 @@ import {
 
 const REFRESH_MS = 2 * 60_000;
 
-/** A language suggested by the next meeting on the calendar, once the person has turned that on. */
+/** The next meeting on the calendar (starting within 15 minutes), once the person has turned that on. */
 export function useCalendarHint() {
-  const { language, setLanguage } = useLanguage();
+  const { language } = useLanguage();
   const [enabled, setEnabled] = useState(readCalendarEnabled);
   const [dismissed, setDismissed] = useState(readDismissed);
   const queryClient = useQueryClient();
@@ -27,11 +27,9 @@ export function useCalendarHint() {
     retry: false,
   });
 
-  const hint = enabled ? pickHint(query.data?.events ?? [], Date.now(), language, dismissed) : null;
-
-  const accept = useCallback(() => {
-    if (hint) setLanguage(hint.language);
-  }, [hint, setLanguage]);
+  const hint = enabled
+    ? pickUpcoming(query.data?.events ?? [], Date.now(), language, dismissed)
+    : null;
 
   const dismiss = useCallback(() => {
     if (!hint) return;
@@ -58,5 +56,5 @@ export function useCalendarHint() {
     [queryClient],
   );
 
-  return { enabled, hint, accept, dismiss, toggle, language };
+  return { enabled, hint, dismiss, toggle, language };
 }

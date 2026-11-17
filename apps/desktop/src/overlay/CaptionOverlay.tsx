@@ -16,13 +16,14 @@ import { saveAssistLevel } from '../settings/use-assist-settings';
 import type { SelectableAssistLevel } from '../settings/settings-store';
 import { queueSettingsPatch } from '../settings/settings-api';
 import { CaptionBlock } from './CaptionBlock';
-import { NoticeBar } from './NoticeBar';
+import { NoticeBar, type NoticeAction } from './NoticeBar';
+import { noticeActionFor } from './notice-actions';
 import { useNotices } from './use-notices';
 import { DisplayMenu } from './DisplayMenu';
 import { ToolsMenu, type ToolItem } from './ToolsMenu';
 import { useOverlayPrefs, type OverlayTheme } from './overlay-prefs';
 import { sampleTranscript } from './sample';
-import { useTranscriptStore } from './transcript-store';
+import { selectRecentSystemSentences, useTranscriptStore } from './transcript-store';
 import { useLiveStatus, type LiveStatus } from './use-live-status';
 import { useOverlayAssistLevel } from './use-overlay-settings';
 import { useDrawerWindow } from './use-drawer-window';
@@ -36,6 +37,8 @@ interface CaptionOverlayProps {
   receivedTranscript?: boolean;
   /** Allowance messages; the overlay listens for them itself unless given (tests). */
   notices?: NoticeEvent[];
+  /** The fixing action of a notice, if it has one. */
+  noticeAction?: (notice: NoticeEvent) => NoticeAction | undefined;
   listen?: boolean;
   initialFontSize?: number;
   initialTheme?: OverlayTheme;
@@ -57,6 +60,7 @@ export function CaptionOverlay({
   segments,
   receivedTranscript,
   notices,
+  noticeAction,
   listen = true,
   initialFontSize,
   initialTheme,
@@ -158,6 +162,10 @@ export function CaptionOverlay({
   }, [drawerOpen, quickAssist.state]);
 
   const hidden = assistLevel === 0;
+  // What the other side said last, for the Nói giúp drawer. Kept in memory only.
+  const asked = received
+    ? (selectRecentSystemSentences(segments ?? storedSegments, 1)[0] ?? null)
+    : null;
 
   return (
     <section
@@ -222,7 +230,11 @@ export function CaptionOverlay({
         />
       </header>
 
-      <NoticeBar notices={shownNotices} onDismiss={noticeState.dismiss} />
+      <NoticeBar
+        notices={shownNotices}
+        onDismiss={noticeState.dismiss}
+        actionFor={noticeAction ?? noticeActionFor}
+      />
 
       <div className="flex min-h-0 flex-1">
         <div
@@ -259,6 +271,7 @@ export function CaptionOverlay({
           <div className="flex shrink-0 justify-end overflow-hidden" style={{ width: drawerWidth }}>
             <QuickAssistPanel
               state={shownPanel}
+              asked={asked}
               actions={quickAssist}
               onToggleCollapsed={() => setPanelCollapsed(true)}
             />

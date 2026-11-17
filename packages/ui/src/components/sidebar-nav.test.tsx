@@ -60,6 +60,17 @@ afterEach(() => {
 });
 
 describe('SidebarNav groups', () => {
+  it.each(['web', 'desktop'] as const)(
+    'lists Nâng cấp in the Ứng dụng group on the %s client, without a "Sắp có" badge',
+    (client) => {
+      setup({ client });
+      const list = document.getElementById(header('Ứng dụng').getAttribute('aria-controls')!)!;
+      const upgrade = within(list).getByRole('link', { name: /Nâng cấp/ });
+      expect(upgrade.getAttribute('href')).toBe('/upgrade');
+      expect(upgrade.textContent).not.toContain('Sắp có');
+    },
+  );
+
   describe('collapse', () => {
     it.each(['web', 'desktop'] as const)(
       'folds and unfolds a group from its title on the %s client, with aria-expanded and aria-controls',
@@ -181,5 +192,31 @@ describe('SidebarNav groups', () => {
       fireEvent.click(header('Quản trị'));
       expect(screen.queryByRole('link', { name: 'Doanh thu' })).toBeNull();
     });
+  });
+});
+
+describe('SidebarNav design', () => {
+  it('shows the logo lockup when no brand is given, and the version under the footer', () => {
+    const { container } = setup({
+      brand: undefined,
+      footer: <span>Tài khoản</span>,
+      version: '0.1.5',
+    });
+    expect(container.querySelector('svg[aria-label="CueLingo"]')).toBeTruthy();
+    expect(screen.getByText('Tài khoản')).toBeTruthy();
+    expect(screen.getByText('Phiên bản 0.1.5')).toBeTruthy();
+  });
+
+  it('has one Ôn tập entry, and a view id from before the merge lights it up', () => {
+    setup({ activeId: 'phrases' });
+    expect(screen.getAllByRole('link', { name: /Ôn tập/ })).toHaveLength(1);
+    expect(screen.queryByRole('link', { name: /Kho cụm từ|Tiến độ/ })).toBeNull();
+    expect(screen.getByRole('link', { name: /Ôn tập/ }).getAttribute('aria-current')).toBe('page');
+  });
+
+  it('marks what is coming with a readable "Sắp ra mắt"', () => {
+    setup({ client: 'web' });
+    const soon = screen.getByRole('link', { name: /Phiên họp/ });
+    expect(within(soon).getByText('Sắp ra mắt')).toBeTruthy();
   });
 });

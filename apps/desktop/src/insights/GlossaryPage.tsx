@@ -43,6 +43,7 @@ export function GlossaryView({
   const [term, setTerm] = useState('');
   const [translation, setTranslation] = useState('');
   const [note, setNote] = useState('');
+  const [noteOpen, setNoteOpen] = useState(false);
 
   const filtered = items.filter((item) =>
     [item.term, item.translation, item.note].some((value) =>
@@ -62,6 +63,7 @@ export function GlossaryView({
       setTerm('');
       setTranslation('');
       setNote('');
+      setNoteOpen(false);
     }
   };
 
@@ -75,27 +77,32 @@ export function GlossaryView({
       <Section title="Thêm thuật ngữ">
         <Card className="gap-0 rounded-lg py-5 shadow-none">
           <CardContent>
-            <form className="grid gap-4 lg:grid-cols-2" onSubmit={submit}>
-              <Field label="Thuật ngữ" htmlFor="new-term">
-                <Input
-                  id="new-term"
-                  value={term}
-                  onChange={(event) => setTerm(event.target.value)}
-                  placeholder="Ví dụ: product discovery"
-                  maxLength={120}
-                  required
-                />
-              </Field>
-              <Field label="Nghĩa tiếng Việt" htmlFor="new-translation">
-                <Input
-                  id="new-translation"
-                  value={translation}
-                  onChange={(event) => setTranslation(event.target.value)}
-                  placeholder="Ví dụ: khám phá sản phẩm"
-                  maxLength={200}
-                />
-              </Field>
-              <div className="lg:col-span-2">
+            <form className="space-y-4" onSubmit={submit}>
+              <div className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]">
+                <Field label="Thuật ngữ" htmlFor="new-term">
+                  <Input
+                    id="new-term"
+                    value={term}
+                    onChange={(event) => setTerm(event.target.value)}
+                    placeholder="Ví dụ: product discovery"
+                    maxLength={120}
+                    required
+                  />
+                </Field>
+                <Field label="Nghĩa tiếng Việt" htmlFor="new-translation">
+                  <Input
+                    id="new-translation"
+                    value={translation}
+                    onChange={(event) => setTranslation(event.target.value)}
+                    placeholder="Ví dụ: khám phá sản phẩm"
+                    maxLength={200}
+                  />
+                </Field>
+                <Button type="submit" className="cursor-pointer" disabled={saving || !term.trim()}>
+                  {saving ? 'Đang lưu…' : 'Thêm'}
+                </Button>
+              </div>
+              {noteOpen || note ? (
                 <Field label="Ghi chú" htmlFor="new-note">
                   <textarea
                     id="new-note"
@@ -107,16 +114,18 @@ export function GlossaryView({
                     rows={2}
                   />
                 </Field>
-              </div>
-              <div className="lg:col-span-2">
+              ) : (
                 <Button
-                  type="submit"
-                  className="bg-foreground text-background hover:bg-foreground/90"
-                  disabled={saving || !term.trim()}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="cursor-pointer"
+                  aria-expanded={false}
+                  onClick={() => setNoteOpen(true)}
                 >
-                  {saving ? 'Đang lưu…' : 'Thêm thuật ngữ'}
+                  Thêm ghi chú
                 </Button>
-              </div>
+              )}
             </form>
             {error ? (
               <p role="alert" className="text-destructive mt-4 text-sm">

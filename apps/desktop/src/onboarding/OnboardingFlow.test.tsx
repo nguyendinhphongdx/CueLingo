@@ -1,5 +1,13 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  advanceProgress,
+  ONBOARDING_STEPS,
+  pendingSteps,
+  readProgress,
+  writeProgress,
+} from './onboarding-storage';
 import { nextOnboardingStep, OnboardingFlow, saveSelectedAssistLevel } from './OnboardingFlow';
 import {
   clearOnboarding,
@@ -67,6 +75,14 @@ describe('onboarding storage', () => {
   });
 });
 
+const client = new QueryClient();
+const renderFlow = (step: number) =>
+  renderToStaticMarkup(
+    <QueryClientProvider client={client}>
+      <OnboardingFlow initialStep={step} onFinish={() => undefined} />
+    </QueryClientProvider>,
+  );
+
 describe('OnboardingFlow', () => {
   it('lets the permission step continue without requiring a permission', () => {
     expect(nextOnboardingStep(1)).toBe(2);
@@ -82,13 +98,43 @@ describe('OnboardingFlow', () => {
 
   it('shows two real sample caption blocks and the overlay action', () => {
     const markup = renderToStaticMarkup(
-      <OnboardingFlow initialStep={2} onFinish={() => undefined} />,
+      <OnboardingFlow initialStep={5} onFinish={() => undefined} />,
     );
 
     expect(markup.match(/data-slot="caption-line"/g)).toHaveLength(2);
     expect(markup).toContain('Hãy cùng xem lại kế hoạch cho tuần này.');
     expect(markup).toContain('Hiện overlay thử');
     expect(markup).toContain('⌘⇧L');
+    expect(markup).toContain('Vào CueLingo');
+  });
+
+  it('has the six steps and every one can be left for later', () => {
+    expect(ONBOARDING_STEPS.map((step) => step.id)).toEqual([
+      'welcome',
+      'permissions',
+      'model',
+      'profile',
+      'listening',
+      'shortcuts',
+    ]);
+    for (let step = 0; step < 6; step += 1) {
+      const markup = renderFlow(step);
+      expect(markup).toContain('Thoát, làm tiếp sau');
+      expect(markup).toContain(`Bước ${step + 1} trên 6`);
+      // Visible text, not only the aria-label of the nav.
+      expect(markup).toMatch(
+        new RegExp(`<p[^>]*>Bước (<!-- -->)?${step + 1}(<!-- -->)? (<!-- -->)?trên`),
+      );
+    }
+  });
+
+  it('offers to skip the steps that can wait, but not the welcome or the last', () => {
+    const at = renderFlow;
+    expect(at(1)).toContain('Để sau');
+    expect(at(2)).toContain('Bỏ qua, tải sau');
+    expect(at(4)).toContain('Để sau');
+    expect(at(0)).not.toContain('Để sau');
+    expect(at(5)).not.toContain('Để sau');
   });
 
   it('offers every selectable assist level on the last step', () => {
@@ -100,7 +146,6 @@ describe('OnboardingFlow', () => {
     expect(markup).toContain('3 · Gợi ý');
     expect(markup).toContain('1 · Tối thiểu');
     expect(markup).toContain('0 · Ẩn');
-    expect(markup).toContain('Vào CueLingo');
   });
 
   it.each(['4', '3', '1', '0'])('saves assist level %s when selected', async (value) => {
@@ -109,5 +154,36 @@ describe('OnboardingFlow', () => {
     await saveSelectedAssistLevel(value, save);
 
     expect(save).toHaveBeenCalledWith(Number(value));
+  });
+});
+
+describe('onboarding progress', () => {
+  const values = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => void values.set(key, value),
+    removeItem: (key: string) => void values.delete(key),
+  };
+  beforeEach(() => values.clear());
+
+  it('remembers where the person stopped, per person', () => {
+    expect(readProgress('a', storage)).toBeNull();
+    writeProgress('a', advanceProgress(null, 0, 1), storage);
+    writeProgress('a', advanceProgress(readProgress('a', storage), 1, 2), storage);
+    expect(readProgress('a', storage)).toEqual({ step: 2, done: [0, 1] });
+    expect(readProgress('b', storage)).toBeNull();
+  });
+
+  it('turns steps that were skipped or not reached into cards, never the welcome', () => {
+    expect(pendingSteps(null)).toEqual([]);
+    expect(pendingSteps({ step: 5, done: [0, 1, 3, 5] })).toEqual([2, 4]);
+    expect(pendingSteps({ step: 5, done: [0, 1, 2, 3, 4, 5] })).toEqual([]);
+  });
+
+  it('survives damaged saved data', () => {
+    values.set('cuelingo.onboarding-progress.a', '{"step":99,"done":[1,"x",-4,2,2]}');
+    expect(readProgress('a', storage)).toEqual({ step: 5, done: [1, 2] });
+    values.set('cuelingo.onboarding-progress.a', 'not json');
+    expect(readProgress('a', storage)).toBeNull();
   });
 });

@@ -11,3 +11,4 @@ export {
   shouldShowOnboarding,
   type OnboardingMode,
 } from './onboarding-storage';
+export { OnboardingCards } from './OnboardingCards';

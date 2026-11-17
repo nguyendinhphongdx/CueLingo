@@ -25,12 +25,12 @@ export interface UsageMeterProps {
 
 const BAR: Record<UsageState, string> = {
   ok: 'bg-primary',
-  low: 'bg-amber-500 dark:bg-amber-400',
+  low: 'bg-warning',
   exhausted: 'bg-destructive',
 };
 const TEXT: Record<UsageState, string> = {
   ok: 'text-muted-foreground',
-  low: 'text-amber-700 dark:text-amber-400',
+  low: 'text-warning',
   exhausted: 'text-destructive',
 };
 
@@ -91,7 +91,7 @@ export function UsageSummary({ plan, planExpiresAt, now, action, usage }: UsageS
         {action}
       </div>
       {notice ? (
-        <p role="status" className="text-sm text-amber-700 dark:text-amber-400">
+        <p role="status" className="text-warning text-sm">
           {notice}
         </p>
       ) : null}

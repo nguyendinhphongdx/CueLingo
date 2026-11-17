@@ -9,9 +9,19 @@ import { CaptionBlock } from '../overlay/CaptionBlock';
 import { sampleTranscript } from '../overlay/sample';
 import { saveAssistLevel } from '../settings/use-assist-settings';
 import type { SelectableAssistLevel } from '../settings/settings-store';
+import { ShortcutList } from '../app/AboutCard';
+import { PlacementSection } from '../study/PlacementSection';
+import { describeModelProgress, useModelProgress } from '../session/model-progress';
 import { PermissionsStep } from './PermissionsStep';
+import {
+  advanceProgress,
+  ONBOARDING_STEPS,
+  readProgress,
+  writeProgress,
+  type OnboardingProgress,
+} from './onboarding-storage';
 
-const steps = ['Chào bạn', 'Quyền truy cập', 'Caption mẫu', 'Mức hỗ trợ'] as const;
+const steps = ONBOARDING_STEPS.map((step) => step.label);
 
 export const nextOnboardingStep = (step: number) => Math.min(steps.length - 1, step + 1);
 
@@ -78,7 +88,7 @@ function SampleCaptionStep() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold tracking-tight">Xem caption trước khi vào họp</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Caption và phím tắt</h1>
       <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
         Caption nổi trên các app họp và luôn giữ bản dịch ở dòng dễ đọc nhất.
       </p>
@@ -108,6 +118,39 @@ function SampleCaptionStep() {
           {overlayMessage}
         </p>
       ) : null}
+      <div className="bg-card mt-6 rounded-xl border px-4 py-3">
+        <ShortcutList />
+      </div>
+    </div>
+  );
+}
+
+/** The speech model comes down the first time a meeting starts; this step says so and shows progress if it is running. */
+function ModelStep() {
+  const progress = describeModelProgress(useModelProgress());
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold tracking-tight">Mô hình nhận dạng</h1>
+      <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+        Mô hình chạy ngay trên máy bạn nên caption tiếng Anh nhanh và âm thanh không rời khỏi máy.
+        CueLingo tải nó một lần, khi bạn bắt đầu cuộc họp đầu tiên. Bạn có thể làm bước tiếp theo
+        trong lúc chờ.
+      </p>
+      <p
+        role="status"
+        className="bg-card text-muted-foreground mt-6 rounded-xl border px-4 py-3 text-sm"
+      >
+        {progress ?? 'Chưa tải gì lúc này. Mô hình sẽ tự tải nếu máy chưa có.'}
+      </p>
+    </div>
+  );
+}
+
+function ListeningStep() {
+  return (
+    <div className="space-y-4">
+      <h1 className="text-2xl font-semibold tracking-tight">Bài nghe đánh giá</h1>
+      <PlacementSection />
     </div>
   );
 }
@@ -168,19 +211,66 @@ function AssistLevelStep() {
   );
 }
 
+const FORWARD: Record<number, string> = {
+  0: 'Bắt đầu',
+  1: 'Tiếp tục',
+  2: 'Tiếp tục',
+  3: 'Tiếp tục',
+  4: 'Tiếp tục',
+  5: 'Vào CueLingo',
+};
+
+/** The steps a person may leave for later; their cards come back on the home page. */
+const SKIPPABLE: Record<number, string> = {
+  1: 'Để sau',
+  2: 'Bỏ qua, tải sau',
+  3: 'Để sau',
+  4: 'Để sau',
+};
+
 export function OnboardingFlow({
   onFinish,
-  initialStep = 0,
+  onExit,
+  userId = 'dev',
+  initialStep,
 }: {
   onFinish(): void;
+  /** Leaves the guide without finishing; where the person stopped is kept for the home-page cards. */
+  onExit?(): void;
+  userId?: string;
+  /** Overrides the saved resume point (a card reopening a step). */
   initialStep?: number;
 }) {
-  const [step, setStep] = useState(Math.min(Math.max(initialStep, 0), steps.length - 1));
+  const [progress, setProgress] = useState<OnboardingProgress | null>(() => readProgress(userId));
+  const [step, setStep] = useState(() =>
+    Math.min(Math.max(initialStep ?? progress?.step ?? 0, 0), steps.length - 1),
+  );
+  const last = steps.length - 1;
 
-  const back = () => setStep((current) => Math.max(0, current - 1));
+  const go = (target: number, finished: boolean) => {
+    const to = Math.min(Math.max(target, 0), last);
+    const saved = finished
+      ? advanceProgress(progress, step, to)
+      : { step: to, done: progress?.done ?? [] };
+    setProgress(saved);
+    writeProgress(userId, saved);
+    setStep(to);
+  };
+  const back = () => go(step - 1, false);
   const next = () => {
-    if (step === steps.length - 1) onFinish();
-    else setStep(nextOnboardingStep);
+    if (step === last) {
+      writeProgress(userId, advanceProgress(progress, step, step));
+      onFinish();
+    } else go(nextOnboardingStep(step), true);
+  };
+  const skip = () => {
+    if (step === last) {
+      onFinish();
+    } else go(nextOnboardingStep(step), false);
+  };
+  const exit = () => {
+    writeProgress(userId, { step, done: progress?.done ?? [] });
+    (onExit ?? onFinish)();
   };
 
   useEffect(() => {
@@ -202,29 +292,30 @@ export function OnboardingFlow({
 
   return (
     <main className="bg-background flex min-h-screen items-center justify-center px-6 py-8">
-      <div className="w-full max-w-3xl">
-        <nav aria-label="Tiến trình hướng dẫn">
-          <ol className="grid grid-cols-4 gap-2">
+      <div className="bg-card w-full max-w-2xl rounded-xl border p-8 shadow-lg">
+        <nav aria-label={`Bước ${step + 1} trên ${steps.length}`}>
+          <ol className="flex gap-2">
             {steps.map((label, index) => (
-              <li key={label}>
+              <li key={label} className="grow">
                 <span
                   aria-current={index === step ? 'step' : undefined}
-                  className={`block border-t-2 pt-2 text-xs ${
-                    index === step
-                      ? 'border-primary text-foreground font-medium'
-                      : index < step
-                        ? 'border-foreground/35 text-muted-foreground'
-                        : 'border-border text-muted-foreground'
+                  className={`block h-1.5 rounded-full ${
+                    index === step ? 'bg-primary' : index < step ? 'bg-primary/40' : 'bg-muted'
                   }`}
                 >
-                  {index + 1}/{steps.length} · <span className="hidden sm:inline">{label}</span>
+                  <span className="sr-only">
+                    {index + 1}/{steps.length} · {label}
+                  </span>
                 </span>
               </li>
             ))}
           </ol>
         </nav>
+        <p className="text-muted-foreground text-body-sm mt-3">
+          Bước {step + 1} trên {steps.length} · {steps[step]}
+        </p>
 
-        <section className="mt-7 min-h-[410px]">
+        <section className="mt-7 min-h-[360px]">
           {step === 0 ? <WelcomeStep /> : null}
           {step === 1 ? (
             <div>
@@ -232,33 +323,37 @@ export function OnboardingFlow({
                 Cho phép CueLingo nghe cuộc họp
               </h1>
               <p className="text-muted-foreground mt-2 mb-5 text-sm leading-relaxed">
-                Bạn có thể cấp quyền bây giờ hoặc để sau. Onboarding không chặn bạn ở bước này.
+                Cấp quyền một lần để bấm Bắt đầu họp là nghe ngay. Bạn có thể để sau.
               </p>
               <PermissionsStep />
             </div>
           ) : null}
-          {step === 2 ? <SampleCaptionStep /> : null}
+          {step === 2 ? <ModelStep /> : null}
           {step === 3 ? <AssistLevelStep /> : null}
+          {step === 4 ? <ListeningStep /> : null}
+          {step === 5 ? <SampleCaptionStep /> : null}
         </section>
 
-        <footer className="mt-6 flex items-center justify-between border-t pt-4">
-          {step > 0 ? (
-            <Button variant="ghost" onClick={back}>
-              <ArrowLeft aria-hidden="true" className="size-4" />
-              Quay lại
+        <footer className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t pt-4">
+          <div className="flex items-center gap-1">
+            {step > 0 ? (
+              <Button variant="ghost" onClick={back}>
+                <ArrowLeft aria-hidden="true" className="size-4" />
+                Quay lại
+              </Button>
+            ) : null}
+            <Button variant="ghost" className="text-muted-foreground" onClick={exit}>
+              Thoát, làm tiếp sau
             </Button>
-          ) : (
-            <span />
-          )}
-          <Button onClick={next}>
-            {step === 0
-              ? 'Bắt đầu'
-              : step === 1
-                ? 'Để sau'
-                : step === steps.length - 1
-                  ? 'Vào CueLingo'
-                  : 'Tiếp tục'}
-          </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            {SKIPPABLE[step] ? (
+              <Button variant="outline" onClick={skip}>
+                {SKIPPABLE[step]}
+              </Button>
+            ) : null}
+            <Button onClick={next}>{FORWARD[step]}</Button>
+          </div>
         </footer>
       </div>
     </main>

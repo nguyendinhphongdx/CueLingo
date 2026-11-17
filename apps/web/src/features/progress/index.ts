@@ -1,1 +1,1 @@
-export { ProgressPage } from './ProgressPage';
+export { ProgressPanel } from './ProgressPage';

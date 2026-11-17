@@ -20,7 +20,7 @@ Cửa sổ caption song ngữ nổi trên app họp.
 
 - `<CaptionOverlay level={level} />`: hiện dữ liệu mẫu trước transcript đầu tiên; level prop dùng cho test, khi chạy thật nhận level từ event `settings`
 - `useTranscript()`: đăng ký và dọn listener qua `native.onTranscript`
-- `useNotices()` và `<NoticeBar />`: nghe `native.onNotice`, hiện thông báo hạn mức (cam khi sắp hết, đỏ khi đã hết) phía trên caption, mỗi thông báo đóng được; caption vẫn chạy bên dưới
+- `useNotices()` và `<NoticeBar />`: nghe `native.onNotice`, hiện thông báo hạn mức phía trên caption, mỗi thông báo đóng được; caption vẫn chạy bên dưới. Cùng ngữ nghĩa với `NoticeStrip` (cam khi sắp hết, đỏ khi đã hết; lỗi là `role="alert"`) nhưng overlay là cửa sổ trong suốt nên mỗi thông báo nằm trên thẻ đặc (`bg-card`), chữ giữ màu `foreground`, chỉ viền và biểu tượng mang màu của mức; nhờ vậy đọc được trên mọi nền. `actionFor(notice)` (prop `noticeAction` của `CaptionOverlay`) cho mỗi thông báo tối đa một nút sửa lỗi. Sự kiện `notice` có trường tuỳ chọn `action` (`'upgrade' | 'open-settings'`, schema `NoticeEvent` ở `lib/native.ts`; thông báo cũ không có trường này vẫn hợp lệ). Cửa sổ chính quyết định hành động nào hợp (nó biết gói và lỗi bắt âm), overlay chỉ thực hiện qua `notice-actions.ts`: `upgrade` mở `/upgrade` trên web bằng `openWeb`; `open-settings` phát event `open-settings`, cửa sổ chính nghe (`useOpenSettingsRequests`), mở Cài đặt và đưa cửa sổ lên trước (cần quyền `core:window:allow-show` và `allow-set-focus` trong `capabilities/default.json`)
 - `useOverlayAssistLevel()`: đăng ký và dọn listener qua `native.onSettings`
 - `useTranscriptStore`: `push(event)` thay segment cùng `segmentId`, giữ tối đa 6 segment
 

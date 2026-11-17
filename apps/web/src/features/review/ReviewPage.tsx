@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReviewAnswerRequest, ReviewCard } from '@cuelingo/shared';
+import type { LanguageCode, ReviewAnswerRequest, ReviewCard } from '@cuelingo/shared';
 import { Button } from '@cuelingo/ui/components/button';
 import {
   Card,
@@ -10,15 +10,14 @@ import {
   CardTitle,
 } from '@cuelingo/ui/components/card';
 import { DictationCard } from '@cuelingo/ui/components/dictation-card';
-import { LanguageSwitcher } from '@cuelingo/ui/components/language-switcher';
-import { PageHeader } from '@cuelingo/ui/components/page-header';
+import { NoticeStrip } from '@cuelingo/ui/components/notice-strip';
+import { Skeleton } from '@cuelingo/ui/components/skeleton';
 import { SpeakButton } from '@cuelingo/ui/components/speak-button';
 import Link from 'next/link';
 import { FlashcardDeck } from '@cuelingo/ui/components/flashcard-deck';
 import { Segmented } from '@cuelingo/ui/components/segmented';
 import { useEffect, useState } from 'react';
 import { client } from '../../lib/client';
-import { useLanguage } from '../../lib/language';
 import { type ReviewResult, useReview } from './use-review';
 
 const RATINGS = [
@@ -111,9 +110,9 @@ export function ReviewSession({
                 variant="outline"
                 className={`min-h-11 h-auto justify-start whitespace-normal px-4 py-3 text-left ${
                   isAnswer
-                    ? 'border-green-700 bg-green-50 text-green-950 dark:bg-green-950 dark:text-green-50'
+                    ? 'border-success bg-success/10 text-foreground'
                     : isWrongChoice
-                      ? 'border-destructive bg-red-50 text-red-950 dark:bg-red-950 dark:text-red-50'
+                      ? 'border-destructive bg-destructive/10 text-foreground'
                       : ''
                 }`}
                 disabled={answered}
@@ -248,8 +247,8 @@ export function ReviewEmptyState() {
   );
 }
 
-export function ReviewPage() {
-  const { language, setLanguage, options } = useLanguage();
+/** The Hôm nay tab of Ôn tập: the cards due today for one language. */
+export function ReviewTodayPanel({ language }: { language: LanguageCode }) {
   const review = useReview(language);
   const [mode, setModeState] = useState<ReviewMode>('flip');
   useEffect(() => {
@@ -288,13 +287,16 @@ export function ReviewPage() {
   let content;
 
   if (review.loading) {
-    content = <p className="text-muted-foreground text-sm">Đang chuẩn bị thẻ ôn…</p>;
-  } else if (review.error && review.total === 0) {
     content = (
-      <p role="alert" className="text-destructive text-sm">
-        {review.error}
-      </p>
+      <div className="space-y-3" aria-busy="true">
+        <p className="sr-only" aria-live="polite">
+          Đang chuẩn bị thẻ ôn…
+        </p>
+        <Skeleton className="h-64 rounded-xl" />
+      </div>
     );
+  } else if (review.error && review.total === 0) {
+    content = <NoticeStrip tone="error">{review.error}</NoticeStrip>;
   } else if (review.result) {
     content = <ReviewSummary result={review.result} onRestart={review.restart} />;
   } else if (!review.card) {
@@ -302,11 +304,7 @@ export function ReviewPage() {
   } else {
     content = (
       <div className="space-y-3">
-        {review.error && (
-          <p role="alert" className="text-destructive text-sm">
-            {review.error}
-          </p>
-        )}
+        {review.error && <NoticeStrip tone="error">{review.error}</NoticeStrip>}
         <div className="flex justify-center">
           <Segmented
             label="Kiểu ôn"
@@ -340,14 +338,5 @@ export function ReviewPage() {
     );
   }
 
-  return (
-    <>
-      <PageHeader
-        title="Ôn tập"
-        description="Ôn lại cụm từ từ chính các cuộc họp của bạn."
-        action={<LanguageSwitcher options={options} value={language} onChange={setLanguage} />}
-      />
-      {content}
-    </>
-  );
+  return content;
 }

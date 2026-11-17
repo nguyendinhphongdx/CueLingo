@@ -118,9 +118,9 @@ export function ReviewCardView({
                 variant="outline"
                 className={`min-h-11 h-auto justify-start whitespace-normal px-4 py-3 text-left shadow-none ${
                   isAnswer
-                    ? 'border-green-700 bg-green-50 text-green-950 dark:bg-green-950 dark:text-green-50'
+                    ? 'border-success bg-success/8 text-success'
                     : isWrongChoice
-                      ? 'border-destructive bg-red-50 text-red-950 dark:bg-red-950 dark:text-red-50'
+                      ? 'border-destructive bg-destructive/8 text-destructive'
                       : ''
                 }`}
                 disabled={answered}

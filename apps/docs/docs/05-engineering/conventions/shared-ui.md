@@ -29,3 +29,7 @@ sidebar_position: 12
 `packages/ui/src/shared-ui.test.ts` đọc mọi component đã xuất ở `packages/ui/src/components` rồi quét `apps/web/src` và `apps/desktop/src`: nếu client **định nghĩa** một hàm hoặc hằng trùng tên với component chung thì test đỏ. Lỗi ghi rõ file và tên.
 
 Test chỉ bắt trùng tên. Hai component khác tên mà làm cùng một việc thì phải để ý ở bước review ([checklist](./code-review.md)).
+
+## Token, không màu tự đặt
+
+Component trong `packages/ui/src/components` chỉ dùng token (`bg-primary`, `text-success`, `border-warning/40`…). Không hex, không `dark:`, không `text-white`/`bg-black`; chế độ tối đến từ giá trị token trong `.dark`. Ngoại lệ duy nhất là `logo.tsx`. `shared-ui.test.ts` kiểm.

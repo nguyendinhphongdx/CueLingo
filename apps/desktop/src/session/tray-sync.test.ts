@@ -13,6 +13,7 @@ const snap = (over: Partial<SessionSnapshot> = {}): SessionSnapshot => ({
   systemFailed: false,
   suggestedLanguage: null,
   meetingLanguage: 'en',
+  latestCaption: null,
   ...over,
 });
 

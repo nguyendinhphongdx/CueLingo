@@ -1,1 +1,1 @@
-export { ReviewPage } from './ReviewPage';
+export { LegacyReviewRedirect, ReviewTabsPage } from './ReviewTabs';

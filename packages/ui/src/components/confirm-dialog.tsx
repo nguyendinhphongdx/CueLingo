@@ -46,7 +46,7 @@ function OpenDialog({
   }, [confirmDelayMs]);
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4"
       onClick={onCancel}
       onKeyDown={(event) => {
         if (event.key === 'Escape') onCancel();
@@ -57,7 +57,7 @@ function OpenDialog({
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
         aria-describedby="confirm-dialog-body"
-        className="bg-card text-card-foreground w-full max-w-md rounded-2xl border p-6 shadow-xl"
+        className="bg-card text-card-foreground w-full max-w-md rounded-xl border p-6 shadow-lg"
         onClick={(event) => event.stopPropagation()}
       >
         <h2 id="confirm-dialog-title" className="text-lg font-semibold">

@@ -3,6 +3,7 @@
 import { Menu, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useMobileNavigation } from '../hooks/use-mobile-navigation';
+import { LogoLockup } from './logo';
 import { SidebarNav, type SidebarNavProps } from './sidebar-nav';
 
 /**
@@ -13,15 +14,12 @@ export function AppFrame({
   nav,
   footer,
   dragRegion,
-  wide = false,
   children,
 }: {
   nav: SidebarNavProps;
   footer?: ReactNode;
   /** Adds a strip along the top for dragging a window with a transparent title bar (desktop). */
   dragRegion?: boolean;
-  /** A wider content area for tables and charts (the admin pages); the default suits forms and text. */
-  wide?: boolean;
   children: ReactNode;
 }) {
   const mobileNavigation = useMobileNavigation();
@@ -34,14 +32,14 @@ export function AppFrame({
       ) : null}
       {responsive ? (
         <header className="bg-background absolute inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b px-4 md:hidden">
-          <div className="min-w-0">{nav.brand}</div>
+          <div className="min-w-0">{nav.brand ?? <LogoLockup />}</div>
           <button
             type="button"
             aria-label={mobileNavigation.open ? 'Đóng trình đơn' : 'Mở trình đơn'}
             aria-expanded={mobileNavigation.open}
             aria-controls="mobile-navigation"
             onClick={mobileNavigation.toggle}
-            className="focus-visible:ring-ring inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg hover:bg-accent focus-visible:ring-2 focus-visible:outline-none"
+            className="focus-visible:ring-ring inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:outline-none"
           >
             {mobileNavigation.open ? (
               <X aria-hidden="true" className="size-5" />
@@ -56,7 +54,7 @@ export function AppFrame({
           type="button"
           aria-label="Đóng trình đơn"
           onClick={mobileNavigation.close}
-          className="absolute inset-x-0 top-16 bottom-0 z-20 cursor-default bg-black/30 md:hidden"
+          className="absolute inset-x-0 top-16 bottom-0 z-20 cursor-default bg-scrim md:hidden"
         />
       ) : null}
       <SidebarNav
@@ -70,9 +68,7 @@ export function AppFrame({
       <main
         className={`h-full min-w-0 flex-1 overflow-y-auto px-4 pb-9 md:px-10 ${dragRegion ? 'pt-14' : 'pt-20 md:pt-10'}`}
       >
-        <div className={`mx-auto flex flex-col gap-6 ${wide ? 'max-w-6xl' : 'max-w-[640px]'}`}>
-          {children}
-        </div>
+        <div className="flex w-full flex-col gap-6">{children}</div>
       </main>
     </div>
   );
