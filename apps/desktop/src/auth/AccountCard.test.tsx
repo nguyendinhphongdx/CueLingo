@@ -10,6 +10,20 @@ const me = {
 };
 
 describe('AccountCardView', () => {
+  it('shows a visible sign-out button, also in dev mode without an account', () => {
+    const markup = renderToStaticMarkup(
+      <AccountCardView
+        dev
+        signedIn={false}
+        me={null}
+        loading={false}
+        error={null}
+        onSignOut={() => {}}
+      />,
+    );
+    expect(markup).toContain('>Đăng xuất<');
+  });
+
   it('shows the account name, email, avatar and device sign-out action', () => {
     const markup = renderToStaticMarkup(
       <AccountCardView

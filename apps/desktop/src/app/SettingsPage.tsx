@@ -2,6 +2,7 @@ import { Button } from '@cuelingo/ui/components/button';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
 import { ListCard, Section } from '@cuelingo/ui/components/section';
 import { SoonBadge } from '@cuelingo/ui/components/soon-badge';
+import { ThemeSwitch } from '@cuelingo/ui/components/theme-switch';
 import { upcoming } from '@cuelingo/ui/lib/roadmap';
 import { useState, type ReactNode } from 'react';
 import { AccountCard } from '../auth';
@@ -16,7 +17,7 @@ import { hasCalendar } from '../lib/platform';
 import { AboutCard } from './AboutCard';
 
 export type SettingsSectionId =
-  'account' | 'meeting' | 'voice' | 'calendar' | 'privacy' | 'device' | 'about';
+  'account' | 'meeting' | 'appearance' | 'voice' | 'calendar' | 'privacy' | 'device' | 'about';
 
 interface SectionDef {
   id: SettingsSectionId;
@@ -29,6 +30,7 @@ interface SectionDef {
 export const SETTINGS_SECTIONS: SectionDef[] = [
   { id: 'account', label: 'Tài khoản và gói' },
   { id: 'meeting', label: 'Họp và caption' },
+  { id: 'appearance', label: 'Giao diện' },
   { id: 'voice', label: 'Giọng đọc' },
   { id: 'calendar', label: 'Lịch', available: hasCalendar },
   { id: 'privacy', label: 'Quyền riêng tư' },
@@ -134,6 +136,8 @@ function SectionBody({
           <PlacementSection />
         </>
       );
+    case 'appearance':
+      return <ThemeSwitch />;
     case 'voice':
       return <VoiceSettings />;
     case 'calendar':

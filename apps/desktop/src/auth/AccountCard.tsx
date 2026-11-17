@@ -1,5 +1,5 @@
 import type { Me } from '@cuelingo/shared';
-import { IconButton } from '@cuelingo/ui/components/icon-button';
+import { Button } from '@cuelingo/ui/components/button';
 import { PersonRow } from '@cuelingo/ui/components/person-row';
 import { LogOut } from 'lucide-react';
 import {
@@ -14,11 +14,15 @@ import { useMe } from './use-me';
 
 function SignOutButton({ onSignOut }: { onSignOut(): void }) {
   return (
-    <IconButton
-      label="Đăng xuất khỏi thiết bị này"
-      icon={<LogOut aria-hidden="true" className="size-[18px]" />}
+    <Button
+      variant="outline"
+      aria-label="Đăng xuất khỏi thiết bị này"
+      className="shrink-0"
       onClick={onSignOut}
-    />
+    >
+      <LogOut aria-hidden="true" />
+      Đăng xuất
+    </Button>
   );
 }
 
@@ -47,18 +51,18 @@ export function AccountCardView({
             : 'Thiết bị này đã đăng nhập. Cuộc họp và cụm từ được đồng bộ với web.'}
         </CardDescription>
       </CardHeader>
-      {signedIn || me ? (
+      {signedIn || me || dev ? (
         <CardContent className="space-y-3">
           {loading ? <p className="text-muted-foreground text-sm">Đang tải tài khoản…</p> : null}
           {me ? (
             <PersonRow
               name={me.name}
               email={me.email}
-              actions={signedIn ? <SignOutButton onSignOut={onSignOut} /> : null}
+              actions={<SignOutButton onSignOut={onSignOut} />}
             />
-          ) : signedIn ? (
+          ) : (
             <SignOutButton onSignOut={onSignOut} />
-          ) : null}
+          )}
           {error ? (
             <p role="alert" className="text-destructive text-sm">
               {error}
