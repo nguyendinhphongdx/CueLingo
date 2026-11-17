@@ -190,4 +190,13 @@ describe('sessions api', () => {
       }
     });
   });
+
+  it('reads one meeting with its sentences for the search', async () => {
+    const detail = { ...session, status: 'ended', segments: [], speakers: [] };
+    const request = vi.fn<typeof fetch>().mockResolvedValueOnce(Response.json(detail));
+    const api = createSessionsApi({ apiUrl: 'ws://api.test/', token: 't', fetch: request });
+
+    await expect(api.get(session.id)).resolves.toMatchObject({ id: session.id, segments: [] });
+    expect(request.mock.calls[0]![0]).toBe(`http://api.test/v1/sessions/${session.id}`);
+  });
 });

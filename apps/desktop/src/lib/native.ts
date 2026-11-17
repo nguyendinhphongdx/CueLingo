@@ -4,6 +4,7 @@
  */
 import { invoke } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { platform, version as osVersion } from '@tauri-apps/plugin-os';
 import { relaunch } from '@tauri-apps/plugin-process';
@@ -171,11 +172,19 @@ export type CalendarResult = z.infer<typeof CalendarResult>;
 export const SettingsEvent = z.object({ assistLevel: AssistLevel });
 export type SettingsEvent = z.infer<typeof SettingsEvent>;
 
+/** What a notice button does: `upgrade` opens the plans page in the browser; `open-settings` brings the main window to Cài đặt. */
+export const NoticeActionId = z.enum(['upgrade', 'open-settings']);
+export type NoticeActionId = z.infer<typeof NoticeActionId>;
+
+export const OPEN_SETTINGS_EVENT = 'open-settings';
+
 /** A short message for the person while a meeting runs (allowance running low or used up). Never holds meeting text. */
 export const NoticeEvent = z.object({
   id: z.string(),
   tone: z.enum(['warning', 'error']),
   text: z.string(),
+  /** The one thing that fixes it; the overlay shows a button for it. Left out for a notice that only informs. */
+  action: NoticeActionId.optional(),
 });
 export type NoticeEvent = z.infer<typeof NoticeEvent>;
 
@@ -294,6 +303,15 @@ export const native = {
   publishNotice: (e: NoticeEvent) => emit('notice', NoticeEvent.parse(e)),
   onNotice: (cb: (e: NoticeEvent) => void): Promise<UnlistenFn> =>
     listen('notice', (e) => cb(NoticeEvent.parse(e.payload))),
+  /** The overlay asks the main window to come forward on Cài đặt (the windows share no JS context). */
+  requestOpenSettings: () => emit(OPEN_SETTINGS_EVENT),
+  /** Brings the main window forward (used when the overlay asks for Cài đặt). */
+  showMainWindow: async () => {
+    const window = getCurrentWindow();
+    await window.show();
+    await window.setFocus();
+  },
+  onOpenSettings: (cb: () => void): Promise<UnlistenFn> => listen(OPEN_SETTINGS_EVENT, () => cb()),
   publishSettings: (e: SettingsEvent) => emit('settings', SettingsEvent.parse(e)),
   onSettings: (cb: (e: SettingsEvent) => void): Promise<UnlistenFn> =>
     listen('settings', (e) => cb(SettingsEvent.parse(e.payload))),

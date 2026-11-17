@@ -12,7 +12,7 @@ import {
 import { FeedbackPage } from '../feedback';
 import { ServerLink } from '../server-picker';
 import { useActivationTelemetry } from '../telemetry';
-import { RecentSessions } from '../session';
+import { MeetingsPage } from '../session';
 import { useLearnLanguage, useSettingsSync } from '../settings';
 import { useSyncAssistLevel } from '../settings/use-assist-settings';
 import { Button } from '@cuelingo/ui/components/button';
@@ -28,6 +28,8 @@ import { tabForView } from './ReviewTabs';
 import { SettingsPage } from './SettingsPage';
 import { views } from './views';
 import { openWeb } from './open-web';
+import { useOpenSettingsRequests } from './use-open-settings';
+import { UPGRADE_PATH } from '../usage/upgrade';
 
 export function App() {
   useColorScheme();
@@ -37,9 +39,15 @@ export function App() {
   useSyncAssistLevel();
   useActivationTelemetry(account.me?.id ?? null);
   const [view, setView] = useState('home');
+  useOpenSettingsRequests(() => setView('settings'));
   // Hôm nay, Kho cụm từ and Tiến độ are tabs of one view; the old ids open the matching tab.
   const [reviewTab, setReviewTab] = useState('today');
   const navigate = (id: string) => {
+    // Plans are sold on the web: Nâng cấp opens that page in the browser and leaves the current view.
+    if (id === 'upgrade') {
+      void openWeb(UPGRADE_PATH);
+      return;
+    }
     const tab = tabForView(id);
     if (tab) {
       setReviewTab(tab);
@@ -161,14 +169,7 @@ function CurrentView({
   }
 
   if (view === 'home') return <HomePage onResumeOnboarding={onResumeOnboarding} />;
-  if (view === 'meetings') {
-    return (
-      <>
-        <PageHeader title="Cuộc họp" description="Bấm vào một cuộc họp để mở debrief trên web." />
-        <RecentSessions limit={20} showEmpty />
-      </>
-    );
-  }
+  if (view === 'meetings') return <MeetingsPage />;
   if (view === 'feedback') return <FeedbackPage />;
   if (view === 'settings') {
     return <SettingsPage onSignOut={onSignOut} onReviewOnboarding={onReviewOnboarding} />;

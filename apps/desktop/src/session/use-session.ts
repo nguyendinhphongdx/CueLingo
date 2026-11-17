@@ -10,6 +10,8 @@ import { createSessionController } from './session-controller';
 import { sessionsApi } from './sessions-api';
 import { startTraySync } from './tray-sync';
 import { usageApi } from '../usage';
+import { billingApi } from '../usage/billing-api';
+import { canUpgrade } from '../usage/upgrade';
 import { activation } from '../telemetry/instance';
 
 const controller = createSessionController({
@@ -18,6 +20,7 @@ const controller = createSessionController({
   hasCloudConsent: () => hasCloudConsent(),
   glossary: { list: insightsApi.listGlossary },
   usage: usageApi,
+  canUpgrade: async () => canUpgrade(await billingApi.overview()),
   createRealtime: createRealtimeClient,
   onFirstCaption: (sessionId) => void activation.captionShown(sessionId),
   apiUrl: serverConfig().wsUrl,

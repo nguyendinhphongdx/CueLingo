@@ -10,7 +10,7 @@ import { useLanguage } from '../settings';
 import { describeNativeError, openDebrief } from './session-actions';
 import { native } from '../lib/native';
 import { shortcutLabel } from '../lib/platform';
-import type { SessionStatus as Status } from './session-controller';
+import type { LatestCaption, SessionStatus as Status } from './session-controller';
 import { SUPPORTED_LANGUAGES, type LanguageCode } from '@cuelingo/shared';
 import { describeModelProgress, useModelProgress } from './model-progress';
 import { debriefApi } from './debrief-api';
@@ -185,6 +185,34 @@ export function CloudSendingBadge() {
   );
 }
 
+export const LATEST_CAPTION_HINT = 'Chỉ để xem nhanh. Bản đầy đủ nằm trong cửa sổ caption.';
+export const LATEST_CAPTION_WAITING = 'Chưa có câu nào. Câu đầu tiên sẽ hiện ở đây.';
+
+/** The newest finished sentence with its translation; the full captions stay in the overlay. */
+export function LatestCaptionCard({ caption }: { caption: LatestCaption | null }) {
+  return (
+    <section aria-labelledby="latest-caption-title" className="bg-card rounded-2xl border p-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="latest-caption-title" className="text-base font-semibold">
+          Câu mới nhất
+        </h2>
+        <p className="text-muted-foreground text-xs">{LATEST_CAPTION_HINT}</p>
+      </div>
+      {caption ? (
+        <div className="mt-3 space-y-1">
+          <p className="text-muted-foreground text-xs font-medium">{caption.speaker}</p>
+          <p className="text-base">{caption.text}</p>
+          {caption.translation ? (
+            <p className="text-muted-foreground text-sm">{caption.translation}</p>
+          ) : null}
+        </div>
+      ) : (
+        <p className="text-muted-foreground mt-3 text-sm">{LATEST_CAPTION_WAITING}</p>
+      )}
+    </section>
+  );
+}
+
 /** The ready state: language, readiness of each input with its own fix, and the Start button. */
 function IdleCard({ controls }: { controls: MeetingControls }) {
   const { language, setLanguage, options } = useLanguage();
@@ -239,126 +267,129 @@ export function SessionPanel({ controls }: { controls: MeetingControls }) {
   const modelProgress = describeModelProgress(useModelProgress());
 
   return (
-    <section
-      aria-label="Caption trực tiếp"
-      className={`relative overflow-hidden rounded-2xl border p-6 transition-colors ${
-        running ? 'surface-live border-transparent text-white' : 'bg-card'
-      }`}
-    >
-      {running ? (
-        <>
-          <div className="flex items-start justify-between gap-6">
-            <div className="min-w-0">
-              <Badge className="bg-white/20 text-white">
-                <span className="relative flex size-2" aria-hidden="true">
-                  {live ? (
-                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-white/70" />
-                  ) : null}
-                  <span className="relative inline-flex size-2 rounded-full bg-white" />
-                </span>
-                {statusText[session.status]}
-              </Badge>
-              <h2 className="mt-3 text-2xl font-semibold tracking-tight">
-                {live ? 'Đang nghe cuộc họp' : 'Đang chuẩn bị…'}
-              </h2>
-              <p className="mt-1.5 text-sm text-white/80">
-                {live
-                  ? 'Caption và bản dịch đang hiện trên overlay nổi.'
-                  : 'Bấm bắt đầu rồi mở Zoom, Meet hoặc Teams như bình thường.'}
-              </p>
-              <p className="mt-1 text-xs text-white/70">
-                Overlay tự hiện khi bắt đầu và ẩn khi dừng. {shortcutLabel('L')} để ẩn/hiện tay.
-              </p>
-            </div>
-            {session.startedAt !== null ? (
-              <p className="font-mono text-3xl tabular-nums" aria-label="Thời gian đã chạy">
-                {duration}
-              </p>
-            ) : null}
-          </div>
-          {metering ? <AudioLevels failures={session} /> : null}
-          <div className="mt-6 flex flex-wrap items-center gap-2">
-            <PressButton asChild hoverScale={1} tapScale={0.97}>
-              <Button
-                size="lg"
-                disabled={busy || controls.pending === 'stopping'}
-                onClick={() => void controls.halt()}
-                className="text-brand cursor-pointer bg-white hover:bg-white/90"
-              >
-                <Square aria-hidden="true" className="size-4 fill-current" />
-                {controls.pending === 'stopping' ? 'Đang dừng…' : 'Dừng'}
-              </Button>
-            </PressButton>
-          </div>
-        </>
-      ) : (
-        <IdleCard controls={controls} />
-      )}
-      {finishedId ? (
-        <PostMeetingCard
-          duration={duration}
-          sentences={session.completedSegmentCount}
-          brief={brief}
-          onOpen={() => void openDebrief(finishedId)}
-          onComposeFollowup={(input) => debriefApi.followup(finishedId, input)}
-        />
-      ) : null}
-      {sendsAudio ? <CloudSendingBadge /> : null}
-      <ConfirmDialog
-        open={controls.consent.open}
-        title="Gửi âm thanh để nhận dạng"
-        confirmLabel="Đồng ý và bắt đầu"
-        cancelLabel="Huỷ"
-        onCancel={controls.consent.cancel}
-        onConfirm={controls.consent.confirm}
+    <>
+      <section
+        aria-label="Caption trực tiếp"
+        className={`relative overflow-hidden rounded-2xl border p-6 transition-colors ${
+          running ? 'surface-live border-transparent text-white' : 'bg-card'
+        }`}
       >
-        {CLOUD_CONSENT_TEXT}
-      </ConfirmDialog>
-      {modelProgress && busy ? (
-        <p className="mt-4 text-sm text-white/80" aria-live="polite">
-          {modelProgress}
-        </p>
-      ) : null}
-      {session.suggestedLanguage ? (
-        <div
-          role="status"
-          className="mt-4 flex flex-wrap items-center gap-2 rounded-lg bg-white/15 px-3 py-2 text-sm"
+        {running ? (
+          <>
+            <div className="flex items-start justify-between gap-6">
+              <div className="min-w-0">
+                <Badge className="bg-white/20 text-white">
+                  <span className="relative flex size-2" aria-hidden="true">
+                    {live ? (
+                      <span className="absolute inline-flex size-full animate-ping rounded-full bg-white/70" />
+                    ) : null}
+                    <span className="relative inline-flex size-2 rounded-full bg-white" />
+                  </span>
+                  {statusText[session.status]}
+                </Badge>
+                <h2 className="mt-3 text-2xl font-semibold tracking-tight">
+                  {live ? 'Đang nghe cuộc họp' : 'Đang chuẩn bị…'}
+                </h2>
+                <p className="mt-1.5 text-sm text-white/80">
+                  {live
+                    ? 'Caption và bản dịch đang hiện trên overlay nổi.'
+                    : 'Bấm bắt đầu rồi mở Zoom, Meet hoặc Teams như bình thường.'}
+                </p>
+                <p className="mt-1 text-xs text-white/70">
+                  Overlay tự hiện khi bắt đầu và ẩn khi dừng. {shortcutLabel('L')} để ẩn/hiện tay.
+                </p>
+              </div>
+              {session.startedAt !== null ? (
+                <p className="font-mono text-3xl tabular-nums" aria-label="Thời gian đã chạy">
+                  {duration}
+                </p>
+              ) : null}
+            </div>
+            {metering ? <AudioLevels failures={session} /> : null}
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              <PressButton asChild hoverScale={1} tapScale={0.97}>
+                <Button
+                  size="lg"
+                  disabled={busy || controls.pending === 'stopping'}
+                  onClick={() => void controls.halt()}
+                  className="text-brand cursor-pointer bg-white hover:bg-white/90"
+                >
+                  <Square aria-hidden="true" className="size-4 fill-current" />
+                  {controls.pending === 'stopping' ? 'Đang dừng…' : 'Dừng'}
+                </Button>
+              </PressButton>
+            </div>
+          </>
+        ) : (
+          <IdleCard controls={controls} />
+        )}
+        {finishedId ? (
+          <PostMeetingCard
+            duration={duration}
+            sentences={session.completedSegmentCount}
+            brief={brief}
+            onOpen={() => void openDebrief(finishedId)}
+            onComposeFollowup={(input) => debriefApi.followup(finishedId, input)}
+          />
+        ) : null}
+        {sendsAudio ? <CloudSendingBadge /> : null}
+        <ConfirmDialog
+          open={controls.consent.open}
+          title="Gửi âm thanh để nhận dạng"
+          confirmLabel="Đồng ý và bắt đầu"
+          cancelLabel="Huỷ"
+          onCancel={controls.consent.cancel}
+          onConfirm={controls.consent.confirm}
         >
-          <span className="mr-auto">
-            Nghe như {SUPPORTED_LANGUAGES[session.suggestedLanguage].name.toLowerCase()}. Đổi sang
-            ngôn ngữ này?
-            {SUPPORTED_LANGUAGES[session.suggestedLanguage].recognition === 'cloud' ? (
-              <span className="mt-0.5 block text-xs text-white/70">{CLOUD_SWITCH_NOTE}</span>
-            ) : null}
-          </span>
-          <Button
-            size="sm"
-            onClick={() => void session.acceptSuggestedLanguage()}
-            className="text-brand cursor-pointer bg-white hover:bg-white/90"
+          {CLOUD_CONSENT_TEXT}
+        </ConfirmDialog>
+        {modelProgress && busy ? (
+          <p className="mt-4 text-sm text-white/80" aria-live="polite">
+            {modelProgress}
+          </p>
+        ) : null}
+        {session.suggestedLanguage ? (
+          <div
+            role="status"
+            className="mt-4 flex flex-wrap items-center gap-2 rounded-lg bg-white/15 px-3 py-2 text-sm"
           >
-            Đổi
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={session.dismissSuggestedLanguage}
-            className="cursor-pointer text-white hover:bg-white/15 hover:text-white"
-          >
-            Bỏ qua
-          </Button>
+            <span className="mr-auto">
+              Nghe như {SUPPORTED_LANGUAGES[session.suggestedLanguage].name.toLowerCase()}. Đổi sang
+              ngôn ngữ này?
+              {SUPPORTED_LANGUAGES[session.suggestedLanguage].recognition === 'cloud' ? (
+                <span className="mt-0.5 block text-xs text-white/70">{CLOUD_SWITCH_NOTE}</span>
+              ) : null}
+            </span>
+            <Button
+              size="sm"
+              onClick={() => void session.acceptSuggestedLanguage()}
+              className="text-brand cursor-pointer bg-white hover:bg-white/90"
+            >
+              Đổi
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={session.dismissSuggestedLanguage}
+              className="cursor-pointer text-white hover:bg-white/15 hover:text-white"
+            >
+              Bỏ qua
+            </Button>
+          </div>
+        ) : null}
+        <div className="sr-only" aria-live="polite">
+          Trạng thái: {statusText[session.status]}
         </div>
-      ) : null}
-      <div className="sr-only" aria-live="polite">
-        Trạng thái: {statusText[session.status]}
-      </div>
-      {error ? (
-        <p
-          role="alert"
-          className="bg-destructive/10 text-destructive mt-4 rounded-lg px-3 py-2 text-sm"
-        >
-          {error}
-        </p>
-      ) : null}
-    </section>
+        {error ? (
+          <p
+            role="alert"
+            className="bg-destructive/10 text-destructive mt-4 rounded-lg px-3 py-2 text-sm"
+          >
+            {error}
+          </p>
+        ) : null}
+      </section>
+      {metering ? <LatestCaptionCard caption={session.latestCaption} /> : null}
+    </>
   );
 }

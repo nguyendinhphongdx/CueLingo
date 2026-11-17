@@ -41,6 +41,18 @@ describe('CaptionOverlay', () => {
     expect(markup).toContain('Câu dịch');
   });
 
+  it('gives a notice that carries an action its button', () => {
+    const markup = renderToStaticMarkup(
+      <CaptionOverlay
+        listen={false}
+        segments={[segment]}
+        receivedTranscript
+        notices={[{ id: 'a', tone: 'error', text: 'Hết giờ', action: 'upgrade' }]}
+      />,
+    );
+    expect(markup).toContain('Nâng cấp');
+  });
+
   it('shows no notice bar without notices', () => {
     const markup = renderToStaticMarkup(
       <CaptionOverlay listen={false} segments={[segment]} receivedTranscript />,

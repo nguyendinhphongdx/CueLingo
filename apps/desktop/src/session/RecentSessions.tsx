@@ -1,4 +1,6 @@
 import { Button } from '@cuelingo/ui/components/button';
+import { HighlightedText } from '@cuelingo/ui/components/highlighted-text';
+import type { SessionHit } from '@cuelingo/ui/lib/meeting-search';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Session } from '@cuelingo/shared';
 import { sessionListLabel } from '@cuelingo/ui/lib/session-state';
@@ -24,23 +26,10 @@ function duration(session: Session): string | null {
   return `${minutes} phút`;
 }
 
-/** The last few meetings, each opening its debrief in the browser. Hidden until there is one. */
-export function RecentSessions({
-  limit = 4,
-  showEmpty = false,
-}: {
-  limit?: number;
-  showEmpty?: boolean;
-}) {
+/** Rows of meetings, each opening its debrief in the browser and asking before it deletes. */
+export function SessionRows({ hits, query = '' }: { hits: SessionHit[]; query?: string }) {
   const queryClient = useQueryClient();
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
-  const recent = useQuery({
-    queryKey: ['recent-sessions', limit],
-    queryFn: () => sessionsApi.list(),
-    select: (data) =>
-      data.sessions.filter((session) => session.status !== 'deleted').slice(0, limit),
-    staleTime: 15_000,
-  });
   const remove = useMutation({
     mutationFn: (sessionId: string) => sessionsApi.remove(sessionId),
     onSuccess: async () => {
@@ -49,23 +38,10 @@ export function RecentSessions({
     },
   });
 
-  if (!recent.data) return null;
-  if (recent.data.length === 0) {
-    return showEmpty ? (
-      <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
-        Chưa có cuộc họp nào. Bấm Bắt đầu ở mục Phiên họp, debrief sẽ xuất hiện ở đây sau khi bạn
-        dừng.
-      </p>
-    ) : null;
-  }
-
   return (
-    <section aria-labelledby="recent-title" className="space-y-3">
-      <h2 id="recent-title" className="text-sm font-semibold">
-        Cuộc họp gần đây
-      </h2>
+    <>
       <ul className="bg-card divide-y overflow-hidden rounded-xl border">
-        {recent.data.map((session) => (
+        {hits.map(({ session, snippets }) => (
           <li key={session.id} className="px-2 py-1">
             <div className="flex items-center gap-1">
               <button
@@ -75,7 +51,11 @@ export function RecentSessions({
               >
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">
-                    {session.title ?? formatter.format(new Date(session.startedAt))}
+                    {session.title ? (
+                      <HighlightedText text={session.title} query={query} />
+                    ) : (
+                      formatter.format(new Date(session.startedAt))
+                    )}
                   </span>
                   <span className="text-muted-foreground block text-xs">
                     {[
@@ -85,6 +65,15 @@ export function RecentSessions({
                       .filter(Boolean)
                       .join(' · ') || 'Đang diễn ra'}
                   </span>
+                  {snippets.map((snippet) => (
+                    <span
+                      key={snippet.segmentId}
+                      className="text-muted-foreground mt-1 block text-xs"
+                    >
+                      <span className="text-foreground font-medium">{snippet.speaker}: </span>
+                      <HighlightedText text={snippet.text} query={query} />
+                    </span>
+                  ))}
                 </span>
                 <span className="text-muted-foreground text-xs">{sessionListLabel(session)}</span>
                 <ChevronRight aria-hidden="true" className="text-muted-foreground size-4" />
@@ -131,6 +120,42 @@ export function RecentSessions({
           Không thể xoá cuộc họp. Vui lòng thử lại.
         </p>
       )}
+    </>
+  );
+}
+
+/** The last few meetings, each opening its debrief in the browser. Hidden until there is one. */
+export function RecentSessions({
+  limit = 4,
+  showEmpty = false,
+}: {
+  limit?: number;
+  showEmpty?: boolean;
+}) {
+  const recent = useQuery({
+    queryKey: ['recent-sessions', limit],
+    queryFn: () => sessionsApi.list(),
+    select: (data) =>
+      data.sessions.filter((session) => session.status !== 'deleted').slice(0, limit),
+    staleTime: 15_000,
+  });
+
+  if (!recent.data) return null;
+  if (recent.data.length === 0) {
+    return showEmpty ? (
+      <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
+        Chưa có cuộc họp nào. Bấm Bắt đầu ở mục Phiên họp, debrief sẽ xuất hiện ở đây sau khi bạn
+        dừng.
+      </p>
+    ) : null;
+  }
+
+  return (
+    <section aria-labelledby="recent-title" className="space-y-3">
+      <h2 id="recent-title" className="text-sm font-semibold">
+        Cuộc họp gần đây
+      </h2>
+      <SessionRows hits={recent.data.map((session) => ({ session, snippets: [] }))} />
     </section>
   );
 }

@@ -46,3 +46,15 @@ describe('usageNotice', () => {
     expect(isMeetingMetric('agent_messages')).toBe(false);
   });
 });
+
+describe('usageNotice action', () => {
+  const exhausted = { used: 5, limit: 5, state: 'exhausted' as const };
+
+  it('adds the upgrade action only to a used-up allowance and only when asked', () => {
+    expect(usageNotice('translation_ms', exhausted, { canUpgrade: true })?.action).toBe('upgrade');
+    expect(usageNotice('translation_ms', exhausted)).not.toHaveProperty('action');
+    expect(
+      usageNotice('debriefs', { used: 7, limit: 8, state: 'low' }, { canUpgrade: true }),
+    ).not.toHaveProperty('action');
+  });
+});

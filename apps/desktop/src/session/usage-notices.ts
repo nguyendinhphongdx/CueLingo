@@ -41,11 +41,21 @@ function lowText(metric: MeetingMetric, left: number): string {
   }
 }
 
-/** The notice for an allowance that is low or used up; null when it is fine, unlimited or not a meeting one. */
-export function usageNotice(metric: string, item: UsageLike): NoticeEvent | null {
+/** The notice for an allowance that is low or used up (with Nâng cấp once used up, if `canUpgrade`); null when it is fine, unlimited or not a meeting one. */
+export function usageNotice(
+  metric: string,
+  item: UsageLike,
+  options: { canUpgrade?: boolean } = {},
+): NoticeEvent | null {
   if (!isMeetingMetric(metric) || item.state === 'ok' || item.limit === null) return null;
   if (item.state === 'exhausted')
-    return { id: `usage:${metric}:exhausted`, tone: 'error', text: EXHAUSTED_TEXT[metric] };
+    return {
+      id: `usage:${metric}:exhausted`,
+      tone: 'error',
+      text: EXHAUSTED_TEXT[metric],
+      // Upgrading is only offered when there is something to buy.
+      ...(options.canUpgrade ? { action: 'upgrade' as const } : {}),
+    };
   const left = Math.max(0, item.limit - item.used);
   return { id: `usage:${metric}:low`, tone: 'warning', text: lowText(metric, left) };
 }

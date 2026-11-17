@@ -1,7 +1,13 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DebriefButton, isCloudMeeting, SessionStatus } from './SessionPanel';
+import {
+  DebriefButton,
+  isCloudMeeting,
+  LATEST_CAPTION_WAITING,
+  LatestCaptionCard,
+  SessionStatus,
+} from './SessionPanel';
 
 const nativeMocks = vi.hoisted(() => ({
   sessionStart: vi.fn(),
@@ -83,5 +89,37 @@ describe('cloud language UI', () => {
     expect(source).not.toContain('toggleOverlay');
     expect(source).not.toContain('Hiện/ẩn overlay');
     expect(source).not.toContain('Chạy thử caption');
+  });
+});
+
+describe('LatestCaptionCard', () => {
+  it('shows who spoke, the sentence and its translation, with the quick-look hint', () => {
+    const markup = renderToStaticMarkup(
+      createElement(LatestCaptionCard, {
+        caption: {
+          segmentId: 's1',
+          speaker: 'Speaker 2',
+          text: "Let's go back to the roadmap.",
+          translation: 'Quay lại lộ trình nhé.',
+        },
+      }),
+    );
+    expect(markup).toContain('Câu mới nhất');
+    expect(markup).toContain('Speaker 2');
+    expect(markup).toContain('Quay lại lộ trình nhé.');
+    expect(markup).toContain('Bản đầy đủ nằm trong cửa sổ caption');
+  });
+
+  it('waits quietly before the first sentence, and omits a missing translation', () => {
+    expect(renderToStaticMarkup(createElement(LatestCaptionCard, { caption: null }))).toContain(
+      LATEST_CAPTION_WAITING,
+    );
+    const markup = renderToStaticMarkup(
+      createElement(LatestCaptionCard, {
+        caption: { segmentId: 's1', speaker: 'Tôi', text: 'Hello', translation: null },
+      }),
+    );
+    expect(markup).toContain('Hello');
+    expect(markup).not.toContain('text-sm">null');
   });
 });

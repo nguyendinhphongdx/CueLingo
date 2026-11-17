@@ -3,12 +3,14 @@ import { ApiError, createHttp, transcribeApi } from '@cuelingo/core-sdk';
 import { currentToken, resolveToken, type TokenSource } from '../auth';
 import {
   CreateSessionRequestSchema,
+  SessionDetailSchema,
   SessionListSchema,
   SessionSchema,
   type TranscribeRequest,
   type TranscribeResponse,
   type CreateSessionRequest,
   type LanguageCode,
+  type SessionDetail,
   type SessionList,
   type Session,
 } from '@cuelingo/shared';
@@ -40,6 +42,8 @@ export interface SessionsApi {
     signal?: AbortSignal,
   ): Promise<TranscribeResponse>;
   list(): Promise<SessionList>;
+  /** One meeting with its sentences and speakers; read for the search on the Cuộc họp page. */
+  get(sessionId: string): Promise<SessionDetail>;
   remove(sessionId: string): Promise<void>;
 }
 
@@ -110,6 +114,13 @@ export function createSessionsApi({ apiUrl, token, fetch: request = fetch }: Ses
       const response = await request(`${baseUrl}/v1/sessions`, { headers });
       if (!response.ok) throw new Error(`Session request failed with status ${response.status}`);
       return SessionListSchema.parse(await response.json());
+    },
+    async get(sessionId: string) {
+      const response = await request(`${baseUrl}/v1/sessions/${encodeURIComponent(sessionId)}`, {
+        headers,
+      });
+      if (!response.ok) throw new Error(`Session request failed with status ${response.status}`);
+      return SessionDetailSchema.parse(await response.json());
     },
     async remove(sessionId: string) {
       const response = await request(`${baseUrl}/v1/sessions/${encodeURIComponent(sessionId)}`, {

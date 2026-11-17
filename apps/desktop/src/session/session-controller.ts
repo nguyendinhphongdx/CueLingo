@@ -13,6 +13,7 @@ import {
 } from '@cuelingo/shared';
 import { captureProblemOf } from './capture-problems';
 import { nativeErrorCode } from './session-errors';
+import { speakerDisplayName } from '@cuelingo/ui/lib/speaker';
 import { createSpeakerRegistry } from './speaker-registry';
 import { isMeetingMetric, usageNotice } from './usage-notices';
 import type {
@@ -29,6 +30,15 @@ import type { SelectableAssistLevel } from '../settings';
 import type { SessionsApi, TranscribeError } from './sessions-api';
 
 export type SessionStatus = 'idle' | 'connecting' | 'running' | 'reconnecting' | 'error';
+
+/** The newest finished sentence of the running meeting, for the quick look on the Phiên họp card. Memory only. */
+export interface LatestCaption {
+  segmentId: string;
+  /** Who said it, as the person sees it ("Tôi", "Speaker 2", "Người khác"). */
+  speaker: string;
+  text: string;
+  translation: string | null;
+}
 
 export interface SessionSnapshot {
   status: SessionStatus;
@@ -47,6 +57,8 @@ export interface SessionSnapshot {
   suggestedLanguage: LanguageCode | null;
   /** Language of the meeting that runs (set at start, cleared once it has fully ended). */
   meetingLanguage: LanguageCode | null;
+  /** Cleared when a meeting starts and when it ends; never stored. */
+  latestCaption: LatestCaption | null;
 }
 
 interface NativeSessionBridge {
@@ -72,6 +84,8 @@ interface SessionControllerOptions {
   hasCloudConsent?: () => boolean;
   /** Reads the person's allowances at the start of a meeting, to warn about the ones running low. Failures are ignored. */
   usage?: { get(): Promise<UsageResponse> };
+  /** Whether there is a plan to buy; read when an allowance runs out so the notice can offer Nâng cấp. Failures mean no. */
+  canUpgrade?: () => Promise<boolean>;
   createRealtime(options: RealtimeClientOptions): RealtimeClient;
   /** Called once per meeting, with its id, when the first final caption of a real meeting appears (never for the demo). */
   onFirstCaption?: (sessionId: string) => void;
@@ -207,6 +221,7 @@ export function createSessionController({
   glossary,
   hasCloudConsent = () => false,
   usage,
+  canUpgrade,
   createRealtime,
   onFirstCaption,
   now = Date.now,
@@ -224,6 +239,7 @@ export function createSessionController({
     systemFailed: false,
     suggestedLanguage: null,
     meetingLanguage: null,
+    latestCaption: null,
   };
   let realtime: RealtimeClient | null = null;
   let activeSessionId: string | null = null;
@@ -287,11 +303,19 @@ export function createSessionController({
       .catch(() => undefined);
   }
 
+  /** A usage notice; an exhausted one offers Nâng cấp when there is a plan to buy (a failed check means no). */
+  function notifyUsage(metric: string, item: Parameters<typeof usageNotice>[1]) {
+    if (item.state !== 'exhausted' || !canUpgrade) return notify(usageNotice(metric, item));
+    void canUpgrade()
+      .catch(() => false)
+      .then((upgradable) => notify(usageNotice(metric, item, { canUpgrade: upgradable })));
+  }
+
   /** Stops sending audio to the cloud for the rest of the meeting; the meeting itself goes on. */
   function stopCloudUploads() {
     cloudQuotaExhausted = true;
     uploads.queue = [];
-    notify(usageNotice('cloud_stt_ms', { used: 0, limit: 0, state: 'exhausted' }));
+    notifyUsage('cloud_stt_ms', { used: 0, limit: 0, state: 'exhausted' });
   }
 
   /** Warns about allowances that are already low or used up when the meeting starts. */
@@ -310,7 +334,7 @@ export function createSessionController({
         if (!isCloudLanguage(language)) continue;
         if (item.state === 'exhausted' && item.limit !== null) cloudQuotaExhausted = true;
       }
-      notify(usageNotice(metric, item));
+      notifyUsage(metric, item);
     }
   }
 
@@ -334,6 +358,19 @@ export function createSessionController({
           // Counting must never get in the way of a caption.
         }
       }
+    }
+    if (!event.partial && event.text !== UNRECOGNISED_TEXT) {
+      update({
+        latestCaption: {
+          segmentId: event.segmentId,
+          speaker: speakerDisplayName({
+            label: event.speaker ?? null,
+            source: event.stream ?? 'system',
+          }),
+          text: event.text,
+          translation: event.translation,
+        },
+      });
     }
     void native.publishTranscript(event).catch(fail);
   }
@@ -503,7 +540,7 @@ export function createSessionController({
       if (transcript) publish({ ...transcript, translation: message.textVi, partial: false });
     } else if (message.type === 'usage') {
       // Only 'low' and 'exhausted' are sent; the server sends each once per connection, the set once per meeting.
-      if (isMeetingMetric(message.metric)) notify(usageNotice(message.metric, message.item));
+      if (isMeetingMetric(message.metric)) notifyUsage(message.metric, message.item);
     } else if (message.type === 'error' && !message.retryable) {
       // Retryable errors (one sentence failed to translate) must not end the session.
       fail(new Error(message.code));
@@ -535,7 +572,15 @@ export function createSessionController({
   function handleAudioStatus(event: AudioStatusEvent) {
     if (event.state !== 'error') return;
     const problem = captureProblemOf(event.message);
-    if (problem === 'mic' && !snapshot.micFailed) update({ micFailed: true });
+    if (problem === 'mic' && !snapshot.micFailed) {
+      update({ micFailed: true });
+      notify({
+        id: 'capture:mic',
+        tone: 'error',
+        text: 'Không dùng được micro nên CueLingo chưa nghe được giọng bạn',
+        action: 'open-settings',
+      });
+    }
     if (problem === 'system' && !snapshot.systemFailed) update({ systemFailed: true });
   }
 
@@ -720,6 +765,7 @@ export function createSessionController({
         systemFailed: false,
         suggestedLanguage: null,
         meetingLanguage: language,
+        latestCaption: null,
       });
       if (leftovers) await leftovers;
 
@@ -825,7 +871,12 @@ export function createSessionController({
         await endCreatedSession();
         activeSessionId = null;
         captureRunning = false;
-        update({ meetingLanguage: null, micFailed: false, systemFailed: false });
+        update({
+          meetingLanguage: null,
+          micFailed: false,
+          systemFailed: false,
+          latestCaption: null,
+        });
         hideOverlay();
         fail(error);
       } finally {
@@ -854,6 +905,7 @@ export function createSessionController({
           meetingLanguage: null,
           micFailed: false,
           systemFailed: false,
+          latestCaption: null,
         });
         hideOverlay();
       };

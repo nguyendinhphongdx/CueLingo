@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { native } from '../lib/native';
 import { useSettings, type SelectableAssistLevel } from './settings-store';
 import { queueSettingsPatch } from './settings-api';
+import { useSavedFlash } from './SavedIndicator';
 
 export const saveAssistLevel = async (level: SelectableAssistLevel) => {
   await native.setAssistLevel(level);
@@ -13,15 +14,21 @@ export const saveAssistLevel = async (level: SelectableAssistLevel) => {
 export function useAssistSettings() {
   const assistLevel = useSettings((state) => state.assistLevel);
   const setAssistLevel = useSettings((state) => state.setAssistLevel);
+  const { saved, markSaved, reset } = useSavedFlash();
   const update = useMutation({
     mutationFn: saveAssistLevel,
-    onSuccess: (_, level) => setAssistLevel(level),
+    onMutate: reset,
+    onSuccess: (_, level) => {
+      setAssistLevel(level);
+      markSaved();
+    },
   });
 
   return {
     assistLevel,
     setAssistLevel: update.mutate,
     saving: update.isPending,
+    saved,
     error: update.error ? 'Không thể đổi mức hỗ trợ. Vui lòng thử lại.' : null,
   };
 }

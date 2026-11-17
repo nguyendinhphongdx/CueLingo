@@ -1,5 +1,6 @@
 import type { SelectableAssistLevel } from './settings-store';
 import { Segmented } from '@cuelingo/ui/components/segmented';
+import { SavedIndicator } from './SavedIndicator';
 import { useAssistSettings } from './use-assist-settings';
 
 const options = [
@@ -11,16 +12,19 @@ const options = [
 
 /** Segmented control for how much help the caption gives. */
 export function AssistSettings() {
-  const { assistLevel, setAssistLevel, saving, error } = useAssistSettings();
+  const { assistLevel, setAssistLevel, saving, saved, error } = useAssistSettings();
   const current = options.find((option) => option.level === assistLevel) ?? options[0];
 
   return (
     <section aria-labelledby="assist-title" className="space-y-3">
-      <div>
-        <h2 id="assist-title" className="text-sm font-semibold">
-          Mức hỗ trợ
-        </h2>
-        <p className="text-muted-foreground mt-0.5 text-sm">{current.hint}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 id="assist-title" className="text-sm font-semibold">
+            Mức hỗ trợ
+          </h2>
+          <p className="text-muted-foreground mt-0.5 text-sm">{current.hint}</p>
+        </div>
+        <SavedIndicator saved={saved} />
       </div>
       <Segmented
         label="Mức hỗ trợ"
