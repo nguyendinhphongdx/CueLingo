@@ -1,4 +1,4 @@
-import { downloadLinks, type DownloadLinks } from '@cuelingo/ui/components/landing/detect-os';
+import { downloadLinks, type DownloadLinks } from '@cuelingo/ui/lib/downloads';
 import type { LandingPaths } from '@cuelingo/ui/components/landing/landing-link';
 
 /**

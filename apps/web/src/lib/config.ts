@@ -1,4 +1,4 @@
-import { downloadLinks, type DownloadLinks } from '@cuelingo/ui/components/landing/detect-os';
+import { downloadLinks, type DownloadLinks } from '@cuelingo/ui/lib/downloads';
 import { sandboxOriginOf } from './csp';
 
 /** The only place the web app reads environment variables. NEXT_PUBLIC_* are inlined at build time. */
