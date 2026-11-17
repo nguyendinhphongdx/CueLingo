@@ -2,11 +2,10 @@
 //! stdout, `stop` / `vocab` / `language` lines on stdin), so `src-tauri/src/audio_bridge.rs` runs it unchanged.
 //! Protocol: apps/docs/docs/05-engineering/scaffold/07-native-swift.md
 //!
-//! Recognition (Parakeet ONNX) and `--file` work; WASAPI capture is the next step (ADR 0020), so a meeting
-//! still reports one clear error and waits for `stop`. The one-shot probes answer for real where Windows lets
-//! us (microphone consent), so onboarding shows the right state.
+//! Recognition (Parakeet ONNX), `--file` and WASAPI capture (ADR 0020) work. The one-shot probes answer for
+//! real where Windows lets us: microphone consent, and whether the system output can be captured.
 use cuelingo_audio::protocol::Out;
-use cuelingo_audio::session::{FileOptions, Session, NOT_YET};
+use cuelingo_audio::session::{FileOptions, Session};
 use cuelingo_audio::{capture, permissions, stt, wav};
 use std::io::{self, Write};
 
@@ -15,7 +14,11 @@ fn line(value: serde_json::Value) -> String {
 }
 
 /// What one run prints for its arguments, before any stdin is read. `None` means: a meeting (or `--file`).
-fn one_shot(args: &[String], microphone: &str) -> Option<Vec<String>> {
+fn one_shot(
+    args: &[String],
+    microphone: &str,
+    system_audio: &dyn Fn() -> Result<(), String>,
+) -> Option<Vec<String>> {
     if args.iter().any(|a| a == "--permissions") {
         return Some(vec![line(
             serde_json::json!({ "type": "permissions", "microphone": microphone }),
@@ -26,9 +29,13 @@ fn one_shot(args: &[String], microphone: &str) -> Option<Vec<String>> {
         return Some(vec![]);
     }
     if args.iter().any(|a| a == "--check-system-audio") {
-        return Some(vec![line(
-            serde_json::json!({ "type": "system-audio", "state": "error", "message": NOT_YET }),
-        )]);
+        // Windows has no system-audio permission: if the output opens for loopback, it is granted.
+        return Some(vec![line(match system_audio() {
+            Ok(()) => serde_json::json!({ "type": "system-audio", "state": "granted" }),
+            Err(message) => {
+                serde_json::json!({ "type": "system-audio", "state": "error", "message": message })
+            }
+        })]);
     }
     None
 }
@@ -45,7 +52,11 @@ fn file_arguments(args: &[String]) -> Vec<&str> {
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
 
-    if let Some(lines) = one_shot(&args, permissions::microphone()) {
+    if let Some(lines) = one_shot(
+        &args,
+        permissions::microphone(),
+        &capture::check_system_audio,
+    ) {
         let mut out = io::stdout().lock();
         for l in lines {
             let _ = writeln!(out, "{l}");
@@ -60,7 +71,7 @@ fn main() {
 
     let paths = file_arguments(&args);
     let code = if paths.is_empty() {
-        let (system, mic) = capture::platform();
+        let (system, mic) = capture::platform(&out);
         session.run_meeting(
             &language,
             vocabulary.as_deref(),
@@ -101,7 +112,7 @@ mod tests {
 
     #[test]
     fn permissions_probe_reports_the_microphone_state() {
-        let lines = one_shot(&["--permissions".into()], "denied").unwrap();
+        let lines = one_shot(&["--permissions".into()], "denied", &|| Ok(())).unwrap();
         assert_eq!(lines.len(), 1);
         let v = parse(&lines[0]);
         assert_eq!(v["type"], "permissions");
@@ -111,22 +122,33 @@ mod tests {
     #[test]
     fn calendar_probes_print_nothing() {
         assert_eq!(
-            one_shot(&["--calendar-events".into()], "granted"),
+            one_shot(&["--calendar-events".into()], "granted", &|| Ok(())),
             Some(vec![])
         );
     }
 
     #[test]
-    fn system_audio_check_says_it_is_not_available() {
-        let lines = one_shot(&["--check-system-audio".into()], "granted").unwrap();
+    fn system_audio_check_is_granted_when_the_output_opens() {
+        let lines = one_shot(&["--check-system-audio".into()], "granted", &|| Ok(())).unwrap();
         let v = parse(&lines[0]);
         assert_eq!(v["type"], "system-audio");
+        assert_eq!(v["state"], "granted");
+    }
+
+    #[test]
+    fn system_audio_check_reports_why_it_failed() {
+        let lines = one_shot(&["--check-system-audio".into()], "granted", &|| {
+            Err("no output device".into())
+        })
+        .unwrap();
+        let v = parse(&lines[0]);
         assert_eq!(v["state"], "error");
+        assert_eq!(v["message"], "no output device");
     }
 
     #[test]
     fn a_meeting_is_not_a_one_shot() {
-        assert_eq!(one_shot(&[], "granted"), None);
+        assert_eq!(one_shot(&[], "granted", &|| Ok(())), None);
     }
 
     #[test]
