@@ -50,6 +50,19 @@ export const SessionStartResult = z.object({ sessionId: z.string().min(1) });
 export type SessionStartResult = z.infer<typeof SessionStartResult>;
 
 export const PermissionState = z.enum(['granted', 'denied', 'undetermined', 'unknown']);
+/** Which on-device speech models are in place; `null` from the native side means it cannot manage them in this build. */
+export const ModelStatus = z.object({
+  type: z.literal('models'),
+  models: z.array(
+    z.object({
+      language: z.string(),
+      state: z.enum(['ready', 'missing']),
+      sizeBytes: z.number().int().nonnegative(),
+    }),
+  ),
+});
+export type ModelStatus = z.infer<typeof ModelStatus>;
+
 export const PermissionsStatus = z.object({
   microphone: PermissionState,
   systemAudio: PermissionState,
@@ -269,6 +282,13 @@ export const native = {
   /** Plays a short system sound and reports whether the app heard it: the only way to test system-audio permission. */
   checkSystemAudio: () => invoke('check_system_audio').then((v) => SystemAudioCheck.parse(v)),
   permissionsStatus: () => invoke('permissions_status').then((v) => PermissionsStatus.parse(v)),
+  /** Which on-device models are downloaded; null when this build cannot tell (the screens keep the old flow). */
+  modelStatus: () => invoke('model_status').then((v) => ModelStatus.nullable().parse(v)),
+  /** Starts downloading the model for `language` in the background; progress arrives as `audio-model` events. */
+  downloadModel: (language: string) =>
+    invoke('model_download', { language: z.string().min(2).max(3).parse(language) }).then(
+      () => undefined,
+    ),
   setAssistLevel: (level: number) =>
     invoke('set_assist_level', { level: AssistLevel.parse(level) }).then(() => undefined),
   hideOverlay: () => invoke('hide_overlay').then(() => undefined),
