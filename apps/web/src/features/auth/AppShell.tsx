@@ -62,7 +62,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <AppFrame
-      wide={onAdminPage}
       nav={{
         client: 'web',
         activeId,

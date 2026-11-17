@@ -3,7 +3,7 @@ import { useQueries, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { client } from '../../lib/client';
 import { describeError } from '../../lib/errors';
-import { SEARCH_SCOPE } from './search';
+import { SEARCH_SCOPE } from '@cuelingo/ui/lib/meeting-search';
 
 const NO_SESSIONS: Session[] = [];
 

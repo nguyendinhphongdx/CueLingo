@@ -3,6 +3,7 @@
 import type { Session } from '@cuelingo/shared';
 import { Card, CardContent } from '@cuelingo/ui/components/card';
 import { EmptyState } from '@cuelingo/ui/components/empty-state';
+import { HighlightedText } from '@cuelingo/ui/components/highlighted-text';
 import { Input } from '@cuelingo/ui/components/input';
 import { NoticeStrip } from '@cuelingo/ui/components/notice-strip';
 import { PageHeader } from '@cuelingo/ui/components/page-header';
@@ -11,7 +12,6 @@ import { sessionListLabel } from '@cuelingo/ui/lib/session-state';
 import Link from 'next/link';
 import { useMemo, useState, type ReactNode } from 'react';
 import {
-  highlight,
   isSearching,
   monthLabel,
   monthsOf,
@@ -20,7 +20,7 @@ import {
   speakersOf,
   type SessionHit,
   type Snippet,
-} from './search';
+} from '@cuelingo/ui/lib/meeting-search';
 import { useDebounced } from '../../lib/use-debounced';
 import { useSessions, useSessionText } from './use-sessions';
 
@@ -43,28 +43,11 @@ function formatDuration(session: Session) {
   return hours ? `${hours} giờ ${minutes} phút` : `${minutes} phút`;
 }
 
-/** `text` with the parts equal to `query` marked. */
-export function Highlighted({ text, query }: { text: string; query: string }) {
-  return (
-    <>
-      {highlight(text, query).map((part, index) =>
-        part.match ? (
-          <mark key={index} className="bg-warning/20 text-foreground rounded-sm px-0.5">
-            {part.text}
-          </mark>
-        ) : (
-          <span key={index}>{part.text}</span>
-        ),
-      )}
-    </>
-  );
-}
-
 function SnippetLine({ snippet, query }: { snippet: Snippet; query: string }) {
   return (
     <p className="text-muted-foreground text-sm">
       <span className="text-foreground font-medium">{snippet.speaker}: </span>
-      <Highlighted text={snippet.text} query={query} />
+      <HighlightedText text={snippet.text} query={query} />
     </p>
   );
 }
@@ -109,7 +92,7 @@ export function SessionList({
             <span className="min-w-0">
               <strong className="block truncate">
                 {session.title?.trim() ? (
-                  <Highlighted text={session.title.trim()} query={query} />
+                  <HighlightedText text={session.title.trim()} query={query} />
                 ) : (
                   formatDate(session.startedAt)
                 )}

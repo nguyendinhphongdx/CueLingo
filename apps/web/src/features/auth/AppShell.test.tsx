@@ -127,10 +127,10 @@ describe('AppShell', () => {
       expect(link(markup, '/admin')).toContain('aria-current="page"');
     });
 
-    it('uses the wide content area on admin pages only', () => {
-      expect(renderShell(<AppShell>Trang</AppShell>)).toContain('max-w-[640px]');
-      path.value = '/admin/revenue';
-      expect(renderShell(<AppShell>Trang</AppShell>, { isAdmin: true })).toContain('max-w-6xl');
+    it('lets every page fill the content area', () => {
+      const markup = renderShell(<AppShell>Trang</AppShell>);
+      expect(markup).not.toContain('max-w-[640px]');
+      expect(markup).toContain('w-full');
     });
   });
 });
