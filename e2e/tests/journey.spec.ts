@@ -43,8 +43,9 @@ test('sign in, read a debrief, save a phrase, review it and see the progress', a
   // The session and the review show in the progress.
   await page.goto('/progress');
   await expect(page.getByText('Tiến độ', { exact: true }).first()).toBeVisible();
+  // StatCard shows the label, then the number, as two paragraphs.
   const saved = page
-    .locator('dt', { hasText: /^Cụm đã lưu$/ })
-    .locator('xpath=following-sibling::dd');
+    .getByText('Cụm đã lưu', { exact: true })
+    .locator('xpath=following-sibling::p[1]');
   await expect(saved).toHaveText('1');
 });
