@@ -70,3 +70,25 @@ describe('design tokens', () => {
     expect(css).toContain('@media (prefers-reduced-motion: reduce)');
   });
 });
+
+const TYPE_STYLES = [
+  'display',
+  'title',
+  'heading',
+  'body',
+  'body-strong',
+  'body-sm',
+  'caption',
+  'overline',
+  'caption-original',
+  'caption-translation',
+  'mono',
+];
+
+describe('type scale', () => {
+  it.each(TYPE_STYLES)('defines text-%s with size, line height and weight', (name) => {
+    expect(css).toMatch(new RegExp(`--text-${name}: \\d+px;`));
+    expect(css).toMatch(new RegExp(`--text-${name}--line-height: \\d+px;`));
+    expect(css).toMatch(new RegExp(`--text-${name}--font-weight: \\d+;`));
+  });
+});

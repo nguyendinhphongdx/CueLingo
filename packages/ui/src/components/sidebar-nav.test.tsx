@@ -183,3 +183,29 @@ describe('SidebarNav groups', () => {
     });
   });
 });
+
+describe('SidebarNav design', () => {
+  it('shows the logo lockup when no brand is given, and the version under the footer', () => {
+    const { container } = setup({
+      brand: undefined,
+      footer: <span>Tài khoản</span>,
+      version: '0.1.5',
+    });
+    expect(container.querySelector('svg[aria-label="CueLingo"]')).toBeTruthy();
+    expect(screen.getByText('Tài khoản')).toBeTruthy();
+    expect(screen.getByText('Phiên bản 0.1.5')).toBeTruthy();
+  });
+
+  it('has one Ôn tập entry, and a view id from before the merge lights it up', () => {
+    setup({ activeId: 'phrases' });
+    expect(screen.getAllByRole('link', { name: /Ôn tập/ })).toHaveLength(1);
+    expect(screen.queryByRole('link', { name: /Kho cụm từ|Tiến độ/ })).toBeNull();
+    expect(screen.getByRole('link', { name: /Ôn tập/ }).getAttribute('aria-current')).toBe('page');
+  });
+
+  it('marks what is coming with a readable "Sắp ra mắt"', () => {
+    setup({ client: 'web' });
+    const soon = screen.getByRole('link', { name: /Phiên họp/ });
+    expect(within(soon).getByText('Sắp ra mắt')).toBeTruthy();
+  });
+});

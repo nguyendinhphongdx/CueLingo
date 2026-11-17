@@ -3,6 +3,7 @@
 import { Menu, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useMobileNavigation } from '../hooks/use-mobile-navigation';
+import { LogoLockup } from './logo';
 import { SidebarNav, type SidebarNavProps } from './sidebar-nav';
 
 /**
@@ -34,14 +35,14 @@ export function AppFrame({
       ) : null}
       {responsive ? (
         <header className="bg-background absolute inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b px-4 md:hidden">
-          <div className="min-w-0">{nav.brand}</div>
+          <div className="min-w-0">{nav.brand ?? <LogoLockup />}</div>
           <button
             type="button"
             aria-label={mobileNavigation.open ? 'Đóng trình đơn' : 'Mở trình đơn'}
             aria-expanded={mobileNavigation.open}
             aria-controls="mobile-navigation"
             onClick={mobileNavigation.toggle}
-            className="focus-visible:ring-ring inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg hover:bg-accent focus-visible:ring-2 focus-visible:outline-none"
+            className="focus-visible:ring-ring inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:outline-none"
           >
             {mobileNavigation.open ? (
               <X aria-hidden="true" className="size-5" />

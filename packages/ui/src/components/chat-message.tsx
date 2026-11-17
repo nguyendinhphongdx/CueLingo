@@ -51,7 +51,7 @@ export function ChatMessage({
     const text = parts.map((part) => (part.type === 'text' ? part.text : '')).join('');
     return (
       <article aria-label="Bạn" className={cn('flex justify-end', className)}>
-        <p className="bg-primary text-primary-foreground max-w-[85%] rounded-2xl rounded-br-md px-3.5 py-2 text-sm break-words whitespace-pre-wrap">
+        <p className="bg-primary text-primary-foreground max-w-[80%] rounded-[16px_16px_4px_16px] px-4 py-3 break-words whitespace-pre-wrap">
           {text}
         </p>
       </article>
@@ -65,12 +65,17 @@ export function ChatMessage({
       aria-busy={status === 'streaming'}
       onDoubleClick={onDoubleClick}
       data-chat-text=""
-      className={cn('flex max-w-full flex-col items-start gap-2', className)}
+      className={cn('flex max-w-[90%] flex-col items-start gap-2', className)}
     >
       {parts.map((part, index) =>
         part.type === 'text' ? (
           part.text ? (
-            <MarkdownView key={index}>{part.text}</MarkdownView>
+            <div
+              key={index}
+              className="bg-card text-card-foreground w-full rounded-lg border p-4 shadow-sm"
+            >
+              <MarkdownView>{part.text}</MarkdownView>
+            </div>
           ) : null
         ) : part.type === 'tool_step' ? (
           <ToolStep
@@ -93,7 +98,7 @@ export function ChatMessage({
         <p
           role={status === 'error' ? 'alert' : undefined}
           className={cn(
-            'text-xs',
+            'text-caption',
             status === 'error' ? 'text-destructive' : 'text-muted-foreground',
           )}
         >

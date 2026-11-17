@@ -74,39 +74,11 @@ export const features: Feature[] = [
     status: { desktop: 'ready', web: 'ready' },
     summary: 'Ôn lại cụm từ từ chính các cuộc họp của bạn, 5–10 phút mỗi ngày.',
     bullets: [
-      'Thẻ nhận diện nghĩa và điền chỗ trống từ câu trong cuộc họp',
-      'Lịch ôn tự giãn dần theo trí nhớ của bạn (FSRS)',
-      'Bài nghe–gõ với giọng đọc tiếng Anh',
+      'Hôm nay: thẻ nhận diện nghĩa và điền chỗ trống từ câu trong cuộc họp, lịch ôn tự giãn dần (FSRS)',
+      'Kho cụm từ: các cụm bạn đã lưu từ debrief và lúc tra từ, kèm câu gốc trong cuộc họp',
+      'Tiến độ: phần trăm hiểu theo tuần, số lần phải tra từ, chuỗi ngày ôn liên tiếp',
     ],
     webPath: '/review',
-  },
-  {
-    id: 'phrases',
-    label: 'Cụm từ',
-    group: 'learn',
-    icon: 'bookmark',
-    status: { desktop: 'ready', web: 'ready' },
-    summary: 'Kho cụm từ bạn đã lưu từ debrief và từ lúc tra từ.',
-    bullets: [
-      'Lưu cụm từ chỉ với một cú bấm từ caption hoặc debrief',
-      'Xem câu gốc trong cuộc họp nơi cụm từ xuất hiện',
-      'Bỏ cụm từ khỏi lịch ôn khi bạn đã thuộc',
-    ],
-    webPath: '/phrases',
-  },
-  {
-    id: 'progress',
-    label: 'Tiến độ',
-    group: 'learn',
-    icon: 'progress',
-    status: { desktop: 'ready', web: 'ready' },
-    summary: 'Bạn nghe hiểu tốt hơn bao nhiêu qua từng tuần.',
-    bullets: [
-      'Phần trăm hiểu trung bình của các cuộc họp',
-      'Số lần phải tra từ mỗi cuộc họp, theo tuần',
-      'Chuỗi ngày ôn tập liên tiếp',
-    ],
-    webPath: '/progress',
   },
   {
     id: 'assistant',
@@ -143,6 +115,35 @@ export const features: Feature[] = [
     webPath: '/feedback',
   },
 ];
+
+/** The three tabs of the Ôn tập page. Clients draw the tabs from this list so web and desktop never disagree. */
+export const REVIEW_TABS = [
+  { id: 'today', label: 'Hôm nay' },
+  { id: 'phrases', label: 'Kho cụm từ' },
+  { id: 'progress', label: 'Tiến độ' },
+] as const;
+export type ReviewTabId = (typeof REVIEW_TABS)[number]['id'];
+
+export const DEFAULT_REVIEW_TAB: ReviewTabId = 'today';
+
+/** Reads a tab id from a query string value (`/review?tab=phrases`); anything unknown is the default tab. */
+export function parseReviewTab(value: string | null | undefined): ReviewTabId {
+  return REVIEW_TABS.find((tab) => tab.id === value)?.id ?? DEFAULT_REVIEW_TAB;
+}
+
+/**
+ * Old view ids that now live inside the Ôn tập page: `phrases` and `progress` were features of their own
+ * before the three tabs were merged. Returns the tab to open, or `null` for any other id.
+ */
+export function reviewTabForView(viewId: string): ReviewTabId | null {
+  if (viewId === 'review') return DEFAULT_REVIEW_TAB;
+  return viewId === 'phrases' || viewId === 'progress' ? viewId : null;
+}
+
+/** Maps a view id from before the merge to the roadmap feature that holds it now (`phrases` → `review`). */
+export function currentFeatureId(viewId: string): string {
+  return reviewTabForView(viewId) ? 'review' : viewId;
+}
 
 export const featureGroups: Array<{ id: FeatureGroup; title: string }> = [
   { id: 'meeting', title: 'Họp' },

@@ -5,8 +5,10 @@ import { spring } from '@animate-ui/react/utils/motion';
 import { ChevronDown } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
 import { useCollapsedGroups } from '../hooks/use-collapsed-groups';
-import { featureGroups, features, type FeatureStatus } from '../lib/roadmap';
+import { currentFeatureId, featureGroups, features, type FeatureStatus } from '../lib/roadmap';
+import { Badge } from './badge';
 import { FeatureIcon, type NavIconName } from './feature-icon';
+import { LogoLockup } from './logo';
 
 /** One entry of the sidebar. A roadmap `Feature` has all of these fields, so it is a `NavItem` too. */
 export interface NavItem {
@@ -25,7 +27,8 @@ export interface NavGroup {
 }
 
 export interface SidebarNavProps {
-  brand: ReactNode;
+  /** The header; defaults to the logo lockup so every client shows the same one. */
+  brand?: ReactNode;
   activeId: string;
   /** Which client this is, to read each feature's status from the roadmap. */
   client: 'desktop' | 'web';
@@ -40,7 +43,10 @@ export interface SidebarNavProps {
   ): ReactNode;
   /** Shown after the roadmap groups, folded and remembered like them. */
   extraGroups?: NavGroup[];
+  /** Who is signed in (an `AccountChip`), above the version line. */
   footer?: ReactNode;
+  /** App version shown under the footer, as "Phiên bản …". */
+  version?: string;
   topInset?: string;
   /** Collapses into AppFrame's mobile drawer while keeping the desktop client unchanged. */
   responsive?: boolean;
@@ -59,18 +65,21 @@ interface Section {
 }
 
 export function SidebarNav({
-  brand,
-  activeId,
+  brand = <LogoLockup />,
+  activeId: requestedId,
   client,
   renderItem,
   extraGroups = [],
   footer,
+  version,
   topInset = 'pt-6',
   responsive = false,
   mobileOpen = false,
   onItemSelect,
 }: SidebarNavProps) {
   const { isCollapsed, toggle, expand } = useCollapsedGroups();
+  // A view id from before the Ôn tập merge (`phrases`, `progress`) lights up its new home.
+  const activeId = currentFeatureId(requestedId);
 
   const sections: Section[] = [
     ...featureGroups.map((group) => ({
@@ -99,9 +108,9 @@ export function SidebarNav({
   return (
     <aside
       id={responsive ? 'mobile-navigation' : undefined}
-      className={`bg-muted/60 h-full w-[220px] shrink-0 flex-col overflow-hidden border-r px-3 pb-5 ${topInset} ${
+      className={`bg-sidebar text-sidebar-foreground h-full w-[240px] shrink-0 flex-col overflow-hidden border-r px-3 pb-3 ${topInset} ${
         responsive
-          ? `${mobileOpen ? 'flex' : 'hidden'} absolute top-16 bottom-0 left-0 z-30 h-auto w-[min(320px,calc(100vw-3rem))] shadow-xl md:static md:flex md:h-full md:w-[220px] md:shadow-none`
+          ? `${mobileOpen ? 'flex' : 'hidden'} absolute top-16 bottom-0 left-0 z-30 h-auto w-[min(320px,calc(100vw-3rem))] shadow-lg md:static md:flex md:h-full md:w-[240px] md:shadow-none`
           : 'flex'
       }`}
     >
@@ -115,7 +124,7 @@ export function SidebarNav({
           hover={false}
           controlledItems
           transition={spring.pop}
-          className="bg-card rounded-lg shadow-sm ring-1 ring-border"
+          className="bg-sidebar-accent rounded-md"
         >
           {sections.map((section) => {
             const folded = isCollapsed(section.id);
@@ -127,7 +136,7 @@ export function SidebarNav({
                   aria-expanded={!folded}
                   aria-controls={listId}
                   onClick={() => toggle(section.id)}
-                  className="text-muted-foreground hover:text-foreground focus-visible:ring-ring flex min-h-8 w-full cursor-pointer items-center justify-between rounded-lg px-3 text-left text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                  className="text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-ring text-overline flex h-8 w-full cursor-pointer items-center justify-between rounded-md px-2 text-left uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
                   {section.title}
                   <ChevronDown
@@ -143,22 +152,20 @@ export function SidebarNav({
                         {renderItem(item, {
                           active,
                           onSelect: () => onItemSelect?.(),
-                          className: `focus-visible:ring-ring flex min-h-11 w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 text-left text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                          className: `focus-visible:ring-ring flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-md px-2 text-left text-sm font-medium transition-colors md:min-h-9 focus-visible:ring-2 focus-visible:outline-none ${
                             active
-                              ? 'text-foreground'
-                              : 'text-muted-foreground hover:text-foreground'
+                              ? 'text-primary font-semibold'
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent'
                           }`,
                           children: (
                             <>
-                              <FeatureIcon
-                                name={item.icon}
-                                className={`size-[18px] ${active ? 'text-primary' : ''}`}
-                              />
+                              <FeatureIcon name={item.icon} className="size-[18px] shrink-0" />
                               <span className="flex-1">{item.label}</span>
                               {soon ? (
-                                <span className="bg-muted-foreground/60 size-1.5 rounded-full">
+                                <Badge variant="outline" className="px-2 py-0">
+                                  <span aria-hidden="true">Sắp có</span>
                                   <span className="sr-only">Sắp ra mắt</span>
-                                </span>
+                                </Badge>
                               ) : null}
                             </>
                           ),
@@ -172,7 +179,14 @@ export function SidebarNav({
           })}
         </Highlight>
       </nav>
-      {footer ? <div className="mt-auto px-2">{footer}</div> : null}
+      {footer || version ? (
+        <div className="mt-auto flex flex-col gap-2 border-t px-2 pt-3">
+          {footer}
+          {version ? (
+            <p className="text-muted-foreground text-caption px-1">Phiên bản {version}</p>
+          ) : null}
+        </div>
+      ) : null}
     </aside>
   );
 }
