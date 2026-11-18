@@ -108,6 +108,14 @@ impl Segmenter {
         events
     }
 
+    /// The microphone was closed for `samples` worth of time: later utterances keep their place on the
+    /// meeting's timeline instead of sliding earlier. Anything pending must be flushed first.
+    pub fn skip(&mut self, samples: usize) {
+        self.reset();
+        self.pre_roll.clear();
+        self.total += samples;
+    }
+
     /// Flush a pending utterance (end of the session).
     pub fn flush(&mut self) -> Vec<Event> {
         if !self.active || self.speech < self.min_speech {

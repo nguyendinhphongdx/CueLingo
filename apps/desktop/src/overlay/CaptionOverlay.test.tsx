@@ -11,6 +11,39 @@ const segment: TranscriptEvent = {
   partial: false,
 };
 
+describe('CaptionOverlay microphone', () => {
+  const render = (props: { micMuted?: boolean; micFailed?: boolean }) =>
+    renderToStaticMarkup(
+      <CaptionOverlay listen={false} segments={[segment]} receivedTranscript {...props} />,
+    );
+
+  it('offers to switch the microphone off while it is on', () => {
+    const markup = render({ micMuted: false });
+    expect(markup).toContain('aria-label="Tắt micro"');
+    expect(markup).toContain('aria-pressed="false"');
+    expect(markup).not.toContain('Micro đã tắt');
+  });
+
+  it('says the microphone is off and offers to switch it on', () => {
+    const markup = render({ micMuted: true });
+    expect(markup).toContain('aria-label="Bật micro"');
+    expect(markup).toContain('aria-pressed="true"');
+    expect(markup).toContain('Micro đã tắt');
+  });
+
+  it('lets the user try again when switching the microphone back on failed', () => {
+    const markup = render({ micMuted: true, micFailed: true });
+    expect(markup).toContain('aria-label="Bật micro"');
+    expect(markup).not.toMatch(/<button[^>]*aria-label="Bật micro"[^>]*disabled=""/);
+  });
+
+  it('disables the button when the microphone could not be opened', () => {
+    expect(render({ micFailed: true })).toMatch(
+      /<button[^>]*aria-label="Tắt micro"[^>]*disabled=""/,
+    );
+  });
+});
+
 describe('CaptionOverlay', () => {
   it('shows three sample lines including one partial before the first transcript', () => {
     const markup = renderToStaticMarkup(

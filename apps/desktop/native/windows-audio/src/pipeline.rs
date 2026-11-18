@@ -114,8 +114,9 @@ impl Pipeline {
         }
     }
 
-    /// Flushes the sentence in progress and waits until everything queued has been recognised and printed.
-    pub fn finish(&self) {
+    /// Sends the sentence in progress for recognition and goes on listening (the microphone was switched
+    /// off for a while). Unlike `finish`, the pipeline keeps working afterwards.
+    pub fn flush(&self) {
         let events = self
             .front
             .lock()
@@ -124,6 +125,18 @@ impl Pipeline {
         for event in events {
             self.handle(event);
         }
+    }
+
+    /// Time that passed without audio: later sentences keep their place on the meeting's timeline.
+    pub fn skip_ms(&self, ms: usize) {
+        if let Ok(mut front) = self.front.lock() {
+            front.segmenter.skip(ms * 16);
+        }
+    }
+
+    /// Flushes the sentence in progress and waits until everything queued has been recognised and printed.
+    pub fn finish(&self) {
+        self.flush();
         // Closing the queue lets the worker run what is left and end.
         if let Ok(mut jobs) = self.jobs.lock() {
             jobs.take();
