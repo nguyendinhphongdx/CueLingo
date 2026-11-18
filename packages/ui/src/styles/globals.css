@@ -35,6 +35,7 @@
   --success: #08694a;
   --warning: #8f3f04;
   --translation: #0a7a79;
+  --caption-text: #000000;
   --brand: #4f46e5;
   --scrim: #14142b80;
   --border: #d9d9ea;
@@ -81,6 +82,7 @@
   --success: #47cd89;
   --warning: #fdb022;
   --translation: #4fd1c5;
+  --caption-text: #ffffff;
   --brand: #4f46e5;
   --scrim: #000000a6;
   --border: #34355a;
@@ -119,6 +121,7 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-translation: var(--translation);
+  --color-caption-text: var(--caption-text);
   --color-brand: var(--brand);
   --color-scrim: var(--scrim);
   --color-border: var(--border);

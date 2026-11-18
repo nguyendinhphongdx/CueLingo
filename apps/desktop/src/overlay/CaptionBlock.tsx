@@ -63,7 +63,7 @@ export function CaptionBlock({ segment, level, faded, showSpeaker, onLookup }: C
       data-slot="caption-line"
       data-partial={segment.partial ? 'true' : undefined}
       // The app turns text selection off for its chrome; the words of the meeting must stay copyable.
-      className={`cursor-text transition-opacity duration-300 select-text ${faded ? 'opacity-50' : ''}`}
+      className={`cursor-text transition-opacity duration-300 select-text ${faded ? 'opacity-70' : ''}`}
     >
       {showSpeaker ? (
         <p className="mb-1 text-[0.7em]">
@@ -73,7 +73,8 @@ export function CaptionBlock({ segment, level, faded, showSpeaker, onLookup }: C
       {showEnglish ? (
         <p
           data-role="original"
-          className={`text-muted-foreground leading-snug ${segment.partial ? 'opacity-70' : ''}`}
+          // Caption text is pure black or white and never follows the background opacity; the pulsing caret marks the unfinished line.
+          className="text-caption-text leading-snug"
           style={{ fontSize: '0.86em' }}
         >
           <OriginalText

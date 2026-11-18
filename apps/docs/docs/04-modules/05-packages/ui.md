@@ -196,7 +196,7 @@ Dùng cho các trang admin. Code: `components/chart-card.tsx`, `components/stat-
 
 ## Token và chuyển động
 
-Mọi token (màu sáng/tối, `success`, `warning`, `translation`, `brand`, bo góc, bóng, `--duration-fast|base|slow`, `--ease-out|in-out`) định nghĩa một lần trong `globals.css`; phông Be Vietnam Pro và JetBrains Mono tải kèm app (`@fontsource`), không gọi Google Fonts. Có khối `prefers-reduced-motion` tắt animation. Component dùng chung chỉ dùng token: không hex, không `dark:`, không `text-white`/`bg-black` (trừ `Logo`); `shared-ui.test.ts` quét.
+Mọi token (màu sáng/tối, `success`, `warning`, `translation`, `caption-text` (đen/trắng thật cho chữ caption overlay), `brand`, bo góc, bóng, `--duration-fast|base|slow`, `--ease-out|in-out`) định nghĩa một lần trong `globals.css`; phông Be Vietnam Pro và JetBrains Mono tải kèm app (`@fontsource`), không gọi Google Fonts. Có khối `prefers-reduced-motion` tắt animation. Component dùng chung chỉ dùng token: không hex, không `dark:`, không `text-white`/`bg-black` (trừ `Logo`); `shared-ui.test.ts` quét.
 
 Cỡ chữ của thiết kế là class Tailwind đặt cùng lúc cỡ, độ cao dòng, độ đậm và giãn chữ: `text-display` (40), `text-title` (28), `text-heading` (18), `text-body` (15), `text-body-strong`, `text-body-sm` (13), `text-caption` (12), `text-overline` (11, hoa, giãn 0,06em), `text-caption-original` (17), `text-caption-translation` (19), `text-mono` (13, dùng với `font-mono`). `globals.test.ts` kiểm đủ biến.
 

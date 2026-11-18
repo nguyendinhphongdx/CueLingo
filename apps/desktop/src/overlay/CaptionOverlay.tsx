@@ -171,7 +171,7 @@ export function CaptionOverlay({
     <section
       aria-label="Caption trực tiếp"
       data-theme={prefs.theme}
-      className={`${prefs.theme} text-foreground relative flex h-screen flex-col overflow-hidden rounded-2xl border`}
+      className={`${prefs.theme} text-caption-text relative flex h-screen flex-col overflow-hidden rounded-2xl border`}
       style={{
         backgroundColor: `color-mix(in oklab, var(--background) ${prefs.opacity}%, transparent)`,
       }}
