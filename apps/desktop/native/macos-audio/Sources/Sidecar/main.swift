@@ -362,7 +362,8 @@ func stopMic() {
     micQueue.async {
         micCapture.stop()
         mic.finish()
-        mutedAt = DispatchTime.now()
+        // A repeated `mic off` must not move the moment the microphone really went quiet.
+        if mutedAt == nil { mutedAt = DispatchTime.now() }
         emit(["type": "mic", "muted": true])
     }
 }

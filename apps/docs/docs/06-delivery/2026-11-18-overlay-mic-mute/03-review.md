@@ -24,13 +24,14 @@
 
 ## 3. Đã chạy thật
 
-| Việc                                                      | Kết quả                                                               |
-| --------------------------------------------------------- | --------------------------------------------------------------------- |
-| `pnpm verify` (format, lint, typecheck, test, check:deps) | Xanh                                                                  |
-| `pnpm docs:build`                                         | Xanh                                                                  |
-| `cargo test` (src-tauri) · `cargo test` (windows-audio)   | Xanh (32 · 23 test)                                                   |
-| `swift build` (macOS sidecar)                             | Biên dịch được; chỉ còn cảnh báo cũ                                   |
-| Cuộc họp thật Zoom/Meet bật/tắt nhiều lần                 | **Chưa chạy** (macOS: chấm cam tắt, mở lại ổn định? Windows: WASAPI?) |
+| Việc                                                      | Kết quả                                                |
+| --------------------------------------------------------- | ------------------------------------------------------ |
+| `pnpm verify` (format, lint, typecheck, test, check:deps) | Xanh                                                   |
+| `pnpm docs:build`                                         | Xanh                                                   |
+| `cargo test` (src-tauri) · `cargo test` (windows-audio)   | Xanh (32 · 23 test)                                    |
+| `swift build` (macOS sidecar)                             | Biên dịch được; chỉ còn cảnh báo cũ                    |
+| Cuộc họp thật trên macOS (bật/tắt nhiều lần)              | Người dùng đã thử bản dev trên cuộc gọi thật và báo ổn |
+| Windows (WASAPI) trên máy thật                            | **Chưa chạy** (chỉ test đơn vị)                        |
 
 ## 4. Thứ tự đọc cho người review
 
@@ -42,7 +43,7 @@
 
 ## 5. Rủi ro còn lại
 
-- Chưa thử thật: bật/tắt nhiều lần trên macOS, và toàn bộ WASAPI trên Windows.
+- Chưa thử thật: toàn bộ WASAPI trên Windows.
 - Khi tắt, câu đang nói dở vẫn được nhận dạng (cloud: gửi đi) rồi mới dừng. Người dùng thường tắt mic vì sắp nói chuyện riêng; nếu muốn bỏ hẳn câu dở thì đổi `finish`/`flush` thành bỏ, cần quyết định.
 - Mẩu âm thanh còn trong callback tap lúc tắt có thể dính vào câu đầu sau khi bật lại (rủi ro thấp).
 - Nút micro hiện cả khi chưa họp (overlay không biết chắc có phiên); bấm lúc đó không làm gì.
