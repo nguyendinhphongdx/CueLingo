@@ -139,13 +139,44 @@ impl Session {
         if let Err(e) = system.start(sink(&system_pipe)) {
             out.status("error", &format!("system audio: {e}"));
         }
-        if let Err(e) = mic.start(sink(&mic_pipe)) {
-            out.status("error", &format!("microphone: {e}"));
-        }
+        // False when the microphone never opened: `mic on` then tries again instead of claiming it is on.
+        let mut mic_open = match mic.start(sink(&mic_pipe)) {
+            Ok(()) => true,
+            Err(e) => {
+                out.status("error", &format!("microphone: {e}"));
+                false
+            }
+        };
         out.status("ready", "");
 
+        // `mic off` closes the microphone (and flushes the sentence in progress), `mic on` reopens it; the
+        // answer is a `mic` line, sent only once the microphone really is in that state.
+        let mut muted_at: Option<std::time::Instant> = None;
         wait_for_stop(input, |command| {
-            if let Some(json) = command.strip_prefix("vocab ") {
+            if command == "mic off" {
+                if mic_open {
+                    mic.stop();
+                    mic_pipe.flush();
+                    mic_open = false;
+                    muted_at = Some(std::time::Instant::now());
+                }
+                out.emit(protocol::mic(true));
+            } else if command == "mic on" {
+                if !mic_open {
+                    match mic.start(sink(&mic_pipe)) {
+                        Ok(()) => {
+                            mic_open = true;
+                            if let Some(since) = muted_at.take() {
+                                mic_pipe.skip_ms(since.elapsed().as_millis() as usize);
+                            }
+                        }
+                        Err(e) => out.status("error", &format!("microphone: {e}")),
+                    }
+                }
+                if mic_open {
+                    out.emit(protocol::mic(false));
+                }
+            } else if let Some(json) = command.strip_prefix("vocab ") {
                 self.apply_vocabulary(json);
             } else if let Some(target) = command.strip_prefix("language ") {
                 let target = target.trim().to_string();

@@ -46,6 +46,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::session_start,
             commands::session_set_language,
+            commands::session_set_mic_muted,
+            commands::session_mic_muted,
             commands::session_set_vocabulary,
             commands::calendar,
             commands::session_stop,

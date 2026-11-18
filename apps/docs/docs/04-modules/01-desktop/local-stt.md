@@ -20,6 +20,7 @@ Nhận dạng giọng nói tiếng Anh ngay trên máy bằng Parakeet-TDT 0.6B 
 
 - `feed(stream, pcm, tsMs)`
 - Sự kiện `transcript.partial` / `transcript.final` {stream, text, words[{w, startMs, endMs, conf}]}
+- Micro: dòng stdin `mic off` đóng luồng micro (gửi nhận dạng câu dở rồi vẫn nghe tiếp, không kết thúc pipeline), `mic on` mở lại; sidecar trả `{"type":"mic","muted":bool}` sau khi trạng thái thật sự đổi. Mở lại lỗi thì in `status` lỗi `microphone: …` và không báo `muted:false`.
 - Thuật ngữ cá nhân: biến `CUELINGO_VOCAB` lúc khởi động hoặc dòng stdin `vocab ["SLA",...]` (thay hẳn danh sách). `VocabularyCorrector` sửa kết quả sau khi model chạy, cả partial lẫn final
 
 ## Phụ thuộc

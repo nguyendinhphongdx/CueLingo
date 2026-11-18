@@ -17,6 +17,9 @@ pub struct Sidecar {
 #[derive(Default)]
 pub struct AudioBridge {
     running: Mutex<Option<Sidecar>>,
+    /// The microphone is switched off, as the sidecar last said: a window that opens (or reloads) in the
+    /// middle of a meeting asks for it instead of guessing.
+    mic_muted: Arc<AtomicBool>,
 }
 
 /// The sidecar run that only downloads a model (onboarding, Settings). It never runs at the same time as a
@@ -248,8 +251,19 @@ pub fn route_line(line: &str) -> Option<(&'static str, Value)> {
         "utterance" => Some(("audio-utterance", value)),
         // Mic and system loudness, about 20 lines a second; only the main window draws it.
         "level" => Some(("audio-level", value)),
+        // The microphone was switched off or on: both windows show it.
+        "mic" => Some(("mic-state", value)),
         "model" | "stats" | "language-suggestion" => Some(("audio-model", value)),
         _ => None,
+    }
+}
+
+/// The stdin line that switches the microphone: `mic off` or `mic on`.
+pub(crate) fn mic_line(muted: bool) -> &'static str {
+    if muted {
+        "mic off"
+    } else {
+        "mic on"
     }
 }
 
@@ -306,10 +320,18 @@ impl AudioBridge {
         let stdin = child.stdin.take().ok_or("audio_sidecar_failed")?;
 
         let app = app.clone();
+        let mic_muted = self.mic_muted.clone();
+        mic_muted.store(false, Ordering::SeqCst);
         std::thread::spawn(move || {
             let mut watch = ModelWatch::default();
             for line in BufReader::new(stdout).lines().map_while(Result::ok) {
                 if let Some((event, payload)) = route_line(&line) {
+                    if event == "mic-state" {
+                        mic_muted.store(
+                            payload["muted"].as_bool().unwrap_or(false),
+                            Ordering::SeqCst,
+                        );
+                    }
                     watch.observe(event, &payload);
                     // Utterance audio is about 1 MB and levels arrive ~20 times a second: main window only.
                     let _ = if event == "audio-utterance" || event == "audio-level" {
@@ -336,6 +358,19 @@ impl AudioBridge {
         sidecar.stdin.flush().map_err(|e| e.to_string())
     }
 
+    /// Whether the microphone is switched off right now (always false when no meeting runs).
+    pub fn mic_muted(&self) -> bool {
+        self.mic_muted.load(Ordering::SeqCst)
+    }
+
+    /// Switches the microphone off or on while running; the sidecar confirms with a `mic` line.
+    pub fn set_mic_muted(&self, muted: bool) -> Result<(), String> {
+        let mut running = self.running.lock().map_err(|e| e.to_string())?;
+        let sidecar = running.as_mut().ok_or("no_session_running")?;
+        writeln!(sidecar.stdin, "{}", mic_line(muted)).map_err(|e| e.to_string())?;
+        sidecar.stdin.flush().map_err(|e| e.to_string())
+    }
+
     /// Replaces the recognition vocabulary while running.
     pub fn set_vocabulary(&self, terms: &[String]) -> Result<(), String> {
         let line = vocab_line(terms)?;
@@ -346,6 +381,7 @@ impl AudioBridge {
     }
 
     pub fn stop(&self) -> Result<(), String> {
+        self.mic_muted.store(false, Ordering::SeqCst);
         let mut running = self.running.lock().map_err(|e| e.to_string())?;
         if let Some(mut sidecar) = running.take() {
             let _ = writeln!(sidecar.stdin, "stop");
@@ -518,6 +554,10 @@ mod tests {
         assert_eq!(route_line(seg).unwrap().0, "segment");
         let st = r#"{"type":"status","state":"ready"}"#;
         assert_eq!(route_line(st).unwrap().0, "audio-status");
+        let mic = r#"{"type":"mic","muted":true}"#;
+        assert_eq!(route_line(mic).unwrap().0, "mic-state");
+        assert_eq!(mic_line(true), "mic off");
+        assert_eq!(mic_line(false), "mic on");
     }
 
     #[test]

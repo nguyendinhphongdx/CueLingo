@@ -120,6 +120,16 @@ describe('capture problems', () => {
     expect(markup).toContain('Không thu được âm thanh hệ thống');
   });
 
+  it('says the microphone is off instead of "no sound" while the other stream keeps listening', () => {
+    const markup = renderToStaticMarkup(
+      <AudioLevelRows levels={{ ...base, micSilent: true }} failures={ok} micMuted />,
+    );
+    expect(markup).toMatch(/data-stream="mic" data-state="muted"/);
+    expect(markup).toContain('Micro đã tắt');
+    expect(markup).not.toContain(NO_SIGNAL_TEXT);
+    expect(markup).toMatch(/data-stream="system" data-state="listening"/);
+  });
+
   it('shows only the soft label when the streams are merely silent', () => {
     const markup = renderToStaticMarkup(
       <AudioLevelRows levels={{ ...base, micSilent: true, systemSilent: true }} failures={ok} />,

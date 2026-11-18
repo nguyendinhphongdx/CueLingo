@@ -16,6 +16,7 @@ import type { LatestCaption, SessionStatus as Status } from './session-controlle
 import { SUPPORTED_LANGUAGES, type LanguageCode } from '@cuelingo/shared';
 import { describeModelProgress, useModelProgress } from './model-progress';
 import { debriefApi } from './debrief-api';
+import { useMicMuted } from './use-mic-muted';
 import { PostMeetingCard } from './PostMeetingCard';
 import {
   describeStream,
@@ -89,6 +90,7 @@ function useMeetingDuration(startedAt: number | null, endedAt: number | null): s
 export const NO_SIGNAL_TEXT = 'Chưa có âm thanh';
 export const CAPTURE_FAILED_TEXT = 'Không mở được';
 export const LISTENING_TEXT = 'Đang nghe';
+export const MIC_OFF_TEXT = 'Micro đã tắt';
 
 const STREAMS: { stream: CaptureStream; label: string; icon: typeof Mic }[] = [
   { stream: 'system', label: 'Âm thanh hệ thống', icon: Volume2 },
@@ -103,16 +105,20 @@ const STREAMS: { stream: CaptureStream; label: string; icon: typeof Mic }[] = [
 export function AudioLevelRows({
   levels,
   failures,
+  micMuted = false,
 }: {
   levels: AudioLevelSnapshot;
   failures: CaptureFailures;
+  /** The user switched the microphone off: its card says so instead of "no sound". */
+  micMuted?: boolean;
 }) {
   return (
     <div className="mt-6 grid gap-3 sm:grid-cols-2">
       {STREAMS.map(({ stream, label, icon: Icon }) => {
         const failed = stream === 'mic' ? failures.micFailed : failures.systemFailed;
         const silent = stream === 'mic' ? levels.micSilent : levels.systemSilent;
-        const note = meterNote(failed, silent);
+        const muted = stream === 'mic' && micMuted && !failed;
+        const note = muted ? 'muted' : meterNote(failed, silent);
         const problem = describeStream(stream, failures);
         return (
           <div
@@ -147,7 +153,11 @@ export function AudioLevelRows({
               </div>
             ) : (
               <p className="text-xs opacity-85">
-                {note === 'silent' ? NO_SIGNAL_TEXT : LISTENING_TEXT}
+                {note === 'muted'
+                  ? MIC_OFF_TEXT
+                  : note === 'silent'
+                    ? NO_SIGNAL_TEXT
+                    : LISTENING_TEXT}
               </p>
             )}
           </div>
@@ -160,7 +170,8 @@ export function AudioLevelRows({
 /** Both meters; mounted only while a meeting runs, which is when it listens. */
 export function AudioLevels({ failures }: { failures: CaptureFailures }) {
   const levels = useAudioLevels(true);
-  return <AudioLevelRows levels={levels} failures={failures} />;
+  const mic = useMicMuted();
+  return <AudioLevelRows levels={levels} failures={failures} micMuted={mic.muted} />;
 }
 
 export const CLOUD_CONSENT_TEXT =

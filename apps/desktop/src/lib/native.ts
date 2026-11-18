@@ -132,6 +132,10 @@ export const LevelEvent = z.object({
 });
 export type LevelEvent = z.infer<typeof LevelEvent>;
 
+/** The microphone was switched off (`muted`) or on again; the sidecar sends it once per change and the app on every new meeting. */
+export const MicStateEvent = z.object({ type: z.literal('mic'), muted: z.boolean() });
+export type MicStateEvent = z.infer<typeof MicStateEvent>;
+
 /** The sidecar's own state; an `error` message starts with `system audio: ` or `microphone: ` when a capture failed to start. */
 export const AudioStatusEvent = z.object({
   type: z.literal('status'),
@@ -263,6 +267,16 @@ export const native = {
     // async: invalid input becomes a rejected promise, never a synchronous throw.
     await invoke('session_set_vocabulary', { terms: Vocabulary.parse(terms) });
   },
+  /** Switches the running meeting's microphone off or on; system audio keeps being captioned. */
+  setMicMuted: async (muted: boolean) => {
+    // async: invalid input becomes a rejected promise, never a synchronous throw.
+    await invoke('session_set_mic_muted', { muted: z.boolean().parse(muted) });
+  },
+  /** Whether the microphone is switched off now; a window that opens in the middle of a meeting asks for it. */
+  micMuted: () => invoke('session_mic_muted').then((v) => z.boolean().parse(v)),
+  /** The microphone state changed (both windows hear it). */
+  onMicState: (cb: (e: MicStateEvent) => void): Promise<UnlistenFn> =>
+    listen('mic-state', (e) => cb(MicStateEvent.parse(e.payload))),
   onAudioModel: (cb: (e: AudioModelEvent) => void): Promise<UnlistenFn> =>
     listen('audio-model', (e) => cb(AudioModelEvent.parse(e.payload))),
   /** macOS only (EventKit). `request` shows the system's permission prompt the first time; `events` lists the next meetings. */

@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { describe, expect, it, vi } from 'vitest';
-import { native, SessionStartInput, UtteranceEvent, Vocabulary } from './native';
+import { MicStateEvent, native, SessionStartInput, UtteranceEvent, Vocabulary } from './native';
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn(async () => undefined) }));
 vi.mock('@tauri-apps/api/app', () => ({ getVersion: vi.fn(async () => '0.1.1') }));
@@ -61,5 +61,24 @@ describe('UtteranceEvent', () => {
 describe('native.appInfo', () => {
   it('reports the app version and the OS family only', async () => {
     expect(await native.appInfo()).toEqual({ version: '0.1.1', os: 'macOS' });
+  });
+});
+
+describe('microphone switch', () => {
+  it('sends the choice to the core', async () => {
+    vi.mocked(invoke).mockClear();
+    await native.setMicMuted(true);
+    expect(invoke).toHaveBeenCalledWith('session_set_mic_muted', { muted: true });
+  });
+
+  it('rejects a non-boolean as a promise, without calling the core', async () => {
+    vi.mocked(invoke).mockClear();
+    await expect(native.setMicMuted('yes' as unknown as boolean)).rejects.toThrow();
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it('reads the sidecar line of the microphone state', () => {
+    expect(MicStateEvent.parse({ type: 'mic', muted: true })).toEqual({ type: 'mic', muted: true });
+    expect(MicStateEvent.safeParse({ type: 'mic' }).success).toBe(false);
   });
 });

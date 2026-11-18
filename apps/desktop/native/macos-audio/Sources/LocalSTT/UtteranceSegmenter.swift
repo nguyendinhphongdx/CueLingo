@@ -72,6 +72,14 @@ public final class UtteranceSegmenter {
         return events
     }
 
+    /// The microphone was closed for `samples` worth of time: later utterances keep their place on the
+    /// meeting's timeline instead of sliding earlier. Anything pending must be flushed first.
+    public func skip(samples: Int) {
+        reset()
+        preRoll = []
+        total += max(samples, 0)
+    }
+
     /// Flush a pending utterance (end of the session).
     public func flush() -> [Event] {
         guard active, speechSamples >= minSpeechSamples else { reset(); return [] }

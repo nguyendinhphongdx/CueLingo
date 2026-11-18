@@ -136,6 +136,25 @@ impl Capture for Failing {
     fn stop(&mut self) {}
 }
 
+/// A microphone that counts how often it was opened and closed; it can refuse to open again.
+struct CountingMic {
+    starts: Arc<AtomicUsize>,
+    stops: Arc<AtomicUsize>,
+    fail_reopen: bool,
+}
+
+impl Capture for CountingMic {
+    fn start(&mut self, _sink: SampleSink) -> Result<(), CaptureError> {
+        if self.starts.fetch_add(1, Ordering::SeqCst) > 0 && self.fail_reopen {
+            return Err(CaptureError::Failed("device gone".into()));
+        }
+        Ok(())
+    }
+    fn stop(&mut self) {
+        self.stops.fetch_add(1, Ordering::SeqCst);
+    }
+}
+
 fn one_sentence() -> Vec<Vec<i16>> {
     vec![tone(2000), vec![0; 16_000]]
 }
@@ -580,4 +599,114 @@ fn short_utterances_are_padded_to_one_second() {
 fn transcribing_before_a_model_is_loaded_is_an_error_not_a_crash() {
     let transcriber = Transcriber::new(FakeProvider::new("x"));
     assert!(transcriber.transcribe(&[0.0; 16_000]).is_err());
+}
+
+#[test]
+fn mic_off_closes_the_microphone_and_mic_on_reopens_it_once() {
+    let (session, out) = session(FakeProvider::new("hello"));
+    let (starts, stops) = (Arc::new(AtomicUsize::new(0)), Arc::new(AtomicUsize::new(0)));
+    let mic = CountingMic {
+        starts: starts.clone(),
+        stops: stops.clone(),
+        fail_reopen: false,
+    };
+    let code = session.run_meeting(
+        "en",
+        None,
+        Box::new(Scripted(vec![])),
+        Box::new(mic),
+        &mut stdin("mic off\r\nmic off\r\nmic on\r\nmic on\r\nstop\r\n"),
+    );
+    assert_eq!(code, 0);
+    let lines = out.lines();
+    let muted: Vec<bool> = of_type(&lines, "mic")
+        .iter()
+        .map(|line| line["muted"].as_bool().unwrap())
+        .collect();
+    // Every command is answered, but the device is only touched when the state really changes.
+    assert_eq!(muted, [true, true, false, false]);
+    assert_eq!(starts.load(Ordering::SeqCst), 2);
+    // Closed by `mic off`, and again when the meeting ends.
+    assert_eq!(stops.load(Ordering::SeqCst), 2);
+}
+
+#[test]
+fn a_microphone_that_cannot_reopen_reports_the_error_and_never_claims_to_be_on() {
+    let (session, out) = session(FakeProvider::new("hello"));
+    let mic = CountingMic {
+        starts: Arc::new(AtomicUsize::new(0)),
+        stops: Arc::new(AtomicUsize::new(0)),
+        fail_reopen: true,
+    };
+    session.run_meeting(
+        "en",
+        None,
+        Box::new(Scripted(vec![])),
+        Box::new(mic),
+        &mut stdin("mic off\r\nmic on\r\nstop\r\n"),
+    );
+    let lines = out.lines();
+    let muted: Vec<bool> = of_type(&lines, "mic")
+        .iter()
+        .map(|line| line["muted"].as_bool().unwrap())
+        .collect();
+    assert_eq!(muted, [true]);
+    assert!(of_type(&lines, "status").iter().any(
+        |s| s["state"] == "error" && s["message"].as_str().unwrap().starts_with("microphone: ")
+    ));
+}
+
+/// A microphone that speaks one sentence every time it is opened.
+struct ReplayMic(Vec<Vec<i16>>);
+
+impl Capture for ReplayMic {
+    fn start(&mut self, mut sink: SampleSink) -> Result<(), CaptureError> {
+        for chunk in &self.0 {
+            sink(chunk);
+        }
+        Ok(())
+    }
+    fn stop(&mut self) {}
+}
+
+#[test]
+fn the_microphone_is_recognised_again_after_it_was_switched_off_and_on() {
+    let (session, out) = session(FakeProvider::new("hello"));
+    let code = session.run_meeting(
+        "en",
+        None,
+        Box::new(Scripted(vec![])),
+        Box::new(ReplayMic(one_sentence())),
+        &mut stdin("mic off\r\nmic on\r\nstop\r\n"),
+    );
+    assert_eq!(code, 0);
+    let lines = out.lines();
+    let finals: Vec<&Value> = of_type(&lines, "segment")
+        .into_iter()
+        .filter(|s| s["stream"] == "mic" && s["partial"] == false)
+        .collect();
+    // One sentence before the switch-off and one after the switch-on: the second is not lost.
+    assert_eq!(finals.len(), 2, "{lines:?}");
+    // The second keeps its place on the timeline, after the first.
+    assert!(finals[1]["startMs"].as_i64() >= finals[0]["endMs"].as_i64());
+}
+
+#[test]
+fn a_microphone_that_never_opened_is_not_reported_as_on() {
+    let (session, out) = session(FakeProvider::new("hello"));
+    session.run_meeting(
+        "en",
+        None,
+        Box::new(Scripted(vec![])),
+        Box::new(Failing("no device")),
+        &mut stdin("mic on\r\nstop\r\n"),
+    );
+    let lines = out.lines();
+    // `mic on` tried again, failed again and said so; it never claimed the microphone was on.
+    assert!(of_type(&lines, "mic").is_empty(), "{lines:?}");
+    let errors = of_type(&lines, "status")
+        .iter()
+        .filter(|s| s["state"] == "error")
+        .count();
+    assert_eq!(errors, 2);
 }

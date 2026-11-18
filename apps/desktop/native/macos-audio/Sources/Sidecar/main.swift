@@ -12,8 +12,10 @@ import LocalSTT
 //                {"type":"utterance","segmentId","stream","startMs","endMs","sampleRate":16000,"pcm"}  (cloud languages:
 //                 one finished utterance as base64 16-bit LE mono PCM; no model runs on this machine)
 //                {"type":"level","stream":"system|mic","rms":0...1,"peak":0...1}  (at most 10 per second per stream)
+//                {"type":"mic","muted":true|false}  (the microphone was switched off or on; sent once per change)
 // stdin: a line "stop" ends the session; "vocab ["SLA",...]" replaces the glossary terms;
-//        "language ja" switches the recognition model (captions continue on the old one until it is ready).
+//        "language ja" switches the recognition model (captions continue on the old one until it is ready);
+//        "mic off" / "mic on" stops / reopens the microphone (system audio keeps running).
 // env CUELINGO_DETECT: comma-separated candidate languages to listen for in the first seconds (their models must
 // already be on this machine; nothing is downloaded for this).
 // env CUELINGO_VOCAB: the same JSON array, applied at start. env CUELINGO_LANGUAGE: language at start (default en).
@@ -153,6 +155,13 @@ final class Pipeline: @unchecked Sendable {
         let events = segmenter.flush()
         lock.unlock()
         for event in events { handle(event) }
+    }
+
+    /// Time that passed without audio (the microphone was off): keeps later sentences at the right time.
+    func skip(ms: Int) {
+        lock.lock()
+        segmenter.skip(samples: ms * 16)
+        lock.unlock()
     }
 
     private func handle(_ event: UtteranceSegmenter.Event) {
@@ -340,14 +349,43 @@ let micCapture = MicCapture()
 do { try tap.start { system.feed($0) } } catch { status("error", "system audio: \(error)") }
 status("ready")
 // The mic can block on its permission prompt; start it off the main path so system captions never wait for it.
-DispatchQueue.global().async {
-    do { try micCapture.start { mic.feed($0) } } catch { status("error", "microphone: \(error)") }
+// Starting and stopping run on one serial queue, so a quick off/on never leaves the engine half open.
+let micQueue = DispatchQueue(label: "cuelingo.mic")
+nonisolated(unsafe) var mutedAt: DispatchTime?  // only touched on micQueue
+func startMic() {
+    micQueue.async {
+        do { try micCapture.start { mic.feed($0) } } catch { status("error", "microphone: \(error)") }
+    }
 }
+/// Closes the microphone and flushes the sentence in progress; the reply is sent once it is really closed.
+func stopMic() {
+    micQueue.async {
+        micCapture.stop()
+        mic.finish()
+        mutedAt = DispatchTime.now()
+        emit(["type": "mic", "muted": true])
+    }
+}
+func resumeMic() {
+    micQueue.async {
+        do {
+            try micCapture.start { mic.feed($0) }
+            if let since = mutedAt {
+                mic.skip(ms: Int((DispatchTime.now().uptimeNanoseconds - since.uptimeNanoseconds) / 1_000_000))
+                mutedAt = nil
+            }
+            emit(["type": "mic", "muted": false])
+        } catch { status("error", "microphone: \(error)") }
+    }
+}
+startMic()
 
 // Wait for "stop" on stdin (or EOF when the parent exits).
 while let line = readLine() {
     let command = line.trimmingCharacters(in: .whitespaces)
     if command == "stop" { break }
+    if command == "mic off" { stopMic() }
+    if command == "mic on" { resumeMic() }
     if command.hasPrefix("vocab ") { await applyVocabulary(String(command.dropFirst(6))) }
     if command.hasPrefix("language ") {
         let target = String(command.dropFirst(9)).trimmingCharacters(in: .whitespaces)
@@ -356,7 +394,7 @@ while let line = readLine() {
     }
 }
 tap.stop()
-micCapture.stop()
+micQueue.sync { micCapture.stop() }  // after any pending mic on/off, so the engine never reopens behind us
 system.finish()
 mic.finish()
 try? await Task.sleep(nanoseconds: 1_500_000_000)  // let final recognitions flush

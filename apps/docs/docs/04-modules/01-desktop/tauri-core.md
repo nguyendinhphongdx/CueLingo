@@ -18,7 +18,7 @@ Lớp Rust của app: cửa sổ, phím tắt toàn cục, cầu nối native �
 
 ## Interface
 
-- Tauri commands: `session_start`, `session_stop`, `session_set_language`, `session_set_vocabulary`, `permissions_status`, `set_assist_level`
+- Tauri commands: `session_start`, `session_stop`, `session_set_language`, `session_set_mic_muted`, `session_mic_muted`, `session_set_vocabulary`, `permissions_status`, `set_assist_level`
 - Quản lý model không cần họp: `model_status` (trả `{type:"models", models:[{language, state: ready|missing, sizeBytes}]}` hoặc `null`) và `model_download(language)` (tải ở nền, tiến trình và kết quả đến qua sự kiện `audio-model`), `model_cancel` (dừng lần tải đang chạy: các màn hình nghe `error` với thông điệp `cancelled` và quay về "chưa tải"). Mỗi lúc chỉ một lần tải; `session_start` trả `model_downloading` khi đang tải, `model_download` trả `session_already_running` khi đang họp. Cờ biên dịch `MODEL_CONTROL` (`commands.rs`) chỉ bật cho Windows: sidecar không biết cờ lạ sẽ chạy như một cuộc họp và tự tải model, nên macOS trả `null` và `model_control_unavailable` cho tới khi có bản Swift ([brief](../../06-delivery/2026-11-17-onboarding-model-download/04-brief-macos-model.md)). Một lần tải kết thúc mà không có `ready` hay `error` (sidecar chết, kể cả sidecar của một cuộc họp bị dừng giữa lúc đang tải model) thì lõi tự phát một `error` (`download interrupted`); mỗi lần tải có cờ hủy riêng nên kết thúc của lần cũ không đụng tới lần mới; thoát app dừng tải.
 - Tauri commands khác: `show_overlay` (nút "Hiện overlay" của cửa sổ chính; ✕ trên overlay chỉ ẩn nó), `hide_overlay`, `toggle_overlay`, `tray_report` (`active`, `minutes`, `problem` = `mic`/`system`/`both`)
 - `session_start` nhận `vocabulary` (danh sách thuật ngữ, xem dưới); `session_set_vocabulary(terms)` thay danh sách khi đang họp
@@ -48,6 +48,10 @@ Rust chỉ kiểm và chuyển tiếp, không có logic sản phẩm. `clean_voc
 
 - `audio-level`: `{type:'level', stream:'system'|'mic', rms, peak}` (0..1), tối đa 10 lần/giây mỗi luồng, để hiện sóng âm trong panel phiên họp.
 - `audio-status`: `{type:'status', state:'loading'|'ready'|'error'|'stopped', message}`. Lỗi mở luồng bắt đầu bằng `microphone:` hoặc `system audio:`; app dùng chúng để báo lỗi thu âm cụ thể.
+
+## Tắt/bật micro khi đang họp
+
+`session_set_mic_muted(muted)` ghi dòng stdin `mic off` hoặc `mic on` cho sidecar (lỗi `no_session_running` nếu chưa họp). Sidecar **đóng hẳn** luồng micro khi tắt (chấm cam của macOS tắt, không nhận dạng, không gửi gì đi; câu đang nói dở được xả ra trước) và mở lại khi bật; âm thanh hệ thống chạy tiếp. Sau mỗi lần đổi, sidecar in `{type:'mic', muted}`; `route_line` chuyển thành sự kiện `mic-state` gửi tới **mọi cửa sổ**, nên overlay và cửa sổ chính cùng thấy trạng thái thật. Mở lại micro lỗi thì chỉ có dòng `status` lỗi `microphone:` như thường, không có `muted:false`. `session_start` và `session_stop` phát `mic-state {muted:false}`: cuộc họp mới luôn bắt đầu với micro bật. `AudioBridge` giữ cờ micro-tắt theo dòng `mic` cuối của sidecar; `session_mic_muted` trả cờ đó để cửa sổ mở (hoặc tải lại) giữa cuộc họp biết trạng thái thật. Giao thức giống nhau ở sidecar Swift và Rust (Windows). Khi tắt, mốc thời gian luồng mic được giữ đúng: sidecar bù thời gian đã tắt (`skip`) khi mở lại, nên câu sau đó không bị xếp sớm hơn.
 
 ## Câu hỏi mở
 

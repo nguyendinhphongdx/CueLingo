@@ -10,6 +10,8 @@ Cửa sổ caption song ngữ nổi trên app họp.
 - Hiển thị theo Assist level: `4` đầy đủ, `3` bản dịch nổi bật, `1` chỉ bản dịch, `0` ẩn caption
 - Gạch chân từ khó theo Lexicon của người dùng
 - Nhãn người nói (khi bật "hiện người nói") dùng `SpeakerTag` của `@cuelingo/ui`: "Tôi" (luồng mic), "Speaker N" (có nhãn), "Người khác" (không nhãn)
+- Chữ caption luôn đen (nền sáng) hoặc trắng (nền tối) thật, token `--caption-text`; độ đậm nền chỉ đổi màu nền, không làm mờ chữ. Dòng đang nói không bị làm nhạt, con trỏ nhấp nháy báo câu chưa xong; câu cũ chỉ lùi nhẹ (`opacity-70`)
+- Nút micro trên thanh trên (`Mic`/`MicOff`, `aria-pressed`, nhãn "Tắt micro"/"Bật micro"): gọi `native.setMicMuted`, trạng thái lấy từ sự kiện `mic-state` qua `useMicMuted` (`session/use-mic-muted.ts`). Khi tắt hiện nhãn "Micro đã tắt" cạnh trạng thái; nút bị vô hiệu nếu sidecar báo lỗi `microphone:` (không có gì để tắt). Props `micMuted`/`micFailed` dùng cho test
 - Thanh công cụ: cỡ chữ 14–28 px, nền 55–100%, giao diện sáng/tối lưu trong `localStorage`
 
 ## Phạm vi MVP

@@ -38,6 +38,11 @@ pub fn status(state: &str, message: &str) -> Value {
     json!({ "type": "status", "state": state, "message": message })
 }
 
+/// The microphone was switched off (`muted`) or on again; the app shows it in both windows.
+pub fn mic(muted: bool) -> Value {
+    json!({ "type": "mic", "muted": muted })
+}
+
 pub fn level(stream: &str, rms: f32, peak: f32) -> Value {
     json!({ "type": "level", "stream": stream, "rms": f64::from(rms), "peak": f64::from(peak) })
 }
@@ -105,6 +110,12 @@ impl ProgressGate {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_mic_line_says_whether_the_microphone_is_off() {
+        assert_eq!(mic(true), json!({ "type": "mic", "muted": true }));
+        assert_eq!(mic(false), json!({ "type": "mic", "muted": false }));
+    }
 
     #[test]
     fn progress_gate_passes_five_point_steps_and_the_end_once() {

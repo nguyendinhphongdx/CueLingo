@@ -3,6 +3,8 @@ import {
   ChevronDown,
   EyeOff,
   ListChecks,
+  Mic,
+  MicOff,
   MessageSquareQuote,
   SlidersHorizontal,
   Sparkles,
@@ -11,6 +13,7 @@ import { useEffect, useRef, useState } from 'react';
 import { IconButton } from '@cuelingo/ui/components/icon-button';
 import { native, type NoticeEvent, type TranscriptEvent } from '../lib/native';
 import { shortcutLabel } from '../lib/platform';
+import { useMicMuted } from '../session/use-mic-muted';
 import { DRAWER_WIDTH, QuickAssistPanel, useQuickAssist } from '../quick-assist';
 import { saveAssistLevel } from '../settings/use-assist-settings';
 import type { SelectableAssistLevel } from '../settings/settings-store';
@@ -39,6 +42,9 @@ interface CaptionOverlayProps {
   notices?: NoticeEvent[];
   /** The fixing action of a notice, if it has one. */
   noticeAction?: (notice: NoticeEvent) => NoticeAction | undefined;
+  /** Microphone state; the overlay listens for it itself unless given (tests). */
+  micMuted?: boolean;
+  micFailed?: boolean;
   listen?: boolean;
   initialFontSize?: number;
   initialTheme?: OverlayTheme;
@@ -61,6 +67,8 @@ export function CaptionOverlay({
   receivedTranscript,
   notices,
   noticeAction,
+  micMuted,
+  micFailed,
   listen = true,
   initialFontSize,
   initialTheme,
@@ -71,6 +79,9 @@ export function CaptionOverlay({
   const assistLevel = level ?? syncedLevel;
   const prefs = useOverlayPrefs({ fontSize: initialFontSize, theme: initialTheme });
   const quickAssist = useQuickAssist({ listen });
+  const mic = useMicMuted(listen);
+  const muted = micMuted ?? mic.muted;
+  const micUnavailable = micFailed ?? mic.failed;
   const [menu, setMenu] = useState<'tools' | 'display' | null>(null);
   const closeMenu = () => setMenu(null);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
@@ -198,6 +209,15 @@ export function CaptionOverlay({
           <span className="truncate" aria-live="polite">
             {preview ? 'Xem trước' : statusText[status]}
           </span>
+          {muted ? (
+            <span
+              role="status"
+              className="text-warning bg-warning/15 flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold"
+            >
+              <MicOff aria-hidden="true" className="size-3.5" />
+              Micro đã tắt
+            </span>
+          ) : null}
         </span>
         <span className="flex-1" data-tauri-drag-region />
         <IconButton
@@ -221,6 +241,22 @@ export function CaptionOverlay({
           active={menu === 'display'}
           icon={<SlidersHorizontal aria-hidden="true" className="size-[18px]" />}
           onClick={() => setMenu((open) => (open === 'display' ? null : 'display'))}
+        />
+        <IconButton
+          label={muted ? 'Bật micro' : 'Tắt micro'}
+          aria-pressed={muted}
+          // Nothing to switch when the microphone never opened; but after a failed reopen it can be tried again.
+          disabled={micUnavailable && !muted}
+          active={muted}
+          icon={
+            muted ? (
+              <MicOff aria-hidden="true" className="size-[18px]" />
+            ) : (
+              <Mic aria-hidden="true" className="size-[18px]" />
+            )
+          }
+          // Without a running meeting there is nothing to switch; the click is simply ignored.
+          onClick={() => void mic.setMuted(!muted).catch(() => undefined)}
         />
         <IconButton
           label="Ẩn overlay"

@@ -3,7 +3,7 @@
 use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Emitter, State};
 
 use crate::audio_bridge::{AudioBridge, ModelDownload};
 use crate::windows;
@@ -110,6 +110,11 @@ pub fn session_start(
         return Err("invalid_language".into());
     }
     let vocabulary = clean_vocabulary(opts.vocabulary.unwrap_or_default())?;
+    // A new meeting always starts with the microphone on.
+    let _ = app.emit(
+        "mic-state",
+        serde_json::json!({ "type": "mic", "muted": false }),
+    );
     state.audio.start(&app, language, &detect, &vocabulary)?;
     // The captions live in the overlay, so a new meeting brings it up instead of waiting for the shortcut.
     windows::show_overlay(&app);
@@ -129,6 +134,18 @@ pub fn session_set_language(state: State<AppState>, language: String) -> Result<
     state.audio.set_language(&language)
 }
 
+/// Switches the running meeting's microphone off or on. System audio keeps being captioned.
+#[tauri::command]
+pub fn session_set_mic_muted(state: State<AppState>, muted: bool) -> Result<(), String> {
+    state.audio.set_mic_muted(muted)
+}
+
+/// Whether the microphone is switched off now, for a window that opens in the middle of a meeting.
+#[tauri::command]
+pub fn session_mic_muted(state: State<AppState>) -> bool {
+    state.audio.mic_muted()
+}
+
 /// Replaces the running meeting's recognition vocabulary.
 #[tauri::command]
 pub fn session_set_vocabulary(state: State<AppState>, terms: Vec<String>) -> Result<(), String> {
@@ -139,6 +156,10 @@ pub fn session_set_vocabulary(state: State<AppState>, terms: Vec<String>) -> Res
 pub fn session_stop(app: AppHandle, state: State<AppState>) -> Result<(), String> {
     *state.session_id.lock().map_err(|e| e.to_string())? = None;
     let stopped = state.audio.stop();
+    let _ = app.emit(
+        "mic-state",
+        serde_json::json!({ "type": "mic", "muted": false }),
+    );
     let _ = crate::tray::refresh(&app);
     stopped
 }
