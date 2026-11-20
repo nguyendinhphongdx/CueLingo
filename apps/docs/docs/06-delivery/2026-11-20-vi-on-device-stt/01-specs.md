@@ -41,6 +41,7 @@ Họp tiếng Việt hiện nhận dạng bằng Gemini: âm thanh của cả ha
 
 ## Decision log
 
-| Ngày       | Pha  | Quyết định / lý do bị từ chối                                     |
-| ---------- | ---- | ----------------------------------------------------------------- |
-| 2026-11-20 | Spec | Mở hồ sơ theo yêu cầu của người dùng sau khảo sát; chưa tích hợp. |
+| Ngày       | Pha  | Quyết định / lý do bị từ chối                                                                                                    |
+| ---------- | ---- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-20 | Spec | Mở hồ sơ theo yêu cầu của người dùng sau khảo sát; chưa tích hợp.                                                                |
+| 2026-11-20 | Làm  | Người dùng bỏ mốc Gemini; chưa có bản thu xen tiếng Anh, chưa tải Parakeet-CTC. Đóng hồ sơ với kết luận một phần ở 03-review.md. |
