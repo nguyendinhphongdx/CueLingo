@@ -289,6 +289,8 @@ fn is_openable(url: &str) -> bool {
                 | "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars"
                 | "ms-settings:privacy-microphone"
                 | "ms-settings:sound"
+                | "x-apple.systempreferences:com.apple.Notifications-Settings.extension"
+                | "ms-settings:notifications"
         )
 }
 
@@ -426,6 +428,10 @@ mod tests {
         ));
         assert!(!is_openable("javascript:alert(1)"));
         assert!(is_openable("ms-settings:privacy-microphone"));
+        assert!(is_openable("ms-settings:notifications"));
+        assert!(is_openable(
+            "x-apple.systempreferences:com.apple.Notifications-Settings.extension"
+        ));
         assert!(is_openable("ms-settings:sound"));
         assert!(!is_openable("ms-settings:windowsupdate"));
     }

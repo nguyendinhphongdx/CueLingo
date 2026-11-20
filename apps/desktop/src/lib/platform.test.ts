@@ -58,6 +58,7 @@ describe('settings pages', () => {
     expect(privacyPanes('windows')).toEqual({
       microphone: 'ms-settings:privacy-microphone',
       systemAudio: 'ms-settings:sound',
+      notifications: 'ms-settings:notifications',
     });
     expect(privacyPanes('macos').microphone).toContain('x-apple.systempreferences');
   });
