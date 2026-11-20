@@ -1,0 +1,2 @@
+{"model": "zipformer-vi-sherpa-onnx-zipformer-vi-int8-2025-04-20", "cloud": false, "machine": "Apple M1 Pro, 16 GB", "vi": {"wer": 7.75, "wer_no_digits": 5.31, "rtf": 0.0105, "clip_s_p50": 0.112, "clip_s_p95": 0.222, "n": 80}, "peak_rss_mb": 552.0}
+{"model": "zipformer-vi-sherpa-onnx-zipformer-vi-30M-int8-2026-02-09", "cloud": false, "machine": "Apple M1 Pro, 16 GB", "vi": {"wer": 6.84, "wer_no_digits": 3.96, "rtf": 0.0086, "clip_s_p50": 0.094, "clip_s_p95": 0.18, "n": 80}, "peak_rss_mb": 521.0}

@@ -139,6 +139,8 @@ def bench(key):
     sets = {name: rows for name in SETS if (rows := load_set(name))}
     first = next(iter(sets.values()))[0]["path"]
     run(first)  # warm-up: model load and kernel compile stay out of the timing
+    if key == "zipformer-vi":  # the same runner serves several model folders
+        key = f"{key}-{os.path.basename(os.environ['VI_ZIPFORMER_DIR'].rstrip('/'))}"
     result = {"model": key, "cloud": key == "gemini", "machine": os.environ.get("BENCH_MACHINE", "")}
     for name, rows in sets.items():
         pairs, no_digit, proc, ratios, audio_s = [], [], [], [], 0.0
