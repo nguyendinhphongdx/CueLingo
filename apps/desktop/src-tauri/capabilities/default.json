@@ -12,6 +12,7 @@
     "os:allow-platform",
     "os:allow-version",
     "os:allow-arch",
+    "notification:default",
     "process:allow-restart",
     "updater:default",
     "core:window:allow-set-size",

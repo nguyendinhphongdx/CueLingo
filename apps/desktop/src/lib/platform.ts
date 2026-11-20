@@ -30,16 +30,20 @@ export interface PrivacyPanes {
   microphone: string;
   /** macOS: the system-audio permission. Windows has no such permission, so this is the Sound page (default output). */
   systemAudio: string;
+  /** The system's page for this app's notifications. */
+  notifications: string;
 }
 
 const MAC_PANES: PrivacyPanes = {
   microphone: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone',
   systemAudio: 'x-apple.systempreferences:com.apple.preference.security?Privacy_AudioCapture',
+  notifications: 'x-apple.systempreferences:com.apple.Notifications-Settings.extension',
 };
 
 const WINDOWS_PANES: PrivacyPanes = {
   microphone: 'ms-settings:privacy-microphone',
   systemAudio: 'ms-settings:sound',
+  notifications: 'ms-settings:notifications',
 };
 
 export const CALENDAR_PANE =

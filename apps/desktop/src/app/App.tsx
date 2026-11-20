@@ -10,6 +10,7 @@ import {
   shouldShowOnboarding,
 } from '../onboarding';
 import { FeedbackPage } from '../feedback';
+import { useSystemNotifications } from '../notifications';
 import { ServerLink } from '../server-picker';
 import { useActivationTelemetry } from '../telemetry';
 import { MeetingsPage } from '../session';
@@ -40,6 +41,7 @@ export function App() {
   useActivationTelemetry(account.me?.id ?? null);
   const [view, setView] = useState('home');
   useOpenSettingsRequests(() => setView('settings'));
+  useSystemNotifications((target) => setView(target));
   // Hôm nay, Kho cụm từ and Tiến độ are tabs of one view; the old ids open the matching tab.
   const [reviewTab, setReviewTab] = useState('today');
   const navigate = (id: string) => {

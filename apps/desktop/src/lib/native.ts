@@ -80,6 +80,9 @@ export const PRIVACY_PANES = {
   get systemAudio() {
     return privacyPanes().systemAudio;
   },
+  get notifications() {
+    return privacyPanes().notifications;
+  },
   calendar: CALENDAR_PANE,
 };
 

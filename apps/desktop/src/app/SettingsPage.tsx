@@ -9,6 +9,7 @@ import { AccountCard } from '../auth';
 import { CalendarSettings } from '../calendar';
 import { LanguageModels } from '../models/LanguageModels';
 import { useLocalModels } from '../models/use-local-models';
+import { NotificationSettings } from '../notifications';
 import { PermissionsStep } from '../onboarding';
 import { PrivacyPanel } from '../privacy';
 import { ServerSettings } from '../server-picker';
@@ -143,6 +144,7 @@ function SectionBody({
       return (
         <>
           <AssistSettings />
+          <NotificationSettings />
           <PermissionsStep />
           <PlacementSection />
         </>
