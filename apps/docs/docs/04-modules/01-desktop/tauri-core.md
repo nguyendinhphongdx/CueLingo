@@ -60,3 +60,7 @@ Rust chỉ kiểm và chuyển tiếp, không có logic sản phẩm. `clean_voc
 ## Plugin cập nhật, process và OS
 
 `tauri-plugin-updater` (chỉ nạp khi build có `CUELINGO_UPDATER=1`, xem [updater](./updater.md)), `tauri-plugin-process` (khởi động lại sau khi cài, và sau khi đổi máy chủ qua `native.relaunchApp()`, xem [Máy chủ](./server.md); dùng cùng quyền `process:allow-restart`, không có command mới) và `tauri-plugin-os` (tên và phiên bản macOS cho form phản hồi). Quyền trong `capabilities/default.json`: `updater:default`, `process:allow-restart`, `os:allow-platform`, `os:allow-version`, `os:allow-arch`. Bundle: `targets: ["app", "dmg"]`, `signingIdentity: "-"` ([ADR 0017](../../08-adr/0017-beta-distribution-adhoc-updater.md)).
+
+## Plugin thông báo
+
+`tauri-plugin-notification` (quyền `notification:default`) gửi thông báo hệ thống cho [Thông báo hệ thống](./notifications.md); không có command riêng. `open_external` cho phép thêm trang cài đặt thông báo của macOS và Windows.
