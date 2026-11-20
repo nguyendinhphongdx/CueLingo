@@ -39,6 +39,7 @@ pub fn run() {
     builder
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(hotkeys::plugin())
         .plugin(tauri_plugin_deep_link::init())
         .manage(commands::AppState::default())
