@@ -4,6 +4,7 @@ mod audio_bridge;
 mod auth;
 mod commands;
 mod hotkeys;
+mod local_stt;
 mod tray;
 mod windows;
 
@@ -44,6 +45,7 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .manage(commands::AppState::default())
         .manage(tray::TrayReport::default())
+        .manage(local_stt::LocalStt::default())
         .invoke_handler(tauri::generate_handler![
             commands::session_start,
             commands::session_set_language,
@@ -56,6 +58,10 @@ pub fn run() {
             commands::model_status,
             commands::model_download,
             commands::model_cancel,
+            local_stt::local_stt_status,
+            local_stt::local_stt_download,
+            local_stt::local_stt_transcribe,
+            local_stt::local_stt_unload,
             commands::check_system_audio,
             commands::open_external,
             commands::set_assist_level,

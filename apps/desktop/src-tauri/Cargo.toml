@@ -9,6 +9,12 @@ publish = false
 name = "cuelingo_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+# Offline Vietnamese recognition (ADR 0024): sherpa-onnx linked statically with its ONNX Runtime. Turn it off
+# (`--no-default-features`) to build and test the rest without the native library download.
+default = ["local-stt"]
+local-stt = ["dep:sherpa-onnx"]
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -23,6 +29,10 @@ tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-os = "2"
 tauri-plugin-notification = "2"
+base64 = "0.22"
+# Model files: the pinned list, download and SHA-256 check are the sidecar crate's (same code, one copy).
+cuelingo-audio = { path = "../native/windows-audio", default-features = false }
+sherpa-onnx = { version = "=2.0.1", optional = true }
 
 # Windows starts a new process for every launch and every cuelingo:// link; one instance keeps one sidecar
 # and hands sign-in links to the running app.

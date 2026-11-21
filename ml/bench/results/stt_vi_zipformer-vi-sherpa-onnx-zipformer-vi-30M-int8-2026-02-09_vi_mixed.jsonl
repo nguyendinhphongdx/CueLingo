@@ -1,0 +1,27 @@
+{"path": "data/vi_mixed/000.wav", "ref": "Anh nhớ update ticket trên Jira trước khi họp standup nhé.", "dur": 3.65, "hyp": "ANH NHỚ UPDATE TÍCH KẾT TRÊN ZIRA TRƯỚC KHI HỌC STAN UPDAP"}
+{"path": "data/vi_mixed/001.wav", "ref": "Team backend đã deploy bản fix lên production hồi sáng.", "dur": 3.49, "hyp": "TIM BACKEN ĐÃ DEPLOY BẠN FIX LÊN PRODUCTION HỒI SÁNG"}
+{"path": "data/vi_mixed/002.wav", "ref": "Khách hàng yêu cầu thêm một API để export báo cáo sang file CSV.", "dur": 4.89, "hyp": "KHÁCH HÀNG YÊU CẦU THÊM MỘT API ĐỂ SPORT BÁO CÁO SANG FILE CSV"}
+{"path": "data/vi_mixed/003.wav", "ref": "Chúng ta nên chia task này thành ba subtask nhỏ hơn.", "dur": 3.29, "hyp": "CHÚNG TA NÊN CHIA TAS NÀY THÀNH BA SHOP TASK NHỎ HANG"}
+{"path": "data/vi_mixed/004.wav", "ref": "Deadline của milestone đầu tiên là thứ sáu tuần sau.", "dur": 3.01, "hyp": "DEADLINE CỦA MISTHOL ĐẦU TIÊN LÀ THỨ SÁU TUẦN SAU"}
+{"path": "data/vi_mixed/005.wav", "ref": "Em có thể share màn hình để mọi người cùng xem dashboard không?", "dur": 3.45, "hyp": "EM CÓ THỂ XEM MÀN HÌNH ĐỂ MỌI NGƯỜI CÙNG XEM DASPORT KHÔNG"}
+{"path": "data/vi_mixed/006.wav", "ref": "Server bị timeout vì database query chạy quá chậm.", "dur": 3.41, "hyp": "SERVER BỊ THA MAO VÌ DATA SQUERRY CHẠY QUÁ CHẬM"}
+{"path": "data/vi_mixed/007.wav", "ref": "Mình đề xuất dùng cache để giảm latency của endpoint này.", "dur": 4.29, "hyp": "MÌNH ĐỀ XUẤT DÙNG CASH ĐỂ GIẢM LATIN C CỦA ANP NÀY"}
+{"path": "data/vi_mixed/008.wav", "ref": "Bên marketing muốn launch chiến dịch mới vào đầu tháng mười hai.", "dur": 3.85, "hyp": "BÊN MARKETING MUỐN LOAN CHIẾN DỊCH MỚI VÀO ĐẦU THÁNG MƯỜI HAI"}
+{"path": "data/vi_mixed/009.wav", "ref": "Doanh thu quý này tăng ba phẩy năm phần trăm so với quý trước.", "dur": 3.77, "hyp": "DOANH THU QUÝ NÀY TĂNG BA PHẨY NĂM PHẦN TRĂM SO VỚI QUÝ TRƯỚC"}
+{"path": "data/vi_mixed/010.wav", "ref": "Ngân sách cho dự án là bốn trăm triệu đồng.", "dur": 3.53, "hyp": "NGÂN SÁCH CHO DỰ ÁN LÀ BỐN TRĂM TRIỆU ĐỒNG"}
+{"path": "data/vi_mixed/011.wav", "ref": "Anh gửi cho em feedback về bản prototype qua email nhé.", "dur": 3.65, "hyp": "ANH GỬI CHO EM FEEDBACK VỀ BẢN PROTOKYPE QUA EMAIL NHÉ"}
+{"path": "data/vi_mixed/012.wav", "ref": "Chúng ta cần thống nhất roadmap cho nửa đầu năm sau.", "dur": 3.33, "hyp": "CHÚNG TA CẦN THỐNG NHẤT ROMAP CHO NỬA ĐẦU NĂM SAU"}
+{"path": "data/vi_mixed/013.wav", "ref": "Mình sẽ book một cuộc họp với team design vào sáng thứ ba.", "dur": 3.57, "hyp": "MÌNH SẼ BOOK MỘT CUỘC HỌP VỚI TEAM DII VÀO SÁNG THỨ BA"}
+{"path": "data/vi_mixed/014.wav", "ref": "Lỗi này chỉ xảy ra trên môi trường staging, không có trên production.", "dur": 5.09, "hyp": "NỖI NÀY CHỈ XẢY RA TRÊN MÔI TRƯỜNG STAGIN KHÔNG CÓ TRÊN PRODUCTION"}
+{"path": "data/vi_mixed/015.wav", "ref": "Em đã merge branch vào main rồi, anh kiểm tra lại giúp em.", "dur": 4.05, "hyp": "EM ĐÃ MỞ BRANCH VÀO MAIN RỒI ANH KIỂM TRA LẠI GIÚP EM"}
+{"path": "data/vi_mixed/016.wav", "ref": "Nhóm cần thêm hai engineer nữa để kịp tiến độ release.", "dur": 3.97, "hyp": "NHÓM CẦN THÊM HAI ENTRY NỮA ĐỂ KỊP TIẾN ĐỘ RELIST"}
+{"path": "data/vi_mixed/017.wav", "ref": "Tỷ lệ churn tháng này giảm xuống còn hai phẩy một phần trăm.", "dur": 3.37, "hyp": "TỶ LỆ TRÊN THÁNG NÀY GIẢM XUỐNG CÒN HAI PHẨY MỘT PHẦN TRĂM"}
+{"path": "data/vi_mixed/018.wav", "ref": "Mình sẽ present kế hoạch này trước ban giám đốc vào thứ năm.", "dur": 3.33, "hyp": "MÌNH SẼ PIZEN KẾ HOẠCH NÀY TRƯỚC BAN GIÁM ĐỐC VÀO THỨ NĂM"}
+{"path": "data/vi_mixed/019.wav", "ref": "Anh có thể onboard bạn mới vào dự án trong tuần này không?", "dur": 3.01, "hyp": "ANH CÓ THỂ ON BOSS BẠN MỚI VÀO DỰ ÁN TRONG TUẦN NÀY KHÔNG"}
+{"path": "data/vi_mixed/020.wav", "ref": "Kết quả A/B test cho thấy nút màu xanh có conversion cao hơn.", "dur": 4.57, "hyp": "KẾT QUẢ AP TEST CHO THẤY NÚT MÀU XANH CÓ CONVERSION CAO HƠN"}
+{"path": "data/vi_mixed/021.wav", "ref": "Chúng ta cần viết thêm unit test cho module thanh toán.", "dur": 3.53, "hyp": "CHÚNG TA CẦN VIẾT THÊM UNITED CHO MODUN THANH TOÁN"}
+{"path": "data/vi_mixed/022.wav", "ref": "Hệ thống monitoring báo động vì CPU vượt quá chín mươi phần trăm.", "dur": 4.61, "hyp": "HỆ THỐNG MONITORING BÁO ĐỘNG VÌ CPU VƯỢT QUÁ CHÍN MƯƠI PHẦN TRĂM"}
+{"path": "data/vi_mixed/023.wav", "ref": "Phiên bản beta sẽ được gửi cho năm mươi người dùng thử nghiệm.", "dur": 3.65, "hyp": "PHIÊN BẢN BETA SẼ ĐƯỢC GỬI CHO NĂM MƯƠI NGƯỜI DÙNG THƯỜNG NHIỆT"}
+{"path": "data/vi_mixed/024.wav", "ref": "Hợp đồng với đối tác có giá trị một tỷ hai trăm triệu đồng.", "dur": 3.57, "hyp": "HỢP ĐỒNG VỚI ĐỐI TÁC CÓ GIÁ TRỊ MỘT TỶ HAI TRĂM TRIỆU ĐỒNG"}
+{"path": "data/vi_mixed/025.wav", "ref": "Anh chị nào còn câu hỏi thì cứ đặt vào phần chat nhé.", "dur": 3.25, "hyp": "ANH CHỊ NÀO CÒN CÂU GIẢI THÌ CỨ ĐẶT VÀO PHẦN CHÁT NHÉ"}
+{"path": "data/vi_mixed/026.wav", "ref": "Cảm ơn mọi người, hẹn gặp lại trong buổi sync tuần sau.", "dur": 3.17, "hyp": "CẢM ƠN MỌI NGƯỜI HẸN GẶP LẠI TRONG BUỔI SINH TUẦN SAU"}

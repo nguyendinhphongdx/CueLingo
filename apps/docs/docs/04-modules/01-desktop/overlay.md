@@ -34,7 +34,8 @@ Cửa sổ caption song ngữ nổi trên app họp.
 
 ## Dữ liệu & sự kiện
 
-- Nhận `transcript`: `{segmentId, text, translation, partial, speaker?}` từ Tauri core; `speaker` là `speaker_1`..`speaker_8` khi câu của người khác đã được gắn nhãn
+- Nhận `transcript`: `{segmentId, text, translation, partial, speaker?, offline?}` từ Tauri core; `speaker` là `speaker_1`..`speaker_8` khi câu của người khác đã được gắn nhãn
+- `offline: true` (câu nhận dạng trên máy vì đám mây không dùng được, ADR 0024): `CaptionBlock` hiện nhãn "Ngoại tuyến" trên câu đã chốt
 - Nhận `notice`: `{id, tone: 'warning' | 'error', text}` từ cửa sổ chính (cùng cơ chế `emit`/`listen` của `transcript`, cửa sổ chính là bên phát nên không cần lệnh Rust mới). Overlay chỉ giữ thông báo trong RAM; thông báo phát trước khi overlay nghe sẽ không được phát lại
 - Nhận `settings`: `{assistLevel}` từ cửa sổ chính
 - Lắng nghe `storage` để áp dụng các khoá overlay do cửa sổ chính tải từ tài khoản

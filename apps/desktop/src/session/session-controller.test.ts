@@ -69,6 +69,11 @@ function setup(
     onFirstCaption?: (sessionId: string) => void;
     usage?: () => Promise<UsageResponse>;
     canUpgrade?: () => Promise<boolean>;
+    offline?: {
+      enabled(): boolean;
+      transcribe(pcm: string): Promise<string>;
+      release?(): void;
+    };
   } = {},
 ) {
   let onUtterance: ((event: UtteranceEvent) => void) | undefined;
@@ -162,6 +167,7 @@ function setup(
     native,
     sessions,
     hasCloudConsent: () => options.consent ?? true,
+    offline: options.offline,
     usage: options.usage ? { get: options.usage } : undefined,
     canUpgrade: options.canUpgrade,
     glossary: glossaryList ? { list: glossaryList } : undefined,
@@ -1783,6 +1789,230 @@ describe('session controller', () => {
       await flush();
 
       expect(ctx.sessions.transcribe).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('offline fallback for Vietnamese (ADR 0024)', () => {
+    const utterance = (n: number, overrides: Partial<UtteranceEvent> = {}): UtteranceEvent => ({
+      type: 'utterance',
+      segmentId: `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`,
+      stream: 'system',
+      startMs: n * 1_000,
+      endMs: n * 1_000 + 800,
+      sampleRate: 16000,
+      pcm: 'AAAA',
+      ...overrides,
+    });
+    const flush = () => vi.advanceTimersByTimeAsync(0);
+    const down = () => new TranscribeError('Transcribe request failed');
+    const offlineHooks = (text = 'Xin chào các bạn') => ({
+      enabled: () => true,
+      transcribe: vi.fn(async (_pcm: string) => text),
+      release: vi.fn(),
+    });
+
+    async function running(options: Parameters<typeof setup>[1] = {}) {
+      const ctx = setup(undefined, options);
+      await ctx.controller.start(3, 'vi');
+      return ctx;
+    }
+
+    // AC1: two failed sentences in a row move the meeting offline; neither is left as "không nhận dạng được".
+    it('recognises a sentence on this machine when the cloud fails, and goes offline on the second failure', async () => {
+      const offline = offlineHooks();
+      const transcribe = vi.fn<Transcribe>().mockRejectedValue(down());
+      const ctx = await running({ transcribe, offline });
+      ctx.emitUtterance(utterance(1));
+      await flush();
+      expect(ctx.published.map((e) => e.text)).toEqual(['Xin chào các bạn']);
+      expect(ctx.notices).toEqual([]); // one failure is not yet "offline"
+      ctx.emitUtterance(utterance(2));
+      await flush();
+      expect(ctx.published).toHaveLength(2);
+      expect(ctx.published.every((e) => e.offline === true)).toBe(true);
+      expect(ctx.notices).toHaveLength(1);
+      expect(ctx.notices[0]).toMatchObject({ tone: 'warning' });
+      expect(ctx.notices[0]?.text).toContain('ngoại tuyến');
+      expect(ctx.notices[0]?.text).toContain('không gửi âm thanh đi');
+      expect(ctx.controller.getSnapshot().status).not.toBe('error');
+    });
+
+    it('does not call the cloud for every sentence while offline, only a probe now and then', async () => {
+      let clock = 1_000;
+      const offline = offlineHooks();
+      const transcribe = vi.fn<Transcribe>().mockRejectedValue(down());
+      const ctx = await running({ transcribe, offline, now: () => clock });
+      ctx.emitUtterance(utterance(1));
+      ctx.emitUtterance(utterance(2));
+      await flush();
+      const callsWhenOffline = transcribe.mock.calls.length;
+      ctx.emitUtterance(utterance(3));
+      ctx.emitUtterance(utterance(4));
+      await flush();
+      expect(transcribe.mock.calls.length).toBe(callsWhenOffline); // straight to this machine
+      clock += 20_000;
+      ctx.emitUtterance(utterance(5));
+      await flush();
+      expect(transcribe.mock.calls.length).toBeGreaterThan(callsWhenOffline); // one probe
+      expect(ctx.published).toHaveLength(5); // no sentence lost
+    });
+
+    // AC3: back on the cloud after a probe works; the sentences keep coming in order, none repeated.
+    it('returns to the cloud when a probe works, without losing or repeating a sentence', async () => {
+      let clock = 1_000;
+      let healthy = false;
+      const offline = offlineHooks('Câu ngoại tuyến');
+      const transcribe = vi.fn<Transcribe>(async (_id, input) => {
+        if (!healthy) throw down();
+        return { segmentId: input.segmentId, text: 'câu đám mây' };
+      });
+      const ctx = await running({ transcribe, offline, now: () => clock });
+      ctx.emitUtterance(utterance(1));
+      ctx.emitUtterance(utterance(2));
+      await flush();
+      healthy = true;
+      clock += 20_000;
+      ctx.emitUtterance(utterance(3)); // the probe
+      await flush();
+      ctx.emitUtterance(utterance(4)); // now on the cloud again
+      await flush();
+      expect(ctx.published.map((e) => e.text)).toEqual([
+        'Câu ngoại tuyến',
+        'Câu ngoại tuyến',
+        'câu đám mây',
+        'câu đám mây',
+      ]);
+      expect(ctx.published.map((e) => e.segmentId)).toEqual(
+        [1, 2, 3, 4].map((n) => utterance(n).segmentId),
+      );
+      expect(ctx.published[3]?.offline).toBeUndefined();
+    });
+
+    it('goes offline for the rest of the meeting when the cloud allowance is used up', async () => {
+      const offline = offlineHooks();
+      const transcribe = vi
+        .fn<Transcribe>()
+        .mockRejectedValue(new TranscribeError('Quota', 429, 'QUOTA_EXCEEDED'));
+      const ctx = await running({ transcribe, offline });
+      ctx.emitUtterance(utterance(1));
+      await flush();
+      ctx.emitUtterance(utterance(2));
+      await flush();
+      expect(transcribe).toHaveBeenCalledTimes(1); // never tried again
+      expect(ctx.published.map((e) => e.text)).toEqual(['Xin chào các bạn', 'Xin chào các bạn']);
+      expect(ctx.notices.some((n) => n.text.includes('ngoại tuyến'))).toBe(true);
+    });
+
+    // The default: nothing changes for a person who did not turn the fallback on.
+    it("keeps today's behaviour when the fallback is off", async () => {
+      const offline = { ...offlineHooks(), enabled: () => false };
+      const transcribe = vi.fn<Transcribe>().mockRejectedValue(down());
+      const ctx = await running({ transcribe, offline });
+      ctx.emitUtterance(utterance(1));
+      await flush();
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(offline.transcribe).not.toHaveBeenCalled();
+      expect(ctx.published.map((e) => e.text)).toEqual(['[không nhận dạng được]']);
+    });
+
+    it('never uses it for a language without a model here', async () => {
+      const offline = offlineHooks();
+      const ctx = setup(undefined, {
+        offline,
+        transcribe: vi.fn<Transcribe>().mockRejectedValue(down()),
+      });
+      await ctx.controller.start(3, 'ja');
+      ctx.emitUtterance(utterance(1));
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(offline.transcribe).not.toHaveBeenCalled();
+    });
+
+    // AC5: the model has not been downloaded.
+    it('says the model is missing instead of staying silent', async () => {
+      const offline = {
+        ...offlineHooks(),
+        transcribe: vi.fn(async (_pcm: string) => {
+          throw 'model_missing';
+        }),
+      };
+      const transcribe = vi.fn<Transcribe>().mockRejectedValue(down());
+      const ctx = await running({ transcribe, offline });
+      ctx.emitUtterance(utterance(1));
+      await flush();
+      expect(ctx.published.map((e) => e.text)).toEqual(['[không nhận dạng được]']);
+      expect(ctx.notices).toEqual([
+        expect.objectContaining({ id: 'offline-model-missing', action: 'open-settings' }),
+      ]);
+    });
+
+    // A network that goes quiet: the sentence must not wait for the 16 s limit twice.
+    it('gives a quiet network 8 seconds, once, before this machine takes the sentence', async () => {
+      const offline = offlineHooks();
+      const transcribe = vi.fn<Transcribe>(
+        (_id, _input, signal) =>
+          new Promise((_resolve, reject) => {
+            signal?.addEventListener('abort', () => reject(new TranscribeError('aborted')));
+          }),
+      );
+      const ctx = await running({ transcribe, offline });
+      ctx.emitUtterance(utterance(1));
+      await vi.advanceTimersByTimeAsync(7_900);
+      expect(ctx.published).toEqual([]);
+      await vi.advanceTimersByTimeAsync(200);
+      expect(transcribe).toHaveBeenCalledTimes(1); // no retry while the fallback is on
+      expect(ctx.published.map((e) => e.text)).toEqual(['Xin chào các bạn']);
+    });
+
+    it('sends only one probe at a time while the network is quiet', async () => {
+      let clock = 1_000;
+      const offline = offlineHooks();
+      const transcribe = vi.fn<Transcribe>(
+        (_id, _input, signal) =>
+          new Promise((_resolve, reject) => {
+            signal?.addEventListener('abort', () => reject(new TranscribeError('aborted')));
+          }),
+      );
+      const ctx = await running({ transcribe, offline, now: () => clock });
+      ctx.emitUtterance(utterance(1));
+      ctx.emitUtterance(utterance(2));
+      await vi.advanceTimersByTimeAsync(9_000); // both failed: offline now
+      const callsBefore = transcribe.mock.calls.length;
+      clock += 20_000;
+      ctx.emitUtterance(utterance(3)); // the probe, which hangs
+      ctx.emitUtterance(utterance(4)); // goes straight to this machine
+      clock += 20_000;
+      ctx.emitUtterance(utterance(5)); // the probe is still out: no second one
+      await vi.advanceTimersByTimeAsync(1);
+      expect(transcribe.mock.calls.length).toBe(callsBefore + 1);
+      expect(ctx.published.map((e) => e.segmentId)).toContain(utterance(4).segmentId);
+      expect(ctx.published.map((e) => e.segmentId)).toContain(utterance(5).segmentId);
+    });
+
+    it('says the allowance is used up, with the usual notice, when that is why it goes offline', async () => {
+      const offline = offlineHooks();
+      const transcribe = vi
+        .fn<Transcribe>()
+        .mockRejectedValue(new TranscribeError('Quota', 429, 'QUOTA_EXCEEDED'));
+      const ctx = await running({ transcribe, offline });
+      ctx.emitUtterance(utterance(1));
+      await flush();
+      const texts = ctx.notices.map((n) => n.text).join(' | ');
+      expect(texts).toContain('Đã hết giờ nhận dạng giọng nói đám mây'); // the usage notice
+      expect(texts).toContain('Đã hết giờ nhận dạng đám mây, tiếp tục nhận dạng trên máy');
+      expect(texts).not.toContain('Mất kết nối');
+    });
+
+    it('gives an offline sentence no speaker label and frees the model when the meeting ends', async () => {
+      const offline = offlineHooks();
+      const transcribe = vi.fn<Transcribe>().mockRejectedValue(down());
+      const ctx = await running({ transcribe, offline });
+      ctx.emitUtterance(utterance(1));
+      await flush();
+      expect(ctx.published[0]?.speaker).toBeUndefined();
+      const stopping = ctx.controller.stop();
+      await vi.advanceTimersByTimeAsync(20_000);
+      await stopping;
+      expect(offline.release).toHaveBeenCalled();
     });
   });
 

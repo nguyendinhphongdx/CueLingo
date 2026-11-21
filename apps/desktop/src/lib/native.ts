@@ -99,6 +99,8 @@ export const TranscriptEvent = z.object({
     .string()
     .regex(/^speaker_[1-8]$/)
     .optional(),
+  /** Recognised on this machine because the cloud was out of reach (ADR 0024); quality may be lower. */
+  offline: z.boolean().optional(),
 });
 export type TranscriptEvent = z.infer<typeof TranscriptEvent>;
 
@@ -125,6 +127,22 @@ export const UtteranceEvent = z.object({
   pcm: z.base64(),
 });
 export type UtteranceEvent = z.infer<typeof UtteranceEvent>;
+
+/** Offline Vietnamese recognition (ADR 0024): whether the model is on this machine and this build can run it. */
+export const LocalSttStatus = z.object({
+  state: z.enum(['ready', 'missing']),
+  sizeBytes: z.number().nonnegative(),
+  available: z.boolean(),
+});
+export type LocalSttStatus = z.infer<typeof LocalSttStatus>;
+
+/** The model download: `downloading` with progress 0..1, then `ready`, or `error` with a message (never meeting text). */
+export const LocalSttModelEvent = z.discriminatedUnion('state', [
+  z.object({ state: z.literal('downloading'), progress: z.number().min(0).max(1) }),
+  z.object({ state: z.literal('ready') }),
+  z.object({ state: z.literal('error'), message: z.string() }),
+]);
+export type LocalSttModelEvent = z.infer<typeof LocalSttModelEvent>;
 
 /** Loudness of one stream, about ten times a second while a meeting runs (0..1). */
 export const LevelEvent = z.object({
@@ -308,6 +326,16 @@ export const native = {
     invoke('model_download', { language: z.string().min(2).max(3).parse(language) }).then(
       () => undefined,
     ),
+  localSttStatus: () => invoke('local_stt_status').then((v) => LocalSttStatus.parse(v)),
+  /** Starts downloading the offline model in the background (never during a meeting); progress arrives as `local-stt-model` events. */
+  localSttDownload: () => invoke('local_stt_download').then(() => undefined),
+  onLocalSttModel: (cb: (e: LocalSttModelEvent) => void): Promise<UnlistenFn> =>
+    listen('local-stt-model', (e) => cb(LocalSttModelEvent.parse(e.payload))),
+  /** Recognises one utterance (16 kHz mono PCM16 base64) on this machine. Audio never leaves it. */
+  localSttTranscribe: (pcm: string) =>
+    invoke('local_stt_transcribe', { pcm, sampleRate: 16000 }).then((v) => z.string().parse(v)),
+  /** Frees the offline model's memory. */
+  localSttUnload: () => invoke('local_stt_unload').then(() => undefined),
   setAssistLevel: (level: number) =>
     invoke('set_assist_level', { level: AssistLevel.parse(level) }).then(() => undefined),
   /** Brings the caption overlay back (the ✕ on the overlay only hides it). */
