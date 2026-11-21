@@ -66,3 +66,7 @@ Trang dùng hai cờ của registry độc lập: `translates` quyết định c
 ## Hai tab
 
 Trang chi tiết cuộc họp có hai tab: **Debrief** (tóm tắt, việc cần làm, đoạn khó, cụm từ, câu nên nói) và **Bản ghi song ngữ** (transcript, lọc theo người nói). Cả hai panel luôn nằm trong DOM, panel không mở bị `hidden`; phím J/K/C chỉ chạy ở tab Debrief. Bấm một "đoạn khó" chuyển sang tab bản ghi rồi cuộn tới câu đó.
+
+## Học khoá này
+
+Với cuộc họp có khối học (ngôn ngữ học được), tiêu đề trang có link "Học khoá này" tới `/review?tab=path`, nơi cuộc họp này đã thành một khoá ([courses](../03-api/courses.md)).

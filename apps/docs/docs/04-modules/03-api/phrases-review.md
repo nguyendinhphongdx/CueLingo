@@ -16,18 +16,20 @@ Phrase Bank và hàng đợi ôn tập FSRS.
 
 ## Interface
 
-| Method   | Path                | Contract                             | Trạng thái |
-| -------- | ------------------- | ------------------------------------ | ---------- |
-| `POST`   | `/v1/phrases`       | `SavePhraseRequest` → `Phrase`       | Đã có      |
-| `GET`    | `/v1/phrases`       | → `PhraseList`                       | Đã có      |
-| `DELETE` | `/v1/phrases/:id`   | → `204`                              | Đã có      |
-| `GET`    | `/v1/review/queue`  | Hàng đợi ôn tập                      | Chưa dựng  |
-| `POST`   | `/v1/review/answer` | Kết quả ôn tập → trạng thái cập nhật | Chưa dựng  |
+| Method   | Path                | Contract                                       | Trạng thái |
+| -------- | ------------------- | ---------------------------------------------- | ---------- |
+| `POST`   | `/v1/phrases`       | `SavePhraseRequest` → `Phrase`                 | Đã có      |
+| `GET`    | `/v1/phrases`       | → `PhraseList`                                 | Đã có      |
+| `DELETE` | `/v1/phrases/:id`   | → `204`                                        | Đã có      |
+| `GET`    | `/v1/review/queue`  | `?dictation&language` → `ReviewQueue`          | Đã có      |
+| `POST`   | `/v1/review/answer` | `ReviewAnswerRequest` → `ReviewAnswerResponse` | Đã có      |
+| `GET`    | `/v1/progress`      | `?language` → `Progress`                       | Đã có      |
 
 ## Phụ thuộc
 
 - `@cuelingo/shared` cho contract Phrase Bank
-- `@cuelingo/learner-model` cho phần review chưa dựng
+- `@cuelingo/learner-model` cho FSRS (`reviewCard`, `isDue`)
+- Module [courses](./courses.md) dùng lại `buildCard`, `listItems` và `phrases.save`; hàng đợi và câu trả lời của khoá đi qua cùng đường này
 
 ## Dữ liệu & sự kiện
 
@@ -38,7 +40,7 @@ Phrase Bank và hàng đợi ôn tập FSRS.
 - Xoá hội thoại không xoá `context_text`; xoá dữ liệu cá nhân thì xoá cả `user_lexicon`.
 - Lưu lặp lại là idempotent; nghĩa mới chỉ thay nghĩa cũ khi request có `meaningVi`.
 - Xoá Phrase Bank chỉ xoá dòng `user_lexicon`; giữ lại `lexical_items` dùng chung.
-- `review_logs`: dành cho luồng review chưa dựng.
+- `review_logs`: mỗi câu trả lời một dòng (`POST /v1/review/answer`, cùng giao dịch với `user_lexicon.receptive_fsrs`). `exercise_type` ghi `recognize`, `cloze` hoặc `dictation`. Tiến độ khoá chỉ đọc bảng này.
 
 ## Câu hỏi mở
 
