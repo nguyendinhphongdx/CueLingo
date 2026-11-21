@@ -7,7 +7,7 @@ import { FlashcardDeck } from '@cuelingo/ui/components/flashcard-deck';
 import { Segmented } from '@cuelingo/ui/components/segmented';
 import { useEffect, useState } from 'react';
 import { studyApi } from './study-api';
-import { type ReviewResult, useReview } from './use-review';
+import { type QueueSource, type ReviewResult, useReview } from './use-review';
 import { useLearnLanguage } from '../settings';
 
 const RATINGS = [
@@ -246,8 +246,8 @@ export function ReviewEmptyState() {
   );
 }
 
-export function ReviewPage() {
-  const review = useReview(useLearnLanguage().language);
+export function ReviewPage({ source }: { source?: QueueSource } = {}) {
+  const review = useReview(useLearnLanguage().language, source);
   const [mode, setMode] = useModeChoice();
 
   useEffect(() => {
