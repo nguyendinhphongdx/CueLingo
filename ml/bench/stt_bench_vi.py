@@ -167,8 +167,9 @@ def bench(key):
         with open(f"results/stt_vi_{key}_{name}.jsonl", "w", encoding="utf-8") as f:
             for r in rows:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
-    # ru_maxrss is bytes on macOS (kilobytes on Linux).
-    result["peak_rss_mb"] = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (1 << 20), 0)
+    # ru_maxrss is bytes on macOS and kilobytes on Linux.
+    rss_divisor = (1 << 20) if sys.platform == "darwin" else (1 << 10)
+    result["peak_rss_mb"] = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / rss_divisor, 0)
     print(json.dumps(result, ensure_ascii=False), flush=True)
     with open("results/stt_vi_summary.jsonl", "a", encoding="utf-8") as f:
         f.write(json.dumps(result, ensure_ascii=False) + "\n")
