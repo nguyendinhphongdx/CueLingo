@@ -10,10 +10,16 @@ function nowMs() {
   return typeof performance === 'undefined' ? Date.now() : performance.now();
 }
 
-export function useReview(language: LanguageCode) {
+/** Where the cards come from. Left out: the cards due today. A course passes its own sitting. */
+export interface QueueSource {
+  key: readonly unknown[];
+  load: () => Promise<ReviewQueue>;
+}
+
+export function useReview(language: LanguageCode, source?: QueueSource) {
   const queueQuery = useQuery({
-    queryKey: ['review', 'queue', language],
-    queryFn: () => client.review.queue(language),
+    queryKey: source?.key ?? ['review', 'queue', language],
+    queryFn: source?.load ?? (() => client.review.queue(language)),
   });
   const answerMutation = useMutation({ mutationFn: client.review.answer });
   const [queue, setQueue] = useState<ReviewQueue | null>(null);

@@ -18,7 +18,7 @@ import { FlashcardDeck } from '@cuelingo/ui/components/flashcard-deck';
 import { Segmented } from '@cuelingo/ui/components/segmented';
 import { useEffect, useState } from 'react';
 import { client } from '../../lib/client';
-import { type ReviewResult, useReview } from './use-review';
+import { type QueueSource, type ReviewResult, useReview } from './use-review';
 
 const RATINGS = [
   { value: 1, label: 'Lại' },
@@ -247,9 +247,15 @@ export function ReviewEmptyState() {
   );
 }
 
-/** The Hôm nay tab of Ôn tập: the cards due today for one language. */
-export function ReviewTodayPanel({ language }: { language: LanguageCode }) {
-  const review = useReview(language);
+/** The Hôm nay tab of Ôn tập: the cards due today for one language, or the sitting of a course (`source`). */
+export function ReviewTodayPanel({
+  language,
+  source,
+}: {
+  language: LanguageCode;
+  source?: QueueSource;
+}) {
+  const review = useReview(language, source);
   const [mode, setModeState] = useState<ReviewMode>('flip');
   useEffect(() => {
     try {

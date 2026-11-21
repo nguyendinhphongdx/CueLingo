@@ -300,6 +300,7 @@ describe('DebriefPageView', () => {
       expect(markup).toContain('Điểm hiểu');
       expect(markup).toContain('Cụm từ nên lưu');
       expect(markup).toContain('Transcript song ngữ');
+      expect(markup).toContain('href="/review?tab=path"');
     }
   });
 

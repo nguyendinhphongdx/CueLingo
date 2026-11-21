@@ -652,6 +652,14 @@ export function DebriefPageView({
               >
                 Sao chép cả debrief
               </Button>
+              {learns && (
+                <Link
+                  href="/review?tab=path"
+                  className="border-input bg-background hover:bg-accent focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
+                >
+                  Học khoá này
+                </Link>
+              )}
               {onComposeFollowup && (
                 <Button
                   variant="outline"

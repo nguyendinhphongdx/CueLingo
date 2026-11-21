@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 import { useLanguage } from '../../lib/language';
 import { PhraseBankPanel } from '../phrase-bank';
+import { LearningPathTab } from '../learning-path';
 import { ProgressPanel } from '../progress';
 import { ReviewTodayPanel } from './ReviewPage';
 
@@ -17,7 +18,7 @@ export function reviewTabHref(tab: ReviewTabId): string {
   return tab === DEFAULT_REVIEW_TAB ? '/review' : `/review?tab=${tab}`;
 }
 
-/** The page frame: title, language switcher, the three tabs and the open tab's content. Presentation only. */
+/** The page frame: title, language switcher, the tabs and the open tab's content. Presentation only. */
 export function ReviewTabsView({
   tab,
   onTab,
@@ -46,10 +47,18 @@ export function ReviewTabsView({
 function Panel({ tab, language }: { tab: ReviewTabId; language: LanguageCode }) {
   if (tab === 'phrases') return <PhraseBankPanel language={language} />;
   if (tab === 'progress') return <ProgressPanel language={language} />;
+  if (tab === 'path') {
+    return (
+      <LearningPathTab
+        language={language}
+        renderSitting={(source) => <ReviewTodayPanel language={language} source={source} />}
+      />
+    );
+  }
   return <ReviewTodayPanel language={language} />;
 }
 
-/** `/review?tab=today|phrases|progress`: the tab lives in the address so a link, reload or back button keeps it. */
+/** `/review?tab=today|phrases|progress|path`: the tab lives in the address so a link, reload or back button keeps it. */
 export function ReviewTabsPage() {
   const router = useRouter();
   const params = useSearchParams();
