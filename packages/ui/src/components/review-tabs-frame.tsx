@@ -5,7 +5,7 @@ import { Tabs } from './tabs';
 
 const PREFIX = 'review';
 
-/** The three Ôn tập tabs and the panel of the open one. Web and desktop both draw it, so they never disagree. */
+/** The Ôn tập tabs and the panel of the open one. Web and desktop both draw it, so they never disagree. */
 export function ReviewTabsFrame({
   tab,
   onTab,

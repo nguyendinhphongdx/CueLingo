@@ -78,6 +78,7 @@ export const features: Feature[] = [
       'Hôm nay: thẻ nhận diện nghĩa và điền chỗ trống từ câu trong cuộc họp, lịch ôn tự giãn dần (FSRS)',
       'Kho cụm từ: các cụm bạn đã lưu từ debrief và lúc tra từ, kèm câu gốc trong cuộc họp',
       'Tiến độ: phần trăm hiểu theo tuần, số lần phải tra từ, chuỗi ngày ôn liên tiếp',
+      'Lộ trình: mỗi cuộc họp có debrief thành một khoá 3–10 bài từ chính cụm từ của cuộc họp, kèm tỷ lệ hoàn thành',
     ],
     webPath: '/review',
   },
@@ -128,11 +129,12 @@ export const features: Feature[] = [
   },
 ];
 
-/** The three tabs of the Ôn tập page. Clients draw the tabs from this list so web and desktop never disagree. */
+/** The tabs of the Ôn tập page. Clients draw the tabs from this list so web and desktop never disagree. */
 export const REVIEW_TABS = [
   { id: 'today', label: 'Hôm nay' },
   { id: 'phrases', label: 'Kho cụm từ' },
   { id: 'progress', label: 'Tiến độ' },
+  { id: 'path', label: 'Lộ trình' },
 ] as const;
 export type ReviewTabId = (typeof REVIEW_TABS)[number]['id'];
 

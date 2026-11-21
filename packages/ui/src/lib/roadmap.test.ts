@@ -28,9 +28,14 @@ describe('roadmap', () => {
     for (const feature of features) expect(groups).toContain(feature.group);
   });
 
-  it('lists the three review tabs in order', () => {
-    expect(REVIEW_TABS.map((tab) => tab.id)).toEqual(['today', 'phrases', 'progress']);
-    expect(REVIEW_TABS.map((tab) => tab.label)).toEqual(['Hôm nay', 'Kho cụm từ', 'Tiến độ']);
+  it('lists the four review tabs in order', () => {
+    expect(REVIEW_TABS.map((tab) => tab.id)).toEqual(['today', 'phrases', 'progress', 'path']);
+    expect(REVIEW_TABS.map((tab) => tab.label)).toEqual([
+      'Hôm nay',
+      'Kho cụm từ',
+      'Tiến độ',
+      'Lộ trình',
+    ]);
   });
 
   it('resolves the old view ids to a review tab', () => {
