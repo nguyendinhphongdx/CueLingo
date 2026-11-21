@@ -1,10 +1,11 @@
 import type { FastifyInstance } from 'fastify';
 import { buildApp, type AppDeps } from './app';
 import { createInMemoryQueue } from './lib/queue';
-import { createInMemoryDebriefRepository } from './modules/debrief';
+import { createInMemoryDebriefRepository, type InMemoryDebriefRepository } from './modules/debrief';
 import { createInMemoryEventsRepository } from './modules/events';
 import { createInMemoryAgentRepository } from './modules/agent';
 import { createInMemoryConversationsRepository } from './modules/conversations';
+import { createInMemoryCoursesRepository } from './modules/courses';
 import { createInMemoryGlossaryRepository } from './modules/glossary';
 import type { PrivacyRepository } from './modules/privacy';
 import { createInMemorySessionsRepository } from './modules/sessions';
@@ -50,11 +51,18 @@ export async function buildTestApp(
   // Usage and billing read and write the same plan rows, so a paid order changes the plan.
   const plans: InMemoryPlanRows = new Map();
   const sessions = repos?.sessions ?? createInMemorySessionsRepository();
+  const debrief = repos?.debrief ?? createInMemoryDebriefRepository();
+  const glossary = repos?.glossary ?? createInMemoryGlossaryRepository();
   const app = await buildApp({
     repos: {
-      debrief: createInMemoryDebriefRepository(),
+      debrief,
       events: createInMemoryEventsRepository(),
-      glossary: createInMemoryGlossaryRepository(),
+      glossary,
+      courses: createInMemoryCoursesRepository({
+        sessions,
+        debrief: debrief as InMemoryDebriefRepository,
+        glossary,
+      }),
       conversations: createInMemoryConversationsRepository(),
       agent: createInMemoryAgentRepository(),
       privacy: emptyPrivacyRepository(),
