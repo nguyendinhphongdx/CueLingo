@@ -47,6 +47,9 @@ export function applyModelEvent(
 /** Fixed Vietnamese text for a failed download; the sidecar's own message never reaches the screen. */
 export function describeDownloadError(message?: string): string {
   const text = (message ?? '').toLowerCase();
+  if (text.includes('session_already_running')) {
+    return 'Đang họp. Hãy tải mô hình sau khi họp xong.';
+  }
   if (/sha|hash|checksum|size/.test(text)) {
     return 'Tệp tải về bị hỏng. Hãy thử tải lại.';
   }

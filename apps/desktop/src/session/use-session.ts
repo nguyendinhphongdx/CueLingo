@@ -6,6 +6,7 @@ import { insightsApi } from '../insights';
 import { native } from '../lib/native';
 import { hasCloudConsent } from './cloud-consent';
 import { refreshOnGlossaryChange } from './glossary-refresh';
+import { isOfflineFallbackOn } from './offline-fallback';
 import { createSessionController } from './session-controller';
 import { sessionsApi } from './sessions-api';
 import { startTraySync } from './tray-sync';
@@ -18,6 +19,11 @@ const controller = createSessionController({
   native,
   sessions: sessionsApi,
   hasCloudConsent: () => hasCloudConsent(),
+  offline: {
+    enabled: () => isOfflineFallbackOn(),
+    transcribe: native.localSttTranscribe,
+    release: () => void native.localSttUnload().catch(() => undefined),
+  },
   glossary: { list: insightsApi.listGlossary },
   usage: usageApi,
   canUpgrade: async () => canUpgrade(await billingApi.overview()),

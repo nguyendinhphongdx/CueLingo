@@ -2,6 +2,7 @@ import { isLanguageCode, SUPPORTED_LANGUAGES } from '@cuelingo/shared';
 import type { TranscriptEvent } from '../lib/native';
 import { splitParts } from '@cuelingo/ui/lib/text-units';
 import { SpeakerTag } from '@cuelingo/ui/components/speaker-tag';
+import { Badge } from '@cuelingo/ui/components/badge';
 
 interface CaptionBlockProps {
   segment: TranscriptEvent;
@@ -68,6 +69,16 @@ export function CaptionBlock({ segment, level, faded, showSpeaker, onLookup }: C
       {showSpeaker ? (
         <p className="mb-1 text-[0.7em]">
           <SpeakerTag label={segment.speaker} source={mine ? 'mic' : 'system'} />
+        </p>
+      ) : null}
+      {segment.offline && !segment.partial ? (
+        <p className="mb-1 text-[0.7em]">
+          <Badge
+            variant="warning"
+            title="Nhận dạng trên máy vì đám mây không dùng được; không gửi âm thanh đi, có thể kém chính xác hơn"
+          >
+            Ngoại tuyến
+          </Badge>
         </p>
       ) : null}
       {showEnglish ? (

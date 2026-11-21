@@ -76,3 +76,25 @@ describe('CaptionBlock speaker tag', () => {
     expect(render('vi')).not.toContain('data-slot="speaker-tag"');
   });
 });
+
+describe('CaptionBlock offline label (ADR 0024)', () => {
+  const html = (overrides: { offline?: boolean; partial?: boolean }) =>
+    renderToStaticMarkup(
+      <CaptionBlock
+        segment={{ ...segment('vi'), ...overrides }}
+        level={3}
+        faded={false}
+        showSpeaker={false}
+        onLookup={() => {}}
+      />,
+    );
+
+  it('marks a sentence recognised on this machine', () => {
+    expect(html({ offline: true })).toContain('Ngoại tuyến');
+  });
+
+  it('marks nothing for a cloud sentence, or while the sentence is still partial', () => {
+    expect(html({})).not.toContain('Ngoại tuyến');
+    expect(html({ offline: true, partial: true })).not.toContain('Ngoại tuyến');
+  });
+});
