@@ -129,6 +129,10 @@ pub fn ensure(
             continue;
         }
         let _ = fs::remove_file(&path);
+        // A name may be a path inside the repository ("exp/encoder.onnx"); it is kept as is on disk.
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).map_err(|e| format!("cannot create the model folder: {e}"))?;
+        }
         let started = Instant::now();
         let url = format!("{hub}/{}/{}", spec.revision, file.name);
         download_with_retries(&url, &path, file, &mut |bytes| {

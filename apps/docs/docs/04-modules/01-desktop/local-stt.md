@@ -63,6 +63,19 @@ Giới hạn còn lại của bản Windows: tải model không tiếp tục đ�
 
 Với ngôn ngữ trong `SpeechModels.cloudLanguages` (hiện `vi`, khớp `recognition: 'cloud'` ở `@cuelingo/shared`) sidecar **không tải model**. Nó vẫn thu cả hai luồng (`system`, `mic`) và tách câu bằng VAD (câu tối đa 25 giây, bỏ câu có tiếng nói dưới 0,3 giây), nhưng mỗi câu xong được phát thành một dòng `{"type":"utterance","segmentId","stream","startMs","endMs","sampleRate":16000,"pcm":"<base64 PCM 16-bit LE>"}` thay vì văn bản; không có partial. Đổi qua lại giữa ngôn ngữ đám mây và ngôn ngữ trên máy bằng lệnh stdin `language <mã>` như thường.
 
+## Dự phòng ngoại tuyến cho tiếng Việt ([ADR 0024](../../08-adr/0024-vi-offline-stt-fallback.md))
+
+Đám mây vẫn là đường chính của tiếng Việt. Khi người dùng bật dự phòng (Cài đặt › Mô hình nhận dạng, tắt sẵn) và đám mây không dùng được, app nhận dạng câu **trên máy**; sidecar không đổi, vẫn chỉ phát `utterance`.
+
+| Thành phần | Chọn                                                                                                                                                                                                           |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chạy ở đâu | Lõi Rust của app (`src-tauri/src/local_stt.rs`), dùng chung macOS và Windows; sherpa-onnx link tĩnh, 2 luồng CPU, mỗi câu một stream riêng                                                                     |
+| Model      | Zipformer tiếng Việt `zzasdf/viet_iter3_pseudo_label` (Apache-2.0), INT8, revision ghim `e827965a37aa…`, 4 tệp, 77 100 477 byte; tải từ `huggingface.co` khi người dùng bật, kiểm kích thước + SHA-256         |
+| Đầu ra     | Model xuất chữ HOA không dấu câu; `normalize` đổi sang chữ thường, viết hoa đầu câu, không thêm dấu câu hay sửa chữ                                                                                            |
+| Số đo      | 30 câu giọng tổng hợp, M1 Pro, bản release: RTF 0,021, p95 mỗi câu 0,098 s, RAM ~370 MB. WER 19,0% trên câu xen thuật ngữ tiếng Anh ([kết quả đo](../../06-delivery/2026-11-20-vi-on-device-stt/03-review.md)) |
+
+Luồng chọn đường nằm ở webview, xem [session-controller](./session-controller.md#dự-phòng-ngoại-tuyến-tiếng-việt).
+
 ## Mức âm thanh và khoảng nghỉ
 
 - Mọi ngôn ngữ và chế độ: mỗi luồng (`system`, `mic`) phát dòng `{"type":"level","stream","rms","peak"}` tối đa 10 lần/giây, tính từ phần âm thanh nghe được kể từ lần báo trước (không mất đỉnh của một tiếng ngắn). Luồng không mở được thì không phát gì.
