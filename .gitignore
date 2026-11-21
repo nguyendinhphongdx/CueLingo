@@ -17,6 +17,7 @@ __pycache__/
 .hf/
 .uvcache/
 ml/bench/data/
+ml/bench/models/
 .pnpm-store/
 
 # Claude Code (per-developer)

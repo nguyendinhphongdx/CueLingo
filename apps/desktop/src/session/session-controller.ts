@@ -15,6 +15,7 @@ import { captureProblemOf } from './capture-problems';
 import { nativeErrorCode } from './session-errors';
 import { speakerDisplayName } from '@cuelingo/ui/lib/speaker';
 import { createSpeakerRegistry } from './speaker-registry';
+import { createFallbackSwitch, hasOfflineModelFor } from './offline-fallback';
 import { isMeetingMetric, usageNotice } from './usage-notices';
 import type {
   AudioModelEvent,
@@ -82,6 +83,16 @@ interface SessionControllerOptions {
   glossary?: { list(language: LanguageCode): Promise<GlossaryTerm[]> };
   /** Whether the person agreed to send meeting audio to the cloud (ADR 0014); without it a cloud-language meeting does not start. */
   hasCloudConsent?: () => boolean;
+  /**
+   * Recognition on this machine for when the cloud is out of reach (ADR 0024); without it a meeting never goes
+   * offline. `enabled` is the person's choice in Cài đặt, `transcribe` takes one utterance (PCM16 base64) and
+   * rejects with `model_missing` when the model is not downloaded, `release` frees the model after a meeting.
+   */
+  offline?: {
+    enabled(): boolean;
+    transcribe(pcm: string): Promise<string>;
+    release?(): void;
+  };
   /** Reads the person's allowances at the start of a meeting, to warn about the ones running low. Failures are ignored. */
   usage?: { get(): Promise<UsageResponse> };
   /** Whether there is a plan to buy; read when an allowance runs out so the notice can offer Nâng cấp. Failures mean no. */
@@ -151,6 +162,8 @@ const UPLOAD_CONCURRENCY = 3;
 const DRAIN_ACCEPT_MS = 3_000;
 /** Uploads still pending this long after Stop are aborted and dropped. */
 const DRAIN_DEADLINE_MS = 15_000;
+/** With the offline fallback on, how long one cloud attempt may take before this machine takes the sentence. */
+const OFFLINE_CLOUD_WAIT_MS = 8_000;
 /** Wait before retrying a rate-limited upload. */
 const RATE_LIMIT_RETRY_MS = 1_000;
 /** Recognised sentences of the same stream sent along as context, oldest first. */
@@ -220,6 +233,7 @@ export function createSessionController({
   sessions,
   glossary,
   hasCloudConsent = () => false,
+  offline,
   usage,
   canUpgrade,
   createRealtime,
@@ -280,6 +294,9 @@ export function createSessionController({
   const shownNotices = new Set<string>();
   /** The cloud refused recognition for lack of allowance: no more audio goes up for this meeting. */
   let cloudQuotaExhausted = false;
+  /** Cloud or this machine, for the meeting that runs (ADR 0024); only used when `offline` is given. */
+  let fallback = createFallbackSwitch();
+  let offlineAnnouncements = 0;
   const listeners = new Set<() => void>();
 
   function update(next: Partial<SessionSnapshot>) {
@@ -398,6 +415,47 @@ export function createSessionController({
     }
   }
 
+  /** The fallback is on, and this meeting's language has a model here. */
+  const offlineOn = () =>
+    offline !== undefined && offline.enabled() && hasOfflineModelFor(meetingLanguage);
+
+  /**
+   * Tells the person the meeting now runs on this machine, and why. Said again each time it happens.
+   * Sentences recognised here send no audio anywhere; the cloud is only tried again now and then, with one sentence.
+   */
+  function announceOffline(reason: 'network' | 'quota') {
+    offlineAnnouncements += 1;
+    if (reason === 'quota') {
+      // The usual notice offers Nâng cấp; this one says what happens instead.
+      notifyUsage('cloud_stt_ms', { used: 0, limit: 0, state: 'exhausted' });
+    }
+    notify({
+      id: `offline-stt-${offlineAnnouncements}`,
+      tone: 'warning',
+      text:
+        reason === 'quota'
+          ? 'Đã hết giờ nhận dạng đám mây, tiếp tục nhận dạng trên máy (ngoại tuyến). Chất lượng có thể thấp hơn; câu nhận dạng trên máy không gửi âm thanh đi.'
+          : 'Mất kết nối nhận dạng đám mây, đang nhận dạng trên máy (ngoại tuyến). Chất lượng có thể thấp hơn; câu nhận dạng trên máy không gửi âm thanh đi, CueLingo chỉ thỉnh thoảng thử lại đám mây bằng một câu.',
+    });
+  }
+
+  /** One sentence on this machine; null when it could not be recognised. Never logs the error (it may echo audio). */
+  async function recogniseOffline(utterance: UtteranceEvent): Promise<string | null> {
+    try {
+      return await offline!.transcribe(utterance.pcm);
+    } catch (error) {
+      if (String(error).includes('model_missing')) {
+        notify({
+          id: 'offline-model-missing',
+          tone: 'warning',
+          text: 'Chưa có model nhận dạng ngoại tuyến. Mở Cài đặt để tải về.',
+          action: 'open-settings',
+        });
+      }
+      return null;
+    }
+  }
+
   /** Runs at most UPLOAD_CONCURRENCY tasks of the current meeting at once. */
   function pump(current: CloudUploads) {
     while (!current.closed && current.active < UPLOAD_CONCURRENCY && current.queue.length > 0) {
@@ -418,6 +476,8 @@ export function createSessionController({
     signal: AbortSignal,
     previous: string[],
     labelsSpeakers: boolean,
+    /** The offline fallback is on: one short attempt, since this machine can take the sentence instead. */
+    quick = false,
   ): Promise<TranscribeResponse | null | typeof QUOTA_EXHAUSTED> {
     const request = {
       ...(previous.length > 0 ? { previous } : {}),
@@ -432,22 +492,33 @@ export function createSessionController({
       sampleRate: utterance.sampleRate,
       pcm: utterance.pcm,
     };
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      try {
-        return await sessions.transcribe(sessionId, request, signal);
-      } catch (error) {
-        // Running out of allowance does not heal by waiting (it is a 429, so check it before the retry rule).
-        if ((error as Partial<TranscribeError> | null)?.code === ErrorCode.QuotaExceeded)
-          return QUOTA_EXHAUSTED;
-        // Retry once, and only for what can heal; give up on this sentence otherwise.
-        if (attempt === 1 || signal.aborted || !isRetryable(error)) return null;
-        if ((error as Partial<TranscribeError>).status === 429) {
-          await pause(RATE_LIMIT_RETRY_MS, signal);
-          if (signal.aborted) return null;
+    const attempts = quick ? 1 : 2;
+    // A network that goes quiet would otherwise hold the sentence for the full 16 s limit, twice.
+    const limit = quick ? new AbortController() : null;
+    const stop = () => limit?.abort();
+    const timer = limit ? setTimeout(stop, OFFLINE_CLOUD_WAIT_MS) : null;
+    signal.addEventListener('abort', stop, { once: true });
+    try {
+      for (let attempt = 0; attempt < attempts; attempt += 1) {
+        try {
+          return await sessions.transcribe(sessionId, request, limit?.signal ?? signal);
+        } catch (error) {
+          // Running out of allowance does not heal by waiting (it is a 429, so check it before the retry rule).
+          if ((error as Partial<TranscribeError> | null)?.code === ErrorCode.QuotaExceeded)
+            return QUOTA_EXHAUSTED;
+          // Retry once, and only for what can heal; give up on this sentence otherwise.
+          if (attempt === attempts - 1 || signal.aborted || !isRetryable(error)) return null;
+          if ((error as Partial<TranscribeError>).status === 429) {
+            await pause(RATE_LIMIT_RETRY_MS, signal);
+            if (signal.aborted) return null;
+          }
         }
       }
+      return null;
+    } finally {
+      if (timer) clearTimeout(timer);
+      signal.removeEventListener('abort', stop);
     }
-    return null;
   }
 
   function handleUtterance(utterance: UtteranceEvent) {
@@ -455,30 +526,62 @@ export function createSessionController({
     // Audio never leaves without consent, and never for a language the device recognises itself.
     if (!sessionId || !isCloudLanguage(meetingLanguage) || !hasCloudConsent()) return;
     if (stopping && !acceptingAfterStop) return;
-    if (cloudQuotaExhausted) return;
+    const fallbackOn = offlineOn();
+    if (cloudQuotaExhausted && !fallbackOn) return;
     const generation = runtimeGeneration;
     const current = uploads;
 
     current.queue.push(async () => {
-      if (cloudQuotaExhausted) return;
+      if (cloudQuotaExhausted && !fallbackOn) return;
       const previous = recentTexts[utterance.stream]
         .slice(-PREVIOUS_COUNT)
         .map((entry) => entry.text);
       const labelsSpeakers = SUPPORTED_LANGUAGES[meetingLanguage].labelsSpeakers;
-      const result = await recognise(
-        sessionId,
-        utterance,
-        current.abort.signal,
-        previous,
-        labelsSpeakers,
-      );
-      if (generation !== runtimeGeneration || current.closed) return;
-      if (result === QUOTA_EXHAUSTED) {
-        // No caption for this sentence and no "[không nhận dạng được]" line: the notice says why.
-        stopCloudUploads();
-        return;
+      // Offline: the cloud allowance is used up, or the cloud has failed lately and only an occasional
+      // sentence is sent to find out whether it is back. Otherwise the cloud goes first.
+      if (fallbackOn && cloudQuotaExhausted && fallback.pinLocal()) announceOffline('quota');
+      let goOffline = fallbackOn && (cloudQuotaExhausted || !fallback.shouldTryCloud(now()));
+      let result: TranscribeResponse | null = null;
+      if (!goOffline) {
+        let outcome: Awaited<ReturnType<typeof recognise>>;
+        try {
+          outcome = await recognise(
+            sessionId,
+            utterance,
+            current.abort.signal,
+            previous,
+            labelsSpeakers,
+            fallbackOn,
+          );
+        } finally {
+          fallback.probeEnded();
+        }
+        if (generation !== runtimeGeneration || current.closed) return;
+        if (outcome === QUOTA_EXHAUSTED) {
+          if (!fallbackOn) {
+            // No caption for this sentence and no "[không nhận dạng được]" line: the notice says why.
+            stopCloudUploads();
+            return;
+          }
+          cloudQuotaExhausted = true;
+          if (fallback.pinLocal()) announceOffline('quota');
+          goOffline = true;
+        } else if (outcome === null && fallbackOn) {
+          // This sentence is recognised here as well, so a failure leaves no gap.
+          if (fallback.cloudFailed(now())) announceOffline('network');
+          goOffline = true;
+        } else {
+          if (outcome !== null && fallbackOn) fallback.cloudWorked();
+          result = outcome;
+        }
       }
-      const text = result === null ? null : result.text;
+      let text: string | null;
+      if (goOffline) {
+        text = await recogniseOffline(utterance);
+        if (generation !== runtimeGeneration || current.closed) return;
+      } else {
+        text = result === null ? null : result.text;
+      }
       // Each result goes out as soon as it is ready; a slow upload never holds a later one back.
       if (text === null) {
         // Local only: the server never hears about a sentence it did not recognise.
@@ -488,6 +591,7 @@ export function createSessionController({
           text: UNRECOGNISED_TEXT,
           translation: null,
           partial: false,
+          ...(goOffline ? { offline: true } : {}),
         });
         return;
       }
@@ -501,7 +605,7 @@ export function createSessionController({
         .slice(-PREVIOUS_COUNT);
       // A server that does not label (older, or a language without labels) sends no verdict: no label.
       const speaker =
-        labelsSpeakers && utterance.stream === 'system'
+        labelsSpeakers && utterance.stream === 'system' && !goOffline
           ? speakerRegistry.resolve(result?.speaker, text)
           : null;
       publish({
@@ -511,6 +615,7 @@ export function createSessionController({
         translation: null,
         partial: false,
         ...(speaker ? { speaker } : {}),
+        ...(goOffline ? { offline: true } : {}),
       });
       realtime?.send({
         type: 'segment.final',
@@ -633,6 +738,11 @@ export function createSessionController({
     demoTimers = [];
     transcriptById.clear();
     speakerRegistry.clear();
+    try {
+      offline?.release?.();
+    } catch {
+      // Freeing memory must never get in the way of ending a meeting.
+    }
   }
 
   /**
@@ -748,6 +858,8 @@ export function createSessionController({
       finalIds.clear();
       shownNotices.clear();
       cloudQuotaExhausted = false;
+      fallback = createFallbackSwitch();
+      offlineAnnouncements = 0;
       firstCaptionReported = false;
       recentTexts.system = [];
       recentTexts.mic = [];

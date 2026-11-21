@@ -8,6 +8,7 @@ import { useState, type ReactNode } from 'react';
 import { AccountCard } from '../auth';
 import { CalendarSettings } from '../calendar';
 import { LanguageModels } from '../models/LanguageModels';
+import { OfflineSttSettings } from '../models/OfflineSttSettings';
 import { useLocalModels } from '../models/use-local-models';
 import { NotificationSettings } from '../notifications';
 import { PermissionsStep } from '../onboarding';
@@ -150,7 +151,12 @@ function SectionBody({
         </>
       );
     case 'models':
-      return <LanguageModels />;
+      return (
+        <>
+          <LanguageModels />
+          <OfflineSttSettings />
+        </>
+      );
     case 'appearance':
       return <ThemeSwitch />;
     case 'voice':

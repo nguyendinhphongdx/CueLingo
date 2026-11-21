@@ -57,6 +57,16 @@ Máy trạng thái của một cuộc họp phía client: nhận segment từ ST
 - **Ngôn ngữ cuộc họp:** snapshot có `meetingLanguage` (đặt lúc bắt đầu, xoá khi phiên kết thúc); chỉ báo và kiểm tra đồng ý khi đổi ngôn ngữ dùng nó, không dùng ô cài đặt.
 - **Overlay:** câu không có bản dịch hiện chữ gốc, không có dòng "Đang dịch…"; nhãn "đang im lặng" chờ 25 giây (thay vì 6 giây) vì caption đám mây cách nhau xa hơn. Overlay hiện khi bắt đầu và ẩn khi phiên kết thúc hẳn (`native.hideOverlay`); panel không còn nút hiện/ẩn overlay (dòng nhắc phím tắt thay cho nút) và không còn nút "Chạy thử caption".
 
+### Dự phòng ngoại tuyến (tiếng Việt)
+
+Điều kiện: tuỳ chọn `offline` được cấp, người dùng bật dự phòng trong Cài đặt (`isOfflineFallbackOn`, cờ lưu theo máy, tắt sẵn) và ngôn ngữ cuộc họp có model trên máy (`hasOfflineModelFor`, hiện chỉ `vi`). Thiếu một điều kiện thì mọi thứ chạy y như phần trên.
+
+- **Chọn đường** (`session/offline-fallback.ts`, `createFallbackSwitch`, logic thuần): đám mây đi trước, **một lần thử, tối đa 8 giây** (không thử lại, để mạng treo không giữ câu 32 giây). Một câu đám mây thất bại vẫn được nhận dạng trên máy ngay, nên không còn "[không nhận dạng được]". **2 câu thất bại liên tiếp** thì cuộc họp chuyển sang ngoại tuyến: từ đó câu đi thẳng vào máy, cứ **15 giây** mới thử đám mây **một** câu (mỗi lúc chỉ một câu dò) để biết nó đã về chưa; một câu đám mây thành công thì quay lại đám mây từ câu kế tiếp, không mất hay lặp câu.
+- **Hết giờ nhận dạng đám mây** (`QUOTA_EXCEEDED`, hoặc tin `usage` báo hết): khi dự phòng bật, thay vì dừng hẳn, cuộc họp ghim ở ngoại tuyến tới hết buổi và không thử lại đám mây; vẫn hiện thông báo hạn mức thường (kèm Nâng cấp) và một thông báo nói đang nhận dạng trên máy.
+- **Báo người dùng:** thông báo "Mất kết nối nhận dạng đám mây, đang nhận dạng trên máy (ngoại tuyến)… câu nhận dạng trên máy không gửi âm thanh đi, chỉ thỉnh thoảng thử lại đám mây bằng một câu" mỗi lần chuyển (id `offline-stt-N`); `transcript` mang `offline: true` và overlay hiện nhãn "Ngoại tuyến" trên câu đó. Chưa tải model thì thông báo `offline-model-missing` kèm nút Cài đặt, và câu hiện "[không nhận dạng được]".
+- **Câu ngoại tuyến** không có nhãn người nói. `segment.final` của nó vẫn lên server như mọi câu, **chưa đánh dấu là ngoại tuyến** (quyết định mở: có thêm cờ `source` vào hợp đồng không). Hết cuộc họp thì `offline.release()` giải phóng model. Không log nội dung và không bao giờ tải model trong họp.
+- Không tải thêm dữ liệu nào lên đám mây khi ngoại tuyến; `segment.final` vẫn gửi qua realtime như mọi câu (không mang `offline`, hợp đồng với server chưa đổi). Đệm và gửi lại segment lúc mất mạng là việc riêng.
+
 ## Hạn mức của gói (W2-02)
 
 Controller mở WebSocket với `features: ['usage']`, nên server báo khi giờ dịch sắp hết hoặc đã hết. Thông báo đi sang overlay bằng `native.publishNotice` (xem [overlay](./overlay.md)); hết hạn mức kèm `action: 'upgrade'` khi `canUpgrade()` (tuỳ chọn của controller, đọc `GET /v1/billing`, lỗi coi như không) trả true, micro bị chặn (`capture:mic`) kèm `action: 'open-settings'`; mọi thông báo chỉ là chữ cố định, không chứa nội dung cuộc họp. Logic chữ nằm ở `session/usage-notices.ts` (thuần, có test), dùng định dạng của `@cuelingo/ui/lib/usage`.
