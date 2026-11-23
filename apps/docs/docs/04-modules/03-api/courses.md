@@ -61,3 +61,7 @@ Không có endpoint chấm điểm hay hoàn thành bài: trả lời bằng `PO
 
 - Tiêu đề phiên thường rỗng nên khoá chuẩn bị hiếm khi hiện; cần đo số lần hiện
 - Nâng lên bảng `course_enrollments` (ẩn/lưu trữ khoá) hoặc sắp thứ tự bằng AI chỉ khi có số đo; xem phương án C, D trong hồ sơ
+
+## Liên hệ với mục tiêu
+
+Khoá từ cuộc họp và mục tiêu cùng nằm trong `LearningPathPanel`, nhưng độc lập: mục tiêu là bảng thật, gọi AI và tính hạn mức; khoá là view không AI. Khi API mục tiêu lỗi, khoá vẫn hiện. Xem [goals](./goals.md).

@@ -128,3 +128,7 @@ Hợp đồng `FollowupRequestSchema` (channel, tone), `FollowupResponseSchema` 
 | `AdminUserRowSchema`, `AdminUserListSchema`                       | Một người (`plan` là gói đang hiệu lực; `source`, `expiresAt` là dòng đã lưu); `{items, nextCursor}`                                          |
 | `AdminUserOrderSchema`, `AdminUserDetailSchema`                   | Đơn (có `byAdmin`, `amount >= 0`) không có `qrCode`, `checkoutUrl`, `transferContent`; `{user, usage: UsageResponse, orders}`                 |
 | `AdminSetUserPlanRequestSchema`, `AdminSetUserPlanResponseSchema` | `{plan, period?}` `.strict()` + refine như trên (người đổi nằm ở đường dẫn, admin lấy từ phiên); `{plan, source:'manual', expiresAt \| null}` |
+
+## Mục tiêu và bài học
+
+`goals.ts`: `GOAL_CATALOG` (8 mục tiêu × 6 bài), `GOAL_MAX=3`, `GoalKeySchema`, `findCatalogGoal`, `findCatalogLesson`. `dto/goal.dto.ts`: `CreateGoalRequest`, `UpdateGoalRequest`, `Goal`, `GoalList`, `LessonContent`, `LessonView`, `PracticeRequest`, `PracticeFeedback`, `QuizSubmitRequest`, `QuizResult`, `LessonReportRequest`. `plans.ts` thêm metric `lessons_daily`, `lesson_practice_daily`; mã lỗi mới `LESSON_FAILED` (502), `LESSONS_DISABLED` (503). Xem [goals](../03-api/goals.md).

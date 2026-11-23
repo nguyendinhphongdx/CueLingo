@@ -125,6 +125,24 @@ describe('INVITES_REQUIRED', () => {
     expect(() => loadConfig({ ...valid, AGENT_ENABLED: 'maybe' })).toThrow(/AGENT_ENABLED/);
   });
 
+  it('turns goal lessons off in production and on elsewhere unless the flag says otherwise', () => {
+    expect(loadConfig(valid).GOAL_LESSONS_ENABLED).toBe(true);
+    const prod = {
+      ...valid,
+      NODE_ENV: 'production',
+      WEB_ORIGIN: 'https://app.example.com',
+      BETTER_AUTH_URL: 'https://api.example.com',
+      MAIL_PROVIDER: 'smtp',
+      SMTP_URL: 'smtp://localhost',
+      MAIL_FROM: 'CueLingo <a@b.co>',
+    };
+    expect(loadConfig(prod).GOAL_LESSONS_ENABLED).toBe(false);
+    expect(loadConfig({ ...prod, GOAL_LESSONS_ENABLED: 'true' }).GOAL_LESSONS_ENABLED).toBe(true);
+    expect(() => loadConfig({ ...valid, GOAL_LESSONS_ENABLED: 'maybe' })).toThrow(
+      /GOAL_LESSONS_ENABLED/,
+    );
+  });
+
   describe('production', () => {
     const production = {
       ...valid,

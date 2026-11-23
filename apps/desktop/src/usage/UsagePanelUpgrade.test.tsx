@@ -15,6 +15,8 @@ const usage: UsageResponse = {
     debriefs: entry,
     assist_daily: entry,
     agent_messages: entry,
+    lessons_daily: entry,
+    lesson_practice_daily: entry,
   },
 };
 

@@ -17,6 +17,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check:deps": "depcruise apps services packages --config .dependency-cruiser.cjs",
+    "eval:lesson": "pnpm --filter @cuelingo/api exec tsx ../../packages/ai-gateway/scripts/eval-lesson.ts",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm check:deps",
     "prepare": "husky",
     "docs:dev": "pnpm --filter @cuelingo/docs dev",

@@ -26,7 +26,15 @@ function sources(dir: string): string[] {
 describe('shared UI rule', () => {
   it('knows which components are shared', () => {
     expect(shared).toEqual(
-      expect.arrayContaining(['Avatar', 'AccountChip', 'PersonRow', 'IconButton']),
+      expect.arrayContaining([
+        'Avatar',
+        'AccountChip',
+        'PersonRow',
+        'IconButton',
+        'GoalPicker',
+        'GoalLessonView',
+        'LearningPathPanel',
+      ]),
     );
   });
 

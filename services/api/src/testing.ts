@@ -7,6 +7,7 @@ import { createInMemoryAgentRepository } from './modules/agent';
 import { createInMemoryConversationsRepository } from './modules/conversations';
 import { createInMemoryCoursesRepository } from './modules/courses';
 import { createInMemoryGlossaryRepository } from './modules/glossary';
+import { createInMemoryGoalsRepository } from './modules/goals';
 import type { PrivacyRepository } from './modules/privacy';
 import { createInMemorySessionsRepository } from './modules/sessions';
 import { createInMemorySpeakersRepository } from './modules/speakers';
@@ -63,6 +64,7 @@ export async function buildTestApp(
         debrief: debrief as InMemoryDebriefRepository,
         glossary,
       }),
+      goals: createInMemoryGoalsRepository(),
       conversations: createInMemoryConversationsRepository(),
       agent: createInMemoryAgentRepository(),
       privacy: emptyPrivacyRepository(),

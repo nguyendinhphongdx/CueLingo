@@ -26,6 +26,12 @@ const ConfigSchema = z
     /** Turns the assistant on or off for everyone. Off (or no GEMINI_API_KEY) answers 503 AGENT_DISABLED. */
     AGENT_ENABLED: z.enum(['true', 'false']).default('true'),
     /**
+     * Lets people open new goal lessons and practise sentences (they call the AI). Default: off in production,
+     * on elsewhere. Turn it on after eval-lesson has run with a real model (docs: 04-modules/03-api/goals.md).
+     * Goals and lessons already opened work either way.
+     */
+    GOAL_LESSONS_ENABLED: z.enum(['true', 'false']).optional(),
+    /**
      * Lets the assistant write small interactive pages (tool `render_html`, prompt agent/v2). They only run in the
      * sandbox runner (infra/sandbox-runner, its own origin): turn this on together with the web app's
      * NEXT_PUBLIC_AGENT_HTML_BLOCKS and NEXT_PUBLIC_SANDBOX_ORIGIN. Default off. See ADR 0019.
@@ -108,11 +114,12 @@ const ConfigSchema = z
 
 export type Config = Omit<
   z.infer<typeof ConfigSchema>,
-  'INVITES_REQUIRED' | 'AGENT_ENABLED' | 'AGENT_HTML_BLOCKS'
+  'INVITES_REQUIRED' | 'AGENT_ENABLED' | 'AGENT_HTML_BLOCKS' | 'GOAL_LESSONS_ENABLED'
 > & {
   INVITES_REQUIRED: boolean;
   AGENT_ENABLED: boolean;
   AGENT_HTML_BLOCKS: boolean;
+  GOAL_LESSONS_ENABLED: boolean;
 };
 
 export class ConfigError extends Error {}
@@ -148,6 +155,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     ...data,
     AGENT_ENABLED: data.AGENT_ENABLED === 'true',
     AGENT_HTML_BLOCKS: data.AGENT_HTML_BLOCKS === 'true',
+    GOAL_LESSONS_ENABLED: data.GOAL_LESSONS_ENABLED
+      ? data.GOAL_LESSONS_ENABLED === 'true'
+      : data.NODE_ENV !== 'production',
     INVITES_REQUIRED: data.INVITES_REQUIRED
       ? data.INVITES_REQUIRED === 'true'
       : data.NODE_ENV === 'production',

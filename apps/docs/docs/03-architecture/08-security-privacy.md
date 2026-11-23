@@ -59,3 +59,7 @@ Trang `/admin/users` ([admin-users](../04-modules/03-api/admin-users.md)) là ch
 - Chính sách quyền riêng tư và điều khoản theo Nghị định 13/2023/NĐ-CP (Việt Nam) và GDPR (nếu có người dùng EU), phải xong trước beta.
 - Mẫu đồng ý dữ liệu riêng cho beta: nêu rõ dữ liệu nào được xem để cải thiện sản phẩm.
 - Ghi công license model: Parakeet (CC-BY-4.0). Tránh model và thư viện NC/AGPL/GPL theo [khảo sát open source](../07-research/01-open-source.md).
+
+## Bài học theo mục tiêu
+
+Câu luyện gõ được gửi tới Gemini để nhận xét rồi bỏ: không lưu, không log (chỉ id, kết luận, số đếm). Thuật ngữ cá nhân của người dùng (glossary, Phrase Bank) cũng được gửi tới Gemini, trong khối không tin cậy, chỉ để viết ví dụ cá nhân; sinh nội dung bài dùng chung thì không gửi gì của người dùng. Nội dung bài dùng chung không chứa dữ liệu người dùng. Xoá dữ liệu cá nhân xoá mục tiêu, tiến độ, báo lỗi của người đó và không đụng nội dung chung. Xem [ADR 0025](../08-adr/0025-goal-lessons-shared-content.md).

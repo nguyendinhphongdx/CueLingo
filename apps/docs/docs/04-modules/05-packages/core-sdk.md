@@ -64,3 +64,7 @@ SDK client dùng chung cho desktop và web: auth, REST, stream phiên, hàng đ�
 - Lỗi trước khi stream (409 `CONFLICT`, 429 `AGENT_QUOTA_EXCEEDED` kèm `details` là `AgentQuota`, 503 `AGENT_DISABLED`, 404, 401) ném `ApiError` giống `request`. Mất mạng giữa chừng, hoặc stream đóng mà chưa có `done`, ném `ApiError(0, 'NETWORK_ERROR')`.
 - Huỷ bằng `signal` (nút Dừng) là chủ ý nên `sendMessage` **resolve êm** ở mọi thời điểm (trước khi gửi, giữa stream); server giữ phần chữ đã sinh với trạng thái `stopped`. Lỗi do `onEvent` ném ra được trả nguyên.
 - `createHttp` có thêm `stream(method, path, body, {signal})` trả về `Response` đang mở, dùng chung token, `baseUrl`, `credentials` và cách map lỗi với `request`.
+
+## Mục tiêu (`goals`)
+
+`client.goals`: `list`, `create`, `update`, `remove`, `openLesson(goalId, lessonKey, { signal })`, `practice`, `submitQuiz`, `report`. Mở bài lần đầu có thể mất 15–25 giây nên truyền `signal`. Xem [goals](../03-api/goals.md).

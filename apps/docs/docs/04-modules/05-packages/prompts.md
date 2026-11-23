@@ -46,3 +46,7 @@ Prompt có phiên bản cho từng tác vụ AI, kèm schema đầu ra và fixtu
 ## Câu hỏi mở
 
 - (chưa có)
+
+## Prompt bài học mục tiêu
+
+`lesson.generate@v1` (`lesson/v1.ts`), `lesson.personalize@v1` (`lesson-personalize/v1.ts`), `lesson.feedback@v1` (`lesson-feedback/v1.ts`). Mỗi prompt kèm bộ kiểm ngữ nghĩa (`checkLessonOutput`, `checkPersonalOutput`, `checkFeedbackOutput`) và fixture. Đầu vào của người dùng (thuật ngữ, câu luyện) nằm trong khối `<terms>`, `<practice>` và coi là không tin cậy. Xem [goals](../03-api/goals.md).

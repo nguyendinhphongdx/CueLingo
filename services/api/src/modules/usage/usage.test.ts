@@ -43,7 +43,15 @@ describe('usage module', () => {
     const body = res.json();
     expect(body.plan).toBe('free');
     expect(Object.keys(body.usage).sort()).toEqual(
-      ['agent_messages', 'assist_daily', 'cloud_stt_ms', 'debriefs', 'translation_ms'].sort(),
+      [
+        'agent_messages',
+        'assist_daily',
+        'cloud_stt_ms',
+        'debriefs',
+        'lesson_practice_daily',
+        'lessons_daily',
+        'translation_ms',
+      ].sort(),
     );
     expect(body.usage.translation_ms).toMatchObject({ used: 0, limit: 7_200_000, state: 'ok' });
     expect(body.usage.debriefs.limit).toBe(8);

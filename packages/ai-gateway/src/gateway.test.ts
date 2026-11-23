@@ -3,7 +3,12 @@ import {
   DebriefContentSchema,
   LookupResponseSchema,
 } from '@cuelingo/shared';
-import { FollowupOutputSchema } from '@cuelingo/prompts';
+import {
+  FollowupOutputSchema,
+  LessonFeedbackOutputSchema,
+  lessonSample,
+  LessonOutputSchema,
+} from '@cuelingo/prompts';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AiGatewayError, createAiGateway, type AiCallRecord, type GenerateFn } from './gateway';
 import type { TranscribeArgs } from './stt';
@@ -545,5 +550,77 @@ describe('debrief prompt choice', () => {
       'debrief.generate@v4',
       'debrief.generate@v4',
     ]);
+  });
+});
+
+describe('ai-gateway lesson tasks', () => {
+  const input = { goalKey: 'standup', lessonKey: 'done', level: 'b1', language: 'en' } as const;
+
+  it('routes the three tasks with their own timeouts', () => {
+    expect(TASKS['lesson.generate']).toMatchObject({ timeoutMs: 40_000 });
+    expect(TASKS['lesson.personalize']).toMatchObject({ timeoutMs: 8_000 });
+    expect(TASKS['lesson.feedback']).toMatchObject({ timeoutMs: 4_000 });
+    expect(TASKS['lesson.feedback'].fallbackModel).toBe('gemini-3.1-flash-lite');
+  });
+
+  it('returns a lesson that matches the schema and records the prompt version', async () => {
+    const calls: AiCallRecord[] = [];
+    const gw = make(
+      async () => ({ text: JSON.stringify(lessonSample), inputTokens: 2000, outputTokens: 3000 }),
+      calls,
+    );
+    const lesson = await gw.json('lesson.generate', input, LessonOutputSchema, { userId: 'u1' });
+    expect(lesson.quiz.questions).toHaveLength(6);
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toMatchObject({
+      task: 'lesson.generate',
+      promptVersion: 'lesson.generate@v1',
+      ok: true,
+    });
+  });
+
+  it('asks again once for a lesson with a missing part, then throws', async () => {
+    const { quiz: _quiz, ...broken } = lessonSample;
+    const generate = vi.fn<GenerateFn>(async () => ({ text: JSON.stringify(broken) }));
+    await expect(
+      make(generate).json('lesson.generate', input, LessonOutputSchema),
+    ).rejects.toBeInstanceOf(AiGatewayError);
+    // Two answers, and no second model: the shared lesson task has one model.
+    expect(generate).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not repeat a failed lesson call on the same model', async () => {
+    const generate = vi.fn<GenerateFn>(async () => {
+      throw new Error('down');
+    });
+    await expect(
+      make(generate).json('lesson.generate', input, LessonOutputSchema),
+    ).rejects.toBeInstanceOf(AiGatewayError);
+    expect(generate).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to the second model for feedback and never records the sentence', async () => {
+    const calls: AiCallRecord[] = [];
+    const generate = vi
+      .fn<GenerateFn>()
+      .mockRejectedValueOnce(new Error('timeout'))
+      .mockResolvedValueOnce({
+        text: JSON.stringify({ verdict: 'ok', better: 'I finished it.', register: 'neutral' }),
+      });
+    const out = await make(generate, calls).json(
+      'lesson.feedback',
+      {
+        goalKey: 'standup',
+        level: 'b1',
+        taskVi: 'Báo việc',
+        targetPhrase: 'I finished',
+        sentence: 'Secret project Zeta is done',
+      },
+      LessonFeedbackOutputSchema,
+    );
+    expect(out.verdict).toBe('ok');
+    expect(generate.mock.calls[0]![0].model).not.toBe(generate.mock.calls[1]![0].model);
+    await vi.waitFor(() => expect(calls).toHaveLength(2));
+    expect(JSON.stringify(calls)).not.toContain('Zeta');
   });
 });

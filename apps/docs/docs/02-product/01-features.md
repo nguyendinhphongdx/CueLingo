@@ -50,3 +50,5 @@ Sáu nhóm tính năng xoay quanh một Learner Model. Cột "Đợt" theo [lộ
 |                      | Thẻ "Cuộc họp vừa xong" (thời lượng, số câu, tóm tắt debrief)                               | ◐                              | 0       | desktop/session-controller                       |
 
 Chi tiết từng tính năng và tiêu chí chấp nhận: [Phạm vi MVP](./03-mvp-scope.md).
+
+> Bài học theo mục tiêu (tiếng Anh, luyện gõ): 8 mục tiêu × 6 bài, AI viết nội dung dùng chung; Free 2 bài và 20 câu luyện mỗi ngày. Xem [goals](../04-modules/03-api/goals.md).

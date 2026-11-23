@@ -12,6 +12,7 @@ import { createPostgresAgentRepository } from './modules/agent';
 import { createPostgresConversationsRepository } from './modules/conversations';
 import { createPostgresCoursesRepository } from './modules/courses';
 import { createPostgresGlossaryRepository } from './modules/glossary';
+import { createPostgresGoalsRepository } from './modules/goals';
 import { createPostgresSpeakersRepository } from './modules/speakers';
 import { createPostgresPrivacyRepository } from './modules/privacy';
 import { createPostgresSessionsRepository } from './modules/sessions';
@@ -100,6 +101,7 @@ const app = await buildApp({
     events: eventsRepository,
     glossary: glossaryRepository,
     courses: createPostgresCoursesRepository(sql),
+    goals: createPostgresGoalsRepository(sql),
     conversations: conversationsRepository,
     agent: createPostgresAgentRepository(sql),
     privacy: privacyRepository,
@@ -138,6 +140,7 @@ const app = await buildApp({
   },
   transcribe: gateway ? { gateway } : undefined,
   followup: gateway ? { gateway } : undefined,
+  goals: gateway ? { gateway, enabled: config.GOAL_LESSONS_ENABLED } : undefined,
   tts: gateway
     ? { gateway, cache: createFileTtsCache(config.TTS_CACHE_DIR ?? join(tmpdir(), 'cuelingo-tts')) }
     : undefined,

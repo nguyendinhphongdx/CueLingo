@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PLAN_LIMITS,
+  isDailyMetric,
   PlanLimitsEnvSchema,
   PlanLimitsOverrideSchema,
   periodEnd,
@@ -33,6 +34,15 @@ describe('period boundaries (UTC+7)', () => {
     expect(periodStart('assist_daily', now).toISOString()).toBe('2026-11-14T17:00:00.000Z');
     expect(periodEnd('assist_daily', now).toISOString()).toBe('2026-11-15T17:00:00.000Z');
   });
+
+  it('uses the Vietnam day for the lesson metrics too', () => {
+    const now = new Date('2026-11-14T18:00:00Z');
+    for (const metric of ['lessons_daily', 'lesson_practice_daily'] as const) {
+      expect(isDailyMetric(metric)).toBe(true);
+      expect(periodStart(metric, now).toISOString()).toBe('2026-11-14T17:00:00.000Z');
+    }
+    expect(isDailyMetric('debriefs')).toBe(false);
+  });
 });
 
 describe('quotaState', () => {
@@ -63,8 +73,12 @@ describe('plan limits', () => {
       debriefs: 8,
       assist_daily: 20,
       agent_messages: 0,
+      lessons_daily: 2,
+      lesson_practice_daily: 20,
     });
     expect(DEFAULT_PLAN_LIMITS.ultra.agent_messages).toBe(500);
+    expect(DEFAULT_PLAN_LIMITS.pro.lessons_daily).toBe(10);
+    expect(DEFAULT_PLAN_LIMITS.ultra.lesson_practice_daily).toBe(300);
   });
   it('merges a partial override without touching the defaults', () => {
     const merged = resolvePlanLimits({ free: { debriefs: 1, assist_daily: null } });

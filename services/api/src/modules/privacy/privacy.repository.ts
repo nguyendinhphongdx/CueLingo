@@ -56,6 +56,11 @@ export function createPostgresPrivacyRepository(sql: Sql): PrivacyRepository {
         // Soft-deleted conversations too: "delete my data" does not wait for the 7-day retention window.
         await tx`DELETE FROM agent_messages WHERE user_id = ${userId}`;
         await tx`DELETE FROM agent_conversations WHERE user_id = ${userId}`;
+        // Goal lessons: the person's goals, progress, personal examples and reports. The shared lesson_contents
+        // table has no user and stays (ADR 0025).
+        await tx`DELETE FROM lesson_reports WHERE user_id = ${userId}`;
+        await tx`DELETE FROM goal_lessons WHERE user_id = ${userId}`;
+        await tx`DELETE FROM learning_goals WHERE user_id = ${userId}`;
         await tx`DELETE FROM review_logs WHERE user_id = ${userId}`;
         await tx`DELETE FROM user_lexicon WHERE user_id = ${userId}`;
         await tx`DELETE FROM glossary_terms WHERE user_id = ${userId}`;

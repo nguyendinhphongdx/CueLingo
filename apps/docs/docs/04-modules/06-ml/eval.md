@@ -37,3 +37,7 @@ Mỗi ngôn ngữ muốn bật cho người dùng (ADR 0013) phải qua cổng n
 ## Câu hỏi mở
 
 - Nguồn 20 cuộc họp test có đồng ý
+
+## Eval bài học mục tiêu
+
+`packages/ai-gateway/scripts/eval-lesson.ts` (script TypeScript, không phải `cuelingo-eval`): 8 mục tiêu × a2/b2 × 2 lần chạy, kiểm cấu trúc bằng `checkLessonOutput` và đo p50/p95 của `lesson.feedback`. Cần khoá AI thật; **chưa được chạy với model thật** khi bàn giao, ngưỡng đã viết sẵn trong script.

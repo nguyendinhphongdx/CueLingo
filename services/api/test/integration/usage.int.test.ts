@@ -44,6 +44,8 @@ describe('usage counters on real Postgres', () => {
         debriefs: start,
         assist_daily: start,
         agent_messages: start,
+        lessons_daily: start,
+        lesson_practice_daily: start,
       },
       NOW,
     );
@@ -59,6 +61,8 @@ describe('usage counters on real Postgres', () => {
       debriefs: start,
       assist_daily: new Date('2026-11-13T17:00:00Z'),
       agent_messages: start,
+      lessons_daily: start,
+      lesson_practice_daily: start,
     };
     await repo.add(bob, 'translation_ms', start, 1500);
     await repo.add(bob, 'assist_daily', new Date('2026-11-12T17:00:00Z'), 9);
@@ -86,10 +90,15 @@ describe('usage counters on real Postgres', () => {
     await sql`INSERT INTO user_plans (user_id, plan, source, expires_at)
       VALUES (${uid}, 'pro', 'payment', ${new Date('2026-11-20T00:00:00Z')})`;
     const starts = Object.fromEntries(
-      ['translation_ms', 'cloud_stt_ms', 'debriefs', 'assist_daily', 'agent_messages'].map((m) => [
-        m,
-        start,
-      ]),
+      [
+        'translation_ms',
+        'cloud_stt_ms',
+        'debriefs',
+        'assist_daily',
+        'agent_messages',
+        'lessons_daily',
+        'lesson_practice_daily',
+      ].map((m) => [m, start]),
     ) as Parameters<typeof repo.snapshot>[1];
     const before = new Date('2026-11-19T23:59:59Z');
     const at = new Date('2026-11-20T00:00:00Z');

@@ -40,6 +40,8 @@ const detail: AdminUserDetail = {
       debriefs: item(2, null),
       assist_daily: item(0, null),
       agent_messages: item(5, 100),
+      lessons_daily: item(0, 10),
+      lesson_practice_daily: item(0, 150),
     },
   },
   orders: [

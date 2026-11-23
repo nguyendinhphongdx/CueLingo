@@ -25,6 +25,23 @@ export const TASKS = {
     fallbackModel: process.env.AI_ASSIST_MODEL ?? 'gemini-3.5-flash-lite',
     timeoutMs: 8_000,
   },
+  // Goal lessons (ADR 0025). The shared lesson takes up to 3k output tokens, so it gets the longest timeout.
+  'lesson.generate': {
+    model: process.env.AI_LESSON_MODEL ?? 'gemini-3.5-flash-lite',
+    fallbackModel: process.env.AI_LESSON_MODEL ?? 'gemini-3.5-flash-lite',
+    timeoutMs: 40_000,
+  },
+  'lesson.personalize': {
+    model: process.env.AI_LESSON_MODEL ?? 'gemini-3.5-flash-lite',
+    fallbackModel: process.env.AI_LESSON_MODEL ?? 'gemini-3.5-flash-lite',
+    timeoutMs: 8_000,
+  },
+  // Feedback on one typed sentence has to come back within 5 s at p95 (AC6), hence the short timeout.
+  'lesson.feedback': {
+    model: process.env.AI_LESSON_MODEL ?? 'gemini-3.5-flash-lite',
+    fallbackModel: process.env.AI_LESSON_FALLBACK_MODEL ?? 'gemini-3.1-flash-lite',
+    timeoutMs: 4_000,
+  },
   'debrief.generate': {
     model: process.env.AI_DEBRIEF_MODEL ?? 'gemini-3.5-flash-lite',
     fallbackModel: process.env.AI_DEBRIEF_MODEL ?? 'gemini-3.5-flash-lite',

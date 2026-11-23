@@ -34,3 +34,7 @@ Lỗi: `400` văn bản không hợp lệ, `401` chưa đăng nhập, `429 RATE_
 
 - Thêm giọng thứ hai (nam) cho bài nghe để quen nhiều giọng?
 - Chuyển bộ nhớ đệm sang kho đối tượng khi có nhiều máy chủ.
+
+## Giọng theo vai (bài học mục tiêu)
+
+Bài học theo mục tiêu đọc hội thoại bằng hai giọng cố định: người nói `a` là `Kore`, người nói `b` là `Puck`, qua `voice` của `TtsRequest` (cùng bộ nhớ đệm, khoá có giọng). Không đổi giọng theo cài đặt. Xem [goals](./goals.md).

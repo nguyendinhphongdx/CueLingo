@@ -28,6 +28,7 @@ import { createFollowupModule, type FollowupDeps } from './modules/followup';
 import { createConversationsModule, type ConversationsRepository } from './modules/conversations';
 import { createCoursesModule, type CoursesRepository } from './modules/courses';
 import { createGlossaryModule, type GlossaryRepository } from './modules/glossary';
+import { createGoalsModule, type GoalsDeps, type GoalsRepository } from './modules/goals';
 import { createPrivacyModule, type PrivacyRepository } from './modules/privacy';
 import { createRealtimeModule, type RealtimeDeps } from './modules/realtime';
 import {
@@ -81,6 +82,7 @@ export interface AppDeps {
     events: EventsRepository;
     glossary: GlossaryRepository;
     courses: CoursesRepository;
+    goals: GoalsRepository;
     conversations: ConversationsRepository;
     /** Read model of assistant spend (`ai_call` events) for the daily quota. */
     agent: AgentRepository;
@@ -128,6 +130,8 @@ export interface AppDeps {
   transcribe?: TranscribeDeps;
   /** Enables follow-up drafts from a debrief when an AI gateway is available. */
   followup?: FollowupDeps;
+  /** Goal lessons: goals always work, making and practising lessons need the gateway (ADR 0025). */
+  goals?: GoalsDeps;
   /** Development-only bearer-token verifier for assist and event ingestion. */
   verifyDevToken?: AuthOptions['verifyDevToken'];
   /** False disables logs. Object form is mainly a test seam for an in-memory stream. */
@@ -260,6 +264,27 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       savePhrase: review.phrases.save,
     }).routes,
     { prefix: '/v1/courses' },
+  );
+  await app.register(
+    createGoalsModule(
+      deps.repos.goals,
+      {
+        usage: usage.service,
+        listItems: deps.repos.study.listItems,
+        savePhrase: review.phrases.save,
+        answer: study.study.answer,
+        async listTerms(userId, language) {
+          const glossary = await deps.repos.glossary.list(userId, language);
+          const phrases = await review.phrases.list(userId, language);
+          return [
+            ...glossary.map(({ term, translation }) => ({ term, translation })),
+            ...phrases.map(({ phrase, meaningVi }) => ({ term: phrase, translation: meaningVi })),
+          ];
+        },
+      },
+      deps.goals,
+    ).routes,
+    { prefix: '/v1/goals' },
   );
   if (deps.transcribe) {
     await app.register(
