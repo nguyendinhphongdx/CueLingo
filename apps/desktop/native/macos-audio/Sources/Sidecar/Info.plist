@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Embedded in the binary (Package.swift). codesign takes the signing identifier from here, so it stays
+       vn.cmcai.cuelingo.audio even when Tauri signs the sidecar again while bundling the app (ADR 0023). -->
+  <key>CFBundleIdentifier</key>
+  <string>vn.cmcai.cuelingo.audio</string>
+  <key>CFBundleName</key>
+  <string>cuelingo-audio</string>
+  <key>CFBundleVersion</key>
+  <string>1</string>
+</dict>
+</plist>
