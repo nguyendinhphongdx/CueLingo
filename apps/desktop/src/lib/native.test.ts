@@ -82,3 +82,29 @@ describe('microphone switch', () => {
     expect(MicStateEvent.safeParse({ type: 'mic' }).success).toBe(false);
   });
 });
+
+describe('speech model commands', () => {
+  it('parses the microphone answer and the model status', async () => {
+    vi.mocked(invoke).mockResolvedValueOnce({ microphone: 'granted', systemAudio: 'unknown' });
+    await expect(native.requestMicrophone()).resolves.toEqual({
+      microphone: 'granted',
+      systemAudio: 'unknown',
+    });
+    expect(invoke).toHaveBeenLastCalledWith('request_microphone');
+
+    vi.mocked(invoke).mockResolvedValueOnce('cached');
+    await expect(native.speechModelStatus('en')).resolves.toBe('cached');
+    expect(invoke).toHaveBeenLastCalledWith('stt_model_status', { language: 'en' });
+
+    vi.mocked(invoke).mockResolvedValueOnce('nonsense');
+    await expect(native.speechModelStatus('en')).rejects.toThrow();
+  });
+
+  it('refuses a malformed language before calling the core', async () => {
+    vi.mocked(invoke).mockClear();
+    await expect(native.prewarmSpeech('en; rm')).rejects.toThrow();
+    expect(invoke).not.toHaveBeenCalled();
+    await native.prewarmSpeech('en');
+    expect(invoke).toHaveBeenCalledWith('stt_prewarm', { language: 'en' });
+  });
+});

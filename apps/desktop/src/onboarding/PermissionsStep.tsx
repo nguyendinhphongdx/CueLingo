@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@cuelingo/ui/components/button';
 import {
   Card,
@@ -42,13 +42,15 @@ export function describePermission(
   if (state === 'undetermined') {
     return os === 'windows'
       ? `Chưa xác định quyền ${label.toLocaleLowerCase('vi')}. Hãy bấm Bắt đầu để thử.`
-      : `Chưa xác định quyền ${label.toLocaleLowerCase('vi')}. macOS sẽ hỏi khi bạn bấm Bắt đầu lần đầu.`;
+      : name === 'microphone'
+        ? 'Chưa xác định quyền micrô. Bấm Cho phép micro để macOS hỏi quyền.'
+        : `Chưa xác định quyền ${label.toLocaleLowerCase('vi')}. Bấm Cho phép âm thanh hệ thống để macOS hỏi quyền.`;
   }
   return `Chưa kiểm tra được quyền ${label.toLocaleLowerCase('vi')}.`;
 }
 
 const checkText: Record<SystemAudioCheck, string> = {
-  granted: 'CueLingo nghe được âm thanh hệ thống.',
+  granted: 'Đã nghe được âm thanh hệ thống.',
   silent:
     'Không nghe thấy âm thanh. Hãy bật CueLingo trong mục Ghi âm thanh hệ thống, và kiểm tra loa không bị tắt tiếng.',
   error: 'Không thử được. Hãy khởi động lại CueLingo rồi thử lại.',
@@ -61,11 +63,21 @@ const windowsSilentText =
 export const describeSystemAudioCheck = (result: SystemAudioCheck, os: DesktopOs = currentOs()) =>
   os === 'windows' && result === 'silent' ? windowsSilentText : checkText[result];
 
+/** The button the microphone row shows: macOS asks itself while undetermined; otherwise Settings is the way. */
+export function micAction(
+  state: PermissionState,
+  os: DesktopOs = currentOs(),
+): 'allow' | 'settings' | null {
+  if (state === 'granted') return null;
+  if (state === 'undetermined' && os === 'macos') return 'allow';
+  return 'settings';
+}
+
 /** What the person is told before testing the system audio. */
 export const systemAudioIdleText = (os: DesktopOs = currentOs()) =>
   os === 'windows'
     ? 'Windows không đòi quyền riêng cho phần này. CueLingo thử bằng một tiếng chuông ngắn.'
-    : 'macOS không cho biết trước quyền này, nên CueLingo thử bằng một tiếng chuông ngắn.';
+    : 'macOS không cho biết trước quyền này, nên CueLingo thử bằng một tiếng chuông ngắn. Nếu macOS hỏi, hãy bấm Cho phép.';
 
 function StateIcon({ state }: { state: PermissionState | SystemAudioCheck | 'checking' }) {
   if (state === 'checking') {
@@ -127,7 +139,13 @@ export function PermissionsStep() {
     queryKey: ['desktop-permissions'],
     queryFn: native.permissionsStatus,
   });
+  const queryClient = useQueryClient();
   const audio = useMutation({ mutationFn: native.checkSystemAudio });
+  // macOS shows its own dialog; the answer replaces what the page knew.
+  const askMic = useMutation({
+    mutationFn: native.requestMicrophone,
+    onSuccess: (status) => queryClient.setQueryData(['desktop-permissions'], status),
+  });
   const mic = permissions.data?.microphone;
 
   return (
@@ -154,7 +172,16 @@ export function PermissionsStep() {
               title="Micrô"
               text={describePermission('microphone', permissions.data.microphone)}
             >
-              {mic !== 'granted' ? (
+              {micAction(mic ?? 'unknown', os) === 'allow' ? (
+                <Button
+                  className="cursor-pointer"
+                  disabled={askMic.isPending}
+                  onClick={() => askMic.mutate()}
+                >
+                  {askMic.isPending ? 'Đang chờ bạn trả lời…' : 'Cho phép micro'}
+                </Button>
+              ) : null}
+              {micAction(mic ?? 'unknown', os) === 'settings' ? (
                 <Button
                   variant="outline"
                   className="cursor-pointer"
@@ -169,7 +196,7 @@ export function PermissionsStep() {
               title="Âm thanh hệ thống"
               text={
                 audio.isPending
-                  ? 'Đang phát một tiếng chuông ngắn để thử…'
+                  ? 'Đang phát một tiếng chuông ngắn để thử… Nếu macOS hỏi, hãy bấm Cho phép.'
                   : audio.data
                     ? describeSystemAudioCheck(audio.data, os)
                     : systemAudioIdleText(os)
@@ -181,7 +208,11 @@ export function PermissionsStep() {
                 disabled={audio.isPending}
                 onClick={() => audio.mutate()}
               >
-                {audio.isPending ? 'Đang thử…' : 'Thử nghe âm thanh'}
+                {audio.isPending
+                  ? 'Đang thử…'
+                  : os === 'windows'
+                    ? 'Thử nghe âm thanh'
+                    : 'Cho phép âm thanh hệ thống'}
               </Button>
               {audio.data !== 'granted' ? (
                 <Button

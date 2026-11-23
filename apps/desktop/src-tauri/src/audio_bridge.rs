@@ -20,6 +20,8 @@ pub struct AudioBridge {
     /// The microphone is switched off, as the sidecar last said: a window that opens (or reloads) in the
     /// middle of a meeting asks for it instead of guessing.
     mic_muted: Arc<AtomicBool>,
+    /// A `--prewarm` run (model download and compile) that is still going. At most one, never during a meeting.
+    prewarm: Mutex<Option<Child>>,
 }
 
 /// The sidecar run that only downloads a model (onboarding, Settings). It never runs at the same time as a
@@ -206,6 +208,32 @@ impl ModelDownload {
     }
 }
 
+/// Whether a model prewarm may start: not while a meeting runs (it would load the model twice) and not twice at once.
+pub(crate) fn prewarm_allowed(
+    meeting_running: bool,
+    prewarm_running: bool,
+) -> Result<(), &'static str> {
+    if meeting_running {
+        Err("session_already_running")
+    } else if prewarm_running {
+        Err("prewarm_already_running")
+    } else {
+        Ok(())
+    }
+}
+
+/// Forwards one sidecar stdout line to the webview, the same way for a meeting and for a prewarm.
+fn forward_line(app: &AppHandle, line: &str) {
+    if let Some((event, payload)) = route_line(line) {
+        // Utterance audio is about 1 MB and levels arrive ~20 times a second: main window only.
+        let _ = if event == "audio-utterance" || event == "audio-level" {
+            app.emit_to("main", event, payload)
+        } else {
+            app.emit(event, payload)
+        };
+    }
+}
+
 /// Where the sidecar binary lives: `CUELINGO_AUDIO_BIN`, next to the app executable (bundled), or the dev build.
 pub(crate) fn sidecar_path() -> Option<PathBuf> {
     if let Ok(path) = std::env::var("CUELINGO_AUDIO_BIN") {
@@ -308,6 +336,8 @@ impl AudioBridge {
         if running.is_some() {
             return Err("session_already_running".into());
         }
+        // The meeting loads the model itself; a prewarm still running would load it a second time.
+        self.kill_prewarm();
         let path = sidecar_path().ok_or("audio_sidecar_missing")?;
         let mut command = sidecar_command(path, language, detect, vocabulary)?;
         let mut child = command
@@ -347,6 +377,45 @@ impl AudioBridge {
             }
         });
         *running = Some(Sidecar { child, stdin });
+        Ok(())
+    }
+
+    /// Stops a running prewarm, if any. A meeting must not wait for it, and only one process holds the model.
+    fn kill_prewarm(&self) {
+        if let Ok(mut slot) = self.prewarm.lock() {
+            if let Some(mut child) = slot.take() {
+                let _ = child.kill();
+                let _ = child.wait();
+            }
+        }
+    }
+
+    /// Downloads (if needed), verifies and compiles the model for `language` in a short-lived sidecar. Progress
+    /// goes out as `audio-model` events, like in a meeting. No audio is opened and no permission is needed.
+    pub fn prewarm(&self, app: &AppHandle, language: &str) -> Result<(), String> {
+        let running = self.running.lock().map_err(|e| e.to_string())?;
+        let mut slot = self.prewarm.lock().map_err(|e| e.to_string())?;
+        let alive = match slot.as_mut() {
+            Some(child) => child.try_wait().map_err(|e| e.to_string())?.is_none(),
+            None => false,
+        };
+        prewarm_allowed(running.is_some(), alive).map_err(String::from)?;
+        let path = sidecar_path().ok_or("audio_sidecar_missing")?;
+        let mut child = sidecar_command(path, language, &[], &[])?
+            .arg("--prewarm")
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .map_err(|e| format!("audio_sidecar_failed: {e}"))?;
+        let stdout = child.stdout.take().ok_or("audio_sidecar_failed")?;
+        let app = app.clone();
+        std::thread::spawn(move || {
+            for line in BufReader::new(stdout).lines().map_while(Result::ok) {
+                forward_line(&app, &line);
+            }
+        });
+        *slot = Some(child);
         Ok(())
     }
 
@@ -600,6 +669,14 @@ mod tests {
         // A raw newline would still be escaped, never emitted as a line break.
         let nl = vocab_line(&["a\nb".to_string()]).unwrap();
         assert!(!nl.contains('\n'));
+    }
+
+    #[test]
+    fn prewarm_never_runs_during_a_meeting_or_twice() {
+        assert_eq!(prewarm_allowed(false, false), Ok(()));
+        assert_eq!(prewarm_allowed(true, false), Err("session_already_running"));
+        assert_eq!(prewarm_allowed(false, true), Err("prewarm_already_running"));
+        assert_eq!(prewarm_allowed(true, true), Err("session_already_running"));
     }
 
     #[test]

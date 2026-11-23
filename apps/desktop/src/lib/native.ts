@@ -69,6 +69,12 @@ export const PermissionsStatus = z.object({
 });
 export type PermissionsStatus = z.infer<typeof PermissionsStatus>;
 
+/** Whether the on-device speech model for a language is on this machine (`stt_model_status`). */
+export const ModelDiskStatus = z.enum(['cached', 'missing', 'ready', 'unknown']);
+export type ModelDiskStatus = z.infer<typeof ModelDiskStatus>;
+
+const LanguageCodeArg = z.string().regex(/^[a-z]{2,3}$/);
+
 export const SystemAudioCheck = z.enum(['granted', 'silent', 'error', 'unknown']);
 export type SystemAudioCheck = z.infer<typeof SystemAudioCheck>;
 
@@ -317,6 +323,17 @@ export const native = {
   /** Plays a short system sound and reports whether the app heard it: the only way to test system-audio permission. */
   checkSystemAudio: () => invoke('check_system_audio').then((v) => SystemAudioCheck.parse(v)),
   permissionsStatus: () => invoke('permissions_status').then((v) => PermissionsStatus.parse(v)),
+  /** Shows macOS's own microphone dialog when it has not been asked yet and resolves with the answer. */
+  requestMicrophone: () => invoke('request_microphone').then((v) => PermissionsStatus.parse(v)),
+  /** Starts downloading and compiling the on-device model in the background; progress arrives through `onAudioModel`. */
+  prewarmSpeech: async (language: string) => {
+    await invoke('stt_prewarm', { language: LanguageCodeArg.parse(language) });
+  },
+  /** Whether the model for one language is already on this machine (macOS flow); loads and downloads nothing. */
+  speechModelStatus: async (language: string) =>
+    ModelDiskStatus.parse(
+      await invoke('stt_model_status', { language: LanguageCodeArg.parse(language) }),
+    ),
   /** Which on-device models are downloaded; null when this build cannot tell (the screens keep the old flow). */
   modelStatus: () => invoke('model_status').then((v) => ModelStatus.nullable().parse(v)),
   /** Stops the download in progress (✕ and reload); the screens hear it end as `cancelled`. */

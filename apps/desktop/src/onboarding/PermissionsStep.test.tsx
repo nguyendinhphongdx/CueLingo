@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   describePermission,
   describeSystemAudioCheck,
+  micAction,
   PermissionsStatusView,
   systemAudioIdleText,
 } from './PermissionsStep';
@@ -10,7 +11,7 @@ import {
 describe('PermissionsStep', () => {
   it('describes each permission state in Vietnamese', () => {
     expect(describePermission('microphone', 'denied')).toContain('Cài đặt hệ thống');
-    expect(describePermission('microphone', 'undetermined')).toContain('macOS sẽ hỏi');
+    expect(describePermission('microphone', 'undetermined')).toContain('Cho phép micro');
     expect(describePermission('systemAudio', 'granted')).toContain('đã được cấp quyền');
     expect(describePermission('systemAudio', 'unknown')).toContain('Chưa kiểm tra được');
   });
@@ -48,9 +49,23 @@ describe('PermissionsStep', () => {
   });
 
   it('describes every result of the system audio check', () => {
-    expect(describeSystemAudioCheck('granted')).toContain('nghe được');
+    expect(describeSystemAudioCheck('granted')).toContain('Đã nghe được');
     expect(describeSystemAudioCheck('silent')).toContain('Không nghe thấy');
     expect(describeSystemAudioCheck('error')).toContain('Không thử được');
     expect(describeSystemAudioCheck('unknown')).toContain('Chưa kiểm tra được');
+  });
+
+  it('asks through macOS while the microphone is undetermined and points at Settings once refused', () => {
+    expect(micAction('undetermined', 'macos')).toBe('allow');
+    expect(micAction('denied', 'macos')).toBe('settings');
+    expect(micAction('unknown', 'macos')).toBe('settings');
+    expect(micAction('granted', 'macos')).toBeNull();
+    // Windows has no dialog to show: Settings is always the way.
+    expect(micAction('undetermined', 'windows')).toBe('settings');
+  });
+
+  it('labels the system audio button as the permission request', () => {
+    expect(systemAudioIdleText('macos')).toContain('Nếu macOS hỏi');
+    expect(describeSystemAudioCheck('granted')).toBe('Đã nghe được âm thanh hệ thống.');
   });
 });

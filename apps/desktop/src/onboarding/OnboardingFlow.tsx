@@ -12,10 +12,10 @@ import { saveAssistLevel } from '../settings/use-assist-settings';
 import type { SelectableAssistLevel } from '../settings/settings-store';
 import { ShortcutList } from '../app/AboutCard';
 import { PlacementSection } from '../study/PlacementSection';
-import { describeModelProgress, useModelProgress } from '../session/model-progress';
 import { ModelDownloadControl } from '../models/ModelDownloadControl';
 import { canContinue, formatSize, type ModelView } from '../models/model-state';
 import { useLocalModels } from '../models/use-local-models';
+import { ModelStep as PrewarmModelStep } from './ModelStep';
 import { PermissionsStep } from './PermissionsStep';
 import {
   advanceProgress,
@@ -135,27 +135,6 @@ const MODEL_LANGUAGE = 'en';
 /** The step that downloads the speech model. */
 export const MODEL_STEP = 2;
 
-/** A build that cannot manage models from the app: the model comes down with the first meeting, as before. */
-function LegacyModelStep() {
-  const progress = describeModelProgress(useModelProgress());
-  return (
-    <div>
-      <h1 className="text-2xl font-semibold tracking-tight">Mô hình nhận dạng</h1>
-      <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-        Mô hình chạy ngay trên máy bạn nên caption tiếng Anh nhanh và âm thanh không rời khỏi máy.
-        CueLingo tải nó một lần, khi bạn bắt đầu cuộc họp đầu tiên. Bạn có thể làm bước tiếp theo
-        trong lúc chờ.
-      </p>
-      <p
-        role="status"
-        className="bg-card text-muted-foreground mt-6 rounded-xl border px-4 py-3 text-sm"
-      >
-        {progress ?? 'Chưa tải gì lúc này. Mô hình sẽ tự tải nếu máy chưa có.'}
-      </p>
-    </div>
-  );
-}
-
 /** The model step when the app can download it: the person cannot go on until the model is in place. */
 export function ModelStepView({
   view,
@@ -202,14 +181,17 @@ function ModelStep({
   onDownload,
   onCancel,
   onRestart,
+  onSkip,
 }: {
   view: ModelView | null;
   onDownload(): void;
   onCancel(): void;
   onRestart(): void;
+  onSkip(): void;
 }) {
+  // A build without the model manager (macOS) prepares the model through the sidecar's `--prewarm`.
   return view === null ? (
-    <LegacyModelStep />
+    <PrewarmModelStep onSkip={onSkip} />
   ) : (
     <ModelStepView view={view} onDownload={onDownload} onCancel={onCancel} onRestart={onRestart} />
   );
@@ -428,6 +410,7 @@ export function OnboardingFlow({
               onDownload={() => void models.download(MODEL_LANGUAGE)}
               onCancel={() => void models.cancel(MODEL_LANGUAGE)}
               onRestart={() => void models.restart(MODEL_LANGUAGE)}
+              onSkip={skip}
             />
           ) : null}
           {step === 3 ? <AssistLevelStep /> : null}

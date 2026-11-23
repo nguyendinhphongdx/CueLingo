@@ -29,6 +29,7 @@ Cài đặt trong app và bản đồng bộ theo tài khoản: Assist mặc đ�
   - Nút **"Nâng gói"** gọi `openWeb('/upgrade')` → `native.openUrl(webUrl + '/upgrade')` mở trình duyệt mặc định. **Không truyền token** trên URL: nếu chưa đăng nhập trên web thì đăng nhập lại ở đó. Mua và hiện QR đều ở web, desktop không tạo đơn
   - Nút **ẩn** khi `enabled: false`, khi không còn gói nào để nâng (`canUpgrade` trong `upgrade.ts`), hoặc khi đọc `/v1/billing` lỗi
   - Còn ≤ 3 ngày hết hạn thì hiện "Gói Pro hết hạn ngày dd/mm/yyyy" (`planExpiresAt = current.expiresAt`)
+- `<ModelSetting />` (`src/settings/`): mục "Mô hình nhận dạng": trạng thái model on-device của ngôn ngữ họp (chưa tải / đang tải X% / đang chuẩn bị / sẵn sàng / lỗi) bằng `ModelStatusRow` của `@cuelingo/ui`, nút Tải về / Chuẩn bị / Thử lại / Chuẩn bị lại (`stt_prewarm`). Chỉ hiện khi app không có bộ quản lý model của mục Mô hình (macOS); tiếng Việt (đám mây) không cần tải gì
 - `useSettings`: store `{assistLevel, setAssistLevel()}` trong bộ nhớ của webview
 - Gọi `native.setAssistLevel(level)` và `native.publishSettings({assistLevel})` khi người dùng đổi mức
 - `settingsApi`: gọi `GET/PATCH /v1/me/settings` bằng device token

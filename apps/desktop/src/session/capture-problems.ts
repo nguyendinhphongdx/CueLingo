@@ -1,16 +1,33 @@
-import { PRIVACY_PANES, type PermissionsStatus } from '../lib/native';
+import { PRIVACY_PANES } from '../lib/native';
 import { currentOs, privacyPanes, type DesktopOs } from '../lib/platform';
 
 export type CaptureStream = 'mic' | 'system';
 
+/** Why the microphone is not recording, when the sidecar says it is a permission: macOS has not asked yet, or the answer was no. */
+export type MicPermissionProblem = 'denied' | 'undetermined';
+
 export interface CaptureFailures {
   micFailed: boolean;
   systemFailed: boolean;
+  /** Set together with `micFailed` when the cause is the microphone permission. */
+  micPermission?: MicPermissionProblem | null;
 }
 
-export const MIC_BLOCKED_TEXT =
-  'Micro đang bị chặn cho CueLingo. Hãy cấp quyền Micro rồi bắt đầu lại.';
 export const MIC_BLOCKED_BUTTON = 'Mở cài đặt Micro';
+
+/** The fixed `status` messages the sidecar sends about the microphone permission (`SidecarProtocol.swift`). */
+const MIC_PERMISSION_MESSAGES: Record<string, MicPermissionProblem | 'authorized'> = {
+  'microphone: not authorized (denied)': 'denied',
+  'microphone: not authorized (undetermined)': 'undetermined',
+  'microphone: authorized': 'authorized',
+};
+
+/** What a sidecar status message says about the microphone permission; null for any other message. */
+export function micPermissionOf(
+  message: string | undefined,
+): MicPermissionProblem | 'authorized' | null {
+  return (message && MIC_PERMISSION_MESSAGES[message]) || null;
+}
 
 /** Which capture a sidecar error message is about; null for any other error (model load, transcribe…). */
 export function captureProblemOf(message: string | undefined): CaptureStream | null {
@@ -28,7 +45,7 @@ export interface CaptureBanner {
 
 /** The warning for what failed to start, or null when nothing did. */
 export function describeCaptureProblems(
-  { micFailed, systemFailed }: CaptureFailures,
+  { micFailed, systemFailed, micPermission }: CaptureFailures,
   os: DesktopOs = currentOs(),
 ): CaptureBanner | null {
   if (os === 'windows') return describeWindowsProblems({ micFailed, systemFailed });
@@ -45,6 +62,16 @@ export function describeCaptureProblems(
         'Không thu được âm thanh hệ thống (tiếng của người trong cuộc họp). Cấp quyền Ghi âm thanh hệ thống cho CueLingo rồi dừng và bắt đầu lại.',
       buttonLabel: 'Mở cài đặt',
       pane: PRIVACY_PANES.systemAudio,
+    };
+  }
+  if (micFailed && micPermission) {
+    return {
+      message:
+        micPermission === 'undetermined'
+          ? 'Micro chưa được cấp quyền. macOS đang hỏi, hãy bấm Cho phép. Caption âm thanh hệ thống vẫn chạy.'
+          : 'Micro chưa được cấp quyền. Bật CueLingo trong mục Micro của Cài đặt hệ thống rồi bắt đầu lại. Caption âm thanh hệ thống vẫn chạy.',
+      buttonLabel: 'Mở Cài đặt',
+      pane: PRIVACY_PANES.microphone,
     };
   }
   if (micFailed) {
@@ -68,7 +95,11 @@ export function describeStream(
   if (!failed) return null;
   // Asked about one stream only, so the answer never talks about the other one.
   return describeCaptureProblems(
-    { micFailed: stream === 'mic', systemFailed: stream === 'system' },
+    {
+      micFailed: stream === 'mic',
+      systemFailed: stream === 'system',
+      micPermission: stream === 'mic' ? failures.micPermission : null,
+    },
     os,
   );
 }
@@ -111,28 +142,13 @@ export function meterNote(failed: boolean, silent: boolean): 'failed' | 'silent'
   return failed ? 'failed' : silent ? 'silent' : null;
 }
 
-/** Whether Bắt đầu may go on. Only a denied microphone blocks; any other answer (or a failed read) lets the system or the sidecar speak. */
-export async function canStartMeeting(
-  read: () => Promise<PermissionsStatus>,
-): Promise<'ok' | 'mic-denied'> {
-  try {
-    return (await read()).microphone === 'denied' ? 'mic-denied' : 'ok';
-  } catch {
-    return 'ok';
-  }
-}
-
-export type StartDecision = 'start' | 'ask-consent' | 'mic-denied';
+export type StartDecision = 'start' | 'ask-consent';
 
 /**
- * What Bắt đầu does first. The microphone is checked before the consent dialog, so a blocked
- * microphone never leads to a saved consent for a meeting that did not run.
+ * What Bắt đầu does first. A missing microphone permission no longer blocks it: the meeting starts, the system
+ * audio is captioned, and a banner says what is missing (the sidecar reports it, see `micPermissionOf`).
  */
-export async function decideStart(input: {
-  needsConsent: boolean;
-  readPermissions: () => Promise<PermissionsStatus>;
-}): Promise<StartDecision> {
-  if ((await canStartMeeting(input.readPermissions)) === 'mic-denied') return 'mic-denied';
+export function decideStart(input: { needsConsent: boolean }): StartDecision {
   return input.needsConsent ? 'ask-consent' : 'start';
 }
 

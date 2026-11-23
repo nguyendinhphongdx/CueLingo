@@ -37,7 +37,7 @@ Phía Rust: `src-tauri/src/audio_bridge.rs` khai báo các hàm của `Bridge`, 
 ## Quyền và cấu hình macOS
 
 - `Info.plist` của app: mô tả quyền micro (`NSMicrophoneUsageDescription`) và quyền thu audio hệ thống (khoá tương ứng của Core Audio tap / Screen Recording — xác nhận trong spike).
-- Hardened runtime + entitlement audio input khi ký/notarize.
+- Hardened runtime + entitlement `com.apple.security.device.audio-input` (và `personal-information.calendars`): `src-tauri/entitlements.plist` cho app, `native/macos-audio/Sidecar.entitlements` cho sidecar. Thiếu entitlement thì macOS từ chối micro mà không hiện hộp thoại (ADR 0026).
 - Onboarding hướng dẫn cấp quyền ([onboarding](../../04-modules/01-desktop/onboarding.md)).
 
 ## Luật
@@ -65,11 +65,13 @@ Tự nhận ngôn ngữ: biến môi trường `CUELINGO_DETECT` (danh sách mã
 
 Đo thực tế trên máy phát triển: tiếng Anh p50 182 ms, p95 249 ms (5 câu); tiếng Nhật (giọng tổng hợp `say`, 2 câu dài): đọc đúng toàn bộ câu, p50 116 ms, p95 189 ms; cần đo lại trên giọng người thật trước khi bật `ja`.
 
+Chế độ một lần khác: `--permissions`, `--request-microphone` (hộp thoại micro), `--check-system-audio` (tối đa 12 s), `--model-status`, `--prewarm` (cờ lạ không được rơi vào nhánh họp, kể cả ở sidecar Windows). Khi họp, `status` về micro dùng ba chuỗi cố định: `microphone: not authorized (denied)`, `microphone: not authorized (undetermined)`, `microphone: authorized`. Thu âm mở trước khi model nạp xong (backlog 60 s trong RAM, `UtteranceBacklog`); `status ready` = đã thu âm.
+
 `--file x.wav` (16 kHz mono Int16) chạy một file qua cùng đường xử lý (test/demo, không cần quyền).
 
 - Tách câu: VAD năng lượng (`UtteranceSegmenter`, im lặng 600 ms hoặc 15 s thì chốt câu), partial mỗi 0,7 s bằng cách nhận dạng lại đoạn đang nói. Model: Parakeet TDT v2 (tiếng Anh) của FluidAudio, tải ~500 MB lần đầu vào `~/Library/Application Support/FluidAudio`. Câu < 1 s được đệm im lặng (model lỗi "zero shape" nếu ngắn hơn).
 - Mic khởi động ở luồng riêng vì có thể treo chờ quyền; system audio không phụ thuộc mic.
-- Lỗi đã gặp: ký lại app ad-hoc mỗi lần build làm macOS hỏi lại quyền, và chờ hộp thoại làm treo tiến trình. Cần chứng chỉ ký ổn định (M5-05) để hết.
+- Lỗi đã gặp: ký lại app ad-hoc mỗi lần build làm macOS hỏi lại quyền, và chờ hộp thoại làm treo tiến trình. Đã xử lý bằng chứng chỉ ký cố định và thu âm trước khi nạp model (ADR 0026).
 
 ## Bản Windows (`native/windows-audio`)
 

@@ -696,6 +696,26 @@ describe('session controller', () => {
       ]);
     });
 
+    it('tracks the microphone permission and clears it once macOS has it', async () => {
+      const ctx = setup();
+      await ctx.controller.start(3, 'en');
+      ctx.emitStatus(error('microphone: not authorized (undetermined)'));
+      expect(ctx.controller.getSnapshot()).toMatchObject({
+        micFailed: true,
+        micPermission: 'undetermined',
+        systemFailed: false,
+      });
+      ctx.emitStatus({ type: 'status', state: 'ready', message: 'microphone: authorized' });
+      expect(ctx.controller.getSnapshot()).toMatchObject({ micFailed: false, micPermission: null });
+      ctx.emitStatus(error('microphone: not authorized (denied)'));
+      expect(ctx.controller.getSnapshot()).toMatchObject({
+        micFailed: true,
+        micPermission: 'denied',
+      });
+      await ctx.controller.stop();
+      expect(ctx.controller.getSnapshot()).toMatchObject({ micFailed: false, micPermission: null });
+    });
+
     it('clears on stop, unlistens, and starts clean next time', async () => {
       const ctx = setup();
       await ctx.controller.start(3, 'en');

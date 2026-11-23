@@ -1,7 +1,13 @@
 // swift-tools-version:6.0
+import Foundation
 import PackageDescription
 
 let v5: [SwiftSetting] = [.swiftLanguageMode(.v5)]
+
+/// The sidecar carries its own Info.plist (CFBundleIdentifier vn.cmcai.cuelingo.audio) inside the Mach-O, so
+/// every later codesign, including the one Tauri runs when it bundles the app, keeps that identifier.
+let sidecarInfoPlist = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+    .appendingPathComponent("Sources/Sidecar/Info.plist").path
 
 let package = Package(
     name: "MacOSAudio",
@@ -22,7 +28,11 @@ let package = Package(
             swiftSettings: v5),
         .executableTarget(name: "Spike", dependencies: ["AudioCapture"], swiftSettings: v5),
         .executableTarget(
-            name: "Sidecar", dependencies: ["AudioCapture", "LocalSTT"], swiftSettings: v5),
+            name: "Sidecar", dependencies: ["AudioCapture", "LocalSTT"],
+            exclude: ["Info.plist"], swiftSettings: v5,
+            linkerSettings: [
+                .unsafeFlags(["-Xlinker", "-sectcreate", "-Xlinker", "__TEXT", "-Xlinker", "__info_plist", "-Xlinker", sidecarInfoPlist])
+            ]),
         .testTarget(name: "AudioCaptureTests", dependencies: ["AudioCapture"], swiftSettings: v5),
         .testTarget(name: "LocalSTTTests", dependencies: ["LocalSTT"], swiftSettings: v5),
     ]

@@ -11,7 +11,7 @@ import {
   type TranscribeResponse,
   type UsageResponse,
 } from '@cuelingo/shared';
-import { captureProblemOf } from './capture-problems';
+import { captureProblemOf, micPermissionOf, type MicPermissionProblem } from './capture-problems';
 import { nativeErrorCode } from './session-errors';
 import { speakerDisplayName } from '@cuelingo/ui/lib/speaker';
 import { createSpeakerRegistry } from './speaker-registry';
@@ -53,6 +53,8 @@ export interface SessionSnapshot {
   endedAt: number | null;
   /** The sidecar reported that this capture could not start. Cleared on a new meeting and on stop. */
   micFailed: boolean;
+  /** Why the microphone is not recording when it is the permission (macOS has not asked, or it was refused). */
+  micPermission: MicPermissionProblem | null;
   systemFailed: boolean;
   /** Another language the speakers seem to be using; offered to the person, never applied alone. */
   suggestedLanguage: LanguageCode | null;
@@ -250,6 +252,7 @@ export function createSessionController({
     startedAt: null,
     endedAt: null,
     micFailed: false,
+    micPermission: null,
     systemFailed: false,
     suggestedLanguage: null,
     meetingLanguage: null,
@@ -675,17 +678,32 @@ export function createSessionController({
 
   /** Capture failures come within milliseconds of the sidecar starting, so this listens before it does. */
   function handleAudioStatus(event: AudioStatusEvent) {
-    if (event.state !== 'error') return;
-    const problem = captureProblemOf(event.message);
-    if (problem === 'mic' && !snapshot.micFailed) {
-      update({ micFailed: true });
-      notify({
-        id: 'capture:mic',
-        tone: 'error',
-        text: 'Không dùng được micro nên CueLingo chưa nghe được giọng bạn',
-        action: 'open-settings',
-      });
+    const permission = micPermissionOf(event.message);
+    if (permission === 'authorized') {
+      // Allowed while the meeting runs (the dialog was answered): the banner goes away.
+      if (snapshot.micFailed || snapshot.micPermission)
+        update({ micFailed: false, micPermission: null });
+      return;
     }
+    if (event.state !== 'error') return;
+    const markMicFailed = (micPermission: MicPermissionProblem | null) => {
+      const first = !snapshot.micFailed;
+      update({ micFailed: true, micPermission });
+      if (first) {
+        notify({
+          id: 'capture:mic',
+          tone: 'error',
+          text: 'Không dùng được micro nên CueLingo chưa nghe được giọng bạn',
+          action: 'open-settings',
+        });
+      }
+    };
+    if (permission && snapshot.micPermission !== permission) {
+      markMicFailed(permission);
+      return;
+    }
+    const problem = captureProblemOf(event.message);
+    if (problem === 'mic' && !snapshot.micFailed) markMicFailed(null);
     if (problem === 'system' && !snapshot.systemFailed) update({ systemFailed: true });
   }
 
@@ -874,6 +892,7 @@ export function createSessionController({
         startedAt: null,
         endedAt: null,
         micFailed: false,
+        micPermission: null,
         systemFailed: false,
         suggestedLanguage: null,
         meetingLanguage: language,
@@ -986,6 +1005,7 @@ export function createSessionController({
         update({
           meetingLanguage: null,
           micFailed: false,
+          micPermission: null,
           systemFailed: false,
           latestCaption: null,
         });
@@ -1016,6 +1036,7 @@ export function createSessionController({
           completedSegmentCount: sessionId ? finalIds.size : snapshot.completedSegmentCount,
           meetingLanguage: null,
           micFailed: false,
+          micPermission: null,
           systemFailed: false,
           latestCaption: null,
         });

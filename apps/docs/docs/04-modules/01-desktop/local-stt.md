@@ -21,6 +21,8 @@ Nhận dạng giọng nói tiếng Anh ngay trên máy bằng Parakeet-TDT 0.6B 
 - `feed(stream, pcm, tsMs)`
 - Sự kiện `transcript.partial` / `transcript.final` {stream, text, words[{w, startMs, endMs, conf}]}
 - Micro: dòng stdin `mic off` đóng luồng micro (gửi nhận dạng câu dở rồi vẫn nghe tiếp, không kết thúc pipeline), `mic on` mở lại; sidecar trả `{"type":"mic","muted":bool}` sau khi trạng thái thật sự đổi. Mở lại lỗi thì in `status` lỗi `microphone: …` và không báo `muted:false`.
+- **Thu âm trước, nạp model sau.** Sidecar mở thu âm ngay (mức âm và tách câu chạy từ mẫu đầu tiên) rồi nạp model song song. Câu đã chốt trước khi model sẵn sàng nằm trong `UtteranceBacklog`: tối đa 60 s mẫu mỗi luồng, chỉ trong RAM (không ghi đĩa), bỏ câu cũ nhất khi tràn; `partial` bị bỏ. Khi model sẵn sàng, các câu được nhận dạng lần lượt theo thứ tự rồi chuyển sang chế độ thường. `status ready` nghĩa là đã thu âm, không phải đã nạp model; model có dòng `model` riêng.
+- **Chuẩn bị model:** `--model-status` (đã có trên máy chưa, không tải), `--prewarm` (tải kèm tiến độ, kiểm checksum, biên dịch CoreML rồi thoát). Đo: binary mới biên dịch lại khoảng 40 s (bộ đệm gắn với từng bản build), lần sau cùng binary khoảng 4 s. Onboarding và Cài đặt dùng hai cờ này (bước "Mô hình nhận dạng"); tiếng Việt (đám mây) không cần.
 - Thuật ngữ cá nhân: biến `CUELINGO_VOCAB` lúc khởi động hoặc dòng stdin `vocab ["SLA",...]` (thay hẳn danh sách). `VocabularyCorrector` sửa kết quả sau khi model chạy, cả partial lẫn final
 
 ## Phụ thuộc
