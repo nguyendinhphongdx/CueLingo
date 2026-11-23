@@ -15,6 +15,8 @@ const usage = (
   debriefs: { used: debriefs[0], limit: debriefs[1], resetsAt, state: 'ok' },
   assist_daily: { used: 0, limit: null, resetsAt, state: 'ok' },
   agent_messages: { used: 0, limit: null, resetsAt, state: 'ok' },
+  lessons_daily: { used: 0, limit: null, resetsAt, state: 'ok' },
+  lesson_practice_daily: { used: 0, limit: null, resetsAt, state: 'ok' },
 });
 
 describe('usage notice on the meeting page', () => {

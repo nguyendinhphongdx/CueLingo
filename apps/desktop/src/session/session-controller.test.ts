@@ -2072,6 +2072,8 @@ describe('session controller', () => {
         assist_daily: item(0, 20, 'ok'),
         // Free has no assistant: exhausted from the start, and never worth a warning in a meeting.
         agent_messages: item(0, 0, 'exhausted'),
+        lessons_daily: item(0, 2, 'ok'),
+        lesson_practice_daily: item(0, 20, 'ok'),
         ...overrides,
       },
     });
