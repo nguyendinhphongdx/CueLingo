@@ -79,6 +79,7 @@ export const features: Feature[] = [
       'Kho cụm từ: các cụm bạn đã lưu từ debrief và lúc tra từ, kèm câu gốc trong cuộc họp',
       'Tiến độ: phần trăm hiểu theo tuần, số lần phải tra từ, chuỗi ngày ôn liên tiếp',
       'Lộ trình: mỗi cuộc họp có debrief thành một khoá 3–10 bài từ chính cụm từ của cuộc họp, kèm tỷ lệ hoàn thành',
+      'Mục tiêu: chọn một trong 8 mục tiêu (stand-up, demo, đàm phán, phỏng vấn…) để có 6 bài AI soạn, mỗi bài có tình huống, hội thoại có audio, luyện câu và kiểm tra',
     ],
     webPath: '/review',
   },
