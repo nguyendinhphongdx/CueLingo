@@ -222,6 +222,8 @@ describe('admin analytics on real Postgres', () => {
           debriefs: MONTH,
           agent_messages: MONTH,
           assist_daily: MONTH,
+          lessons_daily: MONTH,
+          lesson_practice_daily: MONTH,
         },
         NOW,
       );

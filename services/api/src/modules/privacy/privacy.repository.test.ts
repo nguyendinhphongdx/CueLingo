@@ -36,6 +36,23 @@ describe('privacy repository deleteMyData', () => {
     }
   });
 
+  it('removes goals, lesson progress and reports of the person, but not the shared lesson content (AC12, ADR 0025)', async () => {
+    const { sql, log } = recordingSql();
+    await createPostgresPrivacyRepository(sql).deleteMyData('user-1');
+    const deletes = log.filter((entry) => entry.text.startsWith('DELETE FROM'));
+    const tables = deletes.map((entry) => /DELETE FROM (\w+)/.exec(entry.text)![1]);
+    for (const table of ['lesson_reports', 'goal_lessons', 'learning_goals']) {
+      const entry = deletes.find((candidate) =>
+        candidate.text.startsWith(`DELETE FROM ${table} `),
+      )!;
+      expect(entry.inTransaction).toBe(true);
+      expect(entry.text).toContain('WHERE user_id = ?');
+    }
+    expect(tables).not.toContain('lesson_contents');
+    // Lessons go before their goals, so no row is left pointing at a deleted goal.
+    expect(tables.indexOf('goal_lessons')).toBeLessThan(tables.indexOf('learning_goals'));
+  });
+
   it('never touches billing counters or plans (AC13, ADR 0022)', async () => {
     const { sql, log } = recordingSql();
     await createPostgresPrivacyRepository(sql).deleteMyData('user-1');

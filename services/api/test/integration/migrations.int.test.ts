@@ -28,10 +28,21 @@ const EXPECTED_TABLES = [
   'user_plans',
   'usage_counters',
   'billing_orders',
+  'learning_goals',
+  'lesson_contents',
+  'goal_lessons',
+  'lesson_reports',
 ];
 
 /** Created by the plans and usage migration and the billing one after it; every deeper rollback drops both. */
 const PLANS_TABLES: string[] = ['user_plans', 'usage_counters', 'billing_orders'];
+/** Created by the goal lessons migration, the newest one. */
+const GOAL_TABLES: string[] = [
+  'learning_goals',
+  'lesson_contents',
+  'goal_lessons',
+  'lesson_reports',
+];
 /** Created by the agent conversations migration (a later one only adds an index). */
 const LATEST_TABLES: string[] = ['agent_conversations', 'agent_messages'];
 /** Created by the migration before it (feedback + events index). */
@@ -84,8 +95,8 @@ describe('migrations (AC2)', () => {
         WHERE schemaname = 'public' AND indexname = 'agent_messages_streaming_idx'`
     ).map((r) => r.indexname);
 
-  // Counts below are "migrations back from admin_grants"; newer ones (feedback kind 'other') sit on top.
-  const NEWER_MIGRATIONS = 1;
+  // Counts below are "migrations back from admin_grants"; newer ones (feedback kind 'other', goal lessons) sit on top.
+  const NEWER_MIGRATIONS = 2;
   const rollback = (times: number) => {
     for (let i = 0; i < times + NEWER_MIGRATIONS; i += 1) dbmate(db.url, 'rollback');
   };
@@ -97,11 +108,14 @@ describe('migrations (AC2)', () => {
     const [user] = await sql<{ id: string }[]>`
       INSERT INTO auth_user (name, email) VALUES ('F', 'feedback-kind@example.com') RETURNING id`;
     await sql`INSERT INTO feedback (user_id, kind, message, client, app_version, os) VALUES (${user!.id}, 'other', 'hello', 'web', '0.0.0', 'test')`;
+    // The goal lessons migration sits on top of this one: roll both back, then apply both again.
+    dbmate(db.url, 'rollback');
     dbmate(db.url, 'rollback');
     expect(await sql`SELECT 1 FROM feedback WHERE kind = 'other'`).toHaveLength(0);
     await expect(
       sql`INSERT INTO feedback (user_id, kind, message, client, app_version, os) VALUES (${user!.id}, 'other', 'again', 'web', '0.0.0', 'test')`,
     ).rejects.toThrow();
+    dbmate(db.url, 'up');
     dbmate(db.url, 'up');
     await sql`INSERT INTO feedback (user_id, kind, message, client, app_version, os) VALUES (${user!.id}, 'other', 'again', 'web', '0.0.0', 'test')`;
     await sql`DELETE FROM auth_user WHERE id = ${user!.id}`;
@@ -164,7 +178,9 @@ describe('migrations (AC2)', () => {
     expect(await debriefSkippedColumn()).toEqual(['debrief_skipped']);
     rollback(3);
     expect((await tables()).sort()).toEqual(
-      EXPECTED_TABLES.filter((table) => !PLANS_TABLES.includes(table)).sort(),
+      EXPECTED_TABLES.filter(
+        (table) => !PLANS_TABLES.includes(table) && !GOAL_TABLES.includes(table),
+      ).sort(),
     );
     expect(await debriefSkippedColumn()).toEqual([]);
     up(3);
@@ -177,7 +193,10 @@ describe('migrations (AC2)', () => {
     rollback(4);
     expect(await streamingIndex()).toEqual([]);
     // The migrations before it are untouched.
-    expect(await tables()).toHaveLength(EXPECTED_TABLES.length - PLANS_TABLES.length);
+    // The goal lesson tables were rolled back with it, and are back after `up` below.
+    expect(await tables()).toHaveLength(
+      EXPECTED_TABLES.length - PLANS_TABLES.length - GOAL_TABLES.length,
+    );
     up(4);
     expect(await streamingIndex()).toEqual(['agent_messages_streaming_idx']);
   });
@@ -188,7 +207,10 @@ describe('migrations (AC2)', () => {
     rollback(5);
     expect((await tables()).sort()).toEqual(
       EXPECTED_TABLES.filter(
-        (table) => !PLANS_TABLES.includes(table) && !LATEST_TABLES.includes(table),
+        (table) =>
+          !PLANS_TABLES.includes(table) &&
+          !LATEST_TABLES.includes(table) &&
+          !GOAL_TABLES.includes(table),
       ).sort(),
     );
     expect(await eventsIndex()).toEqual(['events_type_user_at_idx']);
@@ -204,7 +226,8 @@ describe('migrations (AC2)', () => {
         (table) =>
           !PLANS_TABLES.includes(table) &&
           !LATEST_TABLES.includes(table) &&
-          !FEEDBACK_TABLES.includes(table),
+          !FEEDBACK_TABLES.includes(table) &&
+          !GOAL_TABLES.includes(table),
       ).sort(),
     );
     expect(await eventsIndex()).toEqual([]);
@@ -219,5 +242,34 @@ describe('migrations (AC2)', () => {
     expect(await tables()).not.toContain('invite_redemptions');
     up(7);
     expect(await tables()).toHaveLength(EXPECTED_TABLES.length);
+  });
+
+  const metricRule = async () =>
+    (
+      await sql<{ def: string }[]>`
+        SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint
+        WHERE conrelid = 'usage_counters'::regclass AND conname = 'usage_counters_metric_check'`
+    )[0]?.def;
+
+  it('adds the goal lesson tables and metrics, and rolls them back', async () => {
+    expect(await tables()).toEqual(expect.arrayContaining(GOAL_TABLES));
+    expect(await metricRule()).toContain('lesson_practice_daily');
+    const [user] = await sql<{ id: string }[]>`
+      INSERT INTO auth_user (name, email) VALUES ('G', 'goal-migration@example.com') RETURNING id`;
+    await sql`INSERT INTO usage_counters (user_id, period_start, metric, amount)
+      VALUES (${user!.id}, now(), 'lessons_daily', 1)`;
+    // The shared content table has no user column: nothing personal can be put in it.
+    const columns = await sql<{ column_name: string }[]>`
+      SELECT column_name FROM information_schema.columns WHERE table_name = 'lesson_contents'`;
+    expect(columns.map((c) => c.column_name)).not.toContain('user_id');
+
+    dbmate(db.url, 'rollback');
+    expect(await tables()).not.toContain('lesson_contents');
+    expect(await metricRule()).not.toContain('lessons_daily');
+    expect(await sql`SELECT 1 FROM usage_counters WHERE metric = 'lessons_daily'`).toHaveLength(0);
+    dbmate(db.url, 'up');
+    expect((await tables()).sort()).toEqual([...EXPECTED_TABLES].sort());
+    expect(await metricRule()).toContain('lessons_daily');
+    await sql`DELETE FROM auth_user WHERE id = ${user!.id}`;
   });
 });

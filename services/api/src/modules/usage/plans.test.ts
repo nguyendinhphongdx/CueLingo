@@ -258,6 +258,8 @@ describe('quota gate', () => {
       debriefs: 2,
       assist_daily: 1,
       agent_messages: 0,
+      lessons_daily: 1,
+      lesson_practice_daily: 1,
     },
     pro: {
       translation_ms: null,
@@ -265,6 +267,8 @@ describe('quota gate', () => {
       debriefs: null,
       assist_daily: null,
       agent_messages: 5,
+      lessons_daily: null,
+      lesson_practice_daily: null,
     },
     ultra: {
       translation_ms: null,
@@ -272,6 +276,8 @@ describe('quota gate', () => {
       debriefs: null,
       assist_daily: null,
       agent_messages: 5,
+      lessons_daily: null,
+      lesson_practice_daily: null,
     },
   };
   const make = (now = new Date('2026-11-14T05:00:00Z')) => {
