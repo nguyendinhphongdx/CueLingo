@@ -10,6 +10,7 @@ import { conversationsApi } from './conversations';
 import { feedbackApi } from './feedback';
 import { followupApi } from './followup';
 import { glossaryApi } from './glossary';
+import { goalsApi } from './goals';
 import { createHttp, type ClientOptions } from './http';
 import { sessionsApi } from './sessions';
 import { speakersApi } from './speakers';
@@ -21,6 +22,7 @@ export function createClient(options: ClientOptions) {
   return {
     glossary: glossaryApi(http),
     courses: coursesApi(http),
+    goals: goalsApi(http),
     feedback: feedbackApi(http),
     conversations: conversationsApi(http),
     agent: agentApi(http),

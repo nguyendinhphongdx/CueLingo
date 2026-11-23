@@ -13,6 +13,8 @@ const usage = {
     debriefs: item,
     assist_daily: item,
     agent_messages: item,
+    lessons_daily: item,
+    lesson_practice_daily: item,
   },
 };
 
