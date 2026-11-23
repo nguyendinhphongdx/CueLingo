@@ -26,6 +26,7 @@ import { createAccountModule, type AccountRepository } from './modules/account';
 import { createDeviceModule, type DeviceRepository } from './modules/device';
 import { createFollowupModule, type FollowupDeps } from './modules/followup';
 import { createConversationsModule, type ConversationsRepository } from './modules/conversations';
+import { createCoursesModule, type CoursesRepository } from './modules/courses';
 import { createGlossaryModule, type GlossaryRepository } from './modules/glossary';
 import { createPrivacyModule, type PrivacyRepository } from './modules/privacy';
 import { createRealtimeModule, type RealtimeDeps } from './modules/realtime';
@@ -79,6 +80,7 @@ export interface AppDeps {
     debrief: DebriefRepository;
     events: EventsRepository;
     glossary: GlossaryRepository;
+    courses: CoursesRepository;
     conversations: ConversationsRepository;
     /** Read model of assistant spend (`ai_call` events) for the daily quota. */
     agent: AgentRepository;
@@ -252,6 +254,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const study = createStudyModule(deps.repos.study);
   await app.register(study.reviewRoutes, { prefix: '/v1/review' });
   await app.register(study.progressRoutes, { prefix: '/v1/progress' });
+  await app.register(
+    createCoursesModule(deps.repos.courses, {
+      listItems: deps.repos.study.listItems,
+      savePhrase: review.phrases.save,
+    }).routes,
+    { prefix: '/v1/courses' },
+  );
   if (deps.transcribe) {
     await app.register(
       createTranscribeModule(deps.repos.sessions, usage.service, deps.transcribe).routes,

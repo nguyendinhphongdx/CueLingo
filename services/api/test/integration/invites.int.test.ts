@@ -12,6 +12,7 @@ import { createPostgresDialRepository } from '../../src/modules/dial';
 import { createPostgresEventsRepository } from '../../src/modules/events';
 import { createPostgresAgentRepository } from '../../src/modules/agent';
 import { createPostgresConversationsRepository } from '../../src/modules/conversations';
+import { createPostgresCoursesRepository } from '../../src/modules/courses';
 import { createPostgresGlossaryRepository } from '../../src/modules/glossary';
 import {
   createInviteGate,
@@ -69,6 +70,7 @@ describe('invite codes on real Postgres (AC1-AC5)', () => {
         debrief: createInMemoryDebriefRepository(),
         events: createPostgresEventsRepository(sql),
         glossary: createPostgresGlossaryRepository(sql),
+        courses: createPostgresCoursesRepository(sql),
         conversations: createPostgresConversationsRepository(sql),
         agent: createPostgresAgentRepository(sql),
         privacy: createPostgresPrivacyRepository(sql),

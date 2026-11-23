@@ -40,10 +40,16 @@ export async function submitReviewAnswer({
   }
 }
 
-export function useReview(language: LanguageCode) {
+/** Where the cards come from. Left out: the cards due today. A course passes its own sitting. */
+export interface QueueSource {
+  key: readonly unknown[];
+  load: () => Promise<ReviewQueue>;
+}
+
+export function useReview(language: LanguageCode, source?: QueueSource) {
   const queueQuery = useQuery({
-    queryKey: ['study', 'review-queue', language],
-    queryFn: () => studyApi.getReviewQueue(language),
+    queryKey: source?.key ?? ['study', 'review-queue', language],
+    queryFn: source?.load ?? (() => studyApi.getReviewQueue(language)),
   });
   const answerMutation = useMutation({ mutationFn: studyApi.answerReview });
   const [queue, setQueue] = useState<ReviewQueue | null>(null);

@@ -5,6 +5,7 @@
 import { adminApi } from './admin';
 import { agentApi } from './agent';
 import { billingApi } from './billing';
+import { coursesApi } from './courses';
 import { conversationsApi } from './conversations';
 import { feedbackApi } from './feedback';
 import { followupApi } from './followup';
@@ -19,6 +20,7 @@ export function createClient(options: ClientOptions) {
   const http = createHttp(options);
   return {
     glossary: glossaryApi(http),
+    courses: coursesApi(http),
     feedback: feedbackApi(http),
     conversations: conversationsApi(http),
     agent: agentApi(http),

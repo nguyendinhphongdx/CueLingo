@@ -11,6 +11,7 @@ export * from './dto/agent.dto';
 export * from './dto/assist-suggestion.dto';
 export * from './dto/assist.dto';
 export * from './dto/billing.dto';
+export * from './dto/course.dto';
 export * from './dto/debrief.dto';
 export * from './dto/device.dto';
 export * from './dto/events.dto';

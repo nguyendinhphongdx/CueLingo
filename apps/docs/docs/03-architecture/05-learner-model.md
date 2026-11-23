@@ -39,6 +39,10 @@ Ngưỡng là đề xuất ban đầu, sẽ chỉnh sau beta. Logic nằm ở [`
 | `review_answer`                                 | Cập nhật FSRS theo dạng bài: nghe → receptive, nói/gõ → productive |
 | `segment_final` (luồng mic) chứa cụm đang học   | Tín hiệu productive tự nhiên                                       |
 
+## Bài trong lộ trình
+
+Lộ trình ([courses](../04-modules/03-api/courses.md)) không có điểm riêng. Trạng thái một bài là hàm của `review_logs` của item kể từ lúc tạo debrief: `todo` (chưa có log), `learning` (có log, chưa có `rating ≥ 3`), `done` (có `rating ≥ 3`, không lùi). Tiến độ khoá là `round(100 × xong / tổng)`. FSRS vẫn là nguồn duy nhất của lịch ôn; hoàn thành bài chỉ là một lần `review_answer` thường.
+
 ## Comprehension %
 
 `comprehension_pct` = số segment của luồng `system` không bị đánh dấu "không tự hiểu" / tổng số segment luồng `system`. Chỉ tính ở Assist ≤ 3, vì ở Assist 4 bản dịch luôn hiện.

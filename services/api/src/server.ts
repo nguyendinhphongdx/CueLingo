@@ -10,6 +10,7 @@ import { createPostgresDebriefRepository } from './modules/debrief';
 import { createPostgresEventsRepository } from './modules/events';
 import { createPostgresAgentRepository } from './modules/agent';
 import { createPostgresConversationsRepository } from './modules/conversations';
+import { createPostgresCoursesRepository } from './modules/courses';
 import { createPostgresGlossaryRepository } from './modules/glossary';
 import { createPostgresSpeakersRepository } from './modules/speakers';
 import { createPostgresPrivacyRepository } from './modules/privacy';
@@ -98,6 +99,7 @@ const app = await buildApp({
     debrief: debriefRepository,
     events: eventsRepository,
     glossary: glossaryRepository,
+    courses: createPostgresCoursesRepository(sql),
     conversations: conversationsRepository,
     agent: createPostgresAgentRepository(sql),
     privacy: privacyRepository,

@@ -31,4 +31,4 @@ Danh sách cụm từ đã lưu, trạng thái receptive/productive, nguồn.
 
 ## Là một tab của Ôn tập
 
-Từ nay màn này hiện là tab **Kho cụm từ** của [Ôn tập](./review.md#ba-tab-hôm-nay-kho-cụm-từ-tiến-độ), không còn trang `/phrases` riêng (địa chỉ cũ chuyển hướng). Feature xuất `PhraseBankPanel({ language })`; tiêu đề và ngôn ngữ do trang Ôn tập giữ.
+Từ nay màn này hiện là tab **Kho cụm từ** của [Ôn tập](./review.md#bốn-tab-hôm-nay-kho-cụm-từ-tiến-độ-lộ-trình), không còn trang `/phrases` riêng (địa chỉ cũ chuyển hướng). Feature xuất `PhraseBankPanel({ language })`; tiêu đề và ngôn ngữ do trang Ôn tập giữ.

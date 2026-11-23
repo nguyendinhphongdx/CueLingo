@@ -27,3 +27,6 @@ export function createStudyModule(repo: StudyRepository) {
 
 export type { StudyRepository } from './study.repository';
 export { createPostgresStudyRepository, createInMemoryStudyRepository } from './study.repository';
+export type { StudyItem } from './study.repository';
+export { buildCard } from './study.service';
+export { QueueQuerySchema } from './study.routes';

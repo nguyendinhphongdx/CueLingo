@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { parse } from '../../lib/http';
 
 /** `?dictation=1` tells the API this client can play and grade listen-and-type cards. */
-const QueueQuerySchema = LanguageQuerySchema.extend({
+export const QueueQuerySchema = LanguageQuerySchema.extend({
   dictation: z
     .enum(['1', 'true', '0', 'false'])
     .optional()

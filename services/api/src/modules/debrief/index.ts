@@ -18,4 +18,5 @@ export function createDebriefModule(
 export type { DebriefRepository } from './debrief.repository';
 export type { DebriefService } from './debrief.service';
 export { createPostgresDebriefRepository } from './debrief.repository';
+export type { InMemoryDebriefRepository } from './debrief.repository.memory';
 export { createInMemoryDebriefRepository } from './debrief.repository.memory';

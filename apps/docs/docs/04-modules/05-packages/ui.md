@@ -36,6 +36,8 @@ Component React dùng chung cho desktop và web.
 
 Tìm trong cuộc họp dùng chung web và desktop: `lib/meeting-search` (`searchSessions`, `findSnippets`, `highlight`, `monthsOf`, `speakersOf`, `SEARCH_SCOPE`…, thuần), `components/highlighted-text` (`HighlightedText`) và `hooks/use-debounced` (`useDebounced`).
 
+`LearningPathPanel` (`@cuelingo/ui/components/learning-path-panel`): tab Lộ trình dùng chung web và desktop. Hiện "Việc nên làm tiếp" (bài kế tiếp của khoá đang học) và danh sách khoá với `Progress` và tỷ lệ %. Nút: "Bắt đầu khoá · thêm N cụm vào Kho cụm từ" khi còn cụm chưa lưu, "Học tiếp" khi đã lưu, nhãn "Đã xong" ở 100%. Nhận `data`, `loading`, `error`, `busySessionId`, `onStart`, `onContinue`; không gọi API. `REVIEW_TABS` (`lib/roadmap.ts`) có tab thứ tư `path` "Lộ trình".
+
 `CaptionLine` nhận `text`, `translation?`, `hardWords?`, `partial?` và `className?`; component không gọi API.
 
 ## Phụ thuộc
