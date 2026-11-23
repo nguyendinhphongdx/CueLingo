@@ -4,6 +4,9 @@ import {
   buildComposePrompt,
   buildDebriefPromptFor,
   buildFollowupPrompt,
+  buildLessonFeedbackPrompt,
+  buildLessonPersonalizePrompt,
+  buildLessonPrompt,
   buildLookupPrompt,
   buildRecapPrompt,
   buildSttPromptV3,
@@ -11,6 +14,9 @@ import {
   buildTranslatePrompt,
   COMPOSE_PROMPT_VERSION,
   FOLLOWUP_PROMPT_VERSION,
+  LESSON_FEEDBACK_PROMPT_VERSION,
+  LESSON_PERSONALIZE_PROMPT_VERSION,
+  LESSON_PROMPT_VERSION,
   LOOKUP_PROMPT_VERSION,
   RECAP_PROMPT_VERSION,
   isContextEcho,
@@ -21,6 +27,9 @@ import {
   type TranslateInput,
   type DebriefSpeakerInput,
   type FollowupPromptInput,
+  type LessonFeedbackInput,
+  type LessonPersonalizeInput,
+  type LessonPromptInput,
 } from '@cuelingo/prompts';
 import type { ComposeRequest, LanguageCode, LookupRequest, RecapRequest } from '@cuelingo/shared';
 import { generateText } from 'ai';
@@ -77,6 +86,10 @@ export interface JsonTaskInputMap {
   'assist.compose': ComposeRequest;
   'assist.followup': FollowupPromptInput;
   'debrief.generate': DebriefSpeakerInput;
+  /** Only catalog keys, a level and a language: no text of a person can reach a shared lesson (ADR 0025). */
+  'lesson.generate': LessonPromptInput;
+  'lesson.personalize': LessonPersonalizeInput;
+  'lesson.feedback': LessonFeedbackInput;
 }
 
 export type GenerateFn = (args: {
@@ -168,6 +181,13 @@ export interface TranscribeResult {
   fallback: boolean;
   latencyMs: number;
 }
+
+/** Tasks that are not tried twice on the same model after a failure. */
+const SINGLE_MODEL_TASKS = new Set<TaskName>([
+  'assist.followup',
+  'lesson.generate',
+  'lesson.personalize',
+]);
 
 /** Upper bound of one assistant step (plan: <= 2k output tokens). */
 const AGENT_MAX_OUTPUT_TOKENS = 2_000;
@@ -358,8 +378,8 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
     try {
       return await attempt(task, config.model, false, system, prompt, version, context);
     } catch (primaryError) {
-      // Only for the follow-up draft: asking the same model again would just double the worst case.
-      if (task === 'assist.followup' && config.model === config.fallbackModel) {
+      // Where no other model is configured, asking the same model again would just double the worst case.
+      if (SINGLE_MODEL_TASKS.has(task) && config.model === config.fallbackModel) {
         throw new AiGatewayError(task, primaryError);
       }
       try {
@@ -382,6 +402,18 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
         return {
           ...buildFollowupPrompt(input as FollowupPromptInput),
           version: FOLLOWUP_PROMPT_VERSION,
+        };
+      case 'lesson.generate':
+        return { ...buildLessonPrompt(input as LessonPromptInput), version: LESSON_PROMPT_VERSION };
+      case 'lesson.personalize':
+        return {
+          ...buildLessonPersonalizePrompt(input as LessonPersonalizeInput),
+          version: LESSON_PERSONALIZE_PROMPT_VERSION,
+        };
+      case 'lesson.feedback':
+        return {
+          ...buildLessonFeedbackPrompt(input as LessonFeedbackInput),
+          version: LESSON_FEEDBACK_PROMPT_VERSION,
         };
       case 'debrief.generate':
         // v5 for meetings in a language nobody studies here, v4 otherwise (chosen by the language in the input).
