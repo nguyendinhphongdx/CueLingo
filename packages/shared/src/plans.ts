@@ -8,7 +8,7 @@ export const DEFAULT_PLAN: Plan = 'free';
 
 /**
  * Units: `*_ms` are milliseconds of audio/speech; the others are counts.
- * Monthly metrics reset on day 1 (Vietnam time); `assist_daily` resets each Vietnam day.
+ * Monthly metrics reset on day 1 (Vietnam time); the `*_daily` ones reset each Vietnam day.
  */
 export const USAGE_METRICS = [
   'translation_ms',
@@ -16,6 +16,8 @@ export const USAGE_METRICS = [
   'debriefs',
   'assist_daily',
   'agent_messages',
+  'lessons_daily',
+  'lesson_practice_daily',
 ] as const;
 export const UsageMetricSchema = z.enum(USAGE_METRICS);
 export type UsageMetric = z.infer<typeof UsageMetricSchema>;
@@ -31,6 +33,8 @@ export const DEFAULT_PLAN_LIMITS: PlanLimitTable = {
     debriefs: 8,
     assist_daily: 20,
     agent_messages: 0,
+    lessons_daily: 2,
+    lesson_practice_daily: 20,
   },
   pro: {
     translation_ms: 20 * HOUR_MS,
@@ -38,6 +42,8 @@ export const DEFAULT_PLAN_LIMITS: PlanLimitTable = {
     debriefs: null,
     assist_daily: null,
     agent_messages: 100,
+    lessons_daily: 10,
+    lesson_practice_daily: 150,
   },
   ultra: {
     translation_ms: 60 * HOUR_MS,
@@ -45,6 +51,8 @@ export const DEFAULT_PLAN_LIMITS: PlanLimitTable = {
     debriefs: null,
     assist_daily: null,
     agent_messages: 500,
+    lessons_daily: 20,
+    lesson_practice_daily: 300,
   },
 };
 
@@ -56,6 +64,8 @@ const PlanOverrideSchema = z
     debriefs: LimitValueSchema,
     assist_daily: LimitValueSchema,
     agent_messages: LimitValueSchema,
+    lessons_daily: LimitValueSchema,
+    lesson_practice_daily: LimitValueSchema,
   })
   .partial()
   .strict();
@@ -109,7 +119,7 @@ const VN_OFFSET_MS = 7 * HOUR_MS;
 const DAY_MS = 24 * HOUR_MS;
 
 export function isDailyMetric(metric: UsageMetric): boolean {
-  return metric === 'assist_daily';
+  return metric.endsWith('_daily');
 }
 
 /** Start of the quota period containing `now`, as a UTC instant. */

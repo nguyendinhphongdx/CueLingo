@@ -4,13 +4,15 @@ import { SetPlanRequestSchema, UsageResponseSchema } from './usage.dto';
 const item = { used: 1, limit: null, resetsAt: '2026-12-01T00:00:00.000Z', state: 'ok' };
 
 describe('UsageResponseSchema', () => {
-  it('needs all five metrics', () => {
+  it('needs every metric', () => {
     const usage = {
       translation_ms: item,
       cloud_stt_ms: item,
       debriefs: item,
       assist_daily: item,
       agent_messages: item,
+      lessons_daily: item,
+      lesson_practice_daily: item,
     };
     expect(UsageResponseSchema.safeParse({ plan: 'free', usage }).success).toBe(true);
     const { debriefs: _d, ...rest } = usage;
