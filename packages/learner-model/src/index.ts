@@ -6,3 +6,4 @@ export * from './fsrs';
 export * from './assist-dial';
 export * from './placement';
 export * from './course';
+export * from './goal-lesson';
