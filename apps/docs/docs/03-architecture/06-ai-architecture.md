@@ -45,3 +45,7 @@ Mỗi lời gọi chỉ ghép phần ngữ cảnh liên quan, không đưa cả 
 ## Chi phí
 
 `ai-gateway` ghi `cost_usd`, token và độ trễ cho từng lời gọi (event `ai_call`). Báo cáo hằng tuần trong beta để kiểm chứng H5. Cách giảm chi phí: VAD, STT on-device, chỉ dịch luồng `system`, dùng model nhỏ cho realtime, cache TTS.
+
+## Bài học theo mục tiêu
+
+Ba task `lesson.generate`, `lesson.personalize`, `lesson.feedback`. Nội dung bài sinh một lần cho mỗi ô (mục tiêu, bài, trình độ, ngôn ngữ) và dùng chung; đầu vào sinh không chứa dữ liệu người dùng. Xem [goals](../04-modules/03-api/goals.md), [ADR 0025](../08-adr/0025-goal-lessons-shared-content.md).

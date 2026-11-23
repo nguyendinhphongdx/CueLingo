@@ -35,3 +35,7 @@ Xoá mềm cuộc họp, xoá dữ liệu cá nhân và xuất bản sao dữ li
 ## Câu hỏi mở
 
 - (chưa có)
+
+## Dữ liệu mục tiêu
+
+`deleteMyData` xoá `lesson_reports`, `goal_lessons`, `learning_goals` của người dùng trước `review_logs`; không xoá `lesson_contents` (nội dung chung, không có `user_id`). Mục tiêu không nằm trong export. Câu luyện gõ không được lưu nên không có gì để xoá. Xem [goals](./goals.md).

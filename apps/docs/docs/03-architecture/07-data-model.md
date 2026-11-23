@@ -60,3 +60,7 @@ erDiagram
 `session_started` · `session_ended` · `segment_final` · `translation_shown` · `translation_expanded` · `lookup` · `ask_recap` · `compose_assist` · `phrase_saved` · `debrief_opened` · `debrief_feedback` · `review_session` · `review_answer` · `assist_level_changed` · `data_deleted` · `ai_call` (nội bộ)
 
 Schema từng event: `@cuelingo/shared` (`events.ts`).
+
+## Bảng bài học mục tiêu
+
+`learning_goals`, `goal_lessons`, `lesson_reports` (theo người, có `user_id`) và `lesson_contents` (dùng chung, **không có `user_id`**, chỉ mục duy nhất cho bản `live`). Xem [goals](../04-modules/03-api/goals.md).

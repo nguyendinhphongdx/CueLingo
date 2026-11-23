@@ -43,3 +43,7 @@ Trang ôn có hai kiểu, chọn bằng công tắc "Kiểu ôn", nhớ theo tr�
 ## Tab Lộ trình
 
 Code: `apps/web/src/features/learning-path/`. Tab vẽ `LearningPathPanel` (`@cuelingo/ui`, dùng chung với desktop) từ `client.courses` ([courses](../03-api/courses.md)). "Bắt đầu khoá" thêm các cụm của khoá vào Kho cụm từ (nút nói rõ số cụm) rồi mở một lần học; "Học tiếp" mở thẳng. Một lần học chạy bằng chính `ReviewTodayPanel` của tab Hôm nay, chỉ đổi nguồn hàng đợi: `useReview(language, source)` nhận `source?: {key, load}`, bỏ trống thì vẫn là `/v1/review/queue`. Câu trả lời vẫn đi `POST /v1/review/answer`, nên FSRS và tiến độ khoá cùng một nguồn. Lỗi API khoá chỉ hiện thông báo tiếng Việt ở tab này; ba tab kia không bị ảnh hưởng. Trang [debrief](./debrief.md) có link "Học khoá này" tới `/review?tab=path`.
+
+## Mục tiêu trong tab Lộ trình
+
+Tab Lộ trình có thêm phần **Mục tiêu của bạn** (chỉ khi ngôn ngữ học là tiếng Anh): chọn tối đa 3 mục tiêu, mở từng bài (`features/goals/GoalLessonPage.tsx`), sửa hoặc xoá mục tiêu. Khi danh sách mục tiêu lỗi, các khoá từ cuộc họp vẫn hiện. Xem [goals](../03-api/goals.md).

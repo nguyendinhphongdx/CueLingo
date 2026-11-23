@@ -11,7 +11,7 @@ Dùng khi thêm lời gọi AI mới, đổi prompt hoặc đổi model. Quy ư�
 1. **Tên** `<nhóm>.<việc>` (`translate.realtime`, `assist.lookup`); thêm vào bảng tác vụ trong Kiến trúc AI.
 2. **Prompt** `packages/prompts/src/<task>/v1.ts`: `build(input) → messages`; input và output có Zod schema; 3–5 fixture trong `<task>/fixtures/`.
 3. **Gateway** `packages/ai-gateway/src/tasks.ts`: task → model mặc định, timeout, fallback; mọi lời gọi ghi `ai_call` (task, model, token, chi phí, độ trễ, prompt version). Gọi model bằng Vercel AI SDK **chỉ trong gateway** ([ADR-0010](../../08-adr/0010-ai-gateway-on-ai-sdk.md)).
-4. **Eval** `ml/eval`: thêm task, chạy `uv run cuelingo-eval --task <task> --prompt v1` ([ML scaffold](../scaffold/08-ml-python.md)).
+4. **Eval**: script TypeScript `packages/ai-gateway/scripts/eval-<nhóm task>.ts` (mẫu `eval-lesson.ts`, chạy bằng script `pnpm eval:<nhóm>` ở gốc repo): gọi gateway thật, kiểm cấu trúc bằng hàm kiểm của prompt, đo p50/p95, in mẫu để người chấm; thoát mã 1 khi vượt ngưỡng. Cần khoá thật và tốn tiền nên CI không chạy.
 5. **Gọi** từ service/worker: `ai.llm('<task>', input)`.
 
 ## Sửa prompt hoặc đổi model

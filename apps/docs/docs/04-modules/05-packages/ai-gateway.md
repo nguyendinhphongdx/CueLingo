@@ -63,3 +63,13 @@ gateway.chat(
 ## Câu hỏi mở
 
 - Chọn LLM cloud cho dịch sau khi so với TranslateGemma 4B / Qwen3-4B
+
+## Task `lesson.*`
+
+| Task                 | Timeout | Model                                                       |
+| -------------------- | ------- | ----------------------------------------------------------- |
+| `lesson.generate`    | 40 s    | `gemini-3.5-flash-lite` (`AI_LESSON_MODEL`), không dự phòng |
+| `lesson.personalize` | 8 s     | như trên, không dự phòng                                    |
+| `lesson.feedback`    | 4 s     | như trên, dự phòng `gemini-3.1-flash-lite`                  |
+
+Ba task nằm trong `SINGLE_MODEL_TASKS` (cùng `assist.followup`) ngoại trừ `lesson.feedback`. Bộ đánh giá `scripts/eval-lesson.ts`: 8 mục tiêu × trình độ a2/b2 × 2 lần chạy, kiểm cấu trúc và đo p50/p95 của feedback. Xem [goals](../03-api/goals.md).

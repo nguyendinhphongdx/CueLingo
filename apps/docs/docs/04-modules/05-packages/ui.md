@@ -209,3 +209,7 @@ Cỡ chữ của thiết kế là class Tailwind đặt cùng lúc cỡ, độ c
 ## Giao diện sáng/tối
 
 `ThemeSwitch` (`@cuelingo/ui/components/theme-switch`) là mục "Giao diện" của Cài đặt: Theo hệ thống (mặc định), Sáng, Tối. Lựa chọn lưu trên máy (`localStorage`, khoá `cuelingo.theme`; "Theo hệ thống" thì xoá khoá). Logic thuần ở `lib/theme.ts` (`followTheme`, `parseThemeMode`, `isDark`), hook `useThemeMode`; web, desktop và site đều gọi `followTheme()` nên cùng một nguồn. Cỡ chữ nền là 14px/20px, tiêu đề trang 24px.
+
+## Mục tiêu và bài học
+
+`GoalPicker` (chọn hoặc sửa mục tiêu), `GoalLessonView` (bốn phần của bài, luyện gõ, quiz, báo lỗi; giọng cố định theo người nói), và `LearningPathPanel` nhận thêm `goals`, `onOpenLesson`, `onAddGoal`, `onEditGoal`, `onRemoveGoal`, `goalError`. Chữ và hàm hỗ trợ ở `lib/goal-lesson.ts`. Web và desktop chỉ dùng, không vẽ lại. Xem [goals](../03-api/goals.md).

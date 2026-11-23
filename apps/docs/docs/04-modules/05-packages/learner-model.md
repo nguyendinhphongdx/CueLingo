@@ -36,3 +36,7 @@ Logic thuần (không I/O) của Learner Model: FSRS hai tầng, giai đoạn t�
 ## Câu hỏi mở
 
 - Thêm BKT cho kỹ năng nghe/phát âm ở Đợt 3
+
+## Luật bài học mục tiêu (`goal-lesson.ts`)
+
+`QUIZ_SIZE=6`, `PASS_CORRECT=4`, `REPORTS_TO_RETIRE=3`; `scoreQuiz`, `quizRating` (đúng 3, sai 1), `goalLessonStatus`, `goalProgress`, `pickGoalNextUp`, `defaultGoalLevel`, `shouldRetire`. Thuần, có test ngưỡng biên.

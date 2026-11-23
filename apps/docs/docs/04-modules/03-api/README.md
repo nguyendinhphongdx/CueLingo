@@ -17,6 +17,7 @@ Backend modular monolith: REST + realtime WebSocket, điều phối dịch, Lear
 | [Debrief](./debrief.md)                 | `src/modules/debrief`         | Đọc kết quả debrief do worker tạo, nhận phản hồi.                                                |
 | [Phrases & review](./phrases-review.md) | `src/modules/review`          | Phrase Bank và hàng đợi ôn tập FSRS.                                                             |
 | [Courses](./courses.md)                 | `src/modules/courses`         | Lộ trình học: khoá tính từ debrief, tiến độ từ `review_logs`, hàng đợi một lần học.              |
+| [Goals](./goals.md)                     | `src/modules/goals`           | Bài học theo mục tiêu: danh mục 8×6, nội dung AI dùng chung, luyện gõ, quiz chấm trên server.    |
 | [Learner Model service](./learner.md)   | `src/modules/learner`         | Nguồn sự thật về người học: profile, lexicon, kỹ năng; áp dụng event thành cập nhật.             |
 | [Progress](./progress.md)               | `src/modules/progress`        | Tổng hợp chỉ số tiến bộ theo tuần.                                                               |
 | [Speakers](./speakers.md)               | `src/modules/speakers`        | Đổi tên người nói của một cuộc họp (nhãn do desktop cấp, lưu ở `speakers`).                      |

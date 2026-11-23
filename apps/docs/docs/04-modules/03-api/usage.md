@@ -64,3 +64,7 @@ Không có dòng trả về nghĩa là bị từ chối. Trước đó, cổng �
 ## Test
 
 `usage.test.ts` (đọc lượng dùng, ranh giới người dùng, admin không giới hạn), `plans.test.ts` (gói mặc định, admin đổi gói theo `period` (hạn tính ở server), log đổi gói, gói trả phí hết hạn, cổng hạn mức, chạy đua), `test/integration/usage.int.test.ts` (SQL thật).
+
+## Hạn mức bài học theo mục tiêu
+
+Hai metric mới theo ngày (kỳ reset giờ Việt Nam): `lessons_daily` (Free 2, Pro 10, Ultra 20) và `lesson_practice_daily` (Free 20, Pro 150, Ultra 300). Tổng số metric là 7; `isDailyMetric` nhận mọi metric kết thúc bằng `_daily`. Module goals kiểm bằng `status` trước và cộng bằng `add` sau khi thành công, nên lỗi AI không bị tính. Ràng buộc `usage_counters_metric_check` được thay bằng danh sách 7 metric trong migration `20261122090000_goal_lessons`. Xem [goals](./goals.md).
