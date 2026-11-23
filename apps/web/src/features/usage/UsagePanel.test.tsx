@@ -14,6 +14,8 @@ const usage: UsageResponse = {
     debriefs: { used: 8, limit: 8, resetsAt, state: 'exhausted' },
     assist_daily: { used: 0, limit: null, resetsAt, state: 'ok' },
     agent_messages: { used: 0, limit: 0, resetsAt, state: 'exhausted' },
+    lessons_daily: { used: 0, limit: 2, resetsAt, state: 'ok' },
+    lesson_practice_daily: { used: 0, limit: 20, resetsAt, state: 'ok' },
   },
 };
 
