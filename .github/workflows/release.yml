@@ -74,6 +74,30 @@ jobs:
           echo "CUELINGO_SIGN_IDENTITY=$ID" >> "$GITHUB_ENV"
           echo "signed=true" >> "$GITHUB_OUTPUT"
 
+      # The restored Rust cache keeps an EMPTY target/sherpa-onnx-prebuilt/<archive>/lib folder, and the build script
+      # takes an existing folder as "already unpacked", so the link fails with "could not find native static
+      # library `sherpa-onnx-c-api`". Same fix as the Windows job: fetch the pinned archive, check its SHA-256, drop
+      # the stale folder and hand the file over through SHERPA_ONNX_ARCHIVE_DIR. Bump with `sherpa-onnx`.
+      - name: Cache the sherpa-onnx static libraries
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/sherpa-onnx
+          key: sherpa-onnx-2.0.1-osx-arm64-static-d7a9b14f
+      - name: Fetch the pinned sherpa-onnx static libraries
+        env:
+          SHERPA_ARCHIVE: sherpa-onnx-v2.0.1-osx-arm64-static-lib.tar.bz2
+          SHERPA_SHA256: d7a9b14f337958e7373c8c650f046df33d210bbaff2f33cb8322dda663ee5e1c
+        run: |
+          dir="$RUNNER_TEMP/sherpa-onnx"
+          mkdir -p "$dir"
+          if [ ! -f "$dir/$SHERPA_ARCHIVE" ]; then
+            curl -fsSL --retry 3 -o "$dir/$SHERPA_ARCHIVE" \
+              "https://github.com/k2-fsa/sherpa-onnx/releases/download/v2.0.1/$SHERPA_ARCHIVE"
+          fi
+          echo "$SHERPA_SHA256  $dir/$SHERPA_ARCHIVE" | shasum -a 256 -c -
+          rm -rf apps/desktop/src-tauri/target/sherpa-onnx-prebuilt
+          echo "SHERPA_ONNX_ARCHIVE_DIR=$dir" >> "$GITHUB_ENV"
+
       - name: Build the audio sidecar
         working-directory: apps/desktop
         run: node scripts/sidecar.mjs --rebuild
