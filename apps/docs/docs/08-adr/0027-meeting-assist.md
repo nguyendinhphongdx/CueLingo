@@ -14,7 +14,7 @@ Người dùng cần hỏi về khái niệm, tên riêng hay việc đã bàn n
 - **Server kiểm nhãn nguồn:** chỉ hiện nguồn đã được lấy ra và được trích; không có thì ghi "Kiến thức chung (chưa kiểm chứng)".
 - **Đồng ý riêng, lưu ở server**, kiểm trước mọi lời gọi, rút lại được.
 - **Lưu hỏi đáp theo cuộc họp**: xoá cùng cuộc họp và cùng "Xoá dữ liệu", xuất khi client yêu cầu. Không đưa nội dung vào log hay `ai_call`.
-- **Chi phí:** hạn mức ngày `meeting_ask_daily` theo gói; cờ `MEETING_ASSIST_ENABLED` mặc định tắt.
+- **Chi phí:** hạn mức ngày `meeting_ask_daily` theo gói; cờ `MEETING_ASSIST_ENABLED` mặc định **bật** (chủ sản phẩm đổi ngày 2026-11-27, trước khi phát hành; ban đầu quyết định là tắt). Biến giữ làm công tắc tắt khẩn cấp; đồng ý riêng của từng người không đổi.
 
 ## Phương án đã cân nhắc
 

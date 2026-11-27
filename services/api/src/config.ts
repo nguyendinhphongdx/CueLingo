@@ -26,10 +26,10 @@ const ConfigSchema = z
     /** Turns the assistant on or off for everyone. Off (or no GEMINI_API_KEY) answers 503 AGENT_DISABLED. */
     AGENT_ENABLED: z.enum(['true', 'false']).default('true'),
     /**
-     * The assistant asked during a meeting (ADR 0027): sends meeting content to the AI provider for a new
-     * purpose, so it is off until turned on. Off (or no GEMINI_API_KEY) answers 503 MEETING_ASSIST_DISABLED.
+     * The assistant asked during a meeting (ADR 0027). On unless set to `false`; nothing is sent before the
+     * person's own consent. Off (or no GEMINI_API_KEY) answers 503 MEETING_ASSIST_DISABLED.
      */
-    MEETING_ASSIST_ENABLED: z.enum(['true', 'false']).default('false'),
+    MEETING_ASSIST_ENABLED: z.enum(['true', 'false']).default('true'),
     /** Models of task `meeting.ask`. The gateway reads them itself; listed here so they are documented. */
     AI_MEETING_ASK_MODEL: z.string().min(1).optional(),
     AI_MEETING_ASK_FALLBACK_MODEL: z.string().min(1).optional(),
