@@ -31,7 +31,9 @@ export function createPrivacyApi({
   };
   return {
     async exportData() {
-      const response = await request(`${baseUrl}/v1/me/export`, { headers: authorization });
+      const response = await request(`${baseUrl}/v1/me/export?include=meeting_questions`, {
+        headers: authorization,
+      });
       if (!response.ok) throw new Error(`Privacy request failed with status ${response.status}`);
       return ExportSchema.parse(await response.json());
     },

@@ -240,7 +240,7 @@ export const client = {
       request('POST', '/v1/invites/intent', null, InviteIntentRequestSchema.parse({ code })),
   },
   privacy: {
-    export: () => request('GET', '/v1/me/export', ExportSchema),
+    export: () => request('GET', '/v1/me/export?include=meeting_questions', ExportSchema),
     deleteMyData: (input: DeleteMyDataRequest) =>
       request('DELETE', '/v1/me/data', null, DeleteMyDataRequestSchema.parse(input)),
   },

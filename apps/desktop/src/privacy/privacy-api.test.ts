@@ -20,7 +20,9 @@ describe('desktop privacy', () => {
     await api.exportData();
     await api.deleteMyData({ confirm: 'XOA DU LIEU' });
 
-    expect(request.mock.calls[0]?.[0]).toBe('http://api.test/v1/me/export');
+    expect(request.mock.calls[0]?.[0]).toBe(
+      'http://api.test/v1/me/export?include=meeting_questions',
+    );
     expect(request.mock.calls[1]?.[1]).toMatchObject({
       method: 'DELETE',
       body: JSON.stringify({ confirm: 'XOA DU LIEU' }),
