@@ -25,7 +25,7 @@ Dữ liệu họp là dữ liệu nhạy cảm của doanh nghiệp người dù
 ## Trợ lý trong cuộc họp
 
 - **Mục đích mới gửi dữ liệu tới Google Gemini** ([ADR 0027](../08-adr/0027-meeting-assist.md)): câu hỏi, trích transcript của phiên, thuật ngữ và cụm từ khớp, trích đoạn cuộc họp cũ của chính người hỏi, 3 hỏi đáp trước. Không gửi audio.
-- Server lưu và kiểm đồng ý (có phiên bản lời văn) trước khi đọc dữ liệu; cờ `MEETING_ASSIST_ENABLED` mặc định tắt.
+- Server lưu và kiểm đồng ý (có phiên bản lời văn) trước khi đọc dữ liệu; cờ `MEETING_ASSIST_ENABLED` mặc định bật, đặt `false` để tắt khẩn cấp.
 - Server quyết dữ liệu nào đi theo luật cố định; mô hình không có công cụ, nên chỉ dẫn nằm trong transcript không mở thêm được dữ liệu.
 - Hỏi đáp lưu theo `userId`, xoá và xuất được; log chỉ id, số đếm, mili giây.
 - Chính sách quyền riêng tư phải nêu mục đích này trước khi bật cho người dùng. Repo chưa có trang chính sách; [bản nháp đoạn này](../06-delivery/2026-11-27-meeting-assistant/privacy-draft.md) chờ pháp lý xem.
