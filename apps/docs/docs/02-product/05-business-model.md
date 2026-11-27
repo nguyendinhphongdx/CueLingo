@@ -32,6 +32,7 @@ Giá và giới hạn Free chốt sau khi đo chi phí AI thực tế/giờ họ
 | Tra từ · recap · compose (`assist.*`)          | Vài chục lần · ~0,0002 USD/lần           | ~0,005      |
 | STT đám mây cho vi/ja/ko/zh (`stt.transcribe`) | 2 luồng · ~60% thời gian có tiếng nói    | 0,10–0,15   |
 | Trợ lý chat (`agent.chat`)                     | ~0,0015 USD/tin                          | theo số tin |
+| Hỏi trợ lý trong họp (`meeting.ask`)           | ~0,002 USD/câu (ước tính, chưa đo)       | theo số câu |
 
 → Một giờ họp tiếng Anh tốn **~0,08–0,13 USD**, gần như toàn bộ là phần dịch. Chi phí cố định (API trên Mac + Cloudflare Tunnel, Resend gói miễn phí) gần bằng 0 ở quy mô beta.
 
@@ -46,6 +47,7 @@ Giá và giới hạn Free chốt sau khi đo chi phí AI thực tế/giờ họ
 | STT đám mây (vi/ja/ko/zh)        | 1 giờ/tháng               | 10 giờ/tháng                        | 30 giờ/tháng   |
 | Debrief                          | Rút gọn · **8 bản/tháng** | Đầy đủ + follow-up · không giới hạn | Đầy đủ         |
 | Tra từ · Nói giúp tôi            | 20 lần/ngày               | Thoải mái                           | Thoải mái      |
+| Hỏi trợ lý trong họp             | 10 câu/ngày               | 60 câu/ngày                         | 150 câu/ngày   |
 | Phrase Bank · SRS (không gọi AI) | Có                        | Có                                  | Có             |
 | Trợ lý chat                      | Không                     | 100 tin/tháng                       | 500 tin/tháng  |
 | Lịch sử cuộc họp (transcript)    | **Giữ 30 ngày**           | Giữ mãi                             | Giữ mãi        |

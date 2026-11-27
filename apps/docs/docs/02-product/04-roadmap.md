@@ -19,6 +19,8 @@ flowchart LR
   D0["0 · Beta kín"] --> D1["1 · Quanh cuộc họp"] --> D2["2 · Trả tiền"] --> D3["3 · Nói được"] --> D4["4 · Mở rộng"]
 ```
 
+**Thêm ngoài đợt (2026-11-27):** trợ lý hỏi trong cuộc họp ([hồ sơ](../06-delivery/2026-11-27-meeting-assistant/01-specs.md), [ADR 0027](../08-adr/0027-meeting-assist.md)), sau cờ mặc định tắt.
+
 ## Vì sao thứ tự này
 
 | Quyết định                                     | Lý do                                                                                                                                                                          |

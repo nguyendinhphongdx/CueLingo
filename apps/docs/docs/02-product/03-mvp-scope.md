@@ -43,6 +43,7 @@ MVP là **app desktop macOS + web app nhỏ**. Nó giúp người Việt hiểu 
 | US-14 | Xem tiến bộ theo tuần               | % hiểu, số cụm, streak                                        | P1      |
 | US-15 | Kiểm soát dữ liệu                   | Tắt lưu audio; xoá phiên và dữ liệu rút ra; xoá tài khoản     | P0      |
 | US-16 | Xuất transcript và tóm tắt          | Markdown/PDF                                                  | P2      |
+| US-17 | Hỏi trợ lý ngay trong họp           | Trả lời tiếng Việt có nhãn nguồn; chữ đầu p95 ≤ 3 giây        | P1      |
 
 ## Ngoài phạm vi MVP
 
