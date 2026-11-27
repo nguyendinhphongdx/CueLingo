@@ -28,7 +28,7 @@ Dữ liệu họp là dữ liệu nhạy cảm của doanh nghiệp người dù
 - Server lưu và kiểm đồng ý (có phiên bản lời văn) trước khi đọc dữ liệu; cờ `MEETING_ASSIST_ENABLED` mặc định tắt.
 - Server quyết dữ liệu nào đi theo luật cố định; mô hình không có công cụ, nên chỉ dẫn nằm trong transcript không mở thêm được dữ liệu.
 - Hỏi đáp lưu theo `userId`, xoá và xuất được; log chỉ id, số đếm, mili giây.
-- Chính sách quyền riêng tư công khai (`apps/site`) phải nêu mục đích này trước khi bật cho người dùng; chưa sửa trong task này.
+- Chính sách quyền riêng tư phải nêu mục đích này trước khi bật cho người dùng. Repo chưa có trang chính sách; [bản nháp đoạn này](../06-delivery/2026-11-27-meeting-assistant/privacy-draft.md) chờ pháp lý xem.
 
 ## Lượng dùng và gói
 

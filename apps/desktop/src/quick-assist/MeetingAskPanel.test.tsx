@@ -70,6 +70,8 @@ describe('meeting assistant drawer', () => {
     await act(async () => seen.ask.ask('SSO là gì?'));
     expect(api.ask).not.toHaveBeenCalled();
     expect(panel(seen.ask)).toContain('Đồng ý và dùng trợ lý');
+    // What is sent includes other people's names and words: the wording has to say so.
+    expect(panel(seen.ask)).toContain('gồm tên người nói và lời người khác');
     await act(async () => {
       await seen.ask.agree();
     });

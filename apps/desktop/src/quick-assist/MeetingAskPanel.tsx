@@ -6,7 +6,7 @@ import { DRAWER_WIDTH, PanelFrame } from './QuickAssistPanel';
 import { lastSentence, type MeetingAsk } from './use-meeting-ask';
 
 export const CONSENT_TEXT =
-  'Mỗi khi bạn hỏi, CueLingo gửi câu hỏi, phần transcript liên quan của cuộc họp này, thuật ngữ, cụm từ đã lưu và trích đoạn cuộc họp cũ của bạn tới Google (Gemini) để trả lời. Câu hỏi và câu trả lời được lưu cùng cuộc họp; bạn xoá hoặc xuất được. Hãy báo cho người cùng họp nếu quy định nơi bạn làm việc yêu cầu.';
+  'Mỗi khi bạn hỏi, CueLingo gửi tới Google (Gemini) để trả lời: câu hỏi, phần transcript liên quan của cuộc họp này (gồm tên người nói và lời người khác), thuật ngữ, cụm từ đã lưu, vài hỏi đáp trước và trích đoạn cuộc họp cũ của bạn. Câu hỏi và câu trả lời được lưu cùng cuộc họp: bạn tải về được, và chúng bị xoá khi bạn xoá cuộc họp hoặc toàn bộ dữ liệu. Hãy báo cho người cùng họp nếu quy định nơi bạn làm việc yêu cầu.';
 
 const SUGGESTIONS = ['Giải thích câu cuối', 'Lần trước bàn gì về việc này?'];
 
