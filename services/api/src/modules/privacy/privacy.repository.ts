@@ -4,15 +4,21 @@ import type {
   Export,
   ExportSession,
   LanguageCode,
+  MeetingQuestion,
   MessagePart,
   MessageStatus,
   Speaker,
 } from '@cuelingo/shared';
 import type { Sql } from '../../lib/db';
 
+export interface ExportOptions {
+  /** Add each meeting's questions to the assistant; older clients refuse the extra key. */
+  meetingQuestions: boolean;
+}
+
 export interface PrivacyRepository {
   deleteMyData(userId: string): Promise<void>;
-  exportMyData(userId: string, exportedAt: Date): Promise<Export>;
+  exportMyData(userId: string, exportedAt: Date, options?: ExportOptions): Promise<Export>;
 }
 
 interface SessionRow {
@@ -61,6 +67,9 @@ export function createPostgresPrivacyRepository(sql: Sql): PrivacyRepository {
         await tx`DELETE FROM lesson_reports WHERE user_id = ${userId}`;
         await tx`DELETE FROM goal_lessons WHERE user_id = ${userId}`;
         await tx`DELETE FROM learning_goals WHERE user_id = ${userId}`;
+        // Questions asked during meetings, and the consent: a new start asks again.
+        await tx`DELETE FROM meeting_questions WHERE user_id = ${userId}`;
+        await tx`DELETE FROM meeting_assist_consents WHERE user_id = ${userId}`;
         await tx`DELETE FROM review_logs WHERE user_id = ${userId}`;
         await tx`DELETE FROM user_lexicon WHERE user_id = ${userId}`;
         await tx`DELETE FROM glossary_terms WHERE user_id = ${userId}`;
@@ -69,7 +78,7 @@ export function createPostgresPrivacyRepository(sql: Sql): PrivacyRepository {
       });
     },
 
-    async exportMyData(userId, exportedAt) {
+    async exportMyData(userId, exportedAt, options) {
       return sql.begin(async (tx) => {
         const sessionRows = await tx<SessionRow[]>`
           SELECT id, title, started_at, ended_at, status, assist_level, language
@@ -174,6 +183,39 @@ export function createPostgresPrivacyRepository(sql: Sql): PrivacyRepository {
           messagesByConversation.set(row.conversation_id, messages);
         }
 
+        const questionsBySession = new Map<string, MeetingQuestion[]>();
+        if (options?.meetingQuestions) {
+          const questionRows = await tx<
+            Array<{
+              id: string;
+              session_id: string;
+              question: string;
+              answer: string;
+              sources: MeetingQuestion['sources'];
+              status: MeetingQuestion['status'] | 'streaming';
+              created_at: Date;
+            }>
+          >`
+            SELECT q.id, q.session_id, q.question, q.answer, q.sources, q.status, q.created_at
+            FROM meeting_questions q
+            JOIN sessions ON sessions.id = q.session_id
+            WHERE q.user_id = ${userId} AND sessions.user_id = ${userId} AND sessions.status <> 'deleted'
+            ORDER BY q.session_id, q.seq`;
+          for (const row of questionRows) {
+            const questions = questionsBySession.get(row.session_id) ?? [];
+            questions.push({
+              id: row.id,
+              question: row.question,
+              answer: row.answer,
+              sources: row.sources,
+              // An answer still marked as streaming never finished (or is being written right now).
+              status: row.status === 'streaming' ? 'error' : row.status,
+              createdAt: row.created_at.toISOString(),
+            });
+            questionsBySession.set(row.session_id, questions);
+          }
+        }
+
         const segmentsBySession = new Map<string, ExportSession['segments']>();
         for (const row of segmentRows) {
           const segments = segmentsBySession.get(row.session_id) ?? [];
@@ -225,6 +267,9 @@ export function createPostgresPrivacyRepository(sql: Sql): PrivacyRepository {
             segments: segmentsBySession.get(row.id) ?? [],
             speakers: speakersBySession.get(row.id) ?? [],
             debrief: debriefs.get(row.id) ?? null,
+            ...(options?.meetingQuestions
+              ? { questions: questionsBySession.get(row.id) ?? [] }
+              : {}),
           })),
           phrases: phraseRows.map((row) => ({
             id: row.id,
