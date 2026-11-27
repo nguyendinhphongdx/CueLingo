@@ -72,7 +72,7 @@ services:
       AGENT_ENABLED: ${AGENT_ENABLED:-false}
       AGENT_HTML_BLOCKS: 'false'
       AI_AGENT_MODEL: ${AI_AGENT_MODEL:-}
-      MEETING_ASSIST_ENABLED: ${MEETING_ASSIST_ENABLED:-false}
+      MEETING_ASSIST_ENABLED: ${MEETING_ASSIST_ENABLED:-true}
       AI_MEETING_ASK_MODEL: ${AI_MEETING_ASK_MODEL:-}
       TTS_CACHE_DIR: /var/cache/cuelingo-tts
     volumes:

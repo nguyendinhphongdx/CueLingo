@@ -103,10 +103,10 @@ describe('INVITES_REQUIRED', () => {
     ).toBe(false);
   });
 
-  it('keeps the meeting assistant off until it is turned on (AC20)', () => {
-    expect(loadConfig(valid).MEETING_ASSIST_ENABLED).toBe(false);
-    expect(loadConfig({ ...valid, MEETING_ASSIST_ENABLED: 'true' }).MEETING_ASSIST_ENABLED).toBe(
-      true,
+  it('keeps the meeting assistant on unless it is turned off (AC20)', () => {
+    expect(loadConfig(valid).MEETING_ASSIST_ENABLED).toBe(true);
+    expect(loadConfig({ ...valid, MEETING_ASSIST_ENABLED: 'false' }).MEETING_ASSIST_ENABLED).toBe(
+      false,
     );
     expect(() => loadConfig({ ...valid, MEETING_ASSIST_ENABLED: 'yes' })).toThrow(ConfigError);
   });

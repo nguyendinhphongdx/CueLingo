@@ -43,7 +43,7 @@ Mô hình gắn `[n]` hoặc `[G]`. Server chỉ giữ số của nguồn đã �
 ## Dữ liệu & cấu hình
 
 - Bảng `meeting_questions`, `meeting_assist_consents`. `DELETE /v1/me/data` xoá cả hai; xoá tài khoản cascade; xuất qua [privacy](./privacy.md).
-- Env `MEETING_ASSIST_ENABLED` (mặc định **tắt**; thiếu `GEMINI_API_KEY` cũng coi là tắt), `AI_MEETING_ASK_MODEL`, `AI_MEETING_ASK_FALLBACK_MODEL`.
+- Env `MEETING_ASSIST_ENABLED` (mặc định **bật**, đặt `false` để tắt khẩn cấp; thiếu `GEMINI_API_KEY` cũng coi là tắt), `AI_MEETING_ASK_MODEL`, `AI_MEETING_ASK_FALLBACK_MODEL`.
 - Log chỉ có id, số đếm, mili giây. Không log câu hỏi, câu trả lời, transcript.
 
 ## Giới hạn đã biết
