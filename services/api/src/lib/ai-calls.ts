@@ -30,6 +30,8 @@ export async function recordAiCall(sql: Sql, record: AiCallRecord): Promise<void
           // The assistant's daily token quota is summed from these.
           ...(record.inputTokens !== undefined ? { inputTokens: record.inputTokens } : {}),
           ...(record.outputTokens !== undefined ? { outputTokens: record.outputTokens } : {}),
+          // How fast the person saw something: the latency target of streamed answers is measured on this.
+          ...(record.firstTokenMs !== undefined ? { firstTokenMs: record.firstTokenMs } : {}),
         })},
         now()
       )`;
