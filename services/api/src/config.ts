@@ -26,6 +26,14 @@ const ConfigSchema = z
     /** Turns the assistant on or off for everyone. Off (or no GEMINI_API_KEY) answers 503 AGENT_DISABLED. */
     AGENT_ENABLED: z.enum(['true', 'false']).default('true'),
     /**
+     * The assistant asked during a meeting (ADR 0027): sends meeting content to the AI provider for a new
+     * purpose, so it is off until turned on. Off (or no GEMINI_API_KEY) answers 503 MEETING_ASSIST_DISABLED.
+     */
+    MEETING_ASSIST_ENABLED: z.enum(['true', 'false']).default('false'),
+    /** Models of task `meeting.ask`. The gateway reads them itself; listed here so they are documented. */
+    AI_MEETING_ASK_MODEL: z.string().min(1).optional(),
+    AI_MEETING_ASK_FALLBACK_MODEL: z.string().min(1).optional(),
+    /**
      * Lets people open new goal lessons and practise sentences (they call the AI). Default: off in production,
      * on elsewhere. Turn it on after eval-lesson has run with a real model (docs: 04-modules/03-api/goals.md).
      * Goals and lessons already opened work either way.
@@ -114,8 +122,13 @@ const ConfigSchema = z
 
 export type Config = Omit<
   z.infer<typeof ConfigSchema>,
-  'INVITES_REQUIRED' | 'AGENT_ENABLED' | 'AGENT_HTML_BLOCKS' | 'GOAL_LESSONS_ENABLED'
+  | 'INVITES_REQUIRED'
+  | 'AGENT_ENABLED'
+  | 'AGENT_HTML_BLOCKS'
+  | 'GOAL_LESSONS_ENABLED'
+  | 'MEETING_ASSIST_ENABLED'
 > & {
+  MEETING_ASSIST_ENABLED: boolean;
   INVITES_REQUIRED: boolean;
   AGENT_ENABLED: boolean;
   AGENT_HTML_BLOCKS: boolean;
@@ -154,6 +167,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   return {
     ...data,
     AGENT_ENABLED: data.AGENT_ENABLED === 'true',
+    MEETING_ASSIST_ENABLED: data.MEETING_ASSIST_ENABLED === 'true',
     AGENT_HTML_BLOCKS: data.AGENT_HTML_BLOCKS === 'true',
     GOAL_LESSONS_ENABLED: data.GOAL_LESSONS_ENABLED
       ? data.GOAL_LESSONS_ENABLED === 'true'

@@ -13,6 +13,7 @@ import { createPostgresConversationsRepository } from './modules/conversations';
 import { createPostgresCoursesRepository } from './modules/courses';
 import { createPostgresGlossaryRepository } from './modules/glossary';
 import { createPostgresGoalsRepository } from './modules/goals';
+import { createPostgresMeetingAssistRepository } from './modules/meeting-assist';
 import { createPostgresSpeakersRepository } from './modules/speakers';
 import { createPostgresPrivacyRepository } from './modules/privacy';
 import { createPostgresSessionsRepository } from './modules/sessions';
@@ -106,6 +107,7 @@ const app = await buildApp({
     agent: createPostgresAgentRepository(sql),
     privacy: privacyRepository,
     sessions: sessionsRepository,
+    meetingAssist: createPostgresMeetingAssistRepository(sql),
     speakers: createPostgresSpeakersRepository(sql),
     settings: createPostgresSettingsRepository(sql),
     account: createPostgresAccountRepository(sql),
@@ -138,6 +140,7 @@ const app = await buildApp({
       costUsd: config.AGENT_QUOTA_USD_PER_DAY,
     },
   },
+  meetingAssist: { enabled: config.MEETING_ASSIST_ENABLED && Boolean(gateway), gateway },
   transcribe: gateway ? { gateway } : undefined,
   followup: gateway ? { gateway } : undefined,
   goals: gateway ? { gateway, enabled: config.GOAL_LESSONS_ENABLED } : undefined,
