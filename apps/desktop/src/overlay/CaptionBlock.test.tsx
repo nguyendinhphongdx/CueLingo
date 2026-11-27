@@ -98,3 +98,22 @@ describe('CaptionBlock offline label (ADR 0024)', () => {
     expect(html({ offline: true, partial: true })).not.toContain('Ngoại tuyến');
   });
 });
+
+describe('CaptionBlock and the assistant', () => {
+  it('offers "Giải thích" on a finished sentence only when the assistant is there (AC6)', () => {
+    const block = (partial: boolean, onExplain?: () => void) =>
+      renderToStaticMarkup(
+        <CaptionBlock
+          segment={{ ...segment('en'), partial }}
+          level={3}
+          faded={false}
+          showSpeaker={false}
+          onLookup={() => {}}
+          onExplain={onExplain}
+        />,
+      );
+    expect(block(false, () => {})).toContain('Giải thích');
+    expect(block(false)).not.toContain('Giải thích');
+    expect(block(true, () => {})).not.toContain('Giải thích');
+  });
+});

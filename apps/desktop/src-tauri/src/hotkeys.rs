@@ -1,4 +1,4 @@
-//! Global shortcuts: ⌘⇧L overlay, ⌘⇧W recap, ⌘⇧S say-for-me (Ctrl+Shift on Windows).
+//! Global shortcuts: ⌘⇧L overlay, ⌘⇧W recap, ⌘⇧S say-for-me, ⌘⇧Y ask (Ctrl+Shift on Windows).
 use serde::Serialize;
 use tauri::plugin::TauriPlugin;
 use tauri::{AppHandle, Emitter, Wry};
@@ -34,6 +34,7 @@ fn action_for(shortcut: &Shortcut) -> Option<&'static str> {
         (Code::KeyL, "toggle_overlay"),
         (Code::KeyW, "recap"),
         (Code::KeyS, "say_for_me"),
+        (Code::KeyY, "ask"),
     ]
     .into_iter()
     .find(|(code, _)| shortcut.matches(mods(), *code))
@@ -64,4 +65,23 @@ pub fn register(app: &AppHandle) -> tauri::Result<()> {
             .map_err(|e| tauri::Error::Anyhow(e.into()))?;
     }
     Ok(())
+}
+
+/// The ask shortcut is held only while the server offers the assistant, so a switched-off server takes no key
+/// from other apps. It is a convenience (the overlay has a button): a key another app holds is skipped.
+#[tauri::command]
+pub fn set_ask_hotkey(app: AppHandle, enabled: bool) {
+    let shortcut = Shortcut::new(Some(mods()), Code::KeyY);
+    let shortcuts = app.global_shortcut();
+    if shortcuts.is_registered(shortcut) == enabled {
+        return;
+    }
+    let result = if enabled {
+        shortcuts.register(shortcut)
+    } else {
+        shortcuts.unregister(shortcut)
+    };
+    if let Err(error) = result {
+        eprintln!("ask shortcut not updated: {error}");
+    }
 }

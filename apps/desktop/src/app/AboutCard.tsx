@@ -15,6 +15,7 @@ const shortcuts = [
   { key: 'L', label: 'Hiện hoặc ẩn overlay caption' },
   { key: 'W', label: 'Họ vừa nói gì? (tóm tắt)' },
   { key: 'S', label: 'Nói giúp (soạn câu tiếng Anh)' },
+  { key: 'Y', label: 'Hỏi trợ lý trong cuộc họp (khi máy chủ có bật)' },
 ] as const;
 
 export function ShortcutList() {

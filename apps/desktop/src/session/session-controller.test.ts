@@ -222,6 +222,7 @@ describe('session controller', () => {
         translation: null,
         partial: true,
         language: 'en',
+        sessionId: expect.any(String),
       },
       {
         segmentId,
@@ -230,6 +231,7 @@ describe('session controller', () => {
         translation: null,
         partial: false,
         language: 'en',
+        sessionId: expect.any(String),
       },
       {
         segmentId,
@@ -238,6 +240,7 @@ describe('session controller', () => {
         translation: null,
         partial: false,
         language: 'en',
+        sessionId: expect.any(String),
       },
     ]);
     expect(context.sent).toEqual([
@@ -290,6 +293,7 @@ describe('session controller', () => {
       translation: 'Bản dịch',
       partial: false,
       language: 'en',
+      sessionId: expect.any(String),
     });
   });
 
@@ -2094,6 +2098,7 @@ describe('session controller', () => {
         agent_messages: item(0, 0, 'exhausted'),
         lessons_daily: item(0, 2, 'ok'),
         lesson_practice_daily: item(0, 20, 'ok'),
+        meeting_ask_daily: item(0, 20, 'ok'),
         ...overrides,
       },
     });

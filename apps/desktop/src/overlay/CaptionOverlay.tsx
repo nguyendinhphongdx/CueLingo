@@ -1,5 +1,6 @@
 import {
   ArrowDown,
+  Bot,
   ChevronDown,
   EyeOff,
   ListChecks,
@@ -14,7 +15,13 @@ import { IconButton } from '@cuelingo/ui/components/icon-button';
 import { native, type NoticeEvent, type TranscriptEvent } from '../lib/native';
 import { shortcutLabel } from '../lib/platform';
 import { useMicMuted } from '../session/use-mic-muted';
-import { DRAWER_WIDTH, QuickAssistPanel, useQuickAssist } from '../quick-assist';
+import {
+  DRAWER_WIDTH,
+  MeetingAskPanel,
+  QuickAssistPanel,
+  useMeetingAsk,
+  useQuickAssist,
+} from '../quick-assist';
 import { saveAssistLevel } from '../settings/use-assist-settings';
 import type { SelectableAssistLevel } from '../settings/settings-store';
 import { queueSettingsPatch } from '../settings/settings-api';
@@ -79,6 +86,7 @@ export function CaptionOverlay({
   const assistLevel = level ?? syncedLevel;
   const prefs = useOverlayPrefs({ fontSize: initialFontSize, theme: initialTheme });
   const quickAssist = useQuickAssist({ listen });
+  const meetingAsk = useMeetingAsk({ listen });
   const mic = useMicMuted(listen);
   const muted = micMuted ?? mic.muted;
   const micUnavailable = micFailed ?? mic.failed;
@@ -124,25 +132,43 @@ export function CaptionOverlay({
   }, [captionSegments, prefs.fontSize, assistLevel]);
 
   const panelView = quickAssist.state.view;
+  const askOpen = meetingAsk.state.open;
+  // Two things share the drawer; the one opened last is in front, the other keeps what it holds.
+  const [front, setFront] = useState<'ask' | 'tool'>('tool');
 
   // Opening something new always shows it expanded.
   useEffect(() => {
-    if (panelView !== 'closed') setPanelCollapsed(false);
-  }, [panelView]);
+    if (quickAssist.openCount === 0) return;
+    setFront('tool');
+    setPanelCollapsed(false);
+  }, [quickAssist.openCount]);
+  useEffect(() => {
+    if (meetingAsk.openCount === 0) return;
+    setFront('ask');
+    setPanelCollapsed(false);
+  }, [meetingAsk.openCount]);
+
+  const activePanel =
+    askOpen && (front === 'ask' || panelView === 'closed')
+      ? 'ask'
+      : panelView !== 'closed'
+        ? 'tool'
+        : null;
 
   // The docked panel changes how tall the captions are: stay on the newest line if the reader was there.
   useEffect(() => {
     if (followingRef.current) scrollToBottom();
-  }, [panelView, panelCollapsed]);
+  }, [activePanel, panelView, panelCollapsed]);
 
   /** The footer buttons open their panel, and fold or unfold it when it is already the one showing. */
   function togglePanel(view: 'recap' | 'compose') {
-    if (panelView === view) setPanelCollapsed((collapsed) => !collapsed);
+    if (panelView === view && activePanel === 'tool') setPanelCollapsed((collapsed) => !collapsed);
     else if (view === 'recap') quickAssist.openRecap();
     else quickAssist.openCompose();
   }
 
-  const drawerOpen = panelView !== 'closed' && !panelCollapsed;
+  const drawerOpen = activePanel !== null && !panelCollapsed;
+  const askAvailable = meetingAsk.state.availability === 'available';
 
   /** Every tool of the overlay. A new one is one more entry here. */
   const tools: ToolItem[] = [
@@ -152,7 +178,7 @@ export function CaptionOverlay({
       description: 'Họ vừa nói gì, trong 1 phút qua',
       hint: shortcutLabel('W'),
       icon: <ListChecks aria-hidden="true" className="size-[18px]" />,
-      active: panelView === 'recap' && !panelCollapsed,
+      active: activePanel === 'tool' && panelView === 'recap' && !panelCollapsed,
       onSelect: () => togglePanel('recap'),
     },
     {
@@ -161,16 +187,36 @@ export function CaptionOverlay({
       description: 'Soạn câu tiếng Anh từ ý của bạn',
       hint: shortcutLabel('S'),
       icon: <MessageSquareQuote aria-hidden="true" className="size-[18px]" />,
-      active: panelView === 'compose' && !panelCollapsed,
+      active: activePanel === 'tool' && panelView === 'compose' && !panelCollapsed,
       onSelect: () => togglePanel('compose'),
     },
+    // Only when the server offers it: an older or switched-off server shows no entry at all.
+    ...(askAvailable
+      ? [
+          {
+            id: 'ask',
+            label: 'Hỏi trợ lý',
+            description: 'Giải thích, nhắc lại cuộc họp trước',
+            hint: shortcutLabel('Y'),
+            icon: <Bot aria-hidden="true" className="size-[18px]" />,
+            active: activePanel === 'ask' && !panelCollapsed,
+            onSelect: () => {
+              if (activePanel === 'ask') setPanelCollapsed((collapsed) => !collapsed);
+              else meetingAsk.open();
+            },
+          },
+        ]
+      : []),
   ];
   const drawerWidth = useDrawerWindow(drawerOpen, DRAWER_WIDTH);
   // While the drawer slides shut its content stays what it was, instead of vanishing on the first frame.
   const [shownPanel, setShownPanel] = useState(quickAssist.state);
+  const [shownKind, setShownKind] = useState<'ask' | 'tool'>('tool');
   useEffect(() => {
-    if (drawerOpen) setShownPanel(quickAssist.state);
-  }, [drawerOpen, quickAssist.state]);
+    if (!drawerOpen || !activePanel) return;
+    setShownKind(activePanel);
+    setShownPanel(quickAssist.state);
+  }, [drawerOpen, activePanel, quickAssist.state]);
 
   const hidden = assistLevel === 0;
   // What the other side said last, for the Nói giúp drawer. Kept in memory only.
@@ -232,7 +278,11 @@ export function CaptionOverlay({
               <ChevronDown aria-hidden="true" className="size-3.5" />
             </>
           }
-          onClick={() => setMenu((open) => (open === 'tools' ? null : 'tools'))}
+          onClick={() => {
+            // The server may have turned the assistant on or off since the overlay opened.
+            meetingAsk.refresh();
+            setMenu((open) => (open === 'tools' ? null : 'tools'));
+          }}
         />
         <span aria-hidden="true" className="bg-border mx-0.5 h-5 w-px" />
         <IconButton
@@ -297,6 +347,15 @@ export function CaptionOverlay({
                     faded={index < captionSegments.length - FRESH_COUNT}
                     showSpeaker={!previous || previous.stream !== segment.stream}
                     onLookup={(term) => quickAssist.lookup(term, segment.text)}
+                    onExplain={
+                      askAvailable && received && meetingAsk.sessionId
+                        ? () =>
+                            meetingAsk.ask('Giải thích câu này', {
+                              segmentId: segment.segmentId,
+                              text: segment.text,
+                            })
+                        : undefined
+                    }
                   />
                 );
               })}
@@ -305,12 +364,16 @@ export function CaptionOverlay({
         </div>
         {drawerWidth > 0.5 ? (
           <div className="flex shrink-0 justify-end overflow-hidden" style={{ width: drawerWidth }}>
-            <QuickAssistPanel
-              state={shownPanel}
-              asked={asked}
-              actions={quickAssist}
-              onToggleCollapsed={() => setPanelCollapsed(true)}
-            />
+            {shownKind === 'ask' ? (
+              <MeetingAskPanel ask={meetingAsk} onToggleCollapsed={() => setPanelCollapsed(true)} />
+            ) : (
+              <QuickAssistPanel
+                state={shownPanel}
+                asked={asked}
+                actions={quickAssist}
+                onToggleCollapsed={() => setPanelCollapsed(true)}
+              />
+            )}
           </div>
         ) : null}
       </div>

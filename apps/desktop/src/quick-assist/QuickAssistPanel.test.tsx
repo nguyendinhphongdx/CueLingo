@@ -8,6 +8,7 @@ import { listenForQuickAssistHotkeys } from './use-quick-assist';
 function actions(): QuickAssistActions {
   return {
     state: { view: 'closed' },
+    openCount: 0,
     lookup: vi.fn(),
     retryLookup: vi.fn(),
     openRecap: vi.fn(),
