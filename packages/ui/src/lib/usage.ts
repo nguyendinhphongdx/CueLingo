@@ -10,6 +10,7 @@ const LABELS: Record<string, string> = {
   agent_messages: 'Tin nhắn trợ lý',
   lessons_daily: 'Bài học mới hôm nay',
   lesson_practice_daily: 'Câu luyện được góp ý hôm nay',
+  meeting_ask_daily: 'Câu hỏi trợ lý trong họp hôm nay',
 };
 
 /** The order allowances are listed in. */
@@ -21,6 +22,7 @@ export const USAGE_METRIC_ORDER = [
   'agent_messages',
   'lessons_daily',
   'lesson_practice_daily',
+  'meeting_ask_daily',
 ] as const;
 
 const PLAN_NAMES: Record<string, string> = { free: 'Free', pro: 'Pro', ultra: 'Ultra' };
@@ -120,7 +122,12 @@ export function planExpiryNotice(
   return `Gói ${planName(plan)} hết hạn ngày ${formatDateVn(expiresAt)}`;
 }
 
-const DAILY_METRICS = new Set(['assist_daily', 'lessons_daily', 'lesson_practice_daily']);
+const DAILY_METRICS = new Set([
+  'assist_daily',
+  'lessons_daily',
+  'lesson_practice_daily',
+  'meeting_ask_daily',
+]);
 
 /** What the person is told when a call is refused for lack of allowance. Never retried. */
 export function quotaExceededMessage(metric: string, resetsAt?: string): string {
@@ -132,6 +139,7 @@ export function quotaExceededMessage(metric: string, resetsAt?: string): string 
     agent_messages: 'tin nhắn trợ lý tháng này',
     lessons_daily: 'lượt mở bài học mới hôm nay',
     lesson_practice_daily: 'lượt góp ý câu luyện hôm nay',
+    meeting_ask_daily: 'lượt hỏi trợ lý trong họp hôm nay',
   };
   const head = `Bạn đã dùng hết ${what[metric] ?? 'hạn mức của gói'}.`;
   const date = resetsAt ? formatResetDate(resetsAt) : '';

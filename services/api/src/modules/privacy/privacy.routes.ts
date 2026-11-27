@@ -1,4 +1,4 @@
-import { DeleteMyDataRequestSchema, type Export } from '@cuelingo/shared';
+import { DeleteMyDataRequestSchema, ExportQuerySchema, type Export } from '@cuelingo/shared';
 import type { FastifyPluginAsync } from 'fastify';
 import { parse } from '../../lib/http';
 import type { PrivacyService } from './privacy.service';
@@ -11,8 +11,11 @@ export function privacyRoutes(service: PrivacyService): FastifyPluginAsync {
       return reply.code(204).send();
     });
 
-    app.get('/v1/me/export', async (request): Promise<Export> =>
-      service.exportMyData(request.userId),
-    );
+    app.get('/v1/me/export', async (request): Promise<Export> => {
+      const { include } = parse(ExportQuerySchema, request.query);
+      return service.exportMyData(request.userId, {
+        meetingQuestions: include === 'meeting_questions',
+      });
+    });
   };
 }

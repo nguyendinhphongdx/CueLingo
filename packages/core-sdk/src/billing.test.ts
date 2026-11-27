@@ -12,6 +12,7 @@ const limits = {
   agent_messages: 100,
   lessons_daily: null,
   lesson_practice_daily: null,
+  meeting_ask_daily: null,
 };
 const order = {
   id: '0b9f2f5e-7c52-4d57-9d4c-1f5f3a7a9a10',

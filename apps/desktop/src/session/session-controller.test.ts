@@ -2094,6 +2094,7 @@ describe('session controller', () => {
         agent_messages: item(0, 0, 'exhausted'),
         lessons_daily: item(0, 2, 'ok'),
         lesson_practice_daily: item(0, 20, 'ok'),
+        meeting_ask_daily: item(0, 20, 'ok'),
         ...overrides,
       },
     });

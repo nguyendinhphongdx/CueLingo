@@ -13,6 +13,7 @@ describe('UsageResponseSchema', () => {
       agent_messages: item,
       lessons_daily: item,
       lesson_practice_daily: item,
+      meeting_ask_daily: item,
     };
     expect(UsageResponseSchema.safeParse({ plan: 'free', usage }).success).toBe(true);
     const { debriefs: _d, ...rest } = usage;

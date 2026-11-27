@@ -15,6 +15,7 @@ const usage: UsageResponse = {
     agent_messages: { used: 99, limit: 100, resetsAt, state: 'low' },
     lessons_daily: { used: 0, limit: 10, resetsAt, state: 'ok' },
     lesson_practice_daily: { used: 0, limit: 150, resetsAt, state: 'ok' },
+    meeting_ask_daily: { used: 0, limit: 150, resetsAt, state: 'ok' },
   },
 };
 
@@ -24,7 +25,7 @@ describe('UsagePanelView', () => {
       <UsagePanelView usage={usage} loading={false} error={null} />,
     );
     expect(markup).toContain('<strong>Pro</strong>');
-    expect(markup.match(/data-state=/g)).toHaveLength(7);
+    expect(markup.match(/data-state=/g)).toHaveLength(8);
     expect(markup).toContain('Còn 19 giờ');
     expect(markup).toContain('Còn 1 lần');
   });

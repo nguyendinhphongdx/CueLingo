@@ -53,6 +53,12 @@ export const TASKS = {
     fallbackModel: process.env.AI_AGENT_FALLBACK_MODEL ?? 'gemini-3.1-flash-lite',
     timeoutMs: 30_000,
   },
+  // The assistant asked during a meeting (ADR 0027): one streamed answer, no tools.
+  'meeting.ask': {
+    model: process.env.AI_MEETING_ASK_MODEL ?? 'gemini-3.5-flash-lite',
+    fallbackModel: process.env.AI_MEETING_ASK_FALLBACK_MODEL ?? 'gemini-3.1-flash-lite',
+    timeoutMs: 20_000,
+  },
   'tts.speak': {
     model: process.env.AI_TTS_MODEL ?? 'gemini-3.8-flash-lite-tts',
     fallbackModel: process.env.AI_TTS_FALLBACK_MODEL ?? 'gemini-3.8-flash-tts',
@@ -68,5 +74,5 @@ export const TASKS = {
 export type TaskName = keyof typeof TASKS;
 export type JsonTaskName = Exclude<
   TaskName,
-  'translate.realtime' | 'tts.speak' | 'stt.transcribe' | 'agent.chat'
+  'translate.realtime' | 'tts.speak' | 'stt.transcribe' | 'agent.chat' | 'meeting.ask'
 >;

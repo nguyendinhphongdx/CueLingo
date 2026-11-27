@@ -32,6 +32,7 @@ const usage = {
     agent_messages: item(0),
     lessons_daily: item(0),
     lesson_practice_daily: item(0),
+    meeting_ask_daily: item(0),
   },
 };
 const make = (fetch: ReturnType<typeof vi.fn>) =>

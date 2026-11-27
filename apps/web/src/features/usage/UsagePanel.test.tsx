@@ -16,6 +16,7 @@ const usage: UsageResponse = {
     agent_messages: { used: 0, limit: 0, resetsAt, state: 'exhausted' },
     lessons_daily: { used: 0, limit: 2, resetsAt, state: 'ok' },
     lesson_practice_daily: { used: 0, limit: 20, resetsAt, state: 'ok' },
+    meeting_ask_daily: { used: 0, limit: 20, resetsAt, state: 'ok' },
   },
 };
 

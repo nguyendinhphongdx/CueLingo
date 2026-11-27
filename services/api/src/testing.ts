@@ -10,6 +10,7 @@ import { createInMemoryGlossaryRepository } from './modules/glossary';
 import { createInMemoryGoalsRepository } from './modules/goals';
 import type { PrivacyRepository } from './modules/privacy';
 import { createInMemorySessionsRepository } from './modules/sessions';
+import { createInMemoryMeetingAssistRepository } from './modules/meeting-assist';
 import { createInMemorySpeakersRepository } from './modules/speakers';
 import { createInMemorySettingsRepository } from './modules/settings';
 import { createInMemoryDialRepository } from './modules/dial';
@@ -69,6 +70,7 @@ export async function buildTestApp(
       agent: createInMemoryAgentRepository(),
       privacy: emptyPrivacyRepository(),
       sessions,
+      meetingAssist: createInMemoryMeetingAssistRepository({ sessions, debrief }),
       // Shares the speaker rows of the in-memory sessions store, so a rename shows up in the transcript.
       speakers: createInMemorySpeakersRepository(
         'speakerRows' in sessions

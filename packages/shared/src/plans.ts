@@ -18,6 +18,7 @@ export const USAGE_METRICS = [
   'agent_messages',
   'lessons_daily',
   'lesson_practice_daily',
+  'meeting_ask_daily',
 ] as const;
 export const UsageMetricSchema = z.enum(USAGE_METRICS);
 export type UsageMetric = z.infer<typeof UsageMetricSchema>;
@@ -35,6 +36,7 @@ export const DEFAULT_PLAN_LIMITS: PlanLimitTable = {
     agent_messages: 0,
     lessons_daily: 2,
     lesson_practice_daily: 20,
+    meeting_ask_daily: 10,
   },
   pro: {
     translation_ms: 20 * HOUR_MS,
@@ -44,6 +46,7 @@ export const DEFAULT_PLAN_LIMITS: PlanLimitTable = {
     agent_messages: 100,
     lessons_daily: 10,
     lesson_practice_daily: 150,
+    meeting_ask_daily: 60,
   },
   ultra: {
     translation_ms: 60 * HOUR_MS,
@@ -53,6 +56,7 @@ export const DEFAULT_PLAN_LIMITS: PlanLimitTable = {
     agent_messages: 500,
     lessons_daily: 20,
     lesson_practice_daily: 300,
+    meeting_ask_daily: 150,
   },
 };
 
@@ -66,6 +70,7 @@ const PlanOverrideSchema = z
     agent_messages: LimitValueSchema,
     lessons_daily: LimitValueSchema,
     lesson_practice_daily: LimitValueSchema,
+    meeting_ask_daily: LimitValueSchema,
   })
   .partial()
   .strict();

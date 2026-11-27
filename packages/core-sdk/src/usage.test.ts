@@ -15,6 +15,7 @@ const usage = {
     agent_messages: item,
     lessons_daily: item,
     lesson_practice_daily: item,
+    meeting_ask_daily: item,
   },
 };
 

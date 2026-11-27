@@ -32,17 +32,23 @@ const EXPECTED_TABLES = [
   'lesson_contents',
   'goal_lessons',
   'lesson_reports',
+  'meeting_questions',
+  'meeting_assist_consents',
 ];
 
 /** Created by the plans and usage migration and the billing one after it; every deeper rollback drops both. */
 const PLANS_TABLES: string[] = ['user_plans', 'usage_counters', 'billing_orders'];
-/** Created by the goal lessons migration, the newest one. */
+/** Created by the goal lessons migration. */
 const GOAL_TABLES: string[] = [
   'learning_goals',
   'lesson_contents',
   'goal_lessons',
   'lesson_reports',
 ];
+/** Created by the meeting assist migration, the newest one. */
+const MEETING_TABLES: string[] = ['meeting_questions', 'meeting_assist_consents'];
+/** The two newest migrations: any deeper rollback drops these. */
+const NEWER_TABLES: string[] = [...GOAL_TABLES, ...MEETING_TABLES];
 /** Created by the agent conversations migration (a later one only adds an index). */
 const LATEST_TABLES: string[] = ['agent_conversations', 'agent_messages'];
 /** Created by the migration before it (feedback + events index). */
@@ -95,8 +101,8 @@ describe('migrations (AC2)', () => {
         WHERE schemaname = 'public' AND indexname = 'agent_messages_streaming_idx'`
     ).map((r) => r.indexname);
 
-  // Counts below are "migrations back from admin_grants"; newer ones (feedback kind 'other', goal lessons) sit on top.
-  const NEWER_MIGRATIONS = 2;
+  // Counts below are "migrations back from admin_grants"; newer ones (feedback kind 'other', goal lessons, meeting assist) sit on top.
+  const NEWER_MIGRATIONS = 3;
   const rollback = (times: number) => {
     for (let i = 0; i < times + NEWER_MIGRATIONS; i += 1) dbmate(db.url, 'rollback');
   };
@@ -108,15 +114,13 @@ describe('migrations (AC2)', () => {
     const [user] = await sql<{ id: string }[]>`
       INSERT INTO auth_user (name, email) VALUES ('F', 'feedback-kind@example.com') RETURNING id`;
     await sql`INSERT INTO feedback (user_id, kind, message, client, app_version, os) VALUES (${user!.id}, 'other', 'hello', 'web', '0.0.0', 'test')`;
-    // The goal lessons migration sits on top of this one: roll both back, then apply both again.
-    dbmate(db.url, 'rollback');
-    dbmate(db.url, 'rollback');
+    // Two newer migrations sit on top of this one: roll all three back, then apply them again.
+    for (let i = 0; i < 3; i += 1) dbmate(db.url, 'rollback');
     expect(await sql`SELECT 1 FROM feedback WHERE kind = 'other'`).toHaveLength(0);
     await expect(
       sql`INSERT INTO feedback (user_id, kind, message, client, app_version, os) VALUES (${user!.id}, 'other', 'again', 'web', '0.0.0', 'test')`,
     ).rejects.toThrow();
-    dbmate(db.url, 'up');
-    dbmate(db.url, 'up');
+    for (let i = 0; i < 3; i += 1) dbmate(db.url, 'up');
     await sql`INSERT INTO feedback (user_id, kind, message, client, app_version, os) VALUES (${user!.id}, 'other', 'again', 'web', '0.0.0', 'test')`;
     await sql`DELETE FROM auth_user WHERE id = ${user!.id}`;
   });
@@ -179,7 +183,7 @@ describe('migrations (AC2)', () => {
     rollback(3);
     expect((await tables()).sort()).toEqual(
       EXPECTED_TABLES.filter(
-        (table) => !PLANS_TABLES.includes(table) && !GOAL_TABLES.includes(table),
+        (table) => !PLANS_TABLES.includes(table) && !NEWER_TABLES.includes(table),
       ).sort(),
     );
     expect(await debriefSkippedColumn()).toEqual([]);
@@ -195,7 +199,7 @@ describe('migrations (AC2)', () => {
     // The migrations before it are untouched.
     // The goal lesson tables were rolled back with it, and are back after `up` below.
     expect(await tables()).toHaveLength(
-      EXPECTED_TABLES.length - PLANS_TABLES.length - GOAL_TABLES.length,
+      EXPECTED_TABLES.length - PLANS_TABLES.length - NEWER_TABLES.length,
     );
     up(4);
     expect(await streamingIndex()).toEqual(['agent_messages_streaming_idx']);
@@ -210,7 +214,7 @@ describe('migrations (AC2)', () => {
         (table) =>
           !PLANS_TABLES.includes(table) &&
           !LATEST_TABLES.includes(table) &&
-          !GOAL_TABLES.includes(table),
+          !NEWER_TABLES.includes(table),
       ).sort(),
     );
     expect(await eventsIndex()).toEqual(['events_type_user_at_idx']);
@@ -227,7 +231,7 @@ describe('migrations (AC2)', () => {
           !PLANS_TABLES.includes(table) &&
           !LATEST_TABLES.includes(table) &&
           !FEEDBACK_TABLES.includes(table) &&
-          !GOAL_TABLES.includes(table),
+          !NEWER_TABLES.includes(table),
       ).sort(),
     );
     expect(await eventsIndex()).toEqual([]);
@@ -263,13 +267,35 @@ describe('migrations (AC2)', () => {
       SELECT column_name FROM information_schema.columns WHERE table_name = 'lesson_contents'`;
     expect(columns.map((c) => c.column_name)).not.toContain('user_id');
 
+    // The meeting assist migration sits on top.
+    dbmate(db.url, 'rollback');
     dbmate(db.url, 'rollback');
     expect(await tables()).not.toContain('lesson_contents');
     expect(await metricRule()).not.toContain('lessons_daily');
     expect(await sql`SELECT 1 FROM usage_counters WHERE metric = 'lessons_daily'`).toHaveLength(0);
     dbmate(db.url, 'up');
+    dbmate(db.url, 'up');
     expect((await tables()).sort()).toEqual([...EXPECTED_TABLES].sort());
     expect(await metricRule()).toContain('lessons_daily');
+    await sql`DELETE FROM auth_user WHERE id = ${user!.id}`;
+  });
+
+  it('adds the meeting assist tables and metric, and rolls them back', async () => {
+    expect(await tables()).toEqual(expect.arrayContaining(MEETING_TABLES));
+    expect(await metricRule()).toContain('meeting_ask_daily');
+    const [user] = await sql<{ id: string }[]>`
+      INSERT INTO auth_user (name, email) VALUES ('M', 'meeting-migration@example.com') RETURNING id`;
+    await sql`INSERT INTO usage_counters (user_id, period_start, metric, amount)
+      VALUES (${user!.id}, now(), 'meeting_ask_daily', 1)`;
+
+    dbmate(db.url, 'rollback');
+    expect(await tables()).not.toContain('meeting_questions');
+    expect(await metricRule()).not.toContain('meeting_ask_daily');
+    expect(await sql`SELECT 1 FROM usage_counters WHERE metric = 'meeting_ask_daily'`).toHaveLength(
+      0,
+    );
+    dbmate(db.url, 'up');
+    expect((await tables()).sort()).toEqual([...EXPECTED_TABLES].sort());
     await sql`DELETE FROM auth_user WHERE id = ${user!.id}`;
   });
 });

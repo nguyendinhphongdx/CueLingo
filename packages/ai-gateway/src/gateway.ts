@@ -8,6 +8,7 @@ import {
   buildLessonPersonalizePrompt,
   buildLessonPrompt,
   buildLookupPrompt,
+  buildMeetingAskPrompt,
   buildRecapPrompt,
   buildSttPromptV3,
   buildSttPromptV4,
@@ -18,6 +19,7 @@ import {
   LESSON_PERSONALIZE_PROMPT_VERSION,
   LESSON_PROMPT_VERSION,
   LOOKUP_PROMPT_VERSION,
+  MEETING_ASK_PROMPT_VERSION,
   RECAP_PROMPT_VERSION,
   isContextEcho,
   STT_V3_PROMPT_VERSION,
@@ -30,6 +32,7 @@ import {
   type LessonFeedbackInput,
   type LessonPersonalizeInput,
   type LessonPromptInput,
+  type MeetingAskPromptInput,
 } from '@cuelingo/prompts';
 import type { ComposeRequest, LanguageCode, LookupRequest, RecapRequest } from '@cuelingo/shared';
 import { generateText } from 'ai';
@@ -157,6 +160,16 @@ export interface AiGateway {
     },
     context?: AiCallContext,
   ): AsyncGenerator<ChatStreamPart, void, void>;
+  /**
+   * One streamed answer to a question asked during a meeting (`meeting.ask`, ADR 0027): no tools, text
+   * deltas then a `finish` part. Same fallback, abort and failure rules as `chat`. Nothing of the input or
+   * the answer is recorded or logged.
+   */
+  ask(
+    input: MeetingAskPromptInput,
+    context?: AiCallContext,
+    signal?: AbortSignal,
+  ): AsyncGenerator<ChatStreamPart, void, void>;
   json<TTask extends JsonTaskName, TOutput>(
     task: TTask,
     input: JsonTaskInputMap[TTask],
@@ -188,6 +201,10 @@ const SINGLE_MODEL_TASKS = new Set<TaskName>([
   'lesson.generate',
   'lesson.personalize',
 ]);
+
+/** A meeting answer is read at a glance: short by default (AC7), longer only when asked. */
+const ASK_MAX_OUTPUT_TOKENS = 450;
+const ASK_DETAIL_MAX_OUTPUT_TOKENS = 1_200;
 
 /** Upper bound of one assistant step (plan: <= 2k output tokens). */
 const AGENT_MAX_OUTPUT_TOKENS = 2_000;
@@ -367,6 +384,93 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
     }
   }
 
+  /** One streamed model step: fallback only before the first output, one record per attempt. */
+  async function* streamStep(
+    {
+      task,
+      promptVersion,
+      system,
+      messages,
+      tools,
+      maxOutputTokens,
+      signal,
+    }: {
+      task: 'agent.chat' | 'meeting.ask';
+      promptVersion: string;
+      system: string;
+      messages: ChatMessage[];
+      tools: ChatToolDeclaration[];
+      maxOutputTokens: number;
+      signal?: AbortSignal;
+    },
+    context?: AiCallContext,
+  ): AsyncGenerator<ChatStreamPart, void, void> {
+    const config = TASKS[task];
+    const models = [{ model: config.model, fallback: false }];
+    if (config.fallbackModel !== config.model)
+      models.push({ model: config.fallbackModel, fallback: true });
+
+    let lastError: unknown;
+    for (const { model, fallback } of models) {
+      const started = performance.now();
+      const record: AiCallRecord = {
+        task,
+        model,
+        promptVersion,
+        latencyMs: 0,
+        fallback,
+        ok: false,
+        ...context,
+      };
+      let produced = false;
+      let received = 0;
+      try {
+        const stepSignal = AbortSignal.any([
+          AbortSignal.timeout(config.timeoutMs),
+          ...(signal ? [signal] : []),
+        ]);
+        for await (const part of streamChat({
+          model,
+          system,
+          messages,
+          tools,
+          maxOutputTokens,
+          signal: stepSignal,
+        })) {
+          if (part.type === 'finish') {
+            if (!produced) throw new Error('empty completion');
+            record.ok = true;
+            record.inputTokens = part.inputTokens;
+            record.outputTokens = part.outputTokens;
+          } else if (part.type !== 'text_delta' || part.text) {
+            if (!produced) record.firstTokenMs = Math.round(performance.now() - started);
+            produced = true;
+          }
+          if (part.type === 'text_delta') received += part.text.length;
+          yield part;
+        }
+        if (!record.ok) throw new Error('stream ended without a finish part');
+        return;
+      } catch (error) {
+        if (signal?.aborted) return;
+        lastError = error;
+        if (produced) break;
+      } finally {
+        if (!record.ok && signal?.aborted && record.inputTokens === undefined) {
+          // Stop must not dodge the cost: the provider bills what was read, so estimate it (about 4 chars/token).
+          const sent = messages.reduce((sum, m) => sum + JSON.stringify(m).length, system.length);
+          record.inputTokens = Math.ceil(sent / 4);
+          record.outputTokens = Math.ceil(received / 4);
+        }
+        record.latencyMs = Math.round(performance.now() - started);
+        void Promise.resolve()
+          .then(() => options.onCall?.(record))
+          .catch(() => undefined);
+      }
+    }
+    throw new AiGatewayError(task, lastError);
+  }
+
   async function runTextTask(
     task: TaskName,
     system: string,
@@ -472,73 +576,35 @@ export function createAiGateway(options: AiGatewayOptions): AiGateway {
     },
 
     async *chat({ language, messages, tools, signal }, context) {
-      const config = TASKS['agent.chat'];
-      const { system, version: promptVersion } = agentPromptFor(Boolean(options.agentHtmlBlocks), {
-        language,
-      });
-      const models = [{ model: config.model, fallback: false }];
-      if (config.fallbackModel !== config.model)
-        models.push({ model: config.fallbackModel, fallback: true });
-
-      let lastError: unknown;
-      for (const { model, fallback } of models) {
-        const started = performance.now();
-        const record: AiCallRecord = {
+      const { system, version } = agentPromptFor(Boolean(options.agentHtmlBlocks), { language });
+      yield* streamStep(
+        {
           task: 'agent.chat',
-          model,
-          promptVersion,
-          latencyMs: 0,
-          fallback,
-          ok: false,
-          ...context,
-        };
-        let produced = false;
-        let received = 0;
-        try {
-          const stepSignal = AbortSignal.any([
-            AbortSignal.timeout(config.timeoutMs),
-            ...(signal ? [signal] : []),
-          ]);
-          for await (const part of streamChat({
-            model,
-            system,
-            messages,
-            tools,
-            maxOutputTokens: AGENT_MAX_OUTPUT_TOKENS,
-            signal: stepSignal,
-          })) {
-            if (part.type === 'finish') {
-              if (!produced) throw new Error('empty completion');
-              record.ok = true;
-              record.inputTokens = part.inputTokens;
-              record.outputTokens = part.outputTokens;
-            } else if (part.type !== 'text_delta' || part.text) {
-              if (!produced) record.firstTokenMs = Math.round(performance.now() - started);
-              produced = true;
-            }
-            if (part.type === 'text_delta') received += part.text.length;
-            yield part;
-          }
-          if (!record.ok) throw new Error('stream ended without a finish part');
-          return;
-        } catch (error) {
-          if (signal?.aborted) return;
-          lastError = error;
-          if (produced) break;
-        } finally {
-          if (!record.ok && signal?.aborted && record.inputTokens === undefined) {
-            // Stop must not dodge the cost: the provider bills what was read, so estimate it (about 4 chars/token).
-            const sent = messages.reduce((sum, m) => sum + JSON.stringify(m).length, system.length);
-            record.inputTokens = Math.ceil(sent / 4);
-            record.outputTokens = Math.ceil(received / 4);
-          }
-          record.latencyMs = Math.round(performance.now() - started);
-          void Promise.resolve()
-            .then(() => options.onCall?.(record))
-            .catch(() => undefined);
-        }
-      }
-      throw new AiGatewayError('agent.chat', lastError);
+          promptVersion: version,
+          system,
+          messages,
+          tools,
+          maxOutputTokens: AGENT_MAX_OUTPUT_TOKENS,
+          signal,
+        },
+        context,
+      );
+    },
+
+    async *ask(input, context, signal) {
+      const { system, prompt } = buildMeetingAskPrompt(input);
+      yield* streamStep(
+        {
+          task: 'meeting.ask',
+          promptVersion: MEETING_ASK_PROMPT_VERSION,
+          system,
+          messages: [{ role: 'user', content: prompt }],
+          tools: [],
+          maxOutputTokens: input.detail ? ASK_DETAIL_MAX_OUTPUT_TOKENS : ASK_MAX_OUTPUT_TOKENS,
+          signal,
+        },
+        context,
+      );
     },
 
     async json(task, input, schema, context) {

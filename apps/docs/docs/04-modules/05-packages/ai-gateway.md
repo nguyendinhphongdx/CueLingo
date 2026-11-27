@@ -73,3 +73,7 @@ gateway.chat(
 | `lesson.feedback`    | 4 s     | như trên, dự phòng `gemini-3.1-flash-lite`                  |
 
 Ba task nằm trong `SINGLE_MODEL_TASKS` (cùng `assist.followup`) ngoại trừ `lesson.feedback`. Bộ đánh giá `scripts/eval-lesson.ts`: 8 mục tiêu × trình độ a2/b2 × 2 lần chạy, kiểm cấu trúc và đo p50/p95 của feedback. Xem [goals](../03-api/goals.md).
+
+## `ask` (task `meeting.ask`)
+
+Một lần gọi stream, không công cụ, tối đa 450 token ra (1.200 khi `detail`). Dùng chung phần stream với `chat`: chỉ đổi sang model dự phòng trước chữ đầu tiên; ghi `firstTokenMs`; không ghi nội dung. Eval: `scripts/eval-meeting-ask.ts` (cần `GEMINI_API_KEY`).

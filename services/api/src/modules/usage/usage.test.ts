@@ -49,6 +49,7 @@ describe('usage module', () => {
         'cloud_stt_ms',
         'debriefs',
         'lesson_practice_daily',
+        'meeting_ask_daily',
         'lessons_daily',
         'translation_ms',
       ].sort(),

@@ -36,3 +36,5 @@ export * from './lesson-personalize/v1';
 export { personalizeFixtures } from './lesson-personalize/fixtures/cases';
 export * from './lesson-feedback/v1';
 export { feedbackFixtures } from './lesson-feedback/fixtures/cases';
+export * from './meeting-ask/v1';
+export { meetingAskFixtures, type MeetingAskFixture } from './meeting-ask/fixtures/cases';

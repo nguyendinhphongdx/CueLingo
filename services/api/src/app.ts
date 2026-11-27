@@ -28,6 +28,11 @@ import { createFollowupModule, type FollowupDeps } from './modules/followup';
 import { createConversationsModule, type ConversationsRepository } from './modules/conversations';
 import { createCoursesModule, type CoursesRepository } from './modules/courses';
 import { createGlossaryModule, type GlossaryRepository } from './modules/glossary';
+import {
+  createMeetingAssistModule,
+  type MeetingAssistDeps,
+  type MeetingAssistRepository,
+} from './modules/meeting-assist';
 import { createGoalsModule, type GoalsDeps, type GoalsRepository } from './modules/goals';
 import { createPrivacyModule, type PrivacyRepository } from './modules/privacy';
 import { createRealtimeModule, type RealtimeDeps } from './modules/realtime';
@@ -95,6 +100,7 @@ export interface AppDeps {
     study: StudyRepository;
     sessions: SessionsRepository;
     speakers: SpeakersRepository;
+    meetingAssist: MeetingAssistRepository;
     admin: AdminRepository;
     invites: InvitesRepository;
     feedback: FeedbackRepository;
@@ -130,6 +136,8 @@ export interface AppDeps {
   transcribe?: TranscribeDeps;
   /** Enables follow-up drafts from a debrief when an AI gateway is available. */
   followup?: FollowupDeps;
+  /** The assistant asked during a meeting (ADR 0027). Omitted or `enabled: false` answers 503. */
+  meetingAssist?: MeetingAssistDeps;
   /** Goal lessons: goals always work, making and practising lessons need the gateway (ADR 0025). */
   goals?: GoalsDeps;
   /** Development-only bearer-token verifier for assist and event ingestion. */
@@ -313,6 +321,17 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     agentAdmin = agent.service.admin;
     await app.register(agent.routes, { prefix: '/v1/conversations' });
   }
+  // Always mounted: a client asks whether the assistant is on, and a person can always withdraw consent.
+  await app.register(
+    createMeetingAssistModule(deps.meetingAssist, {
+      repo: deps.repos.meetingAssist,
+      sessions: deps.repos.sessions,
+      usage: usage.service,
+      listGlossary: (userId, language) => deps.repos.glossary.list(userId, language),
+      listPhrases: (userId, language) => review.phrases.list(userId, language),
+      now: deps.now,
+    }).routes,
+  );
   if (deps.realtime) await app.register(createRealtimeModule(deps.realtime, usage.service).routes);
 
   return app;

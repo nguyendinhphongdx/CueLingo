@@ -103,6 +103,14 @@ describe('INVITES_REQUIRED', () => {
     ).toBe(false);
   });
 
+  it('keeps the meeting assistant on unless it is turned off (AC20)', () => {
+    expect(loadConfig(valid).MEETING_ASSIST_ENABLED).toBe(true);
+    expect(loadConfig({ ...valid, MEETING_ASSIST_ENABLED: 'false' }).MEETING_ASSIST_ENABLED).toBe(
+      false,
+    );
+    expect(() => loadConfig({ ...valid, MEETING_ASSIST_ENABLED: 'yes' })).toThrow(ConfigError);
+  });
+
   it('defaults the assistant to on with the planned daily allowance, and reads overrides', () => {
     const defaults = loadConfig(valid);
     expect(defaults.AGENT_ENABLED).toBe(true);

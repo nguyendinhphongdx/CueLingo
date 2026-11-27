@@ -67,7 +67,21 @@ describe('privacy module', () => {
     });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual(exported);
-    expect(repo.exportMyData).toHaveBeenCalledWith(BOB, expect.any(Date));
+    expect(repo.exportMyData).toHaveBeenCalledWith(BOB, expect.any(Date), {
+      meetingQuestions: false,
+    });
+  });
+
+  it('adds meeting questions to the export only when asked (AC17)', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/me/export?include=meeting_questions',
+      headers: as(BOB),
+    });
+    expect(response.statusCode).toBe(200);
+    expect(repo.exportMyData).toHaveBeenCalledWith(BOB, expect.any(Date), {
+      meetingQuestions: true,
+    });
   });
 
   it('leaves the usage of the month as it was after a data delete (AC13)', async () => {

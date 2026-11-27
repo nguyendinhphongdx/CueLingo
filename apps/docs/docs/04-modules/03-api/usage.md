@@ -68,3 +68,7 @@ Không có dòng trả về nghĩa là bị từ chối. Trước đó, cổng �
 ## Hạn mức bài học theo mục tiêu
 
 Hai metric mới theo ngày (kỳ reset giờ Việt Nam): `lessons_daily` (Free 2, Pro 10, Ultra 20) và `lesson_practice_daily` (Free 20, Pro 150, Ultra 300). Tổng số metric là 7; `isDailyMetric` nhận mọi metric kết thúc bằng `_daily`. Module goals kiểm bằng `status` trước và cộng bằng `add` sau khi thành công, nên lỗi AI không bị tính. Ràng buộc `usage_counters_metric_check` được thay bằng danh sách 7 metric trong migration `20261122090000_goal_lessons`. Xem [goals](./goals.md).
+
+## Hỏi trợ lý trong họp
+
+`meeting_ask_daily` (ngày giờ Việt Nam): Free 10 · Pro 60 · Ultra 150, đổi được bằng `PLAN_LIMITS`. Trừ trước khi gọi mô hình, không hoàn lại. Xem [meeting-assist](./meeting-assist.md).

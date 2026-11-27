@@ -39,3 +39,7 @@ Xoá mềm cuộc họp, xoá dữ liệu cá nhân và xuất bản sao dữ li
 ## Dữ liệu mục tiêu
 
 `deleteMyData` xoá `lesson_reports`, `goal_lessons`, `learning_goals` của người dùng trước `review_logs`; không xoá `lesson_contents` (nội dung chung, không có `user_id`). Mục tiêu không nằm trong export. Câu luyện gõ không được lưu nên không có gì để xoá. Xem [goals](./goals.md).
+
+## Trợ lý trong cuộc họp
+
+`DELETE /v1/me/data` xoá `meeting_questions` và `meeting_assist_consents` trong cùng transaction. `GET /v1/me/export` giữ nguyên hình dạng; thêm `?include=meeting_questions` thì mỗi phiên có thêm `questions` (desktop ≤ 0.1.12 từ chối khoá lạ).

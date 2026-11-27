@@ -1,5 +1,5 @@
 import type { Export } from '@cuelingo/shared';
-import type { PrivacyRepository } from './privacy.repository';
+import type { ExportOptions, PrivacyRepository } from './privacy.repository';
 
 export type PrivacyService = ReturnType<typeof createPrivacyService>;
 
@@ -8,8 +8,8 @@ export function createPrivacyService(repo: PrivacyRepository, now: () => Date = 
     deleteMyData(userId: string): Promise<void> {
       return repo.deleteMyData(userId);
     },
-    exportMyData(userId: string): Promise<Export> {
-      return repo.exportMyData(userId, now());
+    exportMyData(userId: string, options?: ExportOptions): Promise<Export> {
+      return repo.exportMyData(userId, now(), options);
     },
   };
 }

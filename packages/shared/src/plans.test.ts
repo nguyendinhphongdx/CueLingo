@@ -75,6 +75,7 @@ describe('plan limits', () => {
       agent_messages: 0,
       lessons_daily: 2,
       lesson_practice_daily: 20,
+      meeting_ask_daily: 10,
     });
     expect(DEFAULT_PLAN_LIMITS.ultra.agent_messages).toBe(500);
     expect(DEFAULT_PLAN_LIMITS.pro.lessons_daily).toBe(10);

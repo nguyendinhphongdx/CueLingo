@@ -50,3 +50,7 @@ Prompt có phiên bản cho từng tác vụ AI, kèm schema đầu ra và fixtu
 ## Prompt bài học mục tiêu
 
 `lesson.generate@v1` (`lesson/v1.ts`), `lesson.personalize@v1` (`lesson-personalize/v1.ts`), `lesson.feedback@v1` (`lesson-feedback/v1.ts`). Mỗi prompt kèm bộ kiểm ngữ nghĩa (`checkLessonOutput`, `checkPersonalOutput`, `checkFeedbackOutput`) và fixture. Đầu vào của người dùng (thuật ngữ, câu luyện) nằm trong khối `<terms>`, `<practice>` và coi là không tin cậy. Xem [goals](../03-api/goals.md).
+
+## `meeting.ask@v1`
+
+Câu hỏi trong lúc họp: nguồn đánh số trong thẻ `<source n>`, dữ liệu coi là không tin cậy, trả lời tiếng Việt ngắn (≤ 5 gạch đầu dòng hoặc 80 chữ; "Giải thích thêm" tới 250 chữ), không bịa chuyện của người hỏi. `meetingAskRefs` cho biết số nào ứng với nguồn nào. Fixture ở `src/meeting-ask/fixtures/`.
