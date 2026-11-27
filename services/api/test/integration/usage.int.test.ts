@@ -46,6 +46,7 @@ describe('usage counters on real Postgres', () => {
         agent_messages: start,
         lessons_daily: start,
         lesson_practice_daily: start,
+        meeting_ask_daily: start,
       },
       NOW,
     );
@@ -63,6 +64,7 @@ describe('usage counters on real Postgres', () => {
       agent_messages: start,
       lessons_daily: start,
       lesson_practice_daily: start,
+      meeting_ask_daily: start,
     };
     await repo.add(bob, 'translation_ms', start, 1500);
     await repo.add(bob, 'assist_daily', new Date('2026-11-12T17:00:00Z'), 9);
@@ -98,6 +100,7 @@ describe('usage counters on real Postgres', () => {
         'agent_messages',
         'lessons_daily',
         'lesson_practice_daily',
+        'meeting_ask_daily',
       ].map((m) => [m, start]),
     ) as Parameters<typeof repo.snapshot>[1];
     const before = new Date('2026-11-19T23:59:59Z');

@@ -42,6 +42,7 @@ const detail: AdminUserDetail = {
       agent_messages: item(5, 100),
       lessons_daily: item(0, 10),
       lesson_practice_daily: item(0, 150),
+      meeting_ask_daily: item(0, 150),
     },
   },
   orders: [

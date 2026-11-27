@@ -17,6 +17,7 @@ const usage = (
   agent_messages: { used: 0, limit: null, resetsAt, state: 'ok' },
   lessons_daily: { used: 0, limit: null, resetsAt, state: 'ok' },
   lesson_practice_daily: { used: 0, limit: null, resetsAt, state: 'ok' },
+  meeting_ask_daily: { used: 0, limit: null, resetsAt, state: 'ok' },
 });
 
 describe('usage notice on the meeting page', () => {

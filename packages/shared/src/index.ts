@@ -20,6 +20,7 @@ export * from './dto/followup.dto';
 export * from './dto/glossary.dto';
 export * from './dto/goal.dto';
 export * from './dto/invite.dto';
+export * from './dto/meeting-assist.dto';
 export * from './dto/phrase.dto';
 export * from './dto/privacy.dto';
 export * from './dto/review.dto';

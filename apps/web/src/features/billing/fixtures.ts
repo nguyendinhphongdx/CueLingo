@@ -10,6 +10,7 @@ const limits = (translation: number, agent: number | null): BillingOffer['limits
   agent_messages: agent,
   lessons_daily: null,
   lesson_practice_daily: null,
+  meeting_ask_daily: null,
 });
 
 /** Offers as the server sends them: prices from `PLAN_PRICES` defaults. Test data only. */

@@ -132,3 +132,7 @@ Hợp đồng `FollowupRequestSchema` (channel, tone), `FollowupResponseSchema` 
 ## Mục tiêu và bài học
 
 `goals.ts`: `GOAL_CATALOG` (8 mục tiêu × 6 bài), `GOAL_MAX=3`, `GoalKeySchema`, `findCatalogGoal`, `findCatalogLesson`. `dto/goal.dto.ts`: `CreateGoalRequest`, `UpdateGoalRequest`, `Goal`, `GoalList`, `LessonContent`, `LessonView`, `PracticeRequest`, `PracticeFeedback`, `QuizSubmitRequest`, `QuizResult`, `LessonReportRequest`. `plans.ts` thêm metric `lessons_daily`, `lesson_practice_daily`; mã lỗi mới `LESSON_FAILED` (502), `LESSONS_DISABLED` (503). Xem [goals](../03-api/goals.md).
+
+## Trợ lý trong cuộc họp
+
+`dto/meeting-assist.dto.ts`: yêu cầu hỏi, nguồn (`MeetingAnswerSource`), sự kiện SSE, hỏi đáp trong export, trạng thái đồng ý, `stripSourceTags` (bỏ `[1]`, `[G]` khỏi chữ người đọc). Mã lỗi `MEETING_ASSIST_DISABLED|CONSENT_REQUIRED|FAILED`; chỉ số `meeting_ask_daily`.

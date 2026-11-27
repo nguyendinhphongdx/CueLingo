@@ -224,6 +224,7 @@ describe('admin analytics on real Postgres', () => {
           assist_daily: MONTH,
           lessons_daily: MONTH,
           lesson_practice_daily: MONTH,
+          meeting_ask_daily: MONTH,
         },
         NOW,
       );
