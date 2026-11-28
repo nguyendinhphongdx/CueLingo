@@ -22,6 +22,14 @@ Dữ liệu họp là dữ liệu nhạy cảm của doanh nghiệp người dù
 - **Mã do AI sinh ra** ([ADR 0019](../08-adr/0019-ai-generated-ui.md), sau cờ `AGENT_HTML_BLOCKS`, mặc định tắt): chạy trong sandbox runner ở origin riêng (`infra/sandbox-runner`), iframe `sandbox="allow-scripts"` không `allow-same-origin`, CSP bằng header HTTP (`connect-src 'none'`, `form-action 'none'`, `frame-src 'self' about:`), cầu nối `postMessage` chỉ sáu thao tác, ghi dữ liệu luôn cần người dùng xác nhận. Khối không nhận token, cookie hay URL API; đọc cụm từ chỉ trả `phrase` và `meaningVi`. Kiểm tĩnh phía API chỉ là lớp phụ. Runner phải ở **domain khác site** với web khi lên production nếu muốn chắc về cô lập tiến trình (đã kiểm trên Chrome: cả cùng site lẫn khác site đều không làm treo trang chat, WKWebView chưa kiểm).
 - Chính sách quyền riêng tư (khi viết, xem mục Pháp lý) phải nêu: có lưu hội thoại, gửi nội dung tới Gemini, thời hạn lưu và cách xoá. Repo chưa có trang chính sách nên chưa sửa được ở đây.
 
+## Trợ lý trong cuộc họp
+
+- **Mục đích mới gửi dữ liệu tới Google Gemini** ([ADR 0027](../08-adr/0027-meeting-assist.md)): câu hỏi, trích transcript của phiên, thuật ngữ và cụm từ khớp, trích đoạn cuộc họp cũ của chính người hỏi, 3 hỏi đáp trước. Không gửi audio.
+- Server lưu và kiểm đồng ý (có phiên bản lời văn) trước khi đọc dữ liệu; cờ `MEETING_ASSIST_ENABLED` mặc định bật, đặt `false` để tắt khẩn cấp.
+- Server quyết dữ liệu nào đi theo luật cố định; mô hình không có công cụ, nên chỉ dẫn nằm trong transcript không mở thêm được dữ liệu.
+- Hỏi đáp lưu theo `userId`, xoá và xuất được; log chỉ id, số đếm, mili giây.
+- Chính sách quyền riêng tư phải nêu mục đích này trước khi bật cho người dùng. Repo chưa có trang chính sách; [bản nháp đoạn này](../06-delivery/2026-11-27-meeting-assistant/privacy-draft.md) chờ pháp lý xem.
+
 ## Lượng dùng và gói
 
 - `usage_counters` chỉ lưu con số (giây, số lần) gắn với `user_id`; không log nội dung câu hay âm thanh khi đếm.

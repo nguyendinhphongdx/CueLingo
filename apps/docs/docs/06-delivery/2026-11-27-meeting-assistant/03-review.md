@@ -18,7 +18,7 @@
 
 **Docs đã cập nhật:** trang mới `04-modules/03-api/meeting-assist.md`; privacy, usage; shared, prompts, ai-gateway, core-sdk, ui; quick-assist, settings, tauri-core; kiến trúc 06, 07, 08; sản phẩm 03 (US-17), 04, 05; ADR 0027.
 
-**Chưa cập nhật:** chính sách quyền riêng tư công khai ở `apps/site`; trang `overlay.md` và `session-controller.md`.
+**Chưa cập nhật:** chính sách quyền riêng tư công khai (repo chưa có trang; [bản nháp đoạn trợ lý](./privacy-draft.md)); trang `overlay.md` và `session-controller.md`.
 
 ## Tự review
 
@@ -53,7 +53,7 @@ Review độc lập (agent `code-reviewer`): REQUEST_CHANGES với 1 lỗi chặ
 ## Điều kiện phát hành
 
 1. Deploy API (migration mới) **trước** bản desktop: desktop mới bắt buộc có `meeting_ask_daily` trong `/v1/me/usage`; server cũ làm hỏng bảng hạn mức và cảnh báo hạn mức đầu cuộc họp.
-2. Bật `MEETING_ASSIST_ENABLED` chỉ sau khi eval đạt và đã cập nhật chính sách quyền riêng tư.
+2. `MEETING_ASSIST_ENABLED` mặc định **bật** (chủ sản phẩm quyết khi phát hành). Còn nợ: chạy eval, công bố chính sách quyền riêng tư có [đoạn về trợ lý](./privacy-draft.md). Tắt khẩn cấp: đặt `false` rồi `infra/tunnel/tunnel.sh reload`.
 3. Chỉ có trần theo người, chưa có trần chi tiêu toàn hệ thống.
 
 ## Cho người review — đọc theo thứ tự

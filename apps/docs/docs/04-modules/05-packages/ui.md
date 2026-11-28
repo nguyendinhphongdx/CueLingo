@@ -213,3 +213,7 @@ Cỡ chữ của thiết kế là class Tailwind đặt cùng lúc cỡ, độ c
 ## Mục tiêu và bài học
 
 `GoalPicker` (chọn hoặc sửa mục tiêu), `GoalLessonView` (bốn phần của bài, luyện gõ, quiz, báo lỗi; giọng cố định theo người nói), và `LearningPathPanel` nhận thêm `goals`, `onOpenLesson`, `onAddGoal`, `onEditGoal`, `onRemoveGoal`, `goalError`. Chữ và hàm hỗ trợ ở `lib/goal-lesson.ts`. Web và desktop chỉ dùng, không vẽ lại. Xem [goals](../03-api/goals.md).
+
+## `MeetingAnswer`
+
+Một câu hỏi và câu trả lời đang chảy về: chữ Markdown đã bỏ nhãn `[n]`, dòng nguồn (`meetingSourceLabel`), trạng thái, nút Dừng, Thử lại, Giải thích thêm. Chỉ nhận props.

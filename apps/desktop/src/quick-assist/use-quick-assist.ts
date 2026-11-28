@@ -61,9 +61,12 @@ export function useQuickAssist({
   api?: AssistApi;
 } = {}) {
   const [state, setState] = useState<QuickAssistState>({ view: 'closed' });
+  const [openCount, setOpenCount] = useState(0);
+  const opened = useCallback(() => setOpenCount((count) => count + 1), []);
 
   const lookup = useCallback(
     async (term: string, context: string) => {
+      opened();
       if (!meetingLearnable()) {
         setState({ view: 'lookup', status: 'error', term, context });
         return;
@@ -77,10 +80,11 @@ export function useQuickAssist({
         setState({ view: 'lookup', status: 'error', term, context });
       }
     },
-    [api],
+    [api, opened],
   );
 
   const openRecap = useCallback(async () => {
+    opened();
     const sentences = selectRecentSystemSentences(useTranscriptStore.getState().segments);
     setState({ view: 'recap', status: 'loading' });
     if (sentences.length === 0) {
@@ -98,11 +102,12 @@ export function useQuickAssist({
     } catch {
       setState({ view: 'recap', status: 'error' });
     }
-  }, [api]);
+  }, [api, opened]);
 
   const openCompose = useCallback(() => {
+    opened();
     setState({ view: 'compose', status: 'idle', intent: '' });
-  }, []);
+  }, [opened]);
 
   const submitCompose = useCallback(
     async (intent: string) => {
@@ -156,6 +161,7 @@ export function useQuickAssist({
 
   return {
     state,
+    openCount,
     lookup,
     retryLookup: () => {
       if (state.view === 'lookup') void lookup(state.term, state.context);

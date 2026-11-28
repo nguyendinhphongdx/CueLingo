@@ -366,7 +366,12 @@ export function createSessionController({
   }
 
   function publish(input: TranscriptEvent) {
-    const event = { ...input, language: input.language ?? meetingLanguage };
+    const event = {
+      ...input,
+      language: input.language ?? meetingLanguage,
+      // The overlay is another window: this is how it learns which meeting to ask about.
+      ...(activeSessionId ? { sessionId: activeSessionId } : {}),
+    };
     transcriptById.set(event.segmentId, event);
     if (!event.partial && event.text !== UNRECOGNISED_TEXT) {
       finalIds.add(event.segmentId);

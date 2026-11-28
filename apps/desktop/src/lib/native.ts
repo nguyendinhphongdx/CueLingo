@@ -107,6 +107,8 @@ export const TranscriptEvent = z.object({
     .optional(),
   /** Recognised on this machine because the cloud was out of reach (ADR 0024); quality may be lower. */
   offline: z.boolean().optional(),
+  /** The meeting this caption belongs to; left out before one exists (the demo). */
+  sessionId: z.string().optional(),
 });
 export type TranscriptEvent = z.infer<typeof TranscriptEvent>;
 
@@ -233,7 +235,7 @@ export const NoticeEvent = z.object({
 export type NoticeEvent = z.infer<typeof NoticeEvent>;
 
 export const HotkeyEvent = z.object({
-  action: z.enum(['toggle_overlay', 'recap', 'say_for_me']),
+  action: z.enum(['toggle_overlay', 'recap', 'say_for_me', 'ask']),
 });
 export type HotkeyEvent = z.infer<typeof HotkeyEvent>;
 
@@ -401,6 +403,9 @@ export const native = {
   publishSettings: (e: SettingsEvent) => emit('settings', SettingsEvent.parse(e)),
   onSettings: (cb: (e: SettingsEvent) => void): Promise<UnlistenFn> =>
     listen('settings', (e) => cb(SettingsEvent.parse(e.payload))),
+  /** Takes or frees the "ask the assistant" shortcut; it is held only while the server offers it. */
+  setAskHotkey: (enabled: boolean) =>
+    invoke('set_ask_hotkey', { enabled: z.boolean().parse(enabled) }).then(() => undefined),
   onHotkey: (cb: (e: HotkeyEvent) => void): Promise<UnlistenFn> =>
     listen('hotkey', (e) => cb(HotkeyEvent.parse(e.payload))),
 };

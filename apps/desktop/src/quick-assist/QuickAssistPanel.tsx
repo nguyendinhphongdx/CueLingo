@@ -26,7 +26,7 @@ const buttonClass =
  * A drawer on the right of the captions, so the transcript stays in view while you work. The header
  * has a chevron that slides it away (what was typed is kept) and a cross that closes it for good.
  */
-function PanelFrame({
+export function PanelFrame({
   title,
   close,
   onToggleCollapsed,

@@ -68,3 +68,7 @@ SDK client dùng chung cho desktop và web: auth, REST, stream phiên, hàng đ�
 ## Mục tiêu (`goals`)
 
 `client.goals`: `list`, `create`, `update`, `remove`, `openLesson(goalId, lessonKey, { signal })`, `practice`, `submitQuiz`, `report`. Mở bài lần đầu có thể mất 15–25 giây nên truyền `signal`. Xem [goals](../03-api/goals.md).
+
+## `meetingAssist`
+
+`status()`, `setConsent(granted)`, `ask(sessionId, body, {signal, onEvent})`. `ask` và `agent.sendMessage` đọc SSE bằng chung `readEventStream` (`sse.ts`): lỗi trước luồng là `ApiError`, huỷ thì kết thúc êm, luồng đứt trước `done` là `NETWORK_ERROR`.

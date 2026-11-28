@@ -72,6 +72,7 @@ pub fn run() {
             commands::show_overlay,
             commands::hide_overlay,
             commands::tray_report,
+            hotkeys::set_ask_hotkey,
             auth::auth_token_get,
             auth::auth_token_set,
             auth::auth_token_clear,

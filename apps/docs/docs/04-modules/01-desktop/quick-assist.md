@@ -41,3 +41,17 @@ Tra từ và "Nói giúp" chỉ có với ngôn ngữ `learnable`. Trong họp t
 Ngăn kéo bên phải caption (bề rộng `DRAWER_WIDTH`, do cơ chế cửa sổ overlay quyết định): Esc đóng ngăn kéo, ô "Nói giúp" tự lấy tiêu điểm khi mở. Ở đầu ngăn kéo Nói giúp có dòng **Họ vừa hỏi: “…”** là câu cuối của người khác (luồng `system`, đã chốt) lấy từ `transcript-store` của overlay; `CaptionOverlay` truyền qua prop `asked`, chỉ nằm trong bộ nhớ, không lưu, không log; chưa có câu thì không hiện dòng. Dưới mỗi `SpeakableOption` có nút **Hiện chữ lớn**.
 
 Màn **Nói giúp: chữ lớn** (`Teleprompter`) phủ toàn overlay bằng nền đặc `bg-background`: câu tiếng Anh cỡ lớn, ghi chú tiếng Việt màu `translation`, nút **Nghe** (đọc bằng loa máy, bấm lại để dừng), **Sao chép** (ghi `compose_used` như ở ngăn kéo) và ba cỡ chữ (`aria-pressed`). Esc hoặc **Quay lại các lựa chọn** trở về danh sách.
+
+## Hỏi trợ lý
+
+Ngăn kéo thứ hai dùng chung chỗ với tra từ, recap, "Nói giúp": cái mở sau cùng nằm trước, cái kia giữ nguyên nội dung. Code: `use-meeting-ask.ts`, `MeetingAskPanel.tsx`; API: [meeting-assist](../03-api/meeting-assist.md).
+
+| Việc          | Cách làm                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------ |
+| Khi nào hiện  | Chỉ khi `GET /v1/me/meeting-assist` trả `enabled: true`; server cũ (404) hoặc tắt thì không có mục nào |
+| Cách mở       | Menu Công cụ, nút **Giải thích** dưới câu đã chốt, phím ⌘⇧Y / Ctrl+Shift+Y                             |
+| Biết cuộc họp | `TranscriptEvent.sessionId` do `session-controller` gắn; chưa có caption thì ô hỏi khoá                |
+| Đồng ý        | Lần đầu hiện thẻ giải thích dữ liệu gửi đi; đồng ý rồi mới gửi câu đang chờ. Rút lại trong Cài đặt     |
+| Lỗi           | Giữ chữ đã gõ; hết lượt, đang bận, tắt có câu riêng                                                    |
+
+Câu hỏi và câu trả lời chỉ nằm trong bộ nhớ của overlay, không log. Cả cửa sổ overlay đã loại khỏi chia sẻ màn hình.

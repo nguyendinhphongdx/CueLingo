@@ -14,7 +14,7 @@ import { NotificationSettings } from '../notifications';
 import { PermissionsStep } from '../onboarding';
 import { PrivacyPanel } from '../privacy';
 import { ServerSettings } from '../server-picker';
-import { AssistSettings, ModelSetting, VoiceSettings } from '../settings';
+import { AssistSettings, MeetingAssistSetting, ModelSetting, VoiceSettings } from '../settings';
 import { PlacementSection } from '../study';
 import { UsagePanel } from '../usage';
 import { hasCalendar } from '../lib/platform';
@@ -145,6 +145,7 @@ function SectionBody({
       return (
         <>
           <AssistSettings />
+          <MeetingAssistSetting />
           <NotificationSettings />
           <PermissionsStep />
           <PlacementSection />

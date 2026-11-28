@@ -12,6 +12,8 @@ interface CaptionBlockProps {
   /** Show who is speaking above the block. */
   showSpeaker: boolean;
   onLookup(term: string): void;
+  /** Asks the assistant about this sentence; no button when the assistant is not available. */
+  onExplain?(): void;
 }
 
 function OriginalText({
@@ -49,7 +51,14 @@ function OriginalText({
 }
 
 /** One sentence of the meeting: the spoken language on top, the Vietnamese rendering under it. */
-export function CaptionBlock({ segment, level, faded, showSpeaker, onLookup }: CaptionBlockProps) {
+export function CaptionBlock({
+  segment,
+  level,
+  faded,
+  showSpeaker,
+  onLookup,
+  onExplain,
+}: CaptionBlockProps) {
   const mine = segment.stream === 'mic';
   // A language that is not translated (Vietnamese) has only its own text: always show it, never wait for a translation.
   const code = segment.language ?? 'en';
@@ -64,7 +73,7 @@ export function CaptionBlock({ segment, level, faded, showSpeaker, onLookup }: C
       data-slot="caption-line"
       data-partial={segment.partial ? 'true' : undefined}
       // The app turns text selection off for its chrome; the words of the meeting must stay copyable.
-      className={`cursor-text transition-opacity duration-300 select-text ${faded ? 'opacity-70' : ''}`}
+      className={`group cursor-text transition-opacity duration-300 select-text ${faded ? 'opacity-70' : ''}`}
     >
       {showSpeaker ? (
         <p className="mb-1 text-[0.7em]">
@@ -118,6 +127,16 @@ export function CaptionBlock({ segment, level, faded, showSpeaker, onLookup }: C
           Đang dịch…
         </p>
       )}
+      {onExplain && !segment.partial ? (
+        <button
+          type="button"
+          onClick={onExplain}
+          // Out of the way until the person points at the sentence or tabs to it.
+          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring mt-0.5 cursor-pointer rounded-md px-1 text-xs font-medium opacity-0 select-none group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:outline-none"
+        >
+          Giải thích
+        </button>
+      ) : null}
     </div>
   );
 }

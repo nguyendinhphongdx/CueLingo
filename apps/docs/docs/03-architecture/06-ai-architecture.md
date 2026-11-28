@@ -11,6 +11,7 @@ AI được chia hai tầng: **tầng realtime** (dưới 2 giây, model nhỏ v
 | Tra từ theo ngữ cảnh   | Realtime | LLM nhỏ                                                   | api/assist                      | `lookup.v1`                |
 | Recap 60 giây          | Realtime | LLM nhỏ                                                   | api/assist                      | `recap.v1`                 |
 | Compose Việt → Anh     | Realtime | LLM nhỏ                                                   | api/assist                      | `compose.v1`               |
+| Hỏi trợ lý trong họp   | Realtime | LLM nhỏ cloud (Gemini Flash-Lite), stream                 | api/meeting-assist              | `meeting.ask@v1`           |
 | Soạn follow-up sau họp | Nhanh    | LLM nhỏ                                                   | api/followup                    | `followup.v1`              |
 | Debrief                | Suy nghĩ | LLM mạnh                                                  | workers/debrief-job             | `debrief.v1` (JSON schema) |
 | TTS cho thẻ ôn         | Suy nghĩ | TTS cloud hoặc Kokoro                                     | workers/tts-cache               | —                          |

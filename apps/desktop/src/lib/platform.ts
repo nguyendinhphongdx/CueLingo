@@ -18,8 +18,8 @@ export const platformName = (id: string): string =>
 
 export const isWindows = (): boolean => currentOs() === 'windows';
 
-/** The three global shortcuts (hotkeys.rs): the same letters on both systems, Command becomes Ctrl. */
-export type ShortcutKey = 'L' | 'W' | 'S';
+/** The global shortcuts (hotkeys.rs): the same letters on both systems, Command becomes Ctrl. */
+export type ShortcutKey = 'L' | 'W' | 'S' | 'Y';
 
 export function shortcutLabel(key: ShortcutKey, os: DesktopOs = currentOs()): string {
   return os === 'windows' ? `Ctrl+Shift+${key}` : `⌘⇧${key}`;

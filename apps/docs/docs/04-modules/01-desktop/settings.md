@@ -59,3 +59,7 @@ Cài đặt trong app và bản đồng bộ theo tài khoản: Assist mặc đ�
 ## Giao diện và đăng xuất
 
 Cài đặt có mục "Giao diện" (`ThemeSwitch`: Theo hệ thống, Sáng, Tối, lưu trên máy) và thẻ Tài khoản có nút chữ "Đăng xuất" (cả khi chạy bằng token dev).
+
+## Trợ lý trong cuộc họp
+
+`MeetingAssistSetting` (tab Cuộc họp): bật, rút đồng ý cho trợ lý hỏi trong họp. Chỉ hiện khi server có tính năng (hoặc người dùng đã đồng ý, để còn rút được).

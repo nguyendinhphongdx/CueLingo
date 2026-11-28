@@ -5,3 +5,5 @@
 export { ClickableCaptionLine, splitCaptionWords } from './ClickableCaptionLine';
 export { DRAWER_WIDTH, QuickAssistPanel } from './QuickAssistPanel';
 export { useQuickAssist } from './use-quick-assist';
+export { MeetingAskPanel } from './MeetingAskPanel';
+export { useMeetingAsk } from './use-meeting-ask';

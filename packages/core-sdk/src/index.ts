@@ -12,6 +12,7 @@ import { followupApi } from './followup';
 import { glossaryApi } from './glossary';
 import { goalsApi } from './goals';
 import { createHttp, type ClientOptions } from './http';
+import { meetingAssistApi } from './meeting-assist';
 import { sessionsApi } from './sessions';
 import { speakersApi } from './speakers';
 import { transcribeApi } from './transcribe';
@@ -26,6 +27,7 @@ export function createClient(options: ClientOptions) {
     feedback: feedbackApi(http),
     conversations: conversationsApi(http),
     agent: agentApi(http),
+    meetingAssist: meetingAssistApi(http),
     usage: usageApi(http),
     billing: billingApi(http),
     admin: adminApi(http),
@@ -47,3 +49,4 @@ export {
   type RealtimeSocket,
   type RealtimeState,
 } from './realtime';
+export { meetingAssistApi } from './meeting-assist';

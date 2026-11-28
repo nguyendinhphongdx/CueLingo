@@ -28,6 +28,8 @@ export function selectRecentSystemSentences(segments: TranscriptEvent[], limit =
 interface TranscriptState {
   segments: TranscriptEvent[];
   hasReceivedTranscript: boolean;
+  /** The meeting of the latest caption; null until one has arrived. */
+  sessionId: string | null;
   push: (event: TranscriptEvent) => void;
   reset: () => void;
 }
@@ -35,10 +37,12 @@ interface TranscriptState {
 export const useTranscriptStore = create<TranscriptState>((set) => ({
   segments: [],
   hasReceivedTranscript: false,
+  sessionId: null,
   push: (event) =>
     set((state) => ({
       segments: updateTranscriptEvents(state.segments, event),
       hasReceivedTranscript: true,
+      sessionId: event.sessionId ?? state.sessionId,
     })),
-  reset: () => set({ segments: [], hasReceivedTranscript: false }),
+  reset: () => set({ segments: [], hasReceivedTranscript: false, sessionId: null }),
 }));
